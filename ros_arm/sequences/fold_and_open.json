@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "name": "fold_and_open",
+  "angle_unit": "servo_degree",
+  "center_angle": 90,
+  "limits": [60, 120],
+  "joints": [
+    "base_shoulder",
+    "shoulder_arm1",
+    "arm1_arm2",
+    "arn2_end_arm"
+  ],
+  "steps": [
+    {"name": "center", "angles": [90, 90, 90, 90], "duration": 1.0},
+    {"name": "fold", "angles": [90, 115, 65, 115], "duration": 2.0},
+    {"name": "open", "angles": [90, 70, 110, 70], "duration": 2.0},
+    {"name": "return_center", "angles": [90, 90, 90, 90], "duration": 2.0}
+  ]
+}
