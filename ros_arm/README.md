@@ -218,10 +218,17 @@ ros2 launch ros_arm auto_demo_launch.py \
 
 ## Gazebo 물리 시뮬레이션
 
-Gazebo용 모델은 원본 CAD URDF와 별도의 `ros_arm_gazebo.urdf`입니다.
-원본 모델의 질량이 `1e-09 kg` 수준이라 물리 시뮬레이션이 불안정할 수
-있으므로, 단순한 box/cylinder collision과 현실적인 학습용 질량·관성을
-지정했습니다. 관절 이름은 실제 시스템과 동일하게 유지했습니다.
+Gazebo launch는 원본 `ros_arm.urdf`에서 혼합 모델을 동적으로 만듭니다.
+`gazebo_description.py`가 실제 CAD STL visual과 관절 원점은 그대로
+보존하고, `1e-09 kg` 수준의 inertial을 안정적인 학습용 값으로
+교체합니다.
+
+첫 번째 단순 형상 모델로 controller 연결을 확인한 뒤 실제 CAD visual로
+교체했습니다. CAD 좌표에 추정 collision box를 적용하면 링크가 서로
+밀어내며 속도가 과도하게 튀었기 때문에, 현재 기본 launch는 실제 외형의
+모션 확인에 집중하도록 collision과 gravity를 비활성화했습니다. 정확한
+충돌 시뮬레이션은 링크별 collision 치수를 별도로 측정한 뒤 추가해야
+합니다.
 
 필요 패키지:
 
@@ -248,7 +255,7 @@ ros2 launch ros_arm gazebo_auto_demo_launch.py
 4. `joint_state_broadcaster`가 실제 시뮬레이션 각도를 `/joint_states`로
    발행합니다.
 5. `arm_position_controller`가 네 관절 위치 명령을 받습니다.
-6. 자동 노드가 `/arm_position_controller/commands`에 1초마다 명령합니다.
+6. 자동 노드가 목표를 1초마다 바꾸고 50Hz로 보간한 명령을 보냅니다.
 
 Gazebo 모드에서는 자동 노드가 `/joint_states`를 직접 발행하지 않습니다.
 그 토픽은 시뮬레이터가 측정한 결과를 전달하는 피드백이기 때문입니다.
@@ -292,11 +299,12 @@ ros_arm/
 ├── launch/auto_demo_launch.py
 ├── launch/gazebo_auto_demo_launch.py
 ├── ros_arm/auto_joint_publisher.py
+├── ros_arm/gazebo_description.py
 ├── ros_arm/ros_arm_bridge.py
 ├── config/gazebo_controllers.yaml
 ├── rviz/ros_arm.rviz
 ├── urdf/ros_arm.urdf
-├── urdf/ros_arm_gazebo.urdf
+├── urdf/ros_arm.urdf
 ├── package.xml
 └── setup.py
 ```
