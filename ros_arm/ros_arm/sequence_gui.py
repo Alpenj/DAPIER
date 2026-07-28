@@ -203,6 +203,10 @@ class SequenceWindow(QMainWindow):
         self.status.setText('모든 관절을 90° 중심으로 이동했습니다.')
 
     def _publish_current_pose(self):
+        if not rclpy.ok():
+            self.publish_timer.stop()
+            QApplication.quit()
+            return
         self.ros_node.publish_angles(self._angles())
         rclpy.spin_once(self.ros_node, timeout_sec=0.0)
 
