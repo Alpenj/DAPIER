@@ -185,15 +185,118 @@ TX A,90,90,90,90
 RX OK,90,90,90,90
 ```
 
+## 1초 자동 관절 테스트 노드
+
+GUI 대신 `auto_joint_publisher.py`를 사용하면 1초마다 한 관절씩 안전하게
+매핑을 시험할 수 있습니다.
+
+```text
+전체 90°
+→ Base 100° → Base 80° → Base 90°
+→ Shoulder 100° → Shoulder 80° → Shoulder 90°
+→ Forearm 100° → Forearm 80° → Forearm 90°
+→ Upper 100° → Upper 80° → Upper 90°
+→ 반복
+```
+
+실제 Arduino와 RViz를 자동으로 시험하는 명령:
+
+```bash
+ros2 launch ros_arm auto_demo_launch.py
+```
+
+기본 진폭은 중심에서 ±10°이고 주기는 1초입니다. 필요하면 launch
+argument로 바꿀 수 있습니다.
+
+```bash
+ros2 launch ros_arm auto_demo_launch.py \
+  period_seconds:=2.0 amplitude_degrees:=5.0
+```
+
+실물 모드에서는 노드가 `/joint_states`를 발행하므로 Arduino 브리지까지
+함께 움직입니다. 암 주변을 비우고 전원을 확인한 뒤 실행해야 합니다.
+
+## Gazebo 물리 시뮬레이션
+
+Gazebo용 모델은 원본 CAD URDF와 별도의 `ros_arm_gazebo.urdf`입니다.
+원본 모델의 질량이 `1e-09 kg` 수준이라 물리 시뮬레이션이 불안정할 수
+있으므로, 단순한 box/cylinder collision과 현실적인 학습용 질량·관성을
+지정했습니다. 관절 이름은 실제 시스템과 동일하게 유지했습니다.
+
+필요 패키지:
+
+```bash
+sudo apt-get install -y \
+  gazebo \
+  ros-humble-gazebo-ros-pkgs \
+  ros-humble-gazebo-ros2-control \
+  ros-humble-ros2-control \
+  ros-humble-ros2-controllers
+```
+
+Gazebo 자동 시험:
+
+```bash
+ros2 launch ros_arm gazebo_auto_demo_launch.py
+```
+
+이 launch는 다음 순서로 동작합니다.
+
+1. Gazebo Classic을 시작합니다.
+2. `robot_description`의 로봇을 `spawn_entity.py`로 생성합니다.
+3. `gazebo_ros2_control`이 네 관절의 position interface를 등록합니다.
+4. `joint_state_broadcaster`가 실제 시뮬레이션 각도를 `/joint_states`로
+   발행합니다.
+5. `arm_position_controller`가 네 관절 위치 명령을 받습니다.
+6. 자동 노드가 `/arm_position_controller/commands`에 1초마다 명령합니다.
+
+Gazebo 모드에서는 자동 노드가 `/joint_states`를 직접 발행하지 않습니다.
+그 토픽은 시뮬레이터가 측정한 결과를 전달하는 피드백이기 때문입니다.
+
+```text
+auto_joint_publisher
+        │ /arm_position_controller/commands
+        ▼
+arm_position_controller
+        ▼
+gazebo_ros2_control → Gazebo physics
+        │
+        └→ joint_state_broadcaster → /joint_states
+```
+
+controller 확인:
+
+```bash
+ros2 control list_controllers
+ros2 topic echo /joint_states
+ros2 topic info /arm_position_controller/commands --verbose
+```
+
+정상 상태:
+
+```text
+joint_state_broadcaster active
+arm_position_controller active
+```
+
+실물 launch와 Gazebo launch를 동시에 실행하면 토픽이 섞일 수 있으므로
+처음 학습할 때는 한 번에 하나만 실행합니다. Gazebo launch에는 Arduino
+브리지가 포함되지 않아 시뮬레이션 동작이 실제 암으로 전달되지 않습니다.
+
 ## 주요 파일
 
 ```text
 ros_arm/
 ├── arduino/ros_control/ros_control.ino
 ├── launch/display_launch.py
+├── launch/auto_demo_launch.py
+├── launch/gazebo_auto_demo_launch.py
+├── ros_arm/auto_joint_publisher.py
 ├── ros_arm/ros_arm_bridge.py
+├── config/gazebo_controllers.yaml
 ├── rviz/ros_arm.rviz
 ├── urdf/ros_arm.urdf
+├── urdf/ros_arm_gazebo.urdf
 ├── package.xml
 └── setup.py
 ```
