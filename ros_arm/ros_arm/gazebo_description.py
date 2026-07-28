@@ -90,8 +90,20 @@ def _add_ros2_control(root, controller_config):
 
 def build_gazebo_description(source_urdf, controller_config):
     """Return a hybrid URDF: CAD visuals + simple stable physics."""
-    root = ET.parse(Path(source_urdf)).getroot()
+    source_urdf = Path(source_urdf)
+    root = ET.parse(source_urdf).getroot()
     root.set('name', 'ros_arm_gazebo_hybrid')
+
+    # Gazebo may rewrite package:// URIs to model:// and then require a
+    # model.config search path. Absolute file URIs are deterministic for the
+    # installed package and keep gzserver startup independent of model paths.
+    mesh_directory = (source_urdf.parent.parent / 'meshes').resolve()
+    package_prefix = 'package://ros_arm/meshes/'
+    for mesh in root.findall('.//visual/geometry/mesh'):
+        filename = mesh.get('filename', '')
+        if filename.startswith(package_prefix):
+            mesh_name = filename[len(package_prefix):]
+            mesh.set('filename', (mesh_directory / mesh_name).as_uri())
 
     links = {link.get('name'): link for link in root.findall('link')}
     for link_name, settings in PHYSICS.items():
