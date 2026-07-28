@@ -6,7 +6,7 @@ Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Humble의
 ## 전체 데이터 흐름
 
 ```text
-joint_state_publisher_gui
+ros_arm_sequence_gui
         │ /joint_states (관절 이름 + rad)
         ▼
 ros_arm_control
@@ -113,7 +113,7 @@ ros2 launch ros_arm display_launch.py serial_port:=/dev/ttyUSB0
 실행되는 노드:
 
 - `robot_state_publisher`: URDF와 JointState를 TF로 변환
-- `joint_state_publisher_gui`: 관절 슬라이더와 `/joint_states` 발행
+- `ros_arm_sequence_gui`: 관절 슬라이더, 시퀀스 저장·재생, `/joint_states` 발행
 - `ros_arm_control`: radian을 서보 degree로 바꿔 시리얼 전송
 - `rviz2`: 화면의 로봇 모델 표시
 
@@ -139,6 +139,37 @@ GUI의 `Randomize` 버튼은 누르지 않고 각 슬라이더를 천천히 움�
 SG90 계열의 내부 가변저항과 기어 유격 때문에 약간의 떨림은 남을 수
 있습니다. 정지 시 PWM을 끄는 `detach()`는 떨림은 멈추지만 팔이 중력으로
 떨어질 수 있어 이 프로젝트의 기본 동작에는 사용하지 않습니다.
+
+## 자세 시퀀스 저장과 재생
+
+launch를 실행하면 전용 시퀀스 GUI가 열립니다. GUI에 보이는 숫자는 실제
+서보 각도인 60~120°이며, 내부에서
+`radians(servo_degree - 90)`으로 변환해 `/joint_states`를 발행합니다.
+
+1. 슬라이더로 한 관절씩 안전한 자세를 만듭니다.
+2. 단계 이름과 이동 시간을 입력합니다.
+3. `현재 자세 추가`를 누릅니다.
+4. 필요한 자세를 순서대로 추가하고 표에서 확인합니다.
+5. `재생`으로 실제 암과 RViz 움직임을 확인합니다.
+6. `JSON 저장`으로 저장하고 다음 실행에서 다시 불러옵니다.
+
+표의 셀은 더블클릭해 수정할 수 있습니다. 행을 더블클릭하면 해당 자세가
+슬라이더와 실제 암에 적용됩니다. 순서 변경, 선택 삭제, 현재 자세로
+덮어쓰기, 반복 재생도 지원합니다.
+
+샘플 파일은 `sequences/fold_and_open.json`입니다.
+
+```json
+{
+  "name": "center",
+  "angles": [90, 90, 90, 90],
+  "duration": 1.0
+}
+```
+
+재생 중에는 시작 자세와 목표 자세 사이를 20ms 간격으로 선형 보간합니다.
+일시정지는 현재 자세를 유지하고, 정지는 재생만 끝내며 서보를 위험한
+0° 위치로 보내지 않습니다.
 
 ## 검증 명령
 
