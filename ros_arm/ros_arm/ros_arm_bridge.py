@@ -27,13 +27,18 @@ class RobotArmSerialBridge(Node):
         self.declare_parameter('center_angle', 90)
         self.declare_parameter('minimum_angle', 60)
         self.declare_parameter('maximum_angle', 120)
+        self.declare_parameter('deadband_degrees', 2)
+        self.declare_parameter('command_rate_hz', 15.0)
 
         port = self.get_parameter('serial_port').value
         baud = self.get_parameter('baud_rate').value
         self.center = self.get_parameter('center_angle').value
         self.minimum = self.get_parameter('minimum_angle').value
         self.maximum = self.get_parameter('maximum_angle').value
+        self.deadband = self.get_parameter('deadband_degrees').value
+        command_rate = self.get_parameter('command_rate_hz').value
         self.last_sent = None
+        self.pending_angles = None
 
         try:
             self.serial = serial.Serial(port, baud, timeout=0.05)
@@ -46,6 +51,8 @@ class RobotArmSerialBridge(Node):
         self.serial.reset_input_buffer()
         self.subscription = self.create_subscription(
             JointState, '/joint_states', self.joint_state_callback, 10)
+        self.command_timer = self.create_timer(
+            1.0 / command_rate, self.send_pending_command)
         self.read_timer = self.create_timer(0.05, self.read_serial_feedback)
         self.get_logger().info(
             f'Connected to Arduino on {port} at {baud} baud')
@@ -70,7 +77,20 @@ class RobotArmSerialBridge(Node):
             servo_angles.append(angle)
 
         angles = tuple(servo_angles)
-        if angles == self.last_sent:
+        if self.last_sent is not None:
+            # Ignore tiny command noise that can make inexpensive analog
+            # servos hunt back and forth around the target.
+            angles = tuple(
+                previous if abs(requested - previous) < self.deadband
+                else requested
+                for requested, previous in zip(angles, self.last_sent)
+            )
+        self.pending_angles = angles
+
+    def send_pending_command(self):
+        """Send at a bounded rate so rapid GUI updates cannot flood the Uno."""
+        angles = self.pending_angles
+        if angles is None or angles == self.last_sent:
             return
 
         command = 'A,' + ','.join(str(value) for value in angles) + '\n'
