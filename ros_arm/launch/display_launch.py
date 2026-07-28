@@ -39,6 +39,8 @@ def generate_launch_description():
                 'center_angle': 90,
                 'minimum_angle': 60,
                 'maximum_angle': 120,
+                'deadband_degrees': 2,
+                'command_rate_hz': 15.0,
             }],
             output='screen',
         ),
