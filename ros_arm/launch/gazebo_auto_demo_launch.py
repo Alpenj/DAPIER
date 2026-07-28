@@ -5,15 +5,17 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+from ros_arm.gazebo_description import build_gazebo_description
 
 
 def generate_launch_description():
     share = Path(get_package_share_directory('ros_arm'))
     gazebo_share = Path(get_package_share_directory('gazebo_ros'))
     controller_config = share / 'config' / 'gazebo_controllers.yaml'
-    robot_description = (
-        share / 'urdf' / 'ros_arm_gazebo.urdf'
-    ).read_text().replace('__CONTROLLER_CONFIG__', str(controller_config))
+    robot_description = build_gazebo_description(
+        share / 'urdf' / 'ros_arm.urdf',
+        controller_config,
+    )
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -76,6 +78,7 @@ def generate_launch_description():
                     'amplitude_degrees': 10.0,
                     'publish_joint_states': False,
                     'publish_controller_commands': True,
+                    'smooth_commands': True,
                 }],
                 output='screen',
             ),
