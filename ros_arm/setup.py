@@ -15,6 +15,7 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.py'))),
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*')),
         (os.path.join('share', package_name, 'rviz'), glob('rviz/*')),
+        (os.path.join('share', package_name, 'config'), glob('config/*')),
         (os.path.join('share', package_name, 'sequences'), glob('sequences/*.json')),
         (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),
     ],
@@ -33,6 +34,7 @@ setup(
         'console_scripts': [
             'ros_arm_control = ros_arm.ros_arm_bridge:main',
             'ros_arm_sequence_gui = ros_arm.sequence_gui:main',
+            'ros_arm_auto_joint_publisher = ros_arm.auto_joint_publisher:main',
         ],
     },
 )
