@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <!-- Generated using onshape-to-robot -->
 <!-- Onshape https://cad.onshape.com/documents/9b3311679635afcaf1704d5c/w/7546a8ae9bdc5df706c892da/e/c3d23997dc276641aa736859 -->
-<robot name="jdcobot100_urdf">
+<robot name="jdcobot100">
   <!-- Link base_sub_assembly -->
   <link name="base_sub_assembly">
     <inertial>
@@ -13,7 +13,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="-0 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/base.stl"/>
+        <mesh filename="package://assets/base.stl"/>
       </geometry>
       <material name="base_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
@@ -22,14 +22,14 @@
     <collision>
       <origin xyz="0 0 0" rpy="-0 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/base.stl"/>
+        <mesh filename="package://assets/base.stl"/>
       </geometry>
     </collision>
     <!-- Part base_link -->
     <visual>
       <origin xyz="-0 0.065 0" rpy="-0 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/base_link.stl"/>
+        <mesh filename="package://assets/base_link.stl"/>
       </geometry>
       <material name="base_link_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
@@ -38,14 +38,14 @@
     <collision>
       <origin xyz="-0 0.065 0" rpy="-0 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/base_link.stl"/>
+        <mesh filename="package://assets/base_link.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_material">
         <color rgba="0 0 1 1"/>
@@ -54,14 +54,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_2 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_2_material">
         <color rgba="0.25098 0.25098 0.25098 1"/>
@@ -70,14 +70,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_3 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_3_material">
         <color rgba="1 1 1 1"/>
@@ -86,14 +86,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_4 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_4_material">
         <color rgba="1 1 1 1"/>
@@ -102,14 +102,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_5 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_5_material">
         <color rgba="0.54902 0.360784 0.0313725 1"/>
@@ -118,14 +118,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_6 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_6_material">
         <color rgba="1 1 1 1"/>
@@ -134,14 +134,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_7 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_7_material">
         <color rgba="1 1 1 1"/>
@@ -150,14 +150,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_8 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_8_material">
         <color rgba="1 1 1 1"/>
@@ -166,14 +166,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_9 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_9_material">
         <color rgba="1 0.54902 0 1"/>
@@ -182,14 +182,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_10 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_10_material">
         <color rgba="0 0 1 1"/>
@@ -198,14 +198,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_11 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_11_material">
         <color rgba="0 0 1 1"/>
@@ -214,14 +214,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_12 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_12_material">
         <color rgba="0.776471 0.756863 0.737255 1"/>
@@ -230,14 +230,14 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_13 -->
     <visual>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_13_material">
         <color rgba="1 0 0 1"/>
@@ -246,7 +246,7 @@
     <collision>
       <origin xyz="0.00545 0 0.01885" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
     </collision>
   </link>
@@ -261,7 +261,7 @@
     <visual>
       <origin xyz="-0 -0 -0.001" rpy="-3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/shoulder.stl"/>
+        <mesh filename="package://assets/shoulder.stl"/>
       </geometry>
       <material name="shoulder_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
@@ -270,14 +270,14 @@
     <collision>
       <origin xyz="-0 -0 -0.001" rpy="-3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/shoulder.stl"/>
+        <mesh filename="package://assets/shoulder.stl"/>
       </geometry>
     </collision>
     <!-- Part shoulder_top -->
     <visual>
       <origin xyz="-0.0420059 1.12134e-05 -0.0008" rpy="-3.14159 0 -0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/shoulder_top.stl"/>
+        <mesh filename="package://assets/shoulder_top.stl"/>
       </geometry>
       <material name="shoulder_top_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
@@ -286,14 +286,14 @@
     <collision>
       <origin xyz="-0.0420059 1.12134e-05 -0.0008" rpy="-3.14159 0 -0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/shoulder_top.stl"/>
+        <mesh filename="package://assets/shoulder_top.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a -->
     <visual>
       <origin xyz="-0 -0 -0.001" rpy="-1.5708 -0 -0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_3_pe_a_material">
         <color rgba="1 1 1 1"/>
@@ -302,14 +302,14 @@
     <collision>
       <origin xyz="-0 -0 -0.001" rpy="-1.5708 -0 -0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_14 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_14_material">
         <color rgba="0 0 1 1"/>
@@ -318,14 +318,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_15 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_15_material">
         <color rgba="0.25098 0.25098 0.25098 1"/>
@@ -334,14 +334,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_16 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_16_material">
         <color rgba="1 1 1 1"/>
@@ -350,14 +350,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_17 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_17_material">
         <color rgba="1 1 1 1"/>
@@ -366,14 +366,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_18 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_18_material">
         <color rgba="0.54902 0.360784 0.0313725 1"/>
@@ -382,14 +382,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_19 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_19_material">
         <color rgba="1 1 1 1"/>
@@ -398,14 +398,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_20 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_20_material">
         <color rgba="1 1 1 1"/>
@@ -414,14 +414,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_21 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_21_material">
         <color rgba="1 1 1 1"/>
@@ -430,14 +430,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_22 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_22_material">
         <color rgba="1 0.54902 0 1"/>
@@ -446,14 +446,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_23 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_23_material">
         <color rgba="0 0 1 1"/>
@@ -462,14 +462,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_24 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_24_material">
         <color rgba="0 0 1 1"/>
@@ -478,14 +478,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_25 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_25_material">
         <color rgba="0.776471 0.756863 0.737255 1"/>
@@ -494,14 +494,14 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_26 -->
     <visual>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_26_material">
         <color rgba="1 0 0 1"/>
@@ -510,7 +510,7 @@
     <collision>
       <origin xyz="-5.94002e-06 -0.0233888 -0.0258" rpy="-0 -1.5708 0"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
     </collision>
   </link>
@@ -523,242 +523,242 @@
     </inertial>
     <!-- Part arm_1 -->
     <visual>
-      <origin xyz="-0.04 0.015 0.0192" rpy="-1.5708 -0 -3.14159"/>
+      <origin xyz="-0.0158578 0.0396678 0.0192" rpy="-1.5708 0 2.30987"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/arm_1.stl"/>
+        <mesh filename="package://assets/arm_1.stl"/>
       </geometry>
       <material name="arm_1_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.04 0.015 0.0192" rpy="-1.5708 -0 -3.14159"/>
+      <origin xyz="-0.0158578 0.0396678 0.0192" rpy="-1.5708 0 2.30987"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/arm_1.stl"/>
+        <mesh filename="package://assets/arm_1.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_27 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_27_material">
         <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_28 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_28_material">
         <color rgba="0.25098 0.25098 0.25098 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_29 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_29_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_30 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_30_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_31 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_31_material">
         <color rgba="0.54902 0.360784 0.0313725 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_32 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_32_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_33 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_33_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_34 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_34_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_35 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_35_material">
         <color rgba="1 0.54902 0 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_36 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_36_material">
         <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_37 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_37_material">
         <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_38 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_38_material">
         <color rgba="0.776471 0.756863 0.737255 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_39 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_39_material">
         <color rgba="1 0 0 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 0 0"/>
+      <origin xyz="-0.0471523 0.0517365 0.01935" rpy="-1.5708 -0 -0.831722"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a_2 -->
     <visual>
-      <origin xyz="0 -0 -0.0018" rpy="-1.5708 -0 3.14159"/>
+      <origin xyz="0 0 -0.0018" rpy="-1.5708 0 2.30987"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_3_pe_a_2_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="0 -0 -0.0018" rpy="-1.5708 -0 3.14159"/>
+      <origin xyz="0 0 -0.0018" rpy="-1.5708 0 2.30987"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
     </collision>
   </link>
@@ -771,242 +771,242 @@
     </inertial>
     <!-- Part arm_1_2 -->
     <visual>
-      <origin xyz="-0.04 0.015 0.0192" rpy="-1.5708 0 -3.14159"/>
+      <origin xyz="-0.0143443 -0.0402398 0.0192" rpy="-1.5708 -0 -1.55445"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/arm_1.stl"/>
+        <mesh filename="package://assets/arm_1.stl"/>
       </geometry>
       <material name="arm_1_2_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.04 0.015 0.0192" rpy="-1.5708 0 -3.14159"/>
+      <origin xyz="-0.0143443 -0.0402398 0.0192" rpy="-1.5708 -0 -1.55445"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/arm_1.stl"/>
+        <mesh filename="package://assets/arm_1.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_40 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_40_material">
         <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_41 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_41_material">
         <color rgba="0.25098 0.25098 0.25098 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_42 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_42_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_43 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_43_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_44 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_44_material">
         <color rgba="0.54902 0.360784 0.0313725 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_45 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_45_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_46 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_46_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_47 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_47_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_48 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_48_material">
         <color rgba="1 0.54902 0 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_49 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_49_material">
         <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_50 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_50_material">
         <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_51 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_51_material">
         <color rgba="0.776471 0.756863 0.737255 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_52 -->
     <visual>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_52_material">
         <color rgba="1 0 0 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.07 -0 0.01935" rpy="-1.5708 -0 0"/>
+      <origin xyz="0.00114395 -0.0699907 0.01935" rpy="-1.5708 0 1.58714"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a_3 -->
     <visual>
-      <origin xyz="0 -0 -0.0018" rpy="-1.5708 -0 -3.14159"/>
+      <origin xyz="-0 -0 -0.0018" rpy="-1.5708 -0 -1.55445"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_3_pe_a_3_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="0 -0 -0.0018" rpy="-1.5708 -0 -3.14159"/>
+      <origin xyz="-0 -0 -0.0018" rpy="-1.5708 -0 -1.55445"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
     </collision>
   </link>
@@ -1019,52 +1019,52 @@
     </inertial>
     <!-- Part arm_end -->
     <visual>
-      <origin xyz="-0.028 -0.015 -0.0068" rpy="1.5708 0 3.14159"/>
+      <origin xyz="-0.0261771 0.0179934 -0.0068" rpy="1.5708 0 2.04758"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/arm_end.stl"/>
+        <mesh filename="package://assets/arm_end.stl"/>
       </geometry>
       <material name="arm_end_material">
         <color rgba="0.627451 0.627451 0.627451 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="-0.028 -0.015 -0.0068" rpy="1.5708 0 3.14159"/>
+      <origin xyz="-0.0261771 0.0179934 -0.0068" rpy="1.5708 0 2.04758"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/arm_end.stl"/>
+        <mesh filename="package://assets/arm_end.stl"/>
       </geometry>
     </collision>
     <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a_4 -->
     <visual>
-      <origin xyz="0 -0 -0.0018" rpy="-1.5708 -0 3.14159"/>
+      <origin xyz="0 -0 -0.0018" rpy="-1.5708 0 2.04758"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
       <material name="sg90___micro_servo_9g___tower_pro_3_pe_a_4_material">
         <color rgba="1 1 1 1"/>
       </material>
     </visual>
     <collision>
-      <origin xyz="0 -0 -0.0018" rpy="-1.5708 -0 3.14159"/>
+      <origin xyz="0 -0 -0.0018" rpy="-1.5708 0 2.04758"/>
       <geometry>
-        <mesh filename="package://ros_arm/meshes/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+        <mesh filename="package://assets/sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
       </geometry>
     </collision>
   </link>
   <!-- Joint from arm_2_sub_asssembly_copy_1 to end_arm_sub_assembly -->
   <joint name="dof_wrist_pitch" type="revolute">
-    <origin xyz="-0.07515 -0 5.00002e-05" rpy="0 -0 0"/>
+    <origin xyz="0.00122811 -0.07514 5.00002e-05" rpy="0 0 1.58714"/>
     <parent link="arm_2_sub_asssembly_copy_1"/>
     <child link="end_arm_sub_assembly"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
   <!-- Joint from arm_1_sub_asssembly to arm_2_sub_asssembly_copy_1 -->
   <joint name="dof_elbow" type="revolute">
-    <origin xyz="-0.07515 -0 5.00002e-05" rpy="-0 0 0"/>
+    <origin xyz="-0.0506213 0.0555428 5.00002e-05" rpy="-0 -0 -0.831722"/>
     <parent link="arm_1_sub_asssembly"/>
     <child link="arm_2_sub_asssembly_copy_1"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
   <!-- Joint from shoulder_sub_assembly to arm_1_sub_asssembly -->
   <joint name="dof_shoulder" type="revolute">
@@ -1072,7 +1072,7 @@
     <parent link="shoulder_sub_assembly"/>
     <child link="arm_1_sub_asssembly"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
   <!-- Joint from base_sub_assembly to shoulder_sub_assembly -->
   <joint name="dof_base" type="revolute">
@@ -1080,6 +1080,6 @@
     <parent link="base_sub_assembly"/>
     <child link="shoulder_sub_assembly"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
 </robot>

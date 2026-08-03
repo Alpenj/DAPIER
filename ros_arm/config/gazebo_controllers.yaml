@@ -12,8 +12,8 @@ controller_manager:
 arm_position_controller:
   ros__parameters:
     joints:
-      - base_shoulder
-      - shoulder_arm1
-      - arm1_arm2
-      - arn2_end_arm
+      - dof_base
+      - dof_shoulder
+      - dof_elbow
+      - dof_wrist_pitch
     interface_name: position

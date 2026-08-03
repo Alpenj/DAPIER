@@ -14,10 +14,10 @@ class RobotArmSerialBridge(Node):
 
     # URDF joint name -> index in the Arduino A,b,s,f,u serial command.
     JOINT_ORDER = (
-        'base_shoulder',
-        'shoulder_arm1',
-        'arm1_arm2',
-        'arn2_end_arm',
+        'dof_base',
+        'dof_shoulder',
+        'dof_elbow',
+        'dof_wrist_pitch',
     )
 
     def __init__(self):

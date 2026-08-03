@@ -1,0 +1,287 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape https://cad.onshape.com/documents/9b3311679635afcaf1704d5c/w/7546a8ae9bdc5df706c892da/e/c3d23997dc276641aa736859 -->
+<mujoco model="jdcobot100">
+  <compiler angle="radian" meshdir="assets" autolimits="true"/>
+  <default>
+    <default class="jdcobot100">
+      <joint frictionloss="0.1" armature="0.005"/>
+      <position kp="50" dampratio="1"/>
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+      </default>
+      <default class="collision">
+        <geom group="3"/>
+      </default>
+    </default>
+  </default>
+  <worldbody>
+    <!-- Link base_sub_assembly -->
+    <body name="base_sub_assembly" pos="0 0 0" quat="1 0 0 0" childclass="jdcobot100">
+      <freejoint name="base_sub_assembly_freejoint"/>
+      <inertial pos="0 0 0" mass="1e-09" fullinertia="1e-09 1e-09 1e-09 0 0 0"/>
+      <!-- Part base -->
+      <geom type="mesh" class="visual" pos="0 0 0" quat="1 -0 0 0" mesh="base" material="base_material"/>
+      <geom type="mesh" class="collision" pos="0 0 0" quat="1 -0 0 0" mesh="base" material="base_material"/>
+      <!-- Part base_link -->
+      <geom type="mesh" class="visual" pos="-0 0.065 0" quat="1 -0 0 0" mesh="base_link" material="base_link_material"/>
+      <geom type="mesh" class="collision" pos="-0 0.065 0" quat="1 -0 0 0" mesh="base_link" material="base_link_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_2 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_3 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_4 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_5 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_6 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_7 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_8 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_9 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_10 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_11 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_12 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+      <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_13 -->
+      <geom type="mesh" class="visual" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+      <geom type="mesh" class="collision" pos="0.00545 0 0.01885" quat="0.707107 0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+      <!-- Link shoulder_sub_assembly -->
+      <body name="shoulder_sub_assembly" pos="0.0003 -0 0.03815" quat="0 1 0 0">
+        <!-- Joint from base_sub_assembly to shoulder_sub_assembly -->
+        <joint axis="0 0 1" name="dof_base" type="hinge"/>
+        <inertial pos="0 0 0" mass="1e-09" fullinertia="1e-09 1e-09 1e-09 0 0 0"/>
+        <!-- Part shoulder -->
+        <geom type="mesh" class="visual" pos="-0 -0 -0.001" quat="0 1 0 0" mesh="shoulder" material="shoulder_material"/>
+        <geom type="mesh" class="collision" pos="-0 -0 -0.001" quat="0 1 0 0" mesh="shoulder" material="shoulder_material"/>
+        <!-- Part shoulder_top -->
+        <geom type="mesh" class="visual" pos="-0.0420059 1.12134e-05 -0.0008" quat="0 -1 0 0" mesh="shoulder_top" material="shoulder_top_material"/>
+        <geom type="mesh" class="collision" pos="-0.0420059 1.12134e-05 -0.0008" quat="0 -1 0 0" mesh="shoulder_top" material="shoulder_top_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a -->
+        <geom type="mesh" class="visual" pos="-0 -0 -0.001" quat="0.707107 -0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+        <geom type="mesh" class="collision" pos="-0 -0 -0.001" quat="0.707107 -0.707107 0 -0" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_14 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_15 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_16 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_17 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_18 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_19 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_20 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_21 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_22 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_23 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_24 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_25 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+        <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_26 -->
+        <geom type="mesh" class="visual" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+        <geom type="mesh" class="collision" pos="-5.94002e-06 -0.0233888 -0.0258" quat="0.707107 -0 -0.707107 0" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+        <!-- Link arm_1_sub_asssembly -->
+        <body name="arm_1_sub_asssembly" pos="-5.94002e-06 -0.00408879 -0.03095" quat="0.5 0.5 -0.5 0.5">
+          <!-- Joint from shoulder_sub_assembly to arm_1_sub_asssembly -->
+          <joint axis="0 0 1" name="dof_shoulder" type="hinge"/>
+          <inertial pos="0 0 0" mass="1e-09" fullinertia="1e-09 1e-09 1e-09 0 0 0"/>
+          <!-- Part arm_1 -->
+          <geom type="mesh" class="visual" pos="-0.0158578 0.0396678 0.0192" quat="0.285655 -0.285655 -0.646839 0.646839" mesh="arm_1" material="arm_1_material"/>
+          <geom type="mesh" class="collision" pos="-0.0158578 0.0396678 0.0192" quat="0.285655 -0.285655 -0.646839 0.646839" mesh="arm_1" material="arm_1_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_27 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_28 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_29 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_30 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_31 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_32 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_33 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_34 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_35 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_36 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_37 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_38 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_39 -->
+          <geom type="mesh" class="visual" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+          <geom type="mesh" class="collision" pos="-0.0471523 0.0517365 0.01935" quat="0.646839 -0.646839 0.285655 -0.285655" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+          <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a_2 -->
+          <geom type="mesh" class="visual" pos="0 0 -0.0018" quat="0.285655 -0.285655 -0.646839 0.646839" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+          <geom type="mesh" class="collision" pos="0 0 -0.0018" quat="0.285655 -0.285655 -0.646839 0.646839" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+          <!-- Link arm_2_sub_asssembly_copy_1 -->
+          <body name="arm_2_sub_asssembly_copy_1" pos="-0.0506213 0.0555428 5.00002e-05" quat="0.914769 -0 0 -0.403978">
+            <!-- Joint from arm_1_sub_asssembly to arm_2_sub_asssembly_copy_1 -->
+            <joint axis="0 0 1" name="dof_elbow" type="hinge"/>
+            <inertial pos="0 0 0" mass="1e-09" fullinertia="1e-09 1e-09 1e-09 0 0 0"/>
+            <!-- Part arm_1_2 -->
+            <geom type="mesh" class="visual" pos="-0.0143443 -0.0402398 0.0192" quat="0.504069 -0.504069 0.495898 -0.495898" mesh="arm_1" material="arm_1_material"/>
+            <geom type="mesh" class="collision" pos="-0.0143443 -0.0402398 0.0192" quat="0.504069 -0.504069 0.495898 -0.495898" mesh="arm_1" material="arm_1_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_40 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a" material="sg90___micro_servo_9g___tower_pro_1_pe_a_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_41 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__2" material="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_42 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__3" material="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_43 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__4" material="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_44 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__5" material="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_45 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__6" material="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_46 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__7" material="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_47 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__8" material="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_48 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__9" material="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_49 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__10" material="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_50 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__11" material="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_51 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__12" material="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_1_pe_a_52 -->
+            <geom type="mesh" class="visual" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+            <geom type="mesh" class="collision" pos="0.00114395 -0.0699907 0.01935" quat="0.495898 -0.495898 -0.504069 0.504069" mesh="sg90___micro_servo_9g___tower_pro_1_pe_a__13" material="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material"/>
+            <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a_3 -->
+            <geom type="mesh" class="visual" pos="-0 -0 -0.0018" quat="0.504069 -0.504069 0.495898 -0.495898" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+            <geom type="mesh" class="collision" pos="-0 -0 -0.0018" quat="0.504069 -0.504069 0.495898 -0.495898" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+            <!-- Link end_arm_sub_assembly -->
+            <body name="end_arm_sub_assembly" pos="0.00122811 -0.07514 5.00002e-05" quat="0.701305 0 0 0.712861">
+              <!-- Joint from arm_2_sub_asssembly_copy_1 to end_arm_sub_assembly -->
+              <joint axis="0 0 1" name="dof_wrist_pitch" type="hinge"/>
+              <inertial pos="0 0 0" mass="1e-09" fullinertia="1e-09 1e-09 1e-09 0 0 0"/>
+              <!-- Part arm_end -->
+              <geom type="mesh" class="visual" pos="-0.0261771 0.0179934 -0.0068" quat="0.367789 0.367789 0.60393 0.60393" mesh="arm_end" material="arm_end_material"/>
+              <geom type="mesh" class="collision" pos="-0.0261771 0.0179934 -0.0068" quat="0.367789 0.367789 0.60393 0.60393" mesh="arm_end" material="arm_end_material"/>
+              <!-- Part sg90___micro_servo_9g___tower_pro_3_pe_a_4 -->
+              <geom type="mesh" class="visual" pos="0 -0 -0.0018" quat="0.367789 -0.367789 -0.60393 0.60393" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+              <geom type="mesh" class="collision" pos="0 -0 -0.0018" quat="0.367789 -0.367789 -0.60393 0.60393" mesh="sg90___micro_servo_9g___tower_pro_3_pe_a" material="sg90___micro_servo_9g___tower_pro_3_pe_a_material"/>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <asset>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__7.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__11.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__13.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__9.stl"/>
+    <mesh file="base.stl"/>
+    <mesh file="shoulder_top.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__6.stl"/>
+    <mesh file="arm_end.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__10.stl"/>
+    <mesh file="base_link.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__8.stl"/>
+    <mesh file="shoulder.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_3_pe_a.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__12.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__3.stl"/>
+    <mesh file="arm_1.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__4.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__2.stl"/>
+    <mesh file="sg90___micro_servo_9g___tower_pro_1_pe_a__5.stl"/>
+    <material name="base_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="base_link_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a_material" rgba="0 0 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__2_material" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__3_material" rgba="1 1 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__4_material" rgba="1 1 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__5_material" rgba="0.54902 0.360784 0.0313725 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__6_material" rgba="1 1 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__7_material" rgba="1 1 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__8_material" rgba="1 1 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__9_material" rgba="1 0.54902 0 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__10_material" rgba="0 0 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__11_material" rgba="0 0 1 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__12_material" rgba="0.776471 0.756863 0.737255 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_1_pe_a__13_material" rgba="1 0 0 1"/>
+    <material name="shoulder_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="shoulder_top_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="sg90___micro_servo_9g___tower_pro_3_pe_a_material" rgba="1 1 1 1"/>
+    <material name="arm_1_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="arm_end_material" rgba="0.627451 0.627451 0.627451 1"/>
+  </asset>
+  <actuator>
+    <position class="jdcobot100" name="dof_base" joint="dof_base"/>
+    <position class="jdcobot100" name="dof_shoulder" joint="dof_shoulder"/>
+    <position class="jdcobot100" name="dof_elbow" joint="dof_elbow"/>
+    <position class="jdcobot100" name="dof_wrist_pitch" joint="dof_wrist_pitch"/>
+  </actuator>
+  <equality/>
+</mujoco>

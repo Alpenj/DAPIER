@@ -10,10 +10,10 @@ from std_msgs.msg import Float64MultiArray
 
 
 JOINT_NAMES = (
-    'base_shoulder',
-    'shoulder_arm1',
-    'arm1_arm2',
-    'arn2_end_arm',
+    'dof_base',
+    'dof_shoulder',
+    'dof_elbow',
+    'dof_wrist_pitch',
 )
 
 
