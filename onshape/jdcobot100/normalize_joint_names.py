@@ -5,9 +5,16 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 
 JOINT_NAME_MAP = {
+    # Current DAPIER assembly. onshape-to-robot removes the dof_ prefix.
+    "base": "dof_base",
+    "shoulder": "dof_shoulder",
+    "elbow": "dof_elbow",
+    "wrist_pitch": "dof_wrist_pitch",
+    # Original JD-edu reference assembly.
     "base_shoulder": "dof_base",
     "shoulder_arm1": "dof_shoulder",
     "arm1_arm2": "dof_elbow",
@@ -16,24 +23,31 @@ JOINT_NAME_MAP = {
 
 
 def normalize(path: Path) -> None:
-    """Replace quoted joint identifiers without touching link or mesh names."""
-    contents = path.read_text(encoding="utf-8")
+    """Normalize joint attributes without changing links, meshes, or materials."""
+    tree = ET.parse(path)
+    root = tree.getroot()
 
-    for old_name, new_name in JOINT_NAME_MAP.items():
-        old_token = f'"{old_name}"'
-        new_token = f'"{new_name}"'
-        if old_token in contents:
-            contents = contents.replace(old_token, new_token)
+    for element in root.iter():
+        if element.tag == "joint":
+            name = element.attrib.get("name")
+            if name in JOINT_NAME_MAP:
+                element.attrib["name"] = JOINT_NAME_MAP[name]
 
-    missing = [
-        new_name
-        for new_name in JOINT_NAME_MAP.values()
-        if f'"{new_name}"' not in contents
-    ]
+        for attribute in ("joint", "joint1", "joint2"):
+            name = element.attrib.get(attribute)
+            if name in JOINT_NAME_MAP:
+                element.attrib[attribute] = JOINT_NAME_MAP[name]
+
+    joint_names = {
+        element.attrib["name"]
+        for element in root.iter("joint")
+        if "name" in element.attrib
+    }
+    missing = sorted(set(JOINT_NAME_MAP.values()) - joint_names)
     if missing:
         raise ValueError(f"{path}: normalized joints not found: {', '.join(missing)}")
 
-    path.write_text(contents, encoding="utf-8")
+    tree.write(path, encoding="unicode", xml_declaration=True)
     print(f"normalized {path}")
 
 
