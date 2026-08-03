@@ -1,6 +1,8 @@
 .env
 **/.env
 **/__pycache__/
+casino_dealer/build/
+casino_dealer/*.egg-info/
 **/robot.pkl
 **/*.part
 onshape/jdcobot100/assets/

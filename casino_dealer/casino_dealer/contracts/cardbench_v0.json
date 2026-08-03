@@ -1,0 +1,99 @@
+{
+  "schema_version": "dapier.cardbench.v0",
+  "control_frequency_hz": 15,
+  "observation": {
+    "state": {
+      "left_arm.joint_position": {
+        "shape": [4],
+        "dtype": "float32",
+        "unit": "radian",
+        "source": "measured"
+      },
+      "right_arm.joint_position": {
+        "shape": [4],
+        "dtype": "float32",
+        "unit": "radian",
+        "source": "measured"
+      },
+      "left_vacuum.pressure": {
+        "shape": [1],
+        "dtype": "float32",
+        "unit": "kilopascal",
+        "source": "measured"
+      },
+      "right_vacuum.pressure": {
+        "shape": [1],
+        "dtype": "float32",
+        "unit": "kilopascal",
+        "source": "measured"
+      }
+    },
+    "images": {
+      "overhead": {
+        "shape": ["height", "width", 3],
+        "dtype": "uint8",
+        "required": true
+      },
+      "left_wrist": {
+        "shape": ["height", "width", 3],
+        "dtype": "uint8",
+        "required": false
+      },
+      "right_wrist": {
+        "shape": ["height", "width", 3],
+        "dtype": "uint8",
+        "required": false
+      }
+    }
+  },
+  "action": {
+    "left_arm.joint_target": {
+      "shape": [4],
+      "dtype": "float32",
+      "unit": "radian",
+      "representation": "absolute"
+    },
+    "right_arm.joint_target": {
+      "shape": [4],
+      "dtype": "float32",
+      "unit": "radian",
+      "representation": "absolute"
+    },
+    "left_vacuum.command": {
+      "shape": [1],
+      "dtype": "float32",
+      "range": [0.0, 1.0],
+      "representation": "absolute"
+    },
+    "right_vacuum.command": {
+      "shape": [1],
+      "dtype": "float32",
+      "range": [0.0, 1.0],
+      "representation": "absolute"
+    }
+  },
+  "task": {
+    "language_instruction": {
+      "dtype": "string",
+      "required": true
+    },
+    "skill": {
+      "dtype": "string",
+      "required": true
+    },
+    "target": {
+      "dtype": "string",
+      "required": true
+    }
+  },
+  "episode": {
+    "success": {
+      "dtype": "bool",
+      "required": true
+    },
+    "failure_reason": {
+      "dtype": "string",
+      "required": false
+    }
+  }
+}

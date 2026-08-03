@@ -8,9 +8,15 @@
 |---|---|---|
 | RViz·Gazebo 시뮬레이션만 학습 | `jdcobot100_sim` | 아니요 |
 | 실제 Arduino 서보까지 제어 | `ros_arm` | 예 |
+| 양팔 카지노 딜러 계약·플래너 개발 | `casino_dealer` | 아니요 |
 
 시뮬레이션만 실행하려면 [`jdcobot100_sim`](jdcobot100_sim/README.md)을
 사용합니다. 아래 내용은 실물 제어용 `ros_arm` 설명입니다.
+
+양팔 카드 딜러의 관측·행동 계약과 블랙잭 딜 순서를 개발하려면
+[`casino_dealer`](casino_dealer/README.md)를 사용합니다. 현재 버전은
+실물 구동 전 단계이며, 외부 의존성 없이 JSON 딜 계획과 단위 테스트를
+실행할 수 있습니다.
 
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
