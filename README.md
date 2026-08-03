@@ -1,5 +1,17 @@
 # ROS 2 + Arduino 4축 로봇암
 
+## 어떤 패키지를 사용해야 하나
+
+이 저장소는 용도에 따라 ROS 2 패키지를 분리합니다.
+
+| 목적 | 패키지 | Arduino·시리얼 포함 |
+|---|---|---|
+| RViz·Gazebo 시뮬레이션만 학습 | `jdcobot100_sim` | 아니요 |
+| 실제 Arduino 서보까지 제어 | `ros_arm` | 예 |
+
+시뮬레이션만 실행하려면 [`jdcobot100_sim`](jdcobot100_sim/README.md)을
+사용합니다. 아래 내용은 실물 제어용 `ros_arm` 설명입니다.
+
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
 
