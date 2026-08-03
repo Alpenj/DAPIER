@@ -5,3 +5,5 @@
 **/*.part
 onshape/jdcobot100/assets/
 onshape/jdcobot100/jdcobot100.urdf
+onshape/jdcobot100/jdcobot100.xml
+onshape/jdcobot100/scene.xml
