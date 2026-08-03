@@ -39,10 +39,10 @@ PHYSICS = {
 }
 
 JOINT_NAMES = (
-    'base_shoulder',
-    'shoulder_arm1',
-    'arm1_arm2',
-    'arn2_end_arm',
+    'dof_base',
+    'dof_shoulder',
+    'dof_elbow',
+    'dof_wrist_pitch',
 )
 
 
@@ -65,10 +65,10 @@ def _replace_physics(link, settings):
 
 def _add_ros2_control(root, controller_config):
     control = ET.SubElement(
-        root, 'ros2_control', name='GazeboSystem', type='system')
+        root, 'ros2_control', name='GazeboSimSystem', type='system')
     hardware = ET.SubElement(control, 'hardware')
     ET.SubElement(hardware, 'plugin').text = (
-        'gazebo_ros2_control/GazeboSystem')
+        'gz_ros2_control/GazeboSimSystem')
 
     for joint_name in JOINT_NAMES:
         joint = ET.SubElement(control, 'joint', name=joint_name)
@@ -82,8 +82,8 @@ def _add_ros2_control(root, controller_config):
     plugin = ET.SubElement(
         gazebo,
         'plugin',
-        filename='libgazebo_ros2_control.so',
-        name='gazebo_ros2_control',
+        filename='libgz_ros2_control-system.so',
+        name='gz_ros2_control::GazeboSimROS2ControlPlugin',
     )
     ET.SubElement(plugin, 'parameters').text = str(controller_config)
 

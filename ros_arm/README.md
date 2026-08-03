@@ -1,6 +1,6 @@
 # ROS 2 + Arduino 4축 로봇암
 
-Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Humble의
+Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
 
 ## 전체 데이터 흐름
@@ -54,10 +54,10 @@ URDF +0.1745 rad ≈ servo 100°
 찾습니다.
 
 ```text
-base_shoulder
-shoulder_arm1
-arm1_arm2
-arn2_end_arm
+dof_base
+dof_shoulder
+dof_elbow
+dof_wrist_pitch
 ```
 
 ## 안전 제한
@@ -99,12 +99,18 @@ Arduino → PC: OK,90,80,100,90
 
 ```bash
 cd ~/my_ros2_ws
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 colcon build --packages-select ros_arm
 source install/setup.bash
 ```
 
 ## 실행
+
+```bash
+ros2 launch ros_arm model_rviz_launch.py
+```
+
+Arduino까지 함께 구동할 때만 다음 launch를 사용합니다.
 
 ```bash
 ros2 launch ros_arm display_launch.py serial_port:=/dev/ttyUSB0
@@ -234,11 +240,11 @@ Gazebo launch는 원본 `ros_arm.urdf`에서 혼합 모델을 동적으로 만�
 
 ```bash
 sudo apt-get install -y \
-  gazebo \
-  ros-humble-gazebo-ros-pkgs \
-  ros-humble-gazebo-ros2-control \
-  ros-humble-ros2-control \
-  ros-humble-ros2-controllers
+  ros-jazzy-desktop \
+  ros-jazzy-ros-gz \
+  ros-jazzy-gz-ros2-control \
+  ros-jazzy-ros2-control \
+  ros-jazzy-ros2-controllers
 ```
 
 Gazebo 자동 시험:
@@ -247,11 +253,17 @@ Gazebo 자동 시험:
 ros2 launch ros_arm gazebo_auto_demo_launch.py
 ```
 
+화면이 열리면 왼쪽 `Entity Tree`에서 `ros_arm`을 선택하고 `F`를 눌러
+카메라를 로봇에 맞춥니다. 마우스 왼쪽 드래그는 회전, 가운데 드래그는
+이동, 휠은 확대/축소입니다. 상단 재생/일시정지 버튼으로 물리 시계를
+제어합니다. Gazebo 창을 닫으면 관련 ROS 노드도 함께 종료되므로 다시
+보려면 위 launch 명령을 재실행합니다.
+
 이 launch는 다음 순서로 동작합니다.
 
-1. Gazebo Classic을 시작합니다.
-2. `robot_description`의 로봇을 `spawn_entity.py`로 생성합니다.
-3. `gazebo_ros2_control`이 네 관절의 position interface를 등록합니다.
+1. Gazebo Harmonic을 시작합니다.
+2. `robot_description`의 로봇을 `ros_gz_sim create`로 생성합니다.
+3. `gz_ros2_control`이 네 관절의 position interface를 등록합니다.
 4. `joint_state_broadcaster`가 실제 시뮬레이션 각도를 `/joint_states`로
    발행합니다.
 5. `arm_position_controller`가 네 관절 위치 명령을 받습니다.
@@ -266,7 +278,7 @@ auto_joint_publisher
         ▼
 arm_position_controller
         ▼
-gazebo_ros2_control → Gazebo physics
+gz_ros2_control → Gazebo physics
         │
         └→ joint_state_broadcaster → /joint_states
 ```
@@ -296,6 +308,7 @@ arm_position_controller active
 ros_arm/
 ├── arduino/ros_control/ros_control.ino
 ├── launch/display_launch.py
+├── launch/model_rviz_launch.py
 ├── launch/auto_demo_launch.py
 ├── launch/gazebo_auto_demo_launch.py
 ├── ros_arm/auto_joint_publisher.py
@@ -303,8 +316,9 @@ ros_arm/
 ├── ros_arm/ros_arm_bridge.py
 ├── config/gazebo_controllers.yaml
 ├── rviz/ros_arm.rviz
+├── meshes -> ../onshape/jdcobot100/reference/assets
 ├── urdf/ros_arm.urdf
-├── urdf/ros_arm.urdf
+├── urdf/ros_arm_gazebo.urdf
 ├── package.xml
 └── setup.py
 ```

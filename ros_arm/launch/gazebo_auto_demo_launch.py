@@ -10,7 +10,7 @@ from ros_arm.gazebo_description import build_gazebo_description
 
 def generate_launch_description():
     share = Path(get_package_share_directory('ros_arm'))
-    gazebo_share = Path(get_package_share_directory('gazebo_ros'))
+    gazebo_share = Path(get_package_share_directory('ros_gz_sim'))
     controller_config = share / 'config' / 'gazebo_controllers.yaml'
     robot_description = build_gazebo_description(
         share / 'urdf' / 'ros_arm.urdf',
@@ -19,7 +19,18 @@ def generate_launch_description():
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            str(gazebo_share / 'launch' / 'gazebo.launch.py')),
+            str(gazebo_share / 'launch' / 'gz_sim.launch.py')),
+        launch_arguments={
+            'gz_args': '-r empty.sdf',
+            'on_exit_shutdown': 'true',
+        }.items(),
+    )
+
+    clock_bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+        output='screen',
     )
 
     robot_state_publisher = Node(
@@ -33,11 +44,12 @@ def generate_launch_description():
     )
 
     spawn_robot = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
+        package='ros_gz_sim',
+        executable='create',
         arguments=[
             '-topic', 'robot_description',
-            '-entity', 'ros_arm',
+            '-name', 'ros_arm',
+            '-allow_renaming', 'true',
         ],
         output='screen',
     )
@@ -87,6 +99,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         gazebo,
+        clock_bridge,
         robot_state_publisher,
         spawn_robot,
         load_controllers,

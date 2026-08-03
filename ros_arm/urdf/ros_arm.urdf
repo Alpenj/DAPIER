@@ -1051,7 +1051,7 @@
     </collision>
   </link>
   <!-- Joint from arm_2_sub_asssembly_copy_1 to end_arm_sub_assembly -->
-  <joint name="arn2_end_arm" type="revolute">
+  <joint name="dof_wrist_pitch" type="revolute">
     <origin xyz="-0.07515 -0 5.00002e-05" rpy="0 -0 0"/>
     <parent link="arm_2_sub_asssembly_copy_1"/>
     <child link="end_arm_sub_assembly"/>
@@ -1059,7 +1059,7 @@
     <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
   </joint>
   <!-- Joint from arm_1_sub_asssembly to arm_2_sub_asssembly_copy_1 -->
-  <joint name="arm1_arm2" type="revolute">
+  <joint name="dof_elbow" type="revolute">
     <origin xyz="-0.07515 -0 5.00002e-05" rpy="-0 0 0"/>
     <parent link="arm_1_sub_asssembly"/>
     <child link="arm_2_sub_asssembly_copy_1"/>
@@ -1067,7 +1067,7 @@
     <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
   </joint>
   <!-- Joint from shoulder_sub_assembly to arm_1_sub_asssembly -->
-  <joint name="shoulder_arm1" type="revolute">
+  <joint name="dof_shoulder" type="revolute">
     <origin xyz="-5.94002e-06 -0.00408879 -0.03095" rpy="1.5708 -1.5708 0"/>
     <parent link="shoulder_sub_assembly"/>
     <child link="arm_1_sub_asssembly"/>
@@ -1075,7 +1075,7 @@
     <limit effort="10" velocity="1" lower="-0.523599" upper="0.523599"/>
   </joint>
   <!-- Joint from base_sub_assembly to shoulder_sub_assembly -->
-  <joint name="base_shoulder" type="revolute">
+  <joint name="dof_base" type="revolute">
     <origin xyz="0.0003 -0 0.03815" rpy="3.14159 0 0"/>
     <parent link="base_sub_assembly"/>
     <child link="shoulder_sub_assembly"/>

@@ -1,0 +1,7 @@
+.env
+**/.env
+**/__pycache__/
+**/robot.pkl
+**/*.part
+onshape/jdcobot100/assets/
+onshape/jdcobot100/jdcobot100.urdf

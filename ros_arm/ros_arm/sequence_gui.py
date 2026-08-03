@@ -34,10 +34,10 @@ from sensor_msgs.msg import JointState
 
 
 JOINTS = (
-    ('Base', 'base_shoulder'),
-    ('Shoulder', 'shoulder_arm1'),
-    ('Forearm', 'arm1_arm2'),
-    ('Upper arm', 'arn2_end_arm'),
+    ('Base', 'dof_base'),
+    ('Shoulder', 'dof_shoulder'),
+    ('Forearm', 'dof_elbow'),
+    ('Upper arm', 'dof_wrist_pitch'),
 )
 MIN_ANGLE = 60
 MAX_ANGLE = 120
