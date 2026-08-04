@@ -98,3 +98,56 @@ Recommended next milestones:
 4. Record CardBench episodes in LeRobot Dataset format.
 5. Train an ACT baseline before comparing SmolVLA and GR00T.
 6. Duplicate the calibrated arm and add the bimanual simulator adapter.
+
+## SO-101 preparation and episode collection
+
+The planner is intentionally hardware-independent, but a policy needs real
+episodes. The repository now includes a small sidecar manifest tool so a
+person can record, review, and accept or reject each episode without editing
+JSON by hand:
+
+```bash
+python3 -m unittest discover -s test -v
+python3 -m casino_dealer.episode_cli --help
+```
+
+Create a manifest before collecting a single-arm card skill:
+
+```bash
+python3 -m casino_dealer.episode_cli init \
+  --path "$HOME/.ros/so101_episodes/casino_one_card/episode_000001/episode_manifest.json" \
+  --task "Pick one card and place it on player_1." \
+  --skill pick_and_place_card \
+  --source lerobot \
+  --fps 30 \
+  --camera front \
+  --calibration-ref so101_follower_main.json
+```
+
+After recording, review the video and mark the result:
+
+```bash
+python3 -m casino_dealer.episode_cli mark \
+  --path "$HOME/.ros/so101_episodes/casino_one_card/episode_000001/episode_manifest.json" \
+  --status accepted \
+  --success true
+
+python3 -m casino_dealer.episode_cli validate-tree \
+  --root "$HOME/.ros/so101_episodes/casino_one_card"
+```
+
+For a future dual-arm episode, repeat `--arm-spec` once per calibrated arm:
+
+```bash
+python3 -m casino_dealer.episode_cli init \
+  --path "$HOME/.ros/so101_episodes/casino_opening_deal/episode_000001/episode_manifest.json" \
+  --task "Deal the blackjack opening hand." \
+  --skill blackjack_opening_deal \
+  --source rosbag2_mcap \
+  --arm-spec left,so101_follower_left,so101_leader_left \
+  --arm-spec right,so101_follower_right,so101_leader_right
+```
+
+The complete human-run sequence, including hardware safety, calibration,
+teleoperation, recording, replay, and ACT evaluation, is in
+[`docs/SO101_CASINO_DEALER_RUNBOOK_KO.md`](../docs/SO101_CASINO_DEALER_RUNBOOK_KO.md).

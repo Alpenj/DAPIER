@@ -16,7 +16,10 @@
 양팔 카드 딜러의 관측·행동 계약과 블랙잭 딜 순서를 개발하려면
 [`casino_dealer`](casino_dealer/README.md)를 사용합니다. 현재 버전은
 실물 구동 전 단계이며, 외부 의존성 없이 JSON 딜 계획과 단위 테스트를
-실행할 수 있습니다.
+실행할 수 있습니다. SO-101 캘리브레이션부터 episode 수집·검수·정책
+평가까지의 사람이 따라 하는 순서는
+[`docs/SO101_CASINO_DEALER_RUNBOOK_KO.md`](docs/SO101_CASINO_DEALER_RUNBOOK_KO.md)에
+정리되어 있습니다.
 
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
