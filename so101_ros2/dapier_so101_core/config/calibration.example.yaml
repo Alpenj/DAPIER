@@ -1,0 +1,55 @@
+# Schema example only. The hardware layer must reject this file while verified is false.
+# Replace every raw range with values measured from one identified arm, then review
+# the direction and physical limits before changing verified to true.
+schema_version: 1
+device_id: EXAMPLE_DO_NOT_USE
+verified: false
+joints:
+  - name: shoulder_pan
+    motor_id: 1
+    homing_offset: 0
+    raw_min: 0
+    raw_max: 4095
+    position_min: -1.91986
+    position_max: 1.91986
+    inverted: false
+  - name: shoulder_lift
+    motor_id: 2
+    homing_offset: 0
+    raw_min: 0
+    raw_max: 4095
+    position_min: -1.74533
+    position_max: 1.74533
+    inverted: false
+  - name: elbow_flex
+    motor_id: 3
+    homing_offset: 0
+    raw_min: 0
+    raw_max: 4095
+    position_min: -1.69000
+    position_max: 1.69000
+    inverted: false
+  - name: wrist_flex
+    motor_id: 4
+    homing_offset: 0
+    raw_min: 0
+    raw_max: 4095
+    position_min: -1.65806
+    position_max: 1.65806
+    inverted: false
+  - name: wrist_roll
+    motor_id: 5
+    homing_offset: 0
+    raw_min: 0
+    raw_max: 4095
+    position_min: -2.74385
+    position_max: 2.84121
+    inverted: false
+  - name: gripper
+    motor_id: 6
+    homing_offset: 0
+    raw_min: 0
+    raw_max: 4095
+    position_min: -0.174533
+    position_max: 1.74533
+    inverted: false

@@ -33,6 +33,7 @@ AI는 제가 정한 방향을 코드와 문서로 옮길 때 ROS 2 개념을 다
 | RViz·Gazebo 시뮬레이션만 학습 | `jdcobot100_sim` | 아니요 |
 | 실제 Arduino 서보까지 제어 | `ros_arm` | 예 |
 | 양팔 카지노 딜러 계약·플래너 개발 | `casino_dealer` | 아니요 |
+| SO-101 자체 ROS 2 계약·안전 텔레옵 | `so101_ros2` | 현재 아니요(모의 검증) |
 
 시뮬레이션만 실행하려면 [`jdcobot100_sim`](jdcobot100_sim/README.md)을
 사용합니다. 아래 내용은 실물 제어용 `ros_arm` 설명입니다.
@@ -44,6 +45,12 @@ AI는 제가 정한 방향을 코드와 문서로 옮길 때 ROS 2 개념을 다
 평가까지의 사람이 따라 하는 순서는
 [`docs/SO101_CASINO_DEALER_RUNBOOK_KO.md`](docs/SO101_CASINO_DEALER_RUNBOOK_KO.md)에
 정리되어 있습니다.
+
+LeRobot CLI를 실시간 실행 계층으로 사용하지 않고 SO-101의 관절 계약,
+calibration 변환과 안전 텔레옵을 직접 학습하려면
+[`so101_ros2`](so101_ros2/README.md)를 사용합니다. 현재는 C++ 코어 단위
+테스트와 합성 `JointState` 통합 검증까지만 완료했으며, 실제 모터 통신과
+torque 제어는 교체 장비에서 읽기 전용 검사 후 진행할 예정입니다.
 
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
