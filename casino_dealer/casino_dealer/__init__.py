@@ -1,4 +1,4 @@
-"""Domain contracts and deterministic planners for DAPIER CardBench."""
+"""Small contracts and planners used while building DAPIER CardBench."""
 
 from casino_dealer.contract import (
     CARD_BENCH_SCHEMA_VERSION,
