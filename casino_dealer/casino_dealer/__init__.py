@@ -1,4 +1,4 @@
-"""Domain contracts and deterministic planners for DAPIER CardBench."""
+"""Small contracts and planners used while building DAPIER CardBench."""
 
 from casino_dealer.contract import (
     CARD_BENCH_SCHEMA_VERSION,
@@ -7,6 +7,12 @@ from casino_dealer.contract import (
 )
 from casino_dealer.model import Arm, DealPlan, DealerCommand, Skill
 from casino_dealer.planner import build_blackjack_opening_plan
+from casino_dealer.episode_manifest import (
+    EPISODE_MANIFEST_SCHEMA_VERSION,
+    build_manifest,
+    load_manifest,
+    validate_manifest,
+)
 
 
 __all__ = [
@@ -16,6 +22,10 @@ __all__ = [
     'DealerCommand',
     'Skill',
     'build_blackjack_opening_plan',
+    'EPISODE_MANIFEST_SCHEMA_VERSION',
+    'build_manifest',
+    'load_manifest',
+    'validate_manifest',
     'load_cardbench_contract',
     'validate_cardbench_contract',
 ]

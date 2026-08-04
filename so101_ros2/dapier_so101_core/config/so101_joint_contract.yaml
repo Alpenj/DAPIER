@@ -1,0 +1,42 @@
+schema_version: 1
+units:
+  position: radian
+  velocity: radian_per_second
+joint_order:
+  - shoulder_pan
+  - shoulder_lift
+  - elbow_flex
+  - wrist_flex
+  - wrist_roll
+  - gripper
+joints:
+  - name: shoulder_pan
+    motor_id: 1
+    lower_limit: -1.91986
+    upper_limit: 1.91986
+    max_velocity: 0.50
+  - name: shoulder_lift
+    motor_id: 2
+    lower_limit: -1.74533
+    upper_limit: 1.74533
+    max_velocity: 0.50
+  - name: elbow_flex
+    motor_id: 3
+    lower_limit: -1.69000
+    upper_limit: 1.69000
+    max_velocity: 0.50
+  - name: wrist_flex
+    motor_id: 4
+    lower_limit: -1.65806
+    upper_limit: 1.65806
+    max_velocity: 0.60
+  - name: wrist_roll
+    motor_id: 5
+    lower_limit: -2.74385
+    upper_limit: 2.84121
+    max_velocity: 0.80
+  - name: gripper
+    motor_id: 6
+    lower_limit: -0.174533
+    upper_limit: 1.74533
+    max_velocity: 0.80

@@ -27,12 +27,13 @@ setup(
     zip_safe=True,
     maintainer='Alpenj',
     maintainer_email='29724960+Alpenj@users.noreply.github.com',
-    description='Task contracts and deterministic planners for DAPIER CardBench.',
+    description='Experiment contracts and deterministic planners for the DAPIER card-dealer project.',
     license='MIT',
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
             'casino_blackjack_plan = casino_dealer.cli:main',
+            'casino_episode = casino_dealer.episode_cli:main',
         ],
     },
 )

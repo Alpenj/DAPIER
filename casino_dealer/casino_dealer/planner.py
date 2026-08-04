@@ -1,4 +1,4 @@
-"""Deterministic task planners for the first CardBench milestones."""
+"""Deterministic task planner used for the current CardBench experiment."""
 
 from __future__ import annotations
 

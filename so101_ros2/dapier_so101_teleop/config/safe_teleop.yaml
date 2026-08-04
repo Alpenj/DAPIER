@@ -1,0 +1,14 @@
+safe_leader_follower:
+  ros__parameters:
+    leader_topic: /leader/joint_states
+    follower_state_topic: /follower/joint_states
+    command_topic: /follower/trajectory_controller/joint_trajectory
+    enable_service: /dapier_so101/teleop/enable
+    enabled_topic: /dapier_so101/teleop/enabled
+
+    # The node emits no command until the service is explicitly enabled.
+    publish_rate_hz: 50.0
+    stale_timeout_s: 0.25
+    max_start_error_rad: 0.35
+    hard_limit_tolerance_rad: 0.02
+    command_horizon_s: 0.04
