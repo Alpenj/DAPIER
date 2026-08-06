@@ -1,0 +1,145 @@
+# SO-101 sim-first G0 학습 기록
+
+- `record_id`: `DAPIER-2026-08-07-so101-g0`
+- 실행일: 2026-08-07
+- 범위: G0 환경 smoke만
+- 구현 commit: `00b211a6fc8f965a83337786582320e34629d4f1`
+
+## 이번에 확인하려는 것
+
+오늘 수업에서 내가 궁극적으로 만들고 싶은 양팔 카지노 딜러까지 바로
+넘어가기 전에, 단일 SO-101 시뮬레이션의 가장 아래 계약부터 확인하고 있다.
+이번 G0에서는 기존 MuJoCo 모델을 읽기 전용으로 불러와 여섯 관절의 이름과
+순서, degree/radian 변환, gripper `0..100` 변환, 보정 파일 identity, 오래된
+frame 거부 규칙을 검사한다.
+
+Virtual Leader 조작, episode 녹화, 정책 학습·평가, ROS 2 adapter, 시리얼
+연결과 실물 제어는 이번 범위가 아니다. `dapier_sim_first.gate` CLI도
+`init-g0`와 `g0`만 제공한다.
+
+## 기존 작업과의 관계
+
+작업을 시작하며 같은 이름처럼 보이는 폴더를 다시 확인했다.
+
+| 위치 | 직접 확인한 역할 | 이번 G0에서 한 일 |
+|---|---|---|
+| `$HOME/so101` | LeRobot 0.6.0 checkout, 별도 venv, 커밋하지 않은 `so101_mujoco`, 진단 dataset | 코드를 수정하지 않고 MuJoCo venv와 기존 모델만 읽기 전용 입력으로 사용 |
+| `$HOME/so101_ros2_ws` | `build/install/log`가 있는 colcon workspace | 빌드하거나 launch하지 않음 |
+| `DAPIER/so101_ros2` | DAPIER가 소유하는 ROS 2 core와 안전 teleop의 정식 소스 | 수정하지 않음 |
+| `DAPIER-lerobot-ros2-lab` | 2026-08-06 연구 계획용 별도 Git worktree | 계획과 현재 환경 경계만 읽고 수정하지 않음 |
+
+`$HOME/so101_ros2_ws/src/dapier-so101-ros2`는 `DAPIER/so101_ros2`를 가리키는
+symlink다. 별도 lab worktree 안의 `so101_ros2`도 현재 정식 소스와 같고,
+확인된 차이는 생성된 `__pycache__`뿐이었다.
+
+## 환경 매트릭스 대조
+
+설치나 다운로드 전에 아래 상태를 읽기 전용으로 확인했다.
+
+| 항목 | 직접 확인한 값 | 계약 문서와의 대조 |
+|---|---|---|
+| OS | Ubuntu 24.04.4 LTS, amd64 | `Ubuntu 24.04` 후보 행과 일치 |
+| ROS 2 | Jazzy, `/opt/ros/jazzy`, package 428개 | 후보 행과 일치. nexus/LeRobot/MuJoCo 전체 결합은 미검증 |
+| system Python | 3.12.3, `/usr/bin/python3` | 후보 행 및 nexus의 Python 3.12+ 조건과 일치 |
+| uv | 0.12.0 | 설치됨 |
+| GPU | NVIDIA RTX 5050 Laptop GPU 8151 MiB, driver 595.84와 AMD Phoenix3 | 장치·driver만 확인. G0에서 render는 실행하지 않음 |
+| system Python package | NumPy 1.26.4, pytest 7.4.4, torch 2.13.0 | MuJoCo, LeRobot, Gymnasium, so101-nexus는 설치되지 않음 |
+| 기존 LeRobot venv | Python 3.12.3, MuJoCo 3.8.1, LeRobot 0.6.0, Gymnasium 1.3.0, torch 2.11.0+cu128 | 모델 smoke에는 사용 가능. 계약의 pinned nexus 0.5.1 조합으로 보지 않음 |
+
+따라서 이 PC는 문서의 `Ubuntu 24.04 + ROS2 Jazzy + Python 3.12 후보` 축에는
+맞는다. 하지만 `so101-nexus` 0.5.1이 설치된 것이 아니므로 전체 조합의
+호환성을 확인했다고 쓰지 않는다. 별도 venv의 LeRobot 소스도 수정된 dirty
+상태라 이번 G0 구현과 섞지 않았다.
+
+## G0 구현
+
+이번에 추가한 공개 경계는 다음뿐이다.
+
+- `protocols.py`: `connect`, `disconnect`, `get_action` 구조와 exact frame schema
+- `embodiment.py`: SO-101 여섯 채널과 body degree/radian, gripper 선형 변환
+- `environment.py`: 개인정보와 hardware probe를 제외한 읽기 전용 환경 수집
+- `gate.py`: 새 run manifest 생성, G0 검증, 재사용 불가능한 receipt 기록
+
+frame은 embodiment/revision/calibration/channel order/unit가 모두 exact match해야
+한다. `sequence_id`는 strictly increasing, monotonic timestamp는 nondecreasing이어야
+하며 30 Hz의 두 control period보다 오래된 `age > 2T` frame은 거부한다.
+범위를 넘는 action도 조용히 clip하지 않고 거부한다.
+
+## 실제 검증
+
+먼저 시스템 Python과 기존 LeRobot venv에서 같은 단위 테스트를 실행했다.
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s dapier_sim_first/test -v
+PYTHONDONTWRITEBYTECODE=1 \
+  "$HOME/so101/lerobot/.venv/bin/python" \
+  -m unittest discover -s dapier_sim_first/test -v
+```
+
+두 interpreter에서 각각 `8/8`이 통과했다. 처음 실행에서는 endpoint의
+degree/radian 부동소수점 오차가 약 `1e-16`만큼 범위를 벗어나는 실패가
+발생했다. 실제 범위 초과 거부는 유지하고, `1e-12` 이하의 수학 round-off만
+경계값으로 정규화한 뒤 다시 통과했다.
+
+이번 실행은 저장소 밖의 새 경로만 사용했다.
+
+```text
+$HOME/dapier-runs/so101-foundation/20260806T233431Z-g0/
+├── run-manifest.json
+└── G0/
+    ├── environment.json
+    ├── contract.json
+    └── receipt.json
+```
+
+직접 확인한 receipt는 `PASS`이며 결과는 다음과 같다.
+
+| G0 metric | 결과 |
+|---|---:|
+| pinned revision manifest exact match | 5/5 |
+| MuJoCo model load | 1/1 |
+| joint/actuator channel과 order | 6/6 |
+| unit conversion round-trip | 6/6 |
+| calibration identity | 1/1 |
+| valid frame acceptance | 2/2 |
+| invalid frame deterministic rejection | 13/13 |
+| schema/rejection-rule violation | 0 |
+
+`pick_cube.xml`은 MuJoCo 3.8.1에서 로드됐고 named joint와 actuator 순서는 모두
+`shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`,
+`gripper`였다. manifest hash는
+`sha256:5f156f65375824c20cf3f59f9abcf49faa6379f3291666b07e1da4acc708a0ea`다.
+manifest와 세 결과 JSON은 모두 mode `0444`로 생성됐다.
+
+같은 명령을 같은 run에 다시 실행해 보니 exit code `2`와 함께
+`RUN_ROOT contains an existing artifact or receipt; refusing reuse`로 중단됐다.
+기존 PASS receipt를 새 실행 증거로 재사용하지 않는 조건도 확인했다.
+
+revision `5/5`는 작업 계약에 적힌 다섯 SHA가 manifest와 exact match한다는
+뜻이다. 다섯 upstream checkout이 이 PC에 모두 있다는 뜻은 아니다. 실제 G0
+구현 commit은 manifest와 현재 repository가
+`00b211a6fc8f965a83337786582320e34629d4f1`로 같은지도 별도로 검사했다.
+
+## 물건 집기 상태
+
+G0와 물건 집기 성공은 다르다. 기존
+`$HOME/so101/sim_dataset/so101_mujoco_joint_sweep`을 읽어 보니 LeRobot v3
+형태로 5 episodes, 450 frames가 있고 6축 state/action과 front image가
+기록돼 있다. 하지만 `next.success`는 `0/450`, episode 성공은 `0/5`다.
+
+이 dataset은 관절과 기록 파이프라인을 확인한 deterministic joint sweep이며
+집기 demonstration이 아니다. `PickCube-v0` 장면과 큐브·트레이 최종 위치
+평가기준은 구현돼 있지만, approach/grasp/lift/place trajectory와 실제 lift
+metric은 아직 없다. 따라서 현재 증거는 “모델·이미지·기록 경로가 동작한다”
+까지이고 “로봇팔이 물건을 집어 올린다”는 아직 확인하지 못한 부분이다.
+
+## 다음에 확인할 것
+
+별도 범위가 승인되면 단일 팔 scripted pick-lift-place부터 확인할 예정이다.
+큐브 초기 높이 대비 상승, gripper contact 유지, 트레이 최종 위치, seed별
+성공률과 영상을 저장소 밖 새 run에 기록해야 한다. 그 결과가 나온 뒤에야
+human demonstration, policy 학습, 한 팔 카드 조작, 마지막으로 CardBench 양팔
+계약으로 확장한다.
+
+이번 작업에서는 G1 이상, GUI/render, dataset 생성, 정책, ROS 2 launch,
+serial 연결, 물리 hardware movement를 진행하지 않았다.

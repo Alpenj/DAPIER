@@ -168,3 +168,32 @@ serial 연결이나 물리 hardware movement 전에 멈추고 별도 승인을 �
 ## 실행 상태와 증거 경계
 
 이 문서는 **소스 사실**(위 고정 corpus와 로컬 contract), **설계 추론**(권장 wrapper/embodiment/Gate), **실행 미검증**(모든 Gate 결과)으로 나뉜다. 작성 시점의 Windows host는 Python 3.14.4 및 uv 0.10.2만 감지되었고 WSL 열거는 access denied였다. 그러므로 이 PC에서 MuJoCo, so101-nexus, GUI, WSL, dataset recording, training, physical hardware, simulator 또는 sim-to-real이 성공했다는 주장은 없다. 실제 증거는 교육용 노트북에서 해당 Gate가 만든 새 artifact와 metric으로만 승격된다.
+
+### 2026-08-07 Ubuntu PC G0 실행 추가 기록
+
+- `record_id`: `DAPIER-2026-08-07-so101-g0`
+- 구현 commit: `00b211a6fc8f965a83337786582320e34629d4f1`
+- 실행 기록: [`dapier_sim_first/README.md`](../dapier_sim_first/README.md)
+
+오늘 수업에서 이 문서를 작업 계약으로 다시 읽고, 설치나 다운로드 전에 현재
+PC를 읽기 전용으로 확인했다. Ubuntu 24.04.4 LTS, ROS 2 Jazzy, system Python
+3.12.3이므로 위 환경 매트릭스의 두 번째 후보 행과 기본 축이 일치한다. 기존
+`$HOME/so101/lerobot` venv에는 MuJoCo 3.8.1과 수정 중인 LeRobot 0.6.0이
+있지만 `so101-nexus` 0.5.1은 설치되어 있지 않다. 따라서 전체
+nexus/LeRobot/MuJoCo/ROS 2 조합의 호환성을 주장하지 않는다.
+
+새 외부 run
+`$HOME/dapier-runs/so101-foundation/20260806T233431Z-g0`에서 G0를 직접
+실행해 `PASS`를 확인했다. revision manifest exact match `5/5`, model load
+`1/1`, channel/order `6/6`, unit conversion `6/6`, calibration identity `1/1`,
+schema/rejection-rule violation `0`이다. revision `5/5`는 이 문서가 고정한
+다섯 SHA와 manifest 값이 일치한다는 뜻이며 다섯 upstream checkout이 모두
+로컬에 존재한다는 주장이 아니다. 모델은 기존 로컬
+`pick_cube.xml`을 MuJoCo에서 읽기 전용으로 load했고 GUI/render는 실행하지
+않았다.
+
+같은 run을 다시 실행하자 기존 artifact/receipt 재사용으로 exit code `2`가
+발생해 중단되는 것도 확인했다. G1 이상, 새 dataset/video/log/benchmark,
+정책, ROS 2 adapter, serial과 hardware control은 진행하지 않았다. 기존
+joint-sweep dataset 5 episodes/450 frames도 읽어 보니 success는 `0/5`라서
+물건 집기 성공이나 sim-to-real 결과로 승격하지 않는다.
