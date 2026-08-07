@@ -52,9 +52,9 @@ JOINT_NAMES = (
 CAMERA_NAMES = ("front", "top", "wrist")
 POLICY_CAMERA_NAMES = ("top", "wrist")
 CAMERA_OBSERVATION_KEYS = {
-    "front": "pixels",
-    "top": "pixels_top",
-    "wrist": "pixels_wrist",
+    "front": "pixels/front",
+    "top": "pixels/top",
+    "wrist": "pixels/wrist",
 }
 
 # Limits are taken from the upstream SO-101 new-calibration MJCF.
@@ -246,13 +246,17 @@ class SO101MujocoEnv(gym.Env):
                 low=ACTION_LOW, high=ACTION_HIGH, dtype=np.float32
             )
         if obs_type in {"pixels", "pixels_agent_pos"}:
-            for camera_name in self.camera_names:
-                observation_spaces[CAMERA_OBSERVATION_KEYS[camera_name]] = gym.spaces.Box(
-                    low=0,
-                    high=255,
-                    shape=(observation_height, observation_width, 3),
-                    dtype=np.uint8,
-                )
+            observation_spaces["pixels"] = gym.spaces.Dict(
+                {
+                    camera_name: gym.spaces.Box(
+                        low=0,
+                        high=255,
+                        shape=(observation_height, observation_width, 3),
+                        dtype=np.uint8,
+                    )
+                    for camera_name in self.camera_names
+                }
+            )
         self.observation_space = gym.spaces.Dict(observation_spaces)
 
         self._mujoco: Any | None = None
@@ -388,13 +392,14 @@ class SO101MujocoEnv(gym.Env):
         assert self.data is not None and self._joint_qpos_addresses is not None
         return self.data.qpos[self._joint_qpos_addresses]
 
-    def _get_observation(self) -> dict[str, np.ndarray]:
-        observation: dict[str, np.ndarray] = {}
+    def _get_observation(self) -> dict[str, Any]:
+        observation: dict[str, Any] = {}
         if self.obs_type in {"state", "pixels_agent_pos"}:
             observation["agent_pos"] = qpos_to_lerobot_state(self._joint_qpos())
         if self.obs_type in {"pixels", "pixels_agent_pos"}:
-            for camera_name in self.camera_names:
-                observation[CAMERA_OBSERVATION_KEYS[camera_name]] = self.render(camera_name)
+            observation["pixels"] = {
+                camera_name: self.render(camera_name) for camera_name in self.camera_names
+            }
         return observation
 
     def _task_metrics(self) -> tuple[bool, float]:

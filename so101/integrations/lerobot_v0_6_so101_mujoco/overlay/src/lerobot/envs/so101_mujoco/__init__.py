@@ -26,8 +26,11 @@ from .control_routing import (
     build_wrist_student_dataset_command,
     build_wrist_vla_eval_command,
     build_wrist_vla_train_command,
+    mark_ik_expert_dataset_verified,
+    mark_wrist_vla_smoke_completed,
     resolve_control_route,
     write_ik_expert_dataset_contract,
+    write_wrist_student_dataset_contract,
 )
 from .env import (
     ACTION_HIGH,
@@ -124,10 +127,13 @@ __all__ = [
     "lerobot_action_to_qpos",
     "leader_action_dict_to_array",
     "load_camera_profile",
+    "mark_ik_expert_dataset_verified",
+    "mark_wrist_vla_smoke_completed",
     "qpos_to_lerobot_state",
     "project_pixel_to_horizontal_plane",
     "resolve_control_route",
     "scripted_pick_lift_action",
     "should_save_episode",
     "write_ik_expert_dataset_contract",
+    "write_wrist_student_dataset_contract",
 ]

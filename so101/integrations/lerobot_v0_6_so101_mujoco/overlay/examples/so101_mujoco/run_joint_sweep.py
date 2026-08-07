@@ -100,7 +100,7 @@ def run(args: argparse.Namespace) -> None:
                     dataset.add_frame(
                         {
                             OBS_STATE: observation["agent_pos"],
-                            f"{OBS_IMAGES}.front": observation["pixels"],
+                            f"{OBS_IMAGES}.front": observation["pixels"]["front"],
                             ACTION: action,
                             "next.reward": np.array([reward], dtype=np.float32),
                             "next.success": np.array([info["is_success"]], dtype=bool),

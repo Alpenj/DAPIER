@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -55,13 +56,17 @@ from lerobot.envs.so101_mujoco import (
     estimate_blue_cube_world_position,
     leader_action_dict_to_array,
     lerobot_action_to_qpos,
+    mark_ik_expert_dataset_verified,
+    mark_wrist_vla_smoke_completed,
     project_pixel_to_horizontal_plane,
     qpos_to_lerobot_state,
     resolve_control_route,
     scripted_pick_lift_action,
     should_save_episode,
     write_ik_expert_dataset_contract,
+    write_wrist_student_dataset_contract,
 )
+from lerobot.envs.utils import preprocess_observation
 
 
 def test_joint_contract_and_round_trip():
@@ -178,6 +183,38 @@ def test_ik_expert_sidecar_defines_wrist_only_student_derivation(tmp_path):
     )
     assert path == tmp_path / "meta" / "dapier_control_route.json"
     assert path.is_file()
+    mark_ik_expert_dataset_verified(tmp_path, episodes=3, frames=1980)
+    verified = json.loads(path.read_text())
+    assert verified["claims"]["ik_teacher_verified_in_sim"] is True
+    assert verified["ik_teacher_verification"]["successful_episodes"] == 3
+    assert verified["claims"]["vla_trained"] is False
+    student_path = write_wrist_student_dataset_contract(
+        tmp_path,
+        tmp_path / "student",
+        student_features=("observation.images.wrist", "observation.state", "action"),
+        episodes=3,
+        frames=1980,
+    )
+    student = json.loads(student_path.read_text())
+    assert student["student_dataset_derivation"]["verified"] is True
+    assert len(student["student_dataset_derivation"]["teacher_contract_sha256"]) == 64
+    with pytest.raises(ValueError, match="remove the top"):
+        write_wrist_student_dataset_contract(
+            tmp_path,
+            tmp_path / "bad-student",
+            student_features=("observation.images.top", "observation.images.wrist"),
+            episodes=3,
+            frames=1980,
+        )
+    smoke_path = mark_wrist_vla_smoke_completed(
+        tmp_path / "student", training_steps=1, rollout_steps=5, rollout_success=False
+    )
+    smoke = json.loads(smoke_path.read_text())
+    assert smoke["claims"]["vla_training_smoke_completed"] is True
+    assert smoke["claims"]["vla_inference_smoke_completed"] is True
+    assert smoke["claims"]["vla_trained"] is False
+    assert smoke["claims"]["vla_evaluated"] is False
+    assert smoke["vla_smoke_verification"]["rollout_success"] is False
 
 
 def test_wrist_vla_route_delegates_to_standard_lerobot_evaluator(tmp_path):
@@ -223,6 +260,7 @@ def test_wrist_student_trains_with_standard_smolvla_pipeline(tmp_path):
     )
     assert command[:3] == ["python", "-m", "lerobot.scripts.lerobot_train"]
     assert "--policy.type=smolvla" in command
+    assert "--policy.load_vlm_weights=true" in command
     assert "--policy.push_to_hub=false" in command
     assert "--steps=1000" in command
 
@@ -232,10 +270,10 @@ def test_config_exposes_real_robot_compatible_features():
     assert cfg.type == "so101_mujoco"
     assert cfg.features["action"].shape == (6,)
     assert cfg.features["agent_pos"].shape == (6,)
-    assert cfg.features["pixels_top"].shape == (120, 160, 3)
-    assert cfg.features["pixels_wrist"].shape == (120, 160, 3)
-    assert cfg.features_map["pixels_top"] == "observation.images.top"
-    assert cfg.features_map["pixels_wrist"] == "observation.images.wrist"
+    assert cfg.features["pixels/top"].shape == (120, 160, 3)
+    assert cfg.features["pixels/wrist"].shape == (120, 160, 3)
+    assert cfg.features_map["pixels/top"] == "observation.images.top"
+    assert cfg.features_map["pixels/wrist"] == "observation.images.wrist"
     assert cfg.camera_names == POLICY_CAMERA_NAMES
 
 
@@ -448,13 +486,16 @@ def test_headless_dual_camera_render():
     )
     try:
         obs, _ = env.reset(seed=1)
-        assert obs["pixels_top"].shape == (96, 128, 3)
-        assert obs["pixels_top"].dtype == np.uint8
-        assert obs["pixels_top"].max() > obs["pixels_top"].min()
-        assert obs["pixels_wrist"].shape == (96, 128, 3)
-        assert obs["pixels_wrist"].dtype == np.uint8
-        assert obs["pixels_wrist"].max() > obs["pixels_wrist"].min()
-        assert not np.array_equal(obs["pixels_top"], obs["pixels_wrist"])
+        assert obs["pixels"]["top"].shape == (96, 128, 3)
+        assert obs["pixels"]["top"].dtype == np.uint8
+        assert obs["pixels"]["top"].max() > obs["pixels"]["top"].min()
+        assert obs["pixels"]["wrist"].shape == (96, 128, 3)
+        assert obs["pixels"]["wrist"].dtype == np.uint8
+        assert obs["pixels"]["wrist"].max() > obs["pixels"]["wrist"].min()
+        assert not np.array_equal(obs["pixels"]["top"], obs["pixels"]["wrist"])
+        policy_obs = preprocess_observation(obs)
+        assert policy_obs["observation.images.top"].shape == (1, 3, 96, 128)
+        assert policy_obs["observation.images.wrist"].shape == (1, 3, 96, 128)
     finally:
         env.close()
 

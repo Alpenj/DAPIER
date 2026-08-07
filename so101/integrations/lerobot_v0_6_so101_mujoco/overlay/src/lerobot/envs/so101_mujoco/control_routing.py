@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -113,6 +114,8 @@ def build_ik_expert_dataset_contract(
         },
         "claims": {
             "ik_teacher_verified_in_sim": False,
+            "vla_training_smoke_completed": False,
+            "vla_inference_smoke_completed": False,
             "vla_trained": False,
             "vla_evaluated": False,
             "physical_camera_alignment_verified": False,
@@ -133,6 +136,93 @@ def write_ik_expert_dataset_contract(
     )
     output_path = Path(dataset_root) / "meta" / "dapier_control_route.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output_path
+
+
+def mark_ik_expert_dataset_verified(dataset_root: Path, *, episodes: int, frames: int) -> Path:
+    """Mark a completed all-success sim collection without overstating VLA or physical claims."""
+    if min(episodes, frames) <= 0:
+        raise ValueError("episodes and frames must be positive")
+    output_path = Path(dataset_root) / "meta" / "dapier_control_route.json"
+    if not output_path.is_file():
+        raise FileNotFoundError(f"Missing IK expert dataset contract: {output_path}")
+    contract = json.loads(output_path.read_text(encoding="utf-8"))
+    if contract.get("schema_version") != CONTROL_CONTRACT_SCHEMA_VERSION:
+        raise ValueError("Cannot verify a dataset with an unsupported control contract")
+    contract["claims"]["ik_teacher_verified_in_sim"] = True
+    contract["ik_teacher_verification"] = {
+        "successful_episodes": episodes,
+        "recorded_frames": frames,
+        "success_filter": "all_saved_episodes_passed_environment_success_condition",
+    }
+    output_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output_path
+
+
+def write_wrist_student_dataset_contract(
+    teacher_root: Path,
+    student_root: Path,
+    *,
+    student_features: Sequence[str],
+    episodes: int,
+    frames: int,
+) -> Path:
+    """Carry verified IK provenance into a top-free wrist student dataset."""
+    if min(episodes, frames) <= 0:
+        raise ValueError("episodes and frames must be positive")
+    features = set(student_features)
+    required = {"observation.images.wrist", "observation.state", "action"}
+    if not required.issubset(features) or "observation.images.top" in features:
+        raise ValueError("Student features must retain wrist/state/action and remove the top image")
+    teacher_path = Path(teacher_root) / "meta" / "dapier_control_route.json"
+    if not teacher_path.is_file():
+        raise FileNotFoundError(f"Missing IK teacher contract: {teacher_path}")
+    teacher_bytes = teacher_path.read_bytes()
+    contract = json.loads(teacher_bytes)
+    if contract.get("schema_version") != CONTROL_CONTRACT_SCHEMA_VERSION:
+        raise ValueError("Cannot derive a student from an unsupported control contract")
+    if contract.get("claims", {}).get("ik_teacher_verified_in_sim") is not True:
+        raise ValueError("IK teacher must be verified before deriving a VLA student dataset")
+    contract["student_dataset_derivation"].update(
+        {
+            "verified": True,
+            "teacher_contract_sha256": hashlib.sha256(teacher_bytes).hexdigest(),
+            "episodes": episodes,
+            "frames": frames,
+            "result_features": sorted(features),
+        }
+    )
+    output_path = Path(student_root) / "meta" / "dapier_control_route.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output_path
+
+
+def mark_wrist_vla_smoke_completed(
+    student_root: Path,
+    *,
+    training_steps: int,
+    rollout_steps: int,
+    rollout_success: bool,
+) -> Path:
+    """Record an executable VLA smoke while keeping full training/evaluation claims false."""
+    if min(training_steps, rollout_steps) <= 0:
+        raise ValueError("training_steps and rollout_steps must be positive")
+    output_path = Path(student_root) / "meta" / "dapier_control_route.json"
+    if not output_path.is_file():
+        raise FileNotFoundError(f"Missing wrist student contract: {output_path}")
+    contract = json.loads(output_path.read_text(encoding="utf-8"))
+    if contract.get("student_dataset_derivation", {}).get("verified") is not True:
+        raise ValueError("Wrist student derivation must be verified before a VLA smoke")
+    contract["claims"]["vla_training_smoke_completed"] = True
+    contract["claims"]["vla_inference_smoke_completed"] = True
+    contract["vla_smoke_verification"] = {
+        "training_steps": training_steps,
+        "rollout_steps": rollout_steps,
+        "rollout_success": bool(rollout_success),
+        "scope": "pipeline_smoke_not_trained_policy_performance",
+    }
     output_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
 
@@ -188,6 +278,7 @@ def build_wrist_vla_train_command(
         f"--dataset.repo_id={dataset_repo_id}",
         f"--dataset.root={dataset_root}",
         "--policy.type=smolvla",
+        "--policy.load_vlm_weights=true",
         "--policy.push_to_hub=false",
         "--wandb.enable=false",
         f"--output_dir={output_dir}",

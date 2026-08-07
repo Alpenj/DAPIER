@@ -33,7 +33,6 @@ from typing import Any
 import numpy as np
 
 from lerobot.envs.so101_mujoco import (
-    CAMERA_OBSERVATION_KEYS,
     IK_OBSERVE_ACTION,
     JOINT_NAMES,
     POLICY_CAMERA_NAMES,
@@ -558,7 +557,7 @@ def add_dataset_frame(dataset, observation, action, reward, info, done, camera_n
         "task": "Pick up the blue cube and place it in the green tray.",
     }
     for camera_name in camera_names:
-        frame[f"{OBS_IMAGES}.{camera_name}"] = observation[CAMERA_OBSERVATION_KEYS[camera_name]]
+        frame[f"{OBS_IMAGES}.{camera_name}"] = observation["pixels"][camera_name]
     dataset.add_frame(frame)
 
 
