@@ -96,21 +96,45 @@ IK teacher dataset에서 student dataset을 만드는 명령은
 action을 학습하고, wrist-only evaluator로 되돌려 실행한다. 이 세 명령은 코드
 builder와 test로 고정했다.
 
-아직 실제 expert dataset을 수집하지 않았고 SmolVLA checkpoint도 학습하지
-않았다. parser probe에서는 dataset/checkpoint argument가 정상 해석된 뒤 일부러
-지정한 없는 경로를 읽는 단계에서 멈추는 것까지만 확인했다. 따라서 VLA 성공률은
-아직 결과로 적지 않는다.
+## 실제 IK→VLA 배관 smoke
+
+새 외부 run
+`$HOME/dapier-runs/so101-camera-vla/20260807T053717Z`에서 headless collector를
+실행했다. 120×160 top+wrist RGB, seed `200..202`의 IK episode `3/3`, 총
+`1,980` frame이 성공했다. RGB XY 오차는 평균 `1.482 mm`, 최대 `1.640 mm`다.
+
+첫 `remove_feature` 실행에서는 top image는 정확히 빠졌지만 generic LeRobot
+editor가 DAPIER sidecar를 복사하지 않는 것을 발견했다. 그래서 변환 wrapper가
+teacher/student episode와 frame 수를 비교하고, top 부재와 wrist/state/action
+존재를 검사한 다음 teacher contract SHA-256을 student sidecar에 기록하도록
+고쳤다. 검증된 wrist student도 `3 episodes / 1,980 frames`다.
+
+기존 venv에는 `smolvla` extra가 없어 첫 train은 policy 생성 전에 중단됐다.
+환경을 확인한 뒤 해당 extra만 설치하고, pretrained SmolVLM2-500M,
+batch size 1로 1 optimization step을 실행해 1.3 GB checkpoint를 만들었다.
+
+첫 wrist-only evaluator에서는 sim이 `observation.pixels_wrist`, policy가
+`observation.images.wrist`를 받아 image가 없다는 오류가 발생했다. SO-101
+observation을 LeRobot 표준 nested `pixels` dict로 고치고 회귀 test를 추가했다.
+같은 checkpoint로 seed 300, 5-step rollout을 다시 실행하자 끝까지 완료됐다.
+success는 `0/1`이다. 이 결과는 VLA train/inference 배관 smoke이며 learned pick
+정책 성능이 아니다. sidecar에서도 full `vla_trained`와 `vla_evaluated`는 계속
+`false`로 둔다.
 
 ## 직접 실행해 본 결과
 
 | 검증 | 결과 |
 |---|---:|
-| Ruff check / format check | `PASS`, 13 files |
+| Ruff check / format check | `PASS`, 15 files |
 | SO-101 MuJoCo test | `31/31 PASS` |
 | top RGB IK, random seed `0..9` | `10/10 PASS` |
 | top RGB cube XY 오차 | 평균 `0.670 mm`, 최대 `0.939 mm` |
 | upstream SO-101 MJCF/STL hash | `14/14 OK` |
 | clean LeRobot v0.6.0 + patch + overlay | `31/31 PASS` |
+| headless IK expert dataset | `3/3`, `1,980 frames` |
+| verified wrist-only student | `3 episodes`, top 없음, wrist/state/action 있음 |
+| pretrained SmolVLA training smoke | `1/1 step`, checkpoint 저장 |
+| wrist-only VLA inference smoke | `5/5 steps` 실행, success `0/1` |
 | ROS Xacro → URDF / `check_urdf` | `PASS` |
 | ROS optical direction 수치 오차 | `4.69e-10` |
 | ROS launch Python `compileall` | `PASS` |
@@ -133,9 +157,11 @@ standard optical-frame joint까지 합친 축을 검사했다. `so101_descriptio
   측정한다.
 - 그 측정값으로 JSON과 ROS Xacro를 함께 갱신한 뒤 sim/real 같은 pose에서
   reprojection 오차를 비교한다.
-- top+wrist IK successful episode를 새 외부 dataset에 수집하고 top feature만
-  제거한 wrist-only dataset의 feature/schema를 다시 검사한다.
-- SmolVLA를 실제로 학습해 고정 seed에서 success rate를 보고한다.
+- 더 많은 randomization과 camera/domain noise로 IK expert train/validation
+  dataset을 별도 split으로 수집한다.
+- 1-step smoke가 아닌 full SmolVLA 학습을 실행하고, 학습에 쓰지 않은 고정
+  seed에서 success rate와 failure 유형을 보고한다.
 
-지금 결과는 CAD mount 기준 sim controller 성공이다. physical camera alignment,
-learned VLA, sim-to-real 또는 실제 SO-101 제어 성공으로 승격하지 않는다.
+지금 결과는 CAD mount 기준 sim IK controller 성공과 wrist-only VLA 배관
+실행이다. physical camera alignment, 성공하는 learned VLA, sim-to-real 또는
+실제 SO-101 제어 성공으로 승격하지 않는다.

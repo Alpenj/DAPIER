@@ -113,31 +113,31 @@ The routing is fail-closed:
   commanded action are recorded together.
 - `wrist` selects VLA inference. It cannot silently call IK or consume the top image.
 
-First collect successful episodes with `Shift+V`. Other keyboard motion is not written into this expert
-dataset:
+For a reproducible headless batch, collect successful IK episodes directly. This refuses to overwrite an
+existing root and marks the sidecar verified only after every requested episode succeeds:
 
 ```bash
 export SO101_IK_DATASET_ROOT="<NEW_IK_DATASET_PATH_ON_THIS_PC>"
-uv run python examples/so101_mujoco/teleoperate.py \
-  --input keyboard \
-  --camera-set expert \
-  --control-mode ik_expert \
+MUJOCO_GL=egl uv run python examples/so101_mujoco/collect_ik_expert.py \
+  --root "$SO101_IK_DATASET_ROOT" \
   --episodes 100 \
-  --record-root "$SO101_IK_DATASET_ROOT" \
   --repo-id local/so101_ik_teacher
 ```
 
-Make a distinct student dataset by removing only the privileged top image:
+The interactive recorder above remains useful for visual inspection: press `Shift+V` once per episode.
+Other keyboard motion is not written into its expert dataset.
+
+Make a distinct student dataset by removing only the privileged top image. The wrapper calls LeRobot's
+standard editor, verifies that episode/frame counts are unchanged, and restores the DAPIER provenance
+sidecar that the generic editor does not copy:
 
 ```bash
 export SO101_WRIST_DATASET_ROOT="<NEW_WRIST_DATASET_PATH_ON_THIS_PC>"
-uv run python -m lerobot.scripts.lerobot_edit_dataset \
-  --repo_id=local/so101_ik_teacher \
-  --root="$SO101_IK_DATASET_ROOT" \
-  --new_repo_id=local/so101_wrist_student \
-  --new_root="$SO101_WRIST_DATASET_ROOT" \
-  --operation.type=remove_feature \
-  --operation.feature_names='["observation.images.top"]'
+uv run python examples/so101_mujoco/prepare_wrist_student.py \
+  --teacher-root "$SO101_IK_DATASET_ROOT" \
+  --teacher-repo-id local/so101_ik_teacher \
+  --student-root "$SO101_WRIST_DATASET_ROOT" \
+  --student-repo-id local/so101_wrist_student
 ```
 
 Then train LeRobot's maintained SmolVLA implementation. Choose a new output directory; the values below
@@ -149,12 +149,15 @@ uv run python -m lerobot.scripts.lerobot_train \
   --dataset.repo_id=local/so101_wrist_student \
   --dataset.root="$SO101_WRIST_DATASET_ROOT" \
   --policy.type=smolvla \
+  --policy.load_vlm_weights=true \
   --policy.push_to_hub=false \
   --wandb.enable=false \
   --output_dir="$SO101_WRIST_VLA_OUTPUT" \
   --job_name=so101_wrist_smolvla \
   --steps=100000 \
-  --batch_size=8 \
+  --batch_size=1 \
+  --num_workers=0 \
+  --persistent_workers=false \
   --seed=23
 ```
 
@@ -171,9 +174,10 @@ uv run python examples/so101_mujoco/teleoperate.py \
   --output-dir "<NEW_WRIST_ONLY_EVAL_PATH>"
 ```
 
-This command delegates policy rollout to LeRobot's standard evaluator. The dataset derivation, training,
-and evaluation command lines have been parser-checked locally, but no expert dataset or VLA checkpoint has
-been trained in this slice.
+This command delegates policy rollout to LeRobot's standard evaluator. On the current 8 GB GPU, a bounded
+smoke run collected 3 successful IK episodes (1,980 frames), derived a top-free wrist dataset, trained one
+SmolVLA step with the pretrained SmolVLM2-500M backbone, and completed a five-step wrist-only rollout. The
+smoke policy scored `0/1`; one optimization step is pipeline verification, not a trained pick policy.
 
 ## Camera profile boundary
 

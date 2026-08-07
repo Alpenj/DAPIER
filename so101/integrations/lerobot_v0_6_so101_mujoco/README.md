@@ -141,8 +141,21 @@ SmolVLA를 학습하는 `lerobot_train`, wrist-only 평가 명령 builder를 함
 최신 상태에서 정적 검사, `31/31` MuJoCo test, seed `0..9`의 top-RGB IK
 pick-and-place `10/10`이 통과했다. top RGB XY 오차는 평균 `0.670 mm`, 최대
 `0.939 mm`였다. clean v0.6.0 checkout에 patch와 overlay를 다시 적용하고 원본
-asset 해시 `14/14` 및 같은 `31/31` test도 확인했다. 실제 expert dataset 수집,
-SmolVLA 학습·평가와 physical camera alignment는 아직 실행하지 않았다.
+asset 해시 `14/14` 및 같은 `31/31` test도 확인했다.
+
+후속 end-to-end smoke에서는 headless collector로 seed `200..202`의 successful IK
+episode `3/3`, 총 `1,980` frame을 실제 LeRobot dataset으로 기록했다. generic
+`remove_feature`가 추가 sidecar를 복사하지 않는 것을 발견해 episode/frame 수와
+feature를 검사한 뒤 provenance를 다시 쓰는 wrapper를 추가했다. wrist student에는
+top image가 없고 wrist/state/action이 남는다.
+
+RTX 5050 8GB에서 SmolVLA extra와 pretrained SmolVLM2-500M을 사용해 batch 1,
+1-step training checkpoint를 만들고, 그 checkpoint로 wrist-only 5-step evaluator를
+실행했다. 첫 evaluator에서는 flat image key 때문에 정책이 영상을 찾지 못했고,
+environment observation을 LeRobot 표준 nested `pixels` 구조로 고친 뒤 rollout이
+끝까지 실행됐다. smoke success는 `0/1`이다. 따라서 VLA train/inference **배관은
+실행 검증**, learned pick policy 성능은 **미검증**으로 분리한다. full training과
+physical camera alignment도 아직 확인하지 않았다.
 
 ## 결과를 섞지 않는 규칙
 
