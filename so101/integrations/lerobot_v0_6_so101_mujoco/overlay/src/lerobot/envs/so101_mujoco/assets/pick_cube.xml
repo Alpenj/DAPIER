@@ -24,6 +24,7 @@
               reflectance="0.08"/>
     <material name="cube_material" rgba="0.10 0.45 0.95 1"/>
     <material name="tray_material" rgba="0.12 0.55 0.25 1"/>
+    <material name="support_material" rgba="0.42 0.42 0.45 1"/>
   </asset>
 
   <worldbody>
@@ -31,25 +32,40 @@
     <geom name="workbench" type="plane" size="1 1 0.02" pos="0 0 0"
           material="work_surface" friction="1.0 0.01 0.001"/>
 
-    <body name="camera_target" pos="-0.18 0 0.12"/>
+    <body name="camera_target" pos="0.24 0 0.10"/>
     <camera name="front" pos="0.43 -0.50 0.38" mode="targetbody" target="camera_target" fovy="46"/>
 
-    <body name="cube" pos="-0.22 -0.10 0.03">
+    <body name="cube" pos="0.254531 -0.00293087 0.075">
       <freejoint name="cube_joint"/>
       <geom name="cube_geom" type="box" size="0.025 0.025 0.025" mass="0.05"
             material="cube_material" friction="1.2 0.01 0.001"/>
     </body>
 
-    <body name="tray" pos="-0.22 0.14 0.008">
+    <!-- Raised support used by the verified padded pick-and-lift trajectory. -->
+    <body name="tray" pos="0.254531 -0.00293087 0.038">
       <geom name="tray_floor" type="box" size="0.075 0.075 0.006"
-            material="tray_material" friction="1.0 0.01 0.001"/>
+            material="support_material" friction="1.0 0.01 0.001"/>
       <geom name="tray_wall_left" type="box" pos="-0.078 0 0.025" size="0.004 0.08 0.025"
-            material="tray_material"/>
+            material="support_material"/>
       <geom name="tray_wall_right" type="box" pos="0.078 0 0.025" size="0.004 0.08 0.025"
-            material="tray_material"/>
+            material="support_material"/>
       <geom name="tray_wall_near" type="box" pos="0 -0.078 0.025" size="0.08 0.004 0.025"
-            material="tray_material"/>
+            material="support_material"/>
       <geom name="tray_wall_far" type="box" pos="0 0.078 0.025" size="0.08 0.004 0.025"
+            material="support_material"/>
+    </body>
+
+    <!-- Separate reachable goal. The scripted P demo lifts only; it does not claim place success. -->
+    <body name="goal_tray" pos="0.20 0.18 0.008">
+      <geom name="goal_tray_floor" type="box" size="0.075 0.075 0.006"
+            material="tray_material" friction="1.0 0.01 0.001"/>
+      <geom name="goal_tray_wall_left" type="box" pos="-0.078 0 0.025" size="0.004 0.08 0.025"
+            material="tray_material"/>
+      <geom name="goal_tray_wall_right" type="box" pos="0.078 0 0.025" size="0.004 0.08 0.025"
+            material="tray_material"/>
+      <geom name="goal_tray_wall_near" type="box" pos="0 -0.078 0.025" size="0.08 0.004 0.025"
+            material="tray_material"/>
+      <geom name="goal_tray_wall_far" type="box" pos="0 0.078 0.025" size="0.08 0.004 0.025"
             material="tray_material"/>
       <site name="tray_target" pos="0 0 0.023" size="0.004" rgba="1 1 1 0"/>
     </body>

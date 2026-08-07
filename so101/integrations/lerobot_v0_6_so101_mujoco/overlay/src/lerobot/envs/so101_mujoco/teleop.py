@@ -21,7 +21,21 @@ from typing import Any
 
 import numpy as np
 
-from .env import ACTION_HIGH, ACTION_LOW, DEFAULT_HOME_ACTION, JOINT_NAMES
+from .env import (
+    ACTION_HIGH,
+    ACTION_LOW,
+    DEFAULT_HOME_ACTION,
+    JOINT_NAMES,
+    lerobot_action_to_qpos,
+    qpos_to_lerobot_state,
+)
+
+PICK_APPROACH_ACTION = np.array([0.0, -13.75, 26.25, 77.5, 0.0, 100.0], dtype=np.float32)
+PICK_CLEAR_ACTION = np.array([0.0, -45.0, 17.5, 90.0, 0.0, 100.0], dtype=np.float32)
+PICK_LIFT_FRAMES = 300
+_PICK_PHASE_BOUNDARIES = (0, 30, 110, 170, 190, 260, PICK_LIFT_FRAMES)
+_PICK_CLOSED_PERCENT = 55.0
+_PICK_LIFT_FRACTION = 0.65
 
 
 class JointJogController:
@@ -55,12 +69,40 @@ class JointJogController:
             raise ValueError(f"Joint index must be in [0, {len(JOINT_NAMES) - 1}], got {index}")
         self.selected_joint = index
 
-    def jog(self, direction: int) -> np.ndarray:
+    def select_previous_joint(self) -> int:
+        self.selected_joint = (self.selected_joint - 1) % len(JOINT_NAMES)
+        return self.selected_joint
+
+    def select_next_joint(self) -> int:
+        self.selected_joint = (self.selected_joint + 1) % len(JOINT_NAMES)
+        return self.selected_joint
+
+    def jog(self, direction: int, *, scale: float = 1.0) -> np.ndarray:
         if direction not in {-1, 1}:
             raise ValueError(f"direction must be -1 or 1, got {direction}")
+        if not np.isfinite(scale) or scale <= 0:
+            raise ValueError(f"scale must be positive and finite, got {scale}")
         step = self.gripper_step_percent if self.selected_joint == 5 else self.joint_step_degrees
-        self._action[self.selected_joint] += direction * step
+        self._action[self.selected_joint] += direction * step * scale
         self._action = np.clip(self._action, ACTION_LOW, ACTION_HIGH).astype(np.float32)
+        return self.get_action()
+
+    def adjust_joint(self, index: int, amount: float) -> np.ndarray:
+        if not 0 <= index < len(JOINT_NAMES):
+            raise ValueError(f"Joint index must be in [0, {len(JOINT_NAMES) - 1}], got {index}")
+        if not np.isfinite(amount):
+            raise ValueError(f"amount must be finite, got {amount}")
+        self._action[index] += amount
+        self._action = np.clip(self._action, ACTION_LOW, ACTION_HIGH).astype(np.float32)
+        return self.get_action()
+
+    def set_action(self, action: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
+        action_array = np.asarray(action, dtype=np.float32)
+        if action_array.shape != (6,):
+            raise ValueError(f"action must have shape (6,), got {action_array.shape}")
+        if not np.all(np.isfinite(action_array)):
+            raise ValueError(f"action contains non-finite values: {action_array}")
+        self._action = np.clip(action_array, ACTION_LOW, ACTION_HIGH).astype(np.float32)
         return self.get_action()
 
     def reset(self) -> np.ndarray:
@@ -69,6 +111,167 @@ class JointJogController:
 
     def get_action(self) -> np.ndarray:
         return self._action.copy()
+
+
+class CartesianJogController:
+    """Move the gripper site in world XYZ with bounded damped-least-squares IK."""
+
+    def __init__(
+        self,
+        model: Any,
+        *,
+        joint_controller: JointJogController | None = None,
+        site_name: str = "gripperframe",
+        damping: float = 0.02,
+        tolerance_m: float = 5e-4,
+        max_iterations: int = 40,
+    ) -> None:
+        if damping <= 0 or tolerance_m <= 0 or max_iterations <= 0:
+            raise ValueError("IK damping, tolerance, and max_iterations must be positive")
+
+        import mujoco
+
+        self._mujoco = mujoco
+        self.model = model
+        self.joints = joint_controller or JointJogController()
+        self.damping = float(damping)
+        self.tolerance_m = float(tolerance_m)
+        self.max_iterations = int(max_iterations)
+        self.last_cartesian_error_m = 0.0
+
+        self._site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+        joint_ids = [mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name) for name in JOINT_NAMES]
+        if self._site_id < 0 or min(joint_ids) < 0:
+            raise ValueError("The MuJoCo model is missing the SO-101 joints or gripperframe site")
+        self._joint_ids = np.asarray(joint_ids, dtype=np.int32)
+        self._qpos_addresses = model.jnt_qposadr[self._joint_ids].astype(np.int32)
+        # Wrist roll is preserved: the first four joints are sufficient for XYZ motion.
+        self._ik_dof_addresses = model.jnt_dofadr[self._joint_ids[:4]].astype(np.int32)
+        self._ik_data = mujoco.MjData(model)
+
+    @property
+    def selected_joint(self) -> int:
+        return self.joints.selected_joint
+
+    @property
+    def selected_joint_name(self) -> str:
+        return self.joints.selected_joint_name
+
+    def select_previous_joint(self) -> int:
+        return self.joints.select_previous_joint()
+
+    def select_next_joint(self) -> int:
+        return self.joints.select_next_joint()
+
+    def jog_selected_joint(self, amount: float) -> np.ndarray:
+        return self.joints.adjust_joint(self.selected_joint, amount)
+
+    def adjust_gripper(self, amount: float) -> np.ndarray:
+        return self.joints.adjust_joint(5, amount)
+
+    def set_action(self, action: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
+        return self.joints.set_action(action)
+
+    def reset(self) -> np.ndarray:
+        return self.joints.reset()
+
+    def get_action(self) -> np.ndarray:
+        return self.joints.get_action()
+
+    def site_position(self, action: np.ndarray | None = None) -> np.ndarray:
+        action_array = self.get_action() if action is None else np.asarray(action, dtype=np.float32)
+        qpos = lerobot_action_to_qpos(action_array)
+        self._mujoco.mj_resetData(self.model, self._ik_data)
+        self._ik_data.qpos[self._qpos_addresses] = qpos
+        self._mujoco.mj_forward(self.model, self._ik_data)
+        return self._ik_data.site_xpos[self._site_id].copy()
+
+    def move(self, delta_xyz_m: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
+        delta = np.asarray(delta_xyz_m, dtype=np.float64)
+        if delta.shape != (3,):
+            raise ValueError(f"delta_xyz_m must have shape (3,), got {delta.shape}")
+        if not np.all(np.isfinite(delta)):
+            raise ValueError(f"delta_xyz_m contains non-finite values: {delta}")
+        return self.move_to(self.site_position() + delta)
+
+    def move_to(self, target_xyz_m: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
+        target = np.asarray(target_xyz_m, dtype=np.float64)
+        if target.shape != (3,):
+            raise ValueError(f"target_xyz_m must have shape (3,), got {target.shape}")
+        if not np.all(np.isfinite(target)):
+            raise ValueError(f"target_xyz_m contains non-finite values: {target}")
+
+        current_action = self.get_action()
+        robot_qpos = lerobot_action_to_qpos(current_action)
+        joint_ranges = self.model.jnt_range[self._joint_ids[:4]]
+        jacobian_position = np.zeros((3, self.model.nv), dtype=np.float64)
+
+        for _ in range(self.max_iterations):
+            self._mujoco.mj_resetData(self.model, self._ik_data)
+            self._ik_data.qpos[self._qpos_addresses] = robot_qpos
+            self._mujoco.mj_forward(self.model, self._ik_data)
+            error = target - self._ik_data.site_xpos[self._site_id]
+            if np.linalg.norm(error) <= self.tolerance_m:
+                break
+
+            jacobian_position.fill(0.0)
+            self._mujoco.mj_jacSite(
+                self.model,
+                self._ik_data,
+                jacobian_position,
+                None,
+                self._site_id,
+            )
+            jacobian = jacobian_position[:, self._ik_dof_addresses]
+            regularized = jacobian @ jacobian.T + self.damping**2 * np.eye(3)
+            joint_delta = jacobian.T @ np.linalg.solve(regularized, error)
+            robot_qpos[:4] += np.clip(joint_delta, -0.04, 0.04)
+            robot_qpos[:4] = np.clip(robot_qpos[:4], joint_ranges[:, 0], joint_ranges[:, 1])
+
+        solved_action = qpos_to_lerobot_state(robot_qpos)
+        solved_action[4:] = current_action[4:]
+        self.set_action(solved_action)
+        self.last_cartesian_error_m = float(np.linalg.norm(target - self.site_position()))
+        return self.get_action()
+
+
+def _smoothstep_actions(start: np.ndarray, stop: np.ndarray, fraction: float) -> np.ndarray:
+    if not 0.0 <= fraction <= 1.0:
+        raise ValueError("smoothstep fraction must be in [0, 1]")
+    weight = fraction * fraction * (3.0 - 2.0 * fraction)
+    interpolated = start.astype(np.float64) * (1.0 - weight) + stop.astype(np.float64) * weight
+    return np.clip(interpolated, ACTION_LOW, ACTION_HIGH).astype(np.float32)
+
+
+def scripted_pick_lift_action(frame_index: int) -> np.ndarray:
+    """Return one command from the verified 300-frame padded pick-and-lift trace."""
+    if isinstance(frame_index, bool) or not isinstance(frame_index, int):
+        raise ValueError("frame_index must be an integer")
+    if not 0 <= frame_index < PICK_LIFT_FRAMES:
+        raise ValueError(f"frame_index must be in [0, {PICK_LIFT_FRAMES - 1}]")
+
+    high_open = PICK_CLEAR_ACTION
+    low_open = PICK_APPROACH_ACTION
+    low_closed = low_open.copy()
+    low_closed[5] = _PICK_CLOSED_PERCENT
+    high_closed = high_open.copy()
+    high_closed[5] = _PICK_CLOSED_PERCENT
+    lifted = _smoothstep_actions(low_closed, high_closed, _PICK_LIFT_FRACTION)
+    _, settle, descend, close, grasp, lift, end = _PICK_PHASE_BOUNDARIES
+
+    if frame_index < settle:
+        return high_open.copy()
+    if frame_index < descend:
+        return _smoothstep_actions(high_open, low_open, (frame_index - settle) / (descend - settle))
+    if frame_index < close:
+        return _smoothstep_actions(low_open, low_closed, (frame_index - descend) / (close - descend))
+    if frame_index < grasp:
+        return low_closed.copy()
+    if frame_index < lift:
+        return _smoothstep_actions(low_closed, lifted, (frame_index - grasp) / (lift - grasp))
+    if frame_index < end:
+        return lifted.copy()
+    raise AssertionError("unreachable scripted pick phase")
 
 
 def leader_action_dict_to_array(action: Mapping[str, Any]) -> np.ndarray:

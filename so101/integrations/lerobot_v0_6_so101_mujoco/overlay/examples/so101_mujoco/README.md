@@ -40,9 +40,26 @@ uv run python examples/so101_mujoco/teleoperate.py \
   --repo-id local/so101_mujoco_teleop
 ```
 
-In the MuJoCo viewer, press `1` through `6` to select a joint, use `Up`/`Down` to jog it, `Home` to
-return the target to the safe home pose, `N` to discard the current attempt and start another, and
-`Q` or `Esc` to quit. Use `--save-mode=all` only when failed demonstrations are intentionally needed.
+The controls are also shown in the viewer. They deliberately avoid number keys because MuJoCo reserves
+`0` through `4` for geometry-group visibility, and they require `Shift` so MuJoCo does not consume its
+plain-letter rendering shortcuts at the same time.
+
+- Hold `Shift+W`/`Shift+S`, `Shift+A`/`Shift+D`, or `Shift+R`/`Shift+F` for continuous
+  world X, Y, or Z gripper motion.
+- Hold `Shift+O`/`Shift+L` to open or close the gripper.
+- Press `Shift+J`/`Shift+K` to select the previous or next joint, then hold
+  `Shift+Up`/`Shift+Down` for direct joint motion.
+- Press `Shift+G` for the known open-gripper cube-approach target.
+- Press `Shift+P` to replay the verified 300-frame scripted padded pick-and-lift demonstration. The
+  interactive viewer pauses physics at verified frame 299 so the result remains inspectable; any manual
+  motion command resumes physics.
+- Press `Shift+H` for the safe home target, `Shift+N` for a new episode, and `Shift+Q` to quit.
+
+The `Shift` chord is required because MuJoCo assigns plain letters such as `W`, `A`, `F`, `P`, and `Q`
+to rendering and visualization toggles. The hold behavior uses X11 key-state polling after a key press
+has arrived in the focused MuJoCo window; it does not depend on desktop key-repeat timing. The default
+interactive cube has no XY randomization. Use `--cube-randomization` only when variation is intentional.
+Use `--save-mode=all` only when failed demonstrations are intentionally needed.
 
 ## Optionally drive MuJoCo with the calibrated leader
 
@@ -113,14 +130,16 @@ span. It never guesses calibration paths.
 
 ## Scope and next tasks
 
-The current slice covers model loading, joint-position control, deterministic reset, a cube/tray scene,
-front and wrist RGB rendering, a Gymnasium/LeRobot adapter, keyboard/leader simulation teleoperation,
-success-only demonstration selection, and diagnostic dataset recording. It does not yet claim successful
-autonomous grasping.
+The current slice covers model loading, joint- and Cartesian-position control, deterministic reset, a
+reachable cube/support/goal-tray scene, thin simulated finger pads, front and wrist RGB rendering, a
+Gymnasium/LeRobot adapter, keyboard/leader simulation teleoperation, success-only demonstration selection,
+and diagnostic dataset recording. The scripted `P` path has been verified for padded pick-and-lift in
+simulation. It is not a learned policy, a complete place trajectory, a physical-gripper validation, or
+sim-to-real evidence.
 
 The next vertical slices are:
 
-1. scripted IK reach, grasp, lift, and place with measured success rate;
+1. extend the verified scripted lift into place and measure repeated-seed success rate;
 2. collect successful expert episodes and train/evaluate the ACT baseline;
 3. domain randomization for friction, backlash, latency, lighting, and camera pose;
 4. a 12-action bimanual scene made from two SO-101 instances;

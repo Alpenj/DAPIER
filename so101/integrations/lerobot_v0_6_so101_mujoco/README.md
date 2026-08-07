@@ -52,13 +52,37 @@ cp -a "$OVERLAY_ROOT/overlay/." "$LEROBOT_ROOT/"
 이 절차는 source 복원 절차이지 실행 성공 주장이나 hardware 제어 절차가 아니다.
 
 2026-08-07에는 임시 디렉터리에 base revision을 풀고 patch와 overlay를 다시
-적용했다. asset 해시 14/14와 `tests/envs/test_so101_mujoco.py` 10/10이
-통과했다. Gymnasium의 비대칭·비정규화 action space 권고 warning 1건은 남아
-있다.
+적용했다. interactive control 수정 전에는 10/10, 수정 후에는 asset 해시
+14/14와 `tests/envs/test_so101_mujoco.py` 15/15가 통과했다. Gymnasium의
+비대칭·비정규화 action space 권고 warning 1건은 남아 있다.
+
+## 2026-08-07 interactive viewer 수정
+
+직접 실행해 보니 기존 `1..6` 관절 선택은 MuJoCo의 geom group 표시 단축키와
+겹쳤다. 문자키도 `W=wireframe`, `A=auto-connect`, `F=contact force`,
+`P=contact split`, `Q=camera`처럼 대부분 뷰어 단축키였다. 그래서 로봇 입력은
+모두 `Shift+키` chord일 때만 처리한다. 실제 뷰어에서 사용하는 chord 전체를
+보내고 visualization, rendering, geom-group flag 변화가 각각 0건인지 확인했다.
+
+X11 key state를 읽어 OS key repeat에 기대지 않으므로 `Shift+W`처럼 키를 누르고
+있는 동안 30 Hz로 계속 움직인다. 0.5초 `Shift+W` 검증에서는 gripper 끝점 X가
+약 39 mm 이동했고 key release 뒤 추가 이동은 없었다. `Shift+W/S`,
+`Shift+A/D`, `Shift+R/F`는 world XYZ, `Shift+O/L`은 gripper,
+`Shift+Up/Down`은 선택 관절을 움직인다. `Shift+G`는 cube approach,
+`Shift+P`는 검증된 300-frame padded pick-and-lift를 재생한다.
+
+interactive scene은 G1에서 직접 확인한 reachable cube 위치, raised support와
+finger pad 조건을 사용하고 별도 green goal tray를 둔다. `Shift+P` 실제 GUI
+재생에서 cube 최종 z `0.111 m`, process exit `0`을 확인했다. 다만 frame 299
+뒤에도 물리를 계속 진행하면 현재 pad 모델은 약 8 frame 안에 cube를 놓친다.
+이를 장기 hold 성공으로 쓰지 않고, viewer는 검증된 frame 299에서 물리를
+명시적으로 pause해 결과를 관찰하게 했다. 수동 이동 chord를 누르면 물리가 다시
+진행된다.
 
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450
 frame이지만 `next.success`는 0/450이었다. 따라서 물체 집기 성공 데이터가 아니다.
-2026-08-07의 G1 PASS는 별도의 task-adapted padded gripper 장면과
-`dapier_sim_first` Gate에서 나온 결과다. 두 결과를 같은 실험으로 합치지 않는다.
+2026-08-07의 G1 PASS 정본은 `dapier_sim_first` Gate에서 나온 결과다. 현재
+interactive overlay는 그 task adaptation을 사람이 조작해 볼 수 있게 옮긴 것이며,
+새로운 learned policy나 장기 hold 성공 결과로 합치지 않는다.

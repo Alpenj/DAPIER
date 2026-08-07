@@ -25,12 +25,17 @@ from lerobot.envs.so101_mujoco import (
     ACTION_HIGH,
     ACTION_LOW,
     CAMERA_NAMES,
+    CUBE_SPAWN_POSITION,
+    FINGER_PAD_GEOM_NAMES,
     JOINT_NAMES,
+    PICK_LIFT_FRAMES,
+    CartesianJogController,
     JointJogController,
     SO101MujocoEnv,
     leader_action_dict_to_array,
     lerobot_action_to_qpos,
     qpos_to_lerobot_state,
+    scripted_pick_lift_action,
     should_save_episode,
 )
 
@@ -66,6 +71,16 @@ def test_keyboard_jog_controller_is_bounded_and_resettable():
     controller.jog(-1)
     assert controller.get_action()[5] == 75
     np.testing.assert_array_equal(controller.reset(), np.array([0, -35, 55, 35, 0, 100]))
+
+
+def test_joint_selection_wraps_and_direct_adjustment_is_bounded():
+    controller = JointJogController()
+    assert controller.select_previous_joint() == 5
+    assert controller.select_next_joint() == 0
+    controller.adjust_joint(5, -1000)
+    assert controller.get_action()[5] == ACTION_LOW[5]
+    with pytest.raises(ValueError, match="shape"):
+        controller.set_action(np.zeros(5))
 
 
 def test_official_leader_action_mapping():
@@ -114,6 +129,101 @@ def test_env_reset_step_and_determinism():
         assert isinstance(terminated, bool)
         assert truncated is False
         assert info["action_clipped"] is False
+    finally:
+        env.close()
+
+
+@pytest.mark.timeout(30)
+def test_reachable_scene_contains_support_goal_and_finger_pads():
+    mujoco = pytest.importorskip("mujoco")
+    env = SO101MujocoEnv(obs_type="state", cube_xy_randomization=0)
+    try:
+        _, info = env.reset(seed=101)
+        np.testing.assert_allclose(info["cube_position"], CUBE_SPAWN_POSITION, atol=1e-7)
+        assert info["cube_position"][0] > 0
+        assert np.linalg.norm(info["cube_position"][:2] - info["tray_position"][:2]) > 0.1
+        for name in (*FINGER_PAD_GEOM_NAMES, "tray_floor", "goal_tray_floor"):
+            assert mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, name) >= 0
+    finally:
+        env.close()
+
+
+@pytest.mark.timeout(30)
+def test_cartesian_jog_moves_gripper_in_world_xyz():
+    pytest.importorskip("mujoco")
+    env = SO101MujocoEnv(obs_type="state", cube_xy_randomization=0)
+    try:
+        env.reset(seed=0)
+        controller = CartesianJogController(env.model)
+        start = controller.site_position()
+        action = controller.move([0.01, 0.01, 0.01])
+        np.testing.assert_allclose(controller.site_position(), start + 0.01, atol=1e-3)
+        assert np.all(action >= ACTION_LOW)
+        assert np.all(action <= ACTION_HIGH)
+    finally:
+        env.close()
+
+
+def test_scripted_pick_lift_trace_is_bounded_and_deterministic():
+    first = [scripted_pick_lift_action(index) for index in range(PICK_LIFT_FRAMES)]
+    second = [scripted_pick_lift_action(index) for index in range(PICK_LIFT_FRAMES)]
+    np.testing.assert_array_equal(first, second)
+    assert len(first) == 300
+    assert all(np.all(action >= ACTION_LOW) and np.all(action <= ACTION_HIGH) for action in first)
+    np.testing.assert_array_equal(first[0], first[29])
+    np.testing.assert_array_equal(first[260], first[299])
+
+
+@pytest.mark.timeout(30)
+def test_scripted_pick_lifts_and_holds_cube_with_bilateral_contact():
+    mujoco = pytest.importorskip("mujoco")
+    env = SO101MujocoEnv(
+        obs_type="state",
+        cube_xy_randomization=0,
+        max_episode_steps=PICK_LIFT_FRAMES,
+        terminate_on_success=False,
+    )
+    try:
+        env.reset(seed=101)
+        cube_geom_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, "cube_geom")
+        pad_geom_ids = {
+            mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, name) for name in FINGER_PAD_GEOM_NAMES
+        }
+        support_geom_ids = {
+            mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, name)
+            for name in (
+                "workbench",
+                "tray_floor",
+                "tray_wall_left",
+                "tray_wall_right",
+                "tray_wall_near",
+                "tray_wall_far",
+            )
+        }
+        cube_z: list[float] = []
+        bilateral_contact: list[bool] = []
+        support_contact: list[bool] = []
+        for frame_index in range(PICK_LIFT_FRAMES):
+            _, _, _, _, info = env.step(scripted_pick_lift_action(frame_index))
+            cube_z.append(float(info["cube_position"][2]))
+            other_geoms: set[int] = set()
+            for contact_index in range(env.data.ncon):
+                contact = env.data.contact[contact_index]
+                geom1, geom2 = int(contact.geom1), int(contact.geom2)
+                if geom1 == cube_geom_id:
+                    other_geoms.add(geom2)
+                elif geom2 == cube_geom_id:
+                    other_geoms.add(geom1)
+            bilateral_contact.append(pad_geom_ids <= other_geoms)
+            support_contact.append(bool(support_geom_ids & other_geoms))
+
+        settled_z = float(np.median(cube_z[20:30]))
+        hold_lift = np.asarray(cube_z[270:300]) - settled_z
+        assert env._simulated_substeps == 5000
+        assert env.data.time == pytest.approx(10.0, abs=1e-9)
+        assert hold_lift.min() >= 0.02
+        assert all(bilateral_contact[270:300])
+        assert not any(support_contact[270:300])
     finally:
         env.close()
 

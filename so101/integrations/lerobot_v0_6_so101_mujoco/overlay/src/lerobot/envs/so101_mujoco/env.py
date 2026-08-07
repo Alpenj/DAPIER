@@ -60,6 +60,22 @@ _JOINT_HIGH_RAD = np.array(
 ACTION_LOW = np.concatenate((np.rad2deg(_JOINT_LOW_RAD[:5]), np.array([0.0]))).astype(np.float32)
 ACTION_HIGH = np.concatenate((np.rad2deg(_JOINT_HIGH_RAD[:5]), np.array([100.0]))).astype(np.float32)
 DEFAULT_HOME_ACTION = np.array([0.0, -35.0, 55.0, 35.0, 0.0, 100.0], dtype=np.float32)
+CUBE_SPAWN_POSITION = np.array([0.25453126220736555, -0.002930872758779989, 0.075], dtype=np.float64)
+FINGER_PAD_GEOM_NAMES = ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")
+_FINGER_PAD_SPECS = (
+    {
+        "body": "gripper",
+        "name": FINGER_PAD_GEOM_NAMES[0],
+        "pos": [0.0251, -0.000218121, -0.0781274],
+        "quat": [0.707107, 0.0, 0.707107, 0.0],
+    },
+    {
+        "body": "moving_jaw_so101_v1",
+        "name": FINGER_PAD_GEOM_NAMES[1],
+        "pos": [-0.0124346, -0.0794335, 0.0190181],
+        "quat": [-0.206738, 0.206738, -0.67621, 0.67621],
+    },
+)
 
 
 def lerobot_action_to_qpos(action: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
@@ -130,6 +146,8 @@ class SO101MujocoEnv(gym.Env):
             raise ValueError(f"Unsupported reward_type: {reward_type!r}")
         if fps <= 0 or max_episode_steps <= 0:
             raise ValueError("fps and max_episode_steps must be positive")
+        if cube_xy_randomization < 0:
+            raise ValueError("cube_xy_randomization must be non-negative")
         camera_names = tuple(camera_names)
         if not camera_names:
             raise ValueError("camera_names must contain at least one camera")
@@ -182,7 +200,8 @@ class SO101MujocoEnv(gym.Env):
         self._cube_qpos_address: int | None = None
         self._cube_body_id: int | None = None
         self._tray_site_id: int | None = None
-        self._frame_skip = 1
+        self._gripper_site_id: int | None = None
+        self._simulated_substeps = 0
         self._step_count = 0
 
     @property
@@ -195,9 +214,23 @@ class SO101MujocoEnv(gym.Env):
 
         mujoco = _require_mujoco()
         self._mujoco = mujoco
-        self.model = mujoco.MjModel.from_xml_path(str(self.model_path))
+        model_spec = mujoco.MjSpec.from_file(str(self.model_path))
+        for pad in _FINGER_PAD_SPECS:
+            model_spec.body(pad["body"]).add_geom(
+                name=pad["name"],
+                type=mujoco.mjtGeom.mjGEOM_BOX,
+                pos=pad["pos"],
+                quat=pad["quat"],
+                size=[0.02, 0.02, 0.002],
+                contype=1,
+                conaffinity=1,
+                friction=[2.0, 0.01, 0.001],
+                rgba=[0.08, 0.08, 0.08, 1.0],
+                group=3,
+                density=0,
+            )
+        self.model = model_spec.compile()
         self.data = mujoco.MjData(self.model)
-        self._frame_skip = max(1, round((1.0 / self.fps) / self.model.opt.timestep))
 
         joint_ids = [mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, name) for name in JOINT_NAMES]
         actuator_ids = [
@@ -212,6 +245,13 @@ class SO101MujocoEnv(gym.Env):
         self._cube_qpos_address = int(self.model.jnt_qposadr[cube_joint_id])
         self._cube_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "cube")
         self._tray_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "tray_target")
+        self._gripper_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "gripperframe")
+
+    def _substeps_for_next_frame(self) -> int:
+        """Keep the requested FPS without accumulating timestep drift."""
+        assert self.model is not None
+        target_total = int((self._step_count + 1) / (self.fps * self.model.opt.timestep) + 1e-9)
+        return max(1, target_total - self._simulated_substeps)
 
     def _joint_qpos(self) -> np.ndarray:
         assert self.data is not None and self._joint_qpos_addresses is not None
@@ -239,6 +279,11 @@ class SO101MujocoEnv(gym.Env):
     def _get_info(self, action_clipped: bool = False) -> dict[str, Any]:
         assert self.data is not None and self._cube_body_id is not None and self._tray_site_id is not None
         success, dense_reward = self._task_metrics()
+        gripper_position = (
+            self.data.site_xpos[self._gripper_site_id].astype(np.float32).copy()
+            if self._gripper_site_id is not None
+            else np.full(3, np.nan, dtype=np.float32)
+        )
         return {
             "is_success": success,
             "task": self.task,
@@ -246,6 +291,7 @@ class SO101MujocoEnv(gym.Env):
             "dense_reward": dense_reward,
             "cube_position": self.data.xpos[self._cube_body_id].astype(np.float32).copy(),
             "tray_position": self.data.site_xpos[self._tray_site_id].astype(np.float32).copy(),
+            "gripper_position": gripper_position,
         }
 
     def reset(
@@ -265,14 +311,15 @@ class SO101MujocoEnv(gym.Env):
         self.data.qpos[self._joint_qpos_addresses] = home_qpos
         self.data.ctrl[self._actuator_ids] = home_qpos
 
-        cube_xy = np.array([-0.22, -0.10], dtype=np.float64)
+        cube_xy = CUBE_SPAWN_POSITION[:2].copy()
         if self.cube_xy_randomization > 0:
             cube_xy += self.np_random.uniform(-self.cube_xy_randomization, self.cube_xy_randomization, size=2)
         cube_adr = self._cube_qpos_address
-        self.data.qpos[cube_adr : cube_adr + 3] = [cube_xy[0], cube_xy[1], 0.03]
+        self.data.qpos[cube_adr : cube_adr + 3] = [cube_xy[0], cube_xy[1], CUBE_SPAWN_POSITION[2]]
         self.data.qpos[cube_adr + 3 : cube_adr + 7] = [1.0, 0.0, 0.0, 0.0]
         self._mujoco.mj_forward(self.model, self.data)
         self._step_count = 0
+        self._simulated_substeps = 0
         return self._get_observation(), self._get_info()
 
     def step(self, action: np.ndarray) -> tuple[dict[str, np.ndarray], float, bool, bool, dict[str, Any]]:
@@ -287,8 +334,10 @@ class SO101MujocoEnv(gym.Env):
         action_clipped = not np.array_equal(action_array, clipped_action)
         self.data.ctrl[self._actuator_ids] = lerobot_action_to_qpos(clipped_action)
 
-        for _ in range(self._frame_skip):
+        substeps = self._substeps_for_next_frame()
+        for _ in range(substeps):
             self._mujoco.mj_step(self.model, self.data)
+        self._simulated_substeps += substeps
 
         self._step_count += 1
         success, dense_reward = self._task_metrics()
