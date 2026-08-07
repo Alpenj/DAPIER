@@ -49,6 +49,8 @@ plain `A`를 보내면 auto-connect flag가 바뀌고, `Shift+A`는 바뀌지 �
 | `Shift+J/K`, hold `Shift+Up/Down` | 관절 선택, 선택 관절 연속 이동 |
 | `Shift+G` | 검증된 open-gripper cube approach target |
 | `Shift+P` | 300-frame padded pick-and-lift 재생 |
+| `Shift+V` | wrist RGB로 cube 검출 후 pick-and-place |
+| `Shift+C` | external/wrist viewer camera 전환 |
 | `Shift+H`, `Shift+N`, `Shift+Q` | clear home, 새 episode, 종료 |
 
 ## 직접 실행해 본 검증
@@ -84,3 +86,12 @@ MUJOCO_GL=egl "$HOME/so101/lerobot/.venv/bin/python" -m pytest -q \
 아직 place trajectory, 반복 seed 성공률, Wayland native 입력, learned policy,
 실물 pad 마찰과 sim-to-real은 확인하지 않았다. 다음에는 pause 없이 장기 hold가
 되는 접촉 geometry와 gripper controller를 별도 실험으로 확인할 예정이다.
+
+## 같은 날 이어서 확인한 것
+
+위 미확인 목록은 interactive control을 처음 검증한 시점의 상태다. 이어서 wrist
+RGB camera, cube color detection과 green tray place trajectory를 추가했고,
+`+-25 mm` randomization의 seed `0..29`에서 `30/30 PASS`를 확인했다. 이 후속
+실험의 조건과 한계는
+[`2026-08-07-so101-wrist-vision-pick-place.md`](2026-08-07-so101-wrist-vision-pick-place.md)에
+분리해 기록했다. Wayland, learned policy와 sim-to-real은 여전히 확인하지 않았다.

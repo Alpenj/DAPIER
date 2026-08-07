@@ -79,6 +79,22 @@ finger pad 조건을 사용하고 별도 green goal tray를 둔다. `Shift+P` �
 명시적으로 pause해 결과를 관찰하게 했다. 수동 이동 chord를 누르면 물리가 다시
 진행된다.
 
+같은 날 후속 실습에서 gripper에 wrist RGB camera와 비충돌 mount를 추가했다.
+`Shift+C`로 external/wrist view를 바꾸고, `Shift+V`로 reset부터 RGB 검출,
+pick, green tray place까지 실행한다. 검은 판처럼 보이던 finger contact geom은
+투명한 물리 envelope와 좁은 검은 rubber lining으로 분리했다.
+
+planner는 wrist RGB의 blue mask, 현재 camera calibration, 알려진 cube top plane만
+사용한다. cube body pose, depth와 segmentation id는 사용하지 않는다. `+-25 mm`
+cube randomization에서 seed `0..29`를 직접 실행한 결과 `30/30`이 tray success
+조건을 만족했고, RGB XY 추정 오차는 평균 `2.715 mm`, 최대 `6.459 mm`였다. 현재
+SO-101 MuJoCo test는 `22/22 PASS`이며 Gymnasium warning 1건은 남아 있다. 자세한
+기록은
+[`2026-08-07-so101-wrist-vision-pick-place.md`](../../records/2026-08-07-so101-wrist-vision-pick-place.md)에
+남겼다. base revision을 임시 디렉터리에 다시 checkout하고 검증된 upstream asset
+`14/14`, tracked patch와 overlay를 차례로 적용한 재구성 환경에서도 `22/22`가
+통과했다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450
