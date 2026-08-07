@@ -1,0 +1,164 @@
+diff --git a/.gitignore b/.gitignore
+index 8789226..a24b5b9 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -173,6 +173,8 @@ outputs/
+ # Dev folders
+ .cache/*
+ *.stl
++!src/lerobot/envs/so101_mujoco/assets/assets/*.stl
+ *.urdf
+ *.xml
++!src/lerobot/envs/so101_mujoco/assets/*.xml
+ *.part
+diff --git a/pyproject.toml b/pyproject.toml
+index c319c3f..43f7fc6 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -268,6 +268,7 @@ video_benchmark = ["scikit-image>=0.23.2,<0.26.0", "pandas>=2.2.2,<2.4.0"]
+ # NOTE: Explicitly listing scipy helps flatten the dependecy tree.
+ aloha = ["lerobot[dataset]", "gym-aloha>=0.1.4,<0.2.0", "lerobot[scipy-dep]"]
+ pusht = ["lerobot[dataset]", "gym-pusht>=0.1.5,<0.2.0", "pymunk>=6.6.0,<7.0.0"] # TODO: Fix pymunk version in gym-pusht instead
++so101_mujoco = ["lerobot[dataset]", "mujoco>=3.2.0,<4.0.0"]
+ libero = ["lerobot[dataset]", "lerobot[transformers-dep]", "hf-libero>=0.1.4,<0.2.0; sys_platform == 'linux'", "lerobot[scipy-dep]"]
+ metaworld = ["lerobot[dataset]", "metaworld==3.0.0", "lerobot[scipy-dep]"]
+ # NOTE: vlabench is NOT exposed as a `lerobot` extra. Its only distribution
+@@ -328,6 +329,7 @@ all = [
+     "lerobot[video_benchmark]",
+     "lerobot[aloha]",
+     "lerobot[pusht]",
++    "lerobot[so101_mujoco]",
+     "lerobot[phone]",
+     "lerobot[libero]; sys_platform == 'linux'",
+     "lerobot[metaworld]",
+@@ -374,7 +376,12 @@ torch = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux'" }]
+ torchvision = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux'" }]
+ 
+ [tool.setuptools.package-data]
+-lerobot = ["envs/*.json", "annotations/steerable_pipeline/prompts/*.txt"]
++lerobot = [
++    "envs/*.json",
++    "envs/so101_mujoco/assets/*",
++    "envs/so101_mujoco/assets/assets/*.stl",
++    "annotations/steerable_pipeline/prompts/*.txt",
++]
+ 
+ [tool.setuptools.packages.find]
+ where = ["src"]
+diff --git a/src/lerobot/envs/__init__.py b/src/lerobot/envs/__init__.py
+index 277fd04..d5d873d 100644
+--- a/src/lerobot/envs/__init__.py
++++ b/src/lerobot/envs/__init__.py
+@@ -18,7 +18,14 @@
+ # from lerobot.utils.import_utils import require_package
+ # require_package("gymnasium", extra="<update_extra>", import_name="gymnasium")
+ 
+-from .configs import AlohaEnv, EnvConfig, HILSerlRobotEnvConfig, HubEnvConfig, PushtEnv
++from .configs import (
++    AlohaEnv,
++    EnvConfig,
++    HILSerlRobotEnvConfig,
++    HubEnvConfig,
++    PushtEnv,
++    SO101MujocoEnvConfig,
++)
+ from .factory import make_env, make_env_config, make_env_pre_post_processors
+ from .utils import check_env_attributes_and_types, close_envs, env_to_policy_features, preprocess_observation
+ 
+@@ -28,6 +35,7 @@ __all__ = [
+     "HILSerlRobotEnvConfig",
+     "HubEnvConfig",
+     "PushtEnv",
++    "SO101MujocoEnvConfig",
+     "check_env_attributes_and_types",
+     "close_envs",
+     "env_to_policy_features",
+diff --git a/src/lerobot/envs/configs.py b/src/lerobot/envs/configs.py
+index 3624357..4c82c1e 100644
+--- a/src/lerobot/envs/configs.py
++++ b/src/lerobot/envs/configs.py
+@@ -234,6 +234,84 @@ class PushtEnv(EnvConfig):
+         }
+ 
+ 
++@EnvConfig.register_subclass("so101_mujoco")
++@dataclass
++class SO101MujocoEnvConfig(EnvConfig):
++    """Leader-free SO-101 simulation with the same six-value contract as the real arm."""
++
++    task: str = "PickCube-v0"
++    fps: int = 30
++    episode_length: int = 300
++    obs_type: str = "pixels_agent_pos"
++    render_mode: str = "rgb_array"
++    observation_height: int = 480
++    observation_width: int = 640
++    reward_type: str = "dense"
++    terminate_on_success: bool = True
++    cube_xy_randomization: float = 0.04
++    camera_names: tuple[str, ...] = ("front", "wrist")
++    features: dict[str, PolicyFeature] = field(
++        default_factory=lambda: {
++            ACTION: PolicyFeature(type=FeatureType.ACTION, shape=(6,)),
++        }
++    )
++    features_map: dict[str, str] = field(
++        default_factory=lambda: {
++            ACTION: ACTION,
++            "agent_pos": OBS_STATE,
++        }
++    )
++
++    def __post_init__(self):
++        if self.obs_type not in {"state", "pixels", "pixels_agent_pos"}:
++            raise ValueError(f"Unsupported obs_type: {self.obs_type}")
++        if self.obs_type in {"state", "pixels_agent_pos"}:
++            self.features["agent_pos"] = PolicyFeature(type=FeatureType.STATE, shape=(6,))
++        if self.obs_type in {"pixels", "pixels_agent_pos"}:
++            from .so101_mujoco import CAMERA_NAMES, CAMERA_OBSERVATION_KEYS
++
++            if not self.camera_names:
++                raise ValueError("camera_names must contain at least one camera")
++            if len(self.camera_names) != len(set(self.camera_names)):
++                raise ValueError(f"camera_names contains duplicates: {self.camera_names}")
++            unknown_cameras = set(self.camera_names) - set(CAMERA_NAMES)
++            if unknown_cameras:
++                raise ValueError(f"Unsupported camera_names: {sorted(unknown_cameras)}")
++            for camera_name in self.camera_names:
++                observation_key = CAMERA_OBSERVATION_KEYS[camera_name]
++                self.features[observation_key] = PolicyFeature(
++                    type=FeatureType.VISUAL,
++                    shape=(self.observation_height, self.observation_width, 3),
++                )
++                self.features_map[observation_key] = f"{OBS_IMAGES}.{camera_name}"
++
++    @property
++    def gym_kwargs(self) -> dict:
++        return {
++            "task": self.task,
++            "obs_type": self.obs_type,
++            "render_mode": self.render_mode,
++            "observation_height": self.observation_height,
++            "observation_width": self.observation_width,
++            "fps": self.fps,
++            "max_episode_steps": self.episode_length,
++            "reward_type": self.reward_type,
++            "terminate_on_success": self.terminate_on_success,
++            "cube_xy_randomization": self.cube_xy_randomization,
++            "camera_names": self.camera_names,
++        }
++
++    def create_envs(self, n_envs: int, use_async_envs: bool = False):
++        from .so101_mujoco import create_so101_mujoco_envs
++
++        env_cls = _make_vec_env_cls(use_async_envs, n_envs)
++        return create_so101_mujoco_envs(
++            n_envs=n_envs,
++            gym_kwargs=self.gym_kwargs,
++            env_cls=env_cls,
++        )
++
++
+ @dataclass
+ class ImagePreprocessingConfig:
+     crop_params_dict: dict[str, tuple[int, int, int, int]] | None = None

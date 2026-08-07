@@ -1,0 +1,11 @@
+SO-101 robot model and mesh assets
+==================================
+
+Source: https://github.com/TheRobotStudio/SO-ARM100
+Original directory: Simulation/SO101
+License: Apache License 2.0
+
+The original so101_new_calib.xml and mesh files are preserved. LeRobot adds
+pick_cube.xml and a Python action adapter. The adapter maps LeRobot's calibrated
+joint convention (five values in degrees plus a 0-100 gripper value) to the
+MuJoCo model's radians.
