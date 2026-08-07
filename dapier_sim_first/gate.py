@@ -1,4 +1,4 @@
-"""Create and execute only the SO-101 sim-first G0 environment gate."""
+"""Create and execute the simulation-only SO-101 sim-first G0/G1 gates."""
 
 from __future__ import annotations
 
@@ -691,7 +691,7 @@ def run_g0(*, manifest_path: Path, out_path: Path) -> tuple[str, Path]:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Initialize or execute the DAPIER SO-101 G0 environment smoke gate only."
+        description="Initialize or execute DAPIER SO-101 simulation-only G0/G1 gates."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -708,6 +708,24 @@ def _parser() -> argparse.ArgumentParser:
     )
     g0.add_argument("--manifest", type=Path, required=True)
     g0.add_argument("--out", type=Path, required=True)
+
+    init_g1 = subparsers.add_parser(
+        "init-g1", help="Create a new G1 RUN_ROOT and immutable manifest"
+    )
+    init_g1.add_argument("--run-root", type=Path, required=True)
+    init_g1.add_argument("--repo", type=Path, default=Path.cwd())
+    init_g1.add_argument("--model", type=Path, required=True)
+    init_g1.add_argument("--calibration", type=Path, required=True)
+    init_g1.add_argument("--lerobot-root", type=Path, required=True)
+
+    g1 = subparsers.add_parser(
+        "g1", help="Run scripted G1 recording and contact-backed pick evaluation"
+    )
+    g1.add_argument("--manifest", type=Path, required=True)
+    g1.add_argument("--seed", type=int, default=101)
+    g1.add_argument("--rate-hz", type=int, default=30)
+    g1.add_argument("--frames", type=int, default=300)
+    g1.add_argument("--out", type=Path, required=True)
     return parser
 
 
@@ -729,8 +747,32 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(f"G0 {status}: {receipt_path}")
             return 0 if status == "PASS" else 1
-    except (OSError, ValueError) as exc:
-        print(f"G0 refused: {exc}", file=sys.stderr)
+        if args.command == "init-g1":
+            from .g1 import initialize_g1_manifest
+
+            manifest_path = initialize_g1_manifest(
+                run_root=args.run_root,
+                repo_root=args.repo,
+                model_path=args.model,
+                calibration_path=args.calibration,
+                lerobot_root=args.lerobot_root,
+            )
+            print(f"G1 manifest created: {manifest_path}")
+            return 0
+        if args.command == "g1":
+            from .g1 import run_g1
+
+            status, receipt_path = run_g1(
+                manifest_path=args.manifest,
+                out_path=args.out,
+                seed=args.seed,
+                rate_hz=args.rate_hz,
+                frames=args.frames,
+            )
+            print(f"G1 {status}: {receipt_path}")
+            return 0 if status == "PASS" else 1
+    except (ImportError, OSError, RuntimeError, ValueError) as exc:
+        print(f"Gate refused: {exc}", file=sys.stderr)
         return 2
     raise AssertionError(f"unsupported command: {args.command}")
 
