@@ -60,6 +60,9 @@ degree/radian·gripper 변환과 stale frame 거부 규칙을 확인하려면
 통과했습니다. G1 성공은 얇은 finger pad와 높인 지지대를 manifest에 고정한
 시뮬레이션 결과이며, 기본 장면·학습 policy·실물 로봇 성공을 뜻하지 않습니다.
 
+SO-101 관련 디렉터리의 역할, 외부 LeRobot/ROS 2 checkout과 DAPIER 정본의
+경계는 [`so101` 작업 허브](so101/README.md)에 모아 두었습니다.
+
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
 
