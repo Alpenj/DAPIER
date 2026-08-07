@@ -8,6 +8,18 @@
 체크박스는 미리 채우지 않습니다. 실제로 명령을 실행하고 화면·로그·로봇
 움직임을 확인한 뒤에만 체크합니다.
 
+아래 명령은 소스·실행 환경·원시 증거를 섞지 않도록 세 경로를 구분한다.
+
+```bash
+export DAPIER_ROOT="${DAPIER_ROOT:-$HOME/DAPIER}"
+export LEROBOT_ROOT="${LEROBOT_ROOT:-$HOME/so101/lerobot}"
+export SO101_EVIDENCE_ROOT="${SO101_EVIDENCE_ROOT:-$HOME/dapier-runs/so101-hardware}"
+```
+
+`DAPIER_ROOT`에는 공개 가능한 코드와 문서만, `LEROBOT_ROOT`에는 upstream
+checkout과 venv만, `SO101_EVIDENCE_ROOT`에는 calibration·JSONL·영상 같은
+로컬 실행 증거만 둔다.
+
 ## 이 문서에서 AI가 도운 범위
 
 카지노 딜러라는 아이디어, episode를 쌓아 policy를 만들자는 목표, 한 팔에서
@@ -98,7 +110,7 @@ python3 -m casino_dealer.episode_cli mark \
 ### 2-2. PC 사전점검
 
 ```bash
-bash ~/so101-weekend/scripts/preflight.sh
+bash "$DAPIER_ROOT/so101/hardware_tools/read_only/preflight.sh"
 groups
 ls -l /dev/ttyACM* /dev/ttyUSB* 2>/dev/null
 ls -l /dev/serial/by-id/ 2>/dev/null
@@ -110,8 +122,8 @@ ls -l /dev/serial/by-id/ 2>/dev/null
 ### 2-3. 포트 확정
 
 ```bash
-cd ~/so101-weekend/lerobot
-/home/dapier-jhj/.local/bin/uv run lerobot-find-port
+cd "$LEROBOT_ROOT"
+uv run lerobot-find-port
 ```
 
 한 팔의 포트를 찾은 뒤 `FOLLOWER_PORT`, `LEADER_PORT`로 기록한다. 실제
@@ -126,12 +138,12 @@ cd ~/so101-weekend/lerobot
 연결한다.
 
 ```bash
-cd ~/so101-weekend/lerobot
-/home/dapier-jhj/.local/bin/uv run lerobot-setup-motors \
+cd "$LEROBOT_ROOT"
+uv run lerobot-setup-motors \
   --robot.type=so101_follower \
   --robot.port=<FOLLOWER_PORT>
 
-/home/dapier-jhj/.local/bin/uv run lerobot-setup-motors \
+uv run lerobot-setup-motors \
   --teleop.type=so101_leader \
   --teleop.port=<LEADER_PORT>
 ```
@@ -141,17 +153,17 @@ cd ~/so101-weekend/lerobot
 ### 3-2. 캘리브레이션 전 raw 값 기록
 
 ```bash
-/home/dapier-jhj/.local/bin/uv run python \
-  ~/so101-weekend/scripts/read_motor_positions.py \
+uv run python \
+  "$DAPIER_ROOT/so101/hardware_tools/read_only/read_motor_positions.py" \
   --role follower --port <FOLLOWER_PORT> --id so101_follower_main \
   --samples 10 \
-  --output ~/so101-weekend/evidence/follower-before.jsonl
+  --output "$SO101_EVIDENCE_ROOT/follower-before.jsonl"
 
-/home/dapier-jhj/.local/bin/uv run python \
-  ~/so101-weekend/scripts/read_motor_positions.py \
+uv run python \
+  "$DAPIER_ROOT/so101/hardware_tools/read_only/read_motor_positions.py" \
   --role leader --port <LEADER_PORT> --id so101_leader_main \
   --samples 10 \
-  --output ~/so101-weekend/evidence/leader-before.jsonl
+  --output "$SO101_EVIDENCE_ROOT/leader-before.jsonl"
 ```
 
 ### 3-3. 캘리브레이션
@@ -161,8 +173,8 @@ cd ~/so101-weekend/lerobot
 누른다.
 
 ```bash
-/home/dapier-jhj/.local/bin/uv run python \
-  ~/so101-weekend/scripts/calibrate_follower_safe.py \
+uv run python \
+  "$DAPIER_ROOT/so101/hardware_tools/writes_hardware/calibrate_follower_safe.py" \
   --port <FOLLOWER_PORT> \
   --id so101_follower_main
 ```
@@ -170,7 +182,7 @@ cd ~/so101-weekend/lerobot
 리더는 공식 LeRobot 절차를 사용한다.
 
 ```bash
-/home/dapier-jhj/.local/bin/uv run lerobot-calibrate \
+uv run lerobot-calibrate \
   --teleop.type=so101_leader \
   --teleop.port=<LEADER_PORT> \
   --teleop.id=so101_leader_main
@@ -182,14 +194,14 @@ cd ~/so101-weekend/lerobot
 ### 3-4. JSON 검증과 백업
 
 ```bash
-/home/dapier-jhj/.local/bin/uv run python \
-  ~/so101-weekend/scripts/validate_calibration.py
+uv run python \
+  "$DAPIER_ROOT/so101/hardware_tools/read_only/validate_calibration.py"
 
-mkdir -p ~/so101-weekend/evidence/calibration-backup
+mkdir -p "$SO101_EVIDENCE_ROOT/calibration-backup"
 cp -a \
   ~/.cache/huggingface/lerobot/calibration/robots/so_follower/so101_follower_main.json \
   ~/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/so101_leader_main.json \
-  ~/so101-weekend/evidence/calibration-backup/
+  "$SO101_EVIDENCE_ROOT/calibration-backup/"
 ```
 
 검증 전에는 텔레옵이나 ROS launch를 실행하지 않는다. 캘리브레이션 JSON과
@@ -198,7 +210,7 @@ cp -a \
 ## 4. 저속 텔레옵 검증
 
 ```bash
-/home/dapier-jhj/.local/bin/uv run lerobot-teleoperate \
+uv run lerobot-teleoperate \
   --robot.type=so101_follower \
   --robot.port=<FOLLOWER_PORT> \
   --robot.id=so101_follower_main \
@@ -235,8 +247,8 @@ cp -a \
 무조건 학습에 넣지 말고 manifest로 판정한다.
 
 ```bash
-cd ~/so101-weekend/lerobot
-/home/dapier-jhj/.local/bin/uv run lerobot-record \
+cd "$LEROBOT_ROOT"
+uv run lerobot-record \
   --robot.type=so101_follower \
   --robot.port=<FOLLOWER_PORT> \
   --robot.id=so101_follower_main \
@@ -281,8 +293,8 @@ python3 -m casino_dealer.episode_cli validate-tree \
 치우고 전원 차단 수단을 손에 둔다.
 
 ```bash
-cd ~/so101-weekend/lerobot
-/home/dapier-jhj/.local/bin/uv run lerobot-replay \
+cd "$LEROBOT_ROOT"
+uv run lerobot-replay \
   --robot.type=so101_follower \
   --robot.port=<FOLLOWER_PORT> \
   --robot.id=so101_follower_main \
@@ -295,7 +307,7 @@ ACT 기준선은 기존 GPU 설정을 그대로 사용한다. CUDA OOM이 실제
 때만 batch를 8 → 4 → 2로 낮춘다.
 
 ```bash
-/home/dapier-jhj/.local/bin/uv run lerobot-train \
+uv run lerobot-train \
   --dataset.repo_id=<HF_USER>/casino_one_card \
   --policy.type=act \
   --policy.device=cuda \
