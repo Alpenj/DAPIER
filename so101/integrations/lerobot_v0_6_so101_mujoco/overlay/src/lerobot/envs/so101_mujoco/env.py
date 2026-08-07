@@ -66,11 +66,8 @@ GOAL_TRAY_POSITION = np.array([0.20, 0.18, 0.031], dtype=np.float64)
 CUBE_HALF_SIZE_M = 0.025
 CUBE_SETTLED_CENTER_Z_M = 0.06881588
 CUBE_TOP_PLANE_Z_M = CUBE_SETTLED_CENTER_Z_M + CUBE_HALF_SIZE_M
+_GOAL_TRAY_CUBE_CENTER_HALF_EXTENT_M = 0.05
 FINGER_PAD_GEOM_NAMES = ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")
-FINGER_PAD_VISUAL_GEOM_NAMES = (
-    "dapier_fixed_finger_pad_visual",
-    "dapier_moving_finger_pad_visual",
-)
 WRIST_CAMERA_HOUSING_GEOM_NAME = "dapier_wrist_camera_housing"
 WRIST_CAMERA_LENS_GEOM_NAME = "dapier_wrist_camera_lens"
 WRIST_CAMERA_MOUNT_GEOM_NAME = "dapier_wrist_camera_mount"
@@ -90,16 +87,18 @@ _FINGER_PAD_SPECS = (
     {
         "body": "gripper",
         "name": FINGER_PAD_GEOM_NAMES[0],
-        "visual_name": FINGER_PAD_VISUAL_GEOM_NAMES[0],
-        "pos": [0.0251, -0.000218121, -0.0831274],
-        "quat": [0.707107, 0.0, 0.707107, 0.0],
+        # The outward +X face is exactly coplanar with the fixed fingertip STL.
+        "pos": [-0.0109, -0.0002221, -0.097517],
+        "quat": [0.70710678, 0.0, 0.70710678, 0.0],
+        "size": [0.012, 0.008, 0.003],
     },
     {
         "body": "moving_jaw_so101_v1",
         "name": FINGER_PAD_GEOM_NAMES[1],
-        "visual_name": FINGER_PAD_VISUAL_GEOM_NAMES[1],
-        "pos": [-0.0165797936, -0.0822294661, 0.0190181],
-        "quat": [-0.206738, 0.206738, -0.67621, 0.67621],
+        # The outward -X face is exactly coplanar with the moving fingertip STL.
+        "pos": [-0.0093, -0.0750583, 0.0188972],
+        "quat": [-0.5, -0.5, 0.5, 0.5],
+        "size": [0.008, 0.012, 0.003],
     },
 )
 
@@ -253,31 +252,31 @@ class SO101MujocoEnv(gym.Env):
         mujoco = _require_mujoco()
         self._mujoco = mujoco
         model_spec = mujoco.MjSpec.from_file(str(self.model_path))
+        for fingertip_body_name in ("gripper", "moving_jaw_so101_v1"):
+            for geom in model_spec.body(fingertip_body_name).geoms:
+                if geom.type == mujoco.mjtGeom.mjGEOM_MESH and geom.contype:
+                    # MuJoCo collides against a mesh's convex hull. The hollow
+                    # CAD fingers therefore produce contact in visually empty
+                    # space; the measured flush pads below are the contact
+                    # proxies for these two fingertip bodies instead.
+                    geom.contype = 0
+                    geom.conaffinity = 0
         for pad in _FINGER_PAD_SPECS:
-            # The larger transparent contact envelope keeps the cube seated
-            # during transfer. A smaller, opaque rubber lining below shows the
-            # surface the operator should visually treat as the fingertip.
+            # One visible geom is also the collision geom. Its contact face is
+            # flush with the measured STL fingertip plane, so the viewer and
+            # physics engine agree about where contact occurs.
             model_spec.body(pad["body"]).add_geom(
                 name=pad["name"],
                 type=mujoco.mjtGeom.mjGEOM_BOX,
                 pos=pad["pos"],
                 quat=pad["quat"],
-                size=[0.0275, 0.02, 0.002],
+                size=pad["size"],
                 contype=1,
                 conaffinity=1,
-                friction=[2.0, 0.01, 0.001],
-                rgba=[0.08, 0.08, 0.08, 0.0],
-                group=3,
-                density=0,
-            )
-            model_spec.body(pad["body"]).add_geom(
-                name=pad["visual_name"],
-                type=mujoco.mjtGeom.mjGEOM_BOX,
-                pos=pad["pos"],
-                quat=pad["quat"],
-                size=[0.018, 0.0065, 0.0021],
-                contype=0,
-                conaffinity=0,
+                condim=4,
+                friction=[4.0, 0.02, 0.001],
+                solref=[0.005, 1.0],
+                solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
                 rgba=[0.07, 0.07, 0.07, 1.0],
                 group=2,
                 density=0,
@@ -367,8 +366,13 @@ class SO101MujocoEnv(gym.Env):
         cube_position = self.data.xpos[self._cube_body_id]
         tray_position = self.data.site_xpos[self._tray_site_id]
         distance = float(np.linalg.norm(cube_position - tray_position))
-        xy_distance = float(np.linalg.norm(cube_position[:2] - tray_position[:2]))
-        success = xy_distance < 0.055 and 0.012 < cube_position[2] < 0.09
+        xy_error = np.abs(cube_position[:2] - tray_position[:2])
+        # The goal is a square tray, so success follows its usable square
+        # footprint rather than an inscribed Euclidean circle.
+        success = bool(
+            np.all(xy_error < _GOAL_TRAY_CUBE_CENTER_HALF_EXTENT_M)
+            and 0.012 < cube_position[2] < 0.09
+        )
         dense_reward = float(1.0 - np.tanh(5.0 * distance)) + float(success)
         return bool(success), dense_reward
 

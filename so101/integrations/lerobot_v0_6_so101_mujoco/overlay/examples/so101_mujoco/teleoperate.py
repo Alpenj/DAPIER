@@ -45,6 +45,7 @@ from lerobot.envs.so101_mujoco.teleop import (
     PICK_LIFT_FRAMES,
     CartesianJogController,
     JointJogController,
+    ResetSeedSequence,
     SO101LeaderActionSource,
     scripted_pick_lift_action,
     should_save_episode,
@@ -136,6 +137,7 @@ class ViewerKeyboard:
         self._physics_paused = False
         self._mode = "manual"
         self._viewer_camera_mode = "external"
+        self._episode_seed: int | None = None
         self._continuous_keys = {
             glfw.KEY_UP,
             glfw.KEY_DOWN,
@@ -427,6 +429,10 @@ class ViewerKeyboard:
         with self._lock:
             self._viewer_camera_mode = mode
 
+    def set_episode_seed(self, seed: int) -> None:
+        with self._lock:
+            self._episode_seed = int(seed)
+
     @property
     def physics_paused(self) -> bool:
         with self._lock:
@@ -449,6 +455,7 @@ class ViewerKeyboard:
             action = self.controller.get_action()
             return (
                 f"mode: {self._mode}\n"
+                f"scene seed: {self._episode_seed}\n"
                 f"viewer camera: {self._viewer_camera_mode}\n"
                 f"selected: {self.controller.selected_joint_name}\n"
                 f"target: {np.array2string(action, precision=1, suppress_small=True)}"
@@ -598,7 +605,8 @@ def run(args: argparse.Namespace) -> None:
         if recording
         else None
     )
-    observation, info = env.reset(seed=args.seed)
+    seed_sequence = ResetSeedSequence(args.seed)
+    observation, info = env.reset(seed=seed_sequence.initial_seed)
     assert env.model is not None and env.data is not None
     joint_controller = JointJogController(
         home_action=PICK_CLEAR_ACTION,
@@ -613,6 +621,7 @@ def run(args: argparse.Namespace) -> None:
         cartesian_speed_m=args.cartesian_speed_m,
         scripted_playback_enabled=not recording,
     )
+    keyboard.set_episode_seed(seed_sequence.initial_seed)
     action_source = (
         SO101LeaderActionSource(port=args.leader_port, leader_id=args.leader_id)
         if args.input == "leader"
@@ -622,7 +631,6 @@ def run(args: argparse.Namespace) -> None:
     attempts = 0
     successful_episodes = 0
     saved_episodes = 0
-    automation_runs = 0
     viewer_camera_mode = "external"
     print(
         "keys: hold Shift+W/S X, Shift+A/D Y, Shift+R/F Z | Shift+O/L gripper | "
@@ -670,13 +678,11 @@ def run(args: argparse.Namespace) -> None:
 
                 automation_request = keyboard.consume_automation_reset_request()
                 if automation_request is not None:
-                    reset_seed = args.seed
-                    if automation_request == "vision_pick_place":
-                        reset_seed = args.seed + automation_runs
-                        automation_runs += 1
+                    reset_seed = seed_sequence.next_seed()
                     with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
                         observation, info = env.reset(seed=reset_seed)
                     controller.reset()
+                    keyboard.set_episode_seed(reset_seed)
                     if automation_request == "scripted_lift":
                         keyboard.start_scripted_after_reset()
                     elif automation_request == "vision_pick_place":
@@ -747,7 +753,10 @@ def run(args: argparse.Namespace) -> None:
                         keyboard.resume_physics()
                         controller.reset()
                     with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
-                        observation, info = env.reset(seed=args.seed + attempts)
+                        reset_seed = seed_sequence.next_seed()
+                        observation, info = env.reset(seed=reset_seed)
+                    keyboard.set_episode_seed(reset_seed)
+                    print(f"episode_reset_seed={reset_seed}")
 
                 remaining = 1.0 / args.fps - (time.perf_counter() - frame_started)
                 if remaining > 0:
@@ -791,8 +800,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cube-randomization",
         type=float,
-        default=0.0,
-        help="Half-width of cube XY randomization; zero keeps the verified interactive layout",
+        default=0.025,
+        help="Half-width of cube XY randomization (default: 0.025 m; use zero for a fixed layout)",
     )
     parser.add_argument("--front-only", action="store_true", help="Record only the front camera")
     parser.add_argument("--no-viewer", action="store_true", help="Useful for unattended leader runs")
