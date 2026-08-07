@@ -87,6 +87,7 @@ cube randomization 기본값은 `+-25 mm`다. `--seed 101`로 시작하면 초�
 | randomized seed `101..130` RGB pick-and-place | `30/30 PASS` |
 | wrist RGB XY 오차 | 평균 `3.08 mm`, 최대 `6.55 mm` |
 | 최종 tray 중심 축별 오차 | 최대 `< 50 mm` |
+| live GUI, 초기 seed 101 뒤 첫 `Shift+V` | seed `102`, `PASS`, cube `(0.2185, 0.1528, 0.0388) m` |
 | camera parent | `wrist cam body == gripper body` |
 | upstream asset SHA-256 | `14/14 OK` |
 | clean v0.6.0 + patch + overlay 재구성 test | `24/24 PASS` |
