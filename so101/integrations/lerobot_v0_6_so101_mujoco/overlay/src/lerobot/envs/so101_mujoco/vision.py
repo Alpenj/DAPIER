@@ -8,10 +8,10 @@
 
 """Small, auditable RGB perception helpers for the SO-101 MuJoCo task.
 
-The detector deliberately uses only the wrist RGB image and calibrated camera
-pose. It does not read the simulated cube body pose, depth buffer, segmentation
-IDs, or contacts. The known top-plane height is a task calibration, equivalent
-to knowing the work-surface and object dimensions.
+The detector accepts a calibrated RGB camera (top or wrist). It does not read
+the simulated cube body pose, depth buffer, segmentation IDs, or contacts. The
+known top-plane height is a task calibration, equivalent to knowing the work
+surface and object dimensions.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ class BlueCubeDetection:
 
 @dataclass(frozen=True)
 class CubeVisionEstimate:
-    """World-space cube estimate derived from one wrist RGB frame."""
+    """World-space cube estimate derived from one calibrated RGB frame."""
 
     world_xyz: np.ndarray
     detection: BlueCubeDetection
@@ -58,7 +58,10 @@ def detect_blue_cube(rgb: np.ndarray, *, minimum_pixels: int | None = None) -> B
 
     values = image.astype(np.int16, copy=False)
     red, green, blue = values[..., 0], values[..., 1], values[..., 2]
-    mask = (blue > 180) & (green > 140) & (blue > green * 1.2) & (green > red * 2.0)
+    # The top camera's direct light makes the simulated blue material appear
+    # cyan, while the green tray still has green > blue. Integer differences
+    # keep that distinction without depending on a camera-specific exposure.
+    mask = (blue > 180) & (green > 140) & (blue > green + 8) & (green > red + 80)
     rows, columns = np.nonzero(mask)
     required = (
         max(24, int(image.shape[0] * image.shape[1] * 0.0004))
@@ -130,18 +133,18 @@ def project_pixel_to_horizontal_plane(
         raise RuntimeError("Camera ray is parallel to the calibrated horizontal plane")
     distance = (float(plane_z_m) - position[2]) / world_ray[2]
     if distance <= 0:
-        raise RuntimeError("Calibrated horizontal plane is behind the wrist camera")
+        raise RuntimeError("Calibrated horizontal plane is behind the camera")
     return position + distance * world_ray
 
 
 def estimate_blue_cube_world_position(
-    wrist_rgb: np.ndarray,
+    rgb: np.ndarray,
     calibration: CameraCalibration,
     *,
     cube_top_plane_z_m: float = CUBE_TOP_PLANE_Z_M,
 ) -> CubeVisionEstimate:
-    """Estimate cube XY from wrist RGB and the known cube-top plane."""
-    image = np.asarray(wrist_rgb)
+    """Estimate cube XY from calibrated RGB and the known cube-top plane."""
+    image = np.asarray(rgb)
     if image.shape[:2] != (calibration.image_height, calibration.image_width):
         raise ValueError(
             "RGB dimensions do not match camera calibration: "

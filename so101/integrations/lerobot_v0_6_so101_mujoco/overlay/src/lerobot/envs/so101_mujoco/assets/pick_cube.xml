@@ -34,6 +34,8 @@
 
     <body name="camera_target" pos="0.24 0 0.10"/>
     <camera name="front" pos="0.43 -0.50 0.38" mode="targetbody" target="camera_target" fovy="46"/>
+    <!-- The JSON camera profile is authoritative; this duplicate keeps the raw MJCF directly usable. -->
+    <camera name="top" pos="0.25 0 0.70" xyaxes="1 0 0 0 1 0" fovy="46"/>
 
     <body name="cube" pos="0.254531 -0.00293087 0.075">
       <freejoint name="cube_joint"/>

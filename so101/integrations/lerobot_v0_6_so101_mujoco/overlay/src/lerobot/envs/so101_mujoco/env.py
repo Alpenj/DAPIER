@@ -33,6 +33,13 @@ from typing import Any
 import gymnasium as gym
 import numpy as np
 
+from .camera_profiles import (
+    TOP_CAMERA_PROFILE_ID,
+    WRIST_CAMERA_PROFILE_ID,
+    CameraProfile,
+    load_camera_profile,
+)
+
 JOINT_NAMES = (
     "shoulder_pan",
     "shoulder_lift",
@@ -42,9 +49,11 @@ JOINT_NAMES = (
     "gripper",
 )
 
-CAMERA_NAMES = ("front", "wrist")
+CAMERA_NAMES = ("front", "top", "wrist")
+POLICY_CAMERA_NAMES = ("top", "wrist")
 CAMERA_OBSERVATION_KEYS = {
     "front": "pixels",
+    "top": "pixels_top",
     "wrist": "pixels_wrist",
 }
 
@@ -71,18 +80,10 @@ FINGER_PAD_GEOM_NAMES = ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")
 WRIST_CAMERA_HOUSING_GEOM_NAME = "dapier_wrist_camera_housing"
 WRIST_CAMERA_LENS_GEOM_NAME = "dapier_wrist_camera_lens"
 WRIST_CAMERA_MOUNT_GEOM_NAME = "dapier_wrist_camera_mount"
-_WRIST_CAMERA_POSITION = [0.05, -0.07, 0.04]
-_WRIST_CAMERA_QUATERNION = [
-    0.8976243763874222,
-    0.0994776440004103,
-    0.1271154174228951,
-    -0.4101418631554479,
-]
-_WRIST_CAMERA_HOUSING_POSITION = [
-    0.051612642922897835,
-    -0.07311143607055529,
-    0.05042680911794568,
-]
+_CAMERA_PROFILE_IDS = {
+    "top": TOP_CAMERA_PROFILE_ID,
+    "wrist": WRIST_CAMERA_PROFILE_ID,
+}
 _FINGER_PAD_SPECS = (
     {
         "body": "gripper",
@@ -113,6 +114,32 @@ class CameraCalibration:
     vertical_fov_degrees: float
     image_height: int
     image_width: int
+    profile_id: str = "untracked"
+    physical_alignment_verified: bool = False
+
+
+def camera_profile(camera_name: str) -> CameraProfile:
+    """Return the repository-owned pose contract for a calibrated sim camera."""
+    profile_id = _CAMERA_PROFILE_IDS.get(camera_name)
+    if profile_id is None:
+        raise ValueError(f"Camera {camera_name!r} has no auditable profile")
+    return load_camera_profile(profile_id)
+
+
+def _apply_camera_profile(camera: Any, profile: CameraProfile, mujoco: Any) -> None:
+    camera.pos = profile.position_m
+    camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_XYAXES
+    camera.alt.xyaxes = profile.xyaxes
+    camera.fovy = profile.vertical_fov_degrees
+
+
+def _profile_quaternion(profile: CameraProfile, mujoco: Any) -> np.ndarray:
+    x_axis, y_axis = profile.xyaxes[:3], profile.xyaxes[3:]
+    z_axis = np.cross(x_axis, y_axis)
+    rotation = np.column_stack((x_axis, y_axis, z_axis))
+    quaternion = np.empty(4, dtype=np.float64)
+    mujoco.mju_mat2Quat(quaternion, rotation.reshape(-1))
+    return quaternion
 
 
 def lerobot_action_to_qpos(action: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
@@ -169,7 +196,7 @@ class SO101MujocoEnv(gym.Env):
         reward_type: str = "dense",
         terminate_on_success: bool = True,
         cube_xy_randomization: float = 0.04,
-        camera_names: tuple[str, ...] | list[str] = ("front",),
+        camera_names: tuple[str, ...] | list[str] = POLICY_CAMERA_NAMES,
         home_action: tuple[float, ...] | list[float] | np.ndarray = DEFAULT_HOME_ACTION,
     ):
         super().__init__()
@@ -282,17 +309,26 @@ class SO101MujocoEnv(gym.Env):
                 density=0,
             )
 
-        # Put the eye-in-hand camera above and slightly beside the fingers.
-        # A dead-centre overhead camera is physically occluded by the fixed
-        # finger, so this small lateral offset preserves the top-down view.
+        wrist_profile = camera_profile("wrist")
+        top_profile = camera_profile("top")
         wrist_camera = model_spec.camera("wrist")
-        wrist_camera.pos = _WRIST_CAMERA_POSITION
-        wrist_camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_QUAT
-        wrist_camera.quat = _WRIST_CAMERA_QUATERNION
+        top_camera = model_spec.camera("top")
+        if wrist_camera is None:
+            wrist_camera = model_spec.body(wrist_profile.parent_body).add_camera(name="wrist")
+        if top_camera is None:
+            raise RuntimeError("The scene is missing the top camera declared by its camera profile")
+        _apply_camera_profile(wrist_camera, wrist_profile, mujoco)
+        _apply_camera_profile(top_camera, top_profile, mujoco)
+
+        wrist_quaternion = _profile_quaternion(wrist_profile, mujoco)
+        wrist_x_axis, wrist_y_axis = wrist_profile.xyaxes[:3], wrist_profile.xyaxes[3:]
+        wrist_look_axis = -np.cross(wrist_x_axis, wrist_y_axis)
+        housing_position = wrist_profile.position_m - 0.004 * wrist_look_axis
+        lens_position = wrist_profile.position_m + 0.002 * wrist_look_axis
         model_spec.body("gripper").add_geom(
             name=WRIST_CAMERA_MOUNT_GEOM_NAME,
             type=mujoco.mjtGeom.mjGEOM_CAPSULE,
-            fromto=[0.008, -0.018, 0.0, 0.0515, -0.073, 0.0505],
+            fromto=[0.0025, -0.022, 0.0009, *housing_position],
             size=[0.0035, 0.0, 0.0],
             contype=0,
             conaffinity=0,
@@ -303,9 +339,9 @@ class SO101MujocoEnv(gym.Env):
         model_spec.body("gripper").add_geom(
             name=WRIST_CAMERA_HOUSING_GEOM_NAME,
             type=mujoco.mjtGeom.mjGEOM_BOX,
-            pos=_WRIST_CAMERA_HOUSING_POSITION,
-            quat=_WRIST_CAMERA_QUATERNION,
-            size=[0.014, 0.01, 0.008],
+            pos=housing_position,
+            quat=wrist_quaternion,
+            size=[0.0175, 0.0175, 0.002],
             contype=0,
             conaffinity=0,
             rgba=[0.025, 0.025, 0.025, 1.0],
@@ -315,9 +351,9 @@ class SO101MujocoEnv(gym.Env):
         model_spec.body("gripper").add_geom(
             name=WRIST_CAMERA_LENS_GEOM_NAME,
             type=mujoco.mjtGeom.mjGEOM_CYLINDER,
-            pos=[0.050219905853122436, -0.07042428673689391, 0.04142183760699259],
-            quat=_WRIST_CAMERA_QUATERNION,
-            size=[0.005, 0.001, 0.0],
+            pos=lens_position,
+            quat=wrist_quaternion,
+            size=[0.005, 0.002, 0.0],
             contype=0,
             conaffinity=0,
             rgba=[0.04, 0.13, 0.18, 1.0],
@@ -370,8 +406,7 @@ class SO101MujocoEnv(gym.Env):
         # The goal is a square tray, so success follows its usable square
         # footprint rather than an inscribed Euclidean circle.
         success = bool(
-            np.all(xy_error < _GOAL_TRAY_CUBE_CENTER_HALF_EXTENT_M)
-            and 0.012 < cube_position[2] < 0.09
+            np.all(xy_error < _GOAL_TRAY_CUBE_CENTER_HALF_EXTENT_M) and 0.012 < cube_position[2] < 0.09
         )
         dense_reward = float(1.0 - np.tanh(5.0 * distance)) + float(success)
         return bool(success), dense_reward
@@ -463,8 +498,8 @@ class SO101MujocoEnv(gym.Env):
     def camera_calibration(self, camera_name: str = "wrist") -> CameraCalibration:
         """Return the current camera pose and intrinsic field of view.
 
-        The pose changes with the measured robot state because the wrist camera
-        is a child of the gripper body. Object state is intentionally absent.
+        The wrist pose changes with measured robot state; the top pose is fixed.
+        Object state is intentionally absent from both calibrations.
         """
         if camera_name not in CAMERA_NAMES:
             raise ValueError(f"Unsupported camera_name: {camera_name!r}")
@@ -474,6 +509,8 @@ class SO101MujocoEnv(gym.Env):
         if camera_id < 0:
             raise RuntimeError(f"The MuJoCo model is missing camera {camera_name!r}")
         self._mujoco.mj_forward(self.model, self.data)
+        profile_id = _CAMERA_PROFILE_IDS.get(camera_name, "untracked_front_sim")
+        profile = load_camera_profile(profile_id) if camera_name in _CAMERA_PROFILE_IDS else None
         return CameraCalibration(
             name=camera_name,
             position=self.data.cam_xpos[camera_id].astype(np.float64).copy(),
@@ -481,6 +518,10 @@ class SO101MujocoEnv(gym.Env):
             vertical_fov_degrees=float(self.model.cam_fovy[camera_id]),
             image_height=self.observation_height,
             image_width=self.observation_width,
+            profile_id=profile_id,
+            physical_alignment_verified=(
+                profile.physical_alignment_verified if profile is not None else False
+            ),
         )
 
     def close(self) -> None:

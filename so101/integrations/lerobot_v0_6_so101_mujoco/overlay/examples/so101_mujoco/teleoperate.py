@@ -22,6 +22,9 @@ import argparse
 import contextlib
 import ctypes
 import ctypes.util
+import shlex
+import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -30,14 +33,20 @@ from typing import Any
 import numpy as np
 
 from lerobot.envs.so101_mujoco import (
-    CAMERA_NAMES,
     CAMERA_OBSERVATION_KEYS,
+    IK_OBSERVE_ACTION,
     JOINT_NAMES,
+    POLICY_CAMERA_NAMES,
+    TOP_CAMERA_PROFILE_ID,
     VISION_SETTLE_FRAMES,
+    WRIST_CAMERA_PROFILE_ID,
     SO101MujocoEnv,
     VisionPickPlacePlan,
     build_vision_pick_place_plan,
+    build_wrist_vla_eval_command,
     estimate_blue_cube_world_position,
+    resolve_control_route,
+    write_ik_expert_dataset_contract,
 )
 from lerobot.envs.so101_mujoco.teleop import (
     PICK_APPROACH_ACTION,
@@ -113,6 +122,9 @@ class ViewerKeyboard:
         gripper_speed_percent: float,
         cartesian_speed_m: float,
         scripted_playback_enabled: bool,
+        vision_automation_enabled: bool,
+        vision_source_camera: str,
+        control_mode: str,
     ) -> None:
         import glfw
 
@@ -121,6 +133,11 @@ class ViewerKeyboard:
         self.gripper_speed_percent = float(gripper_speed_percent)
         self.cartesian_speed_m = float(cartesian_speed_m)
         self.scripted_playback_enabled = bool(scripted_playback_enabled)
+        self.vision_automation_enabled = bool(vision_automation_enabled)
+        if vision_source_camera not in {"top", "wrist"}:
+            raise ValueError(f"Unsupported vision source camera: {vision_source_camera!r}")
+        self.vision_source_camera = vision_source_camera
+        self.control_mode = control_mode
         self._lock = threading.Lock()
         self._new_episode_requested = False
         self._automation_reset_requested: str | None = None
@@ -133,6 +150,7 @@ class ViewerKeyboard:
         self._vision_settle_remaining: int | None = None
         self._vision_plan: VisionPickPlacePlan | None = None
         self._vision_frame = 0
+        self._vision_episode_active = False
         self._freeze_after_current_step: str | None = None
         self._physics_paused = False
         self._mode = "manual"
@@ -202,6 +220,7 @@ class ViewerKeyboard:
         self._vision_settle_remaining = None
         self._vision_plan = None
         self._vision_frame = 0
+        self._vision_episode_active = False
         self._freeze_after_current_step = None
 
     def poll_controls(self, poller: X11HeldKeyPoller, elapsed_seconds: float) -> None:
@@ -249,14 +268,14 @@ class ViewerKeyboard:
                 else:
                     print("scripted_pick=disabled_while_recording")
             if glfw.KEY_V in new_edges:
-                if self.scripted_playback_enabled:
+                if self.vision_automation_enabled:
                     self._cancel_automation_locked()
                     self._automation_reset_requested = "vision_pick_place"
                     self._physics_paused = False
                     self._mode = "vision reset requested"
                     print("vision_pick_place=reset_requested")
                 else:
-                    print("vision_pick_place=disabled_while_recording")
+                    print("vision_pick_place=disabled_for_control_route")
             if glfw.KEY_C in new_edges:
                 self._camera_toggle_requested = True
             if glfw.KEY_N in new_edges:
@@ -321,7 +340,10 @@ class ViewerKeyboard:
             elif self._vision_settle_remaining is not None:
                 if self._vision_settle_remaining > 0:
                     completed = VISION_SETTLE_FRAMES - self._vision_settle_remaining + 1
-                    self.controller.set_action(PICK_CLEAR_ACTION)
+                    settle_action = (
+                        IK_OBSERVE_ACTION if self.vision_source_camera == "top" else PICK_CLEAR_ACTION
+                    )
+                    self.controller.set_action(settle_action)
                     self._vision_settle_remaining -= 1
                     self._mode = f"vision camera settle {completed}/{VISION_SETTLE_FRAMES}"
                 elif self._vision_plan is not None:
@@ -336,9 +358,12 @@ class ViewerKeyboard:
                         self._freeze_after_current_step = "vision_pick_place"
                         self._mode = "vision pick/place complete (pausing physics)"
                     else:
-                        self._mode = f"vision {stage} {self._vision_frame}/365"
+                        self._mode = f"vision {stage} {self._vision_frame}/{len(self._vision_plan.actions)}"
                 else:
-                    self.controller.set_action(PICK_CLEAR_ACTION)
+                    pending_action = (
+                        IK_OBSERVE_ACTION if self.vision_source_camera == "top" else PICK_CLEAR_ACTION
+                    )
+                    self.controller.set_action(pending_action)
                     self._mode = "vision RGB detection pending"
             return self.controller.get_action()
 
@@ -391,8 +416,12 @@ class ViewerKeyboard:
     def start_vision_after_reset(self) -> None:
         with self._lock:
             self._cancel_automation_locked()
-            self.controller.reset()
+            if self.vision_source_camera == "top":
+                self.controller.set_action(IK_OBSERVE_ACTION)
+            else:
+                self.controller.reset()
             self._vision_settle_remaining = VISION_SETTLE_FRAMES
+            self._vision_episode_active = True
             self._physics_paused = False
             self._mode = f"vision camera settle 0/{VISION_SETTLE_FRAMES}"
             print(f"vision_pick_place=started_from_reset settle_frames={VISION_SETTLE_FRAMES}")
@@ -401,6 +430,16 @@ class ViewerKeyboard:
     def vision_detection_requested(self) -> bool:
         with self._lock:
             return self._vision_settle_remaining == 0 and self._vision_plan is None
+
+    @property
+    def vision_episode_active(self) -> bool:
+        with self._lock:
+            return self._vision_episode_active
+
+    def end_episode(self) -> None:
+        with self._lock:
+            self._cancel_automation_locked()
+            self._physics_paused = False
 
     def provide_vision_plan(self, plan: VisionPickPlacePlan) -> None:
         with self._lock:
@@ -424,7 +463,7 @@ class ViewerKeyboard:
             return requested
 
     def set_viewer_camera_mode(self, mode: str) -> None:
-        if mode not in {"external", "wrist"}:
+        if mode not in {"external", "top", "wrist"}:
             raise ValueError(f"Unsupported viewer camera mode: {mode!r}")
         with self._lock:
             self._viewer_camera_mode = mode
@@ -455,6 +494,7 @@ class ViewerKeyboard:
             action = self.controller.get_action()
             return (
                 f"mode: {self._mode}\n"
+                f"control route: {self.control_mode}\n"
                 f"scene seed: {self._episode_seed}\n"
                 f"viewer camera: {self._viewer_camera_mode}\n"
                 f"selected: {self.controller.selected_joint_name}\n"
@@ -535,8 +575,8 @@ VIEWER_HELP = (
     "Shift+Up/Down: selected joint   Shift+J/K: select\n"
     "Shift+G: known cube approach\n"
     "Shift+P: reset + scripted pick/lift\n"
-    "Shift+V: wrist RGB find + pick + place\n"
-    "Shift+C: wrist/external viewer camera\n"
+    "Shift+V: top RGB + IK expert pick/place\n"
+    "Shift+C: external/top/wrist viewer camera\n"
     "Shift+H: home   Shift+N: new   Shift+Q: quit"
 )
 
@@ -566,10 +606,10 @@ def set_viewer_camera_mode(viewer_handle, model, keyboard: ViewerKeyboard, mode:
     import mujoco
 
     with viewer_handle.lock():
-        if mode == "wrist":
-            camera_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, "wrist")
+        if mode in {"top", "wrist"}:
+            camera_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, mode)
             if camera_id < 0:
-                raise RuntimeError("The MuJoCo model is missing the wrist camera")
+                raise RuntimeError(f"The MuJoCo model is missing the {mode} camera")
             viewer_handle.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
             viewer_handle.cam.fixedcamid = camera_id
         elif mode == "external":
@@ -582,13 +622,54 @@ def set_viewer_camera_mode(viewer_handle, model, keyboard: ViewerKeyboard, mode:
 
 
 def run(args: argparse.Namespace) -> None:
+    camera_sets = {
+        "expert": POLICY_CAMERA_NAMES,
+        "wrist-only": ("wrist",),
+        "front-only": ("front",),
+    }
+    camera_set = "front-only" if args.front_only else args.camera_set
+    camera_names = camera_sets[camera_set]
+    control_route = (
+        None
+        if camera_set == "front-only"
+        else resolve_control_route(camera_names, requested_mode=args.control_mode)
+    )
+    if control_route is None and args.control_mode != "auto":
+        raise ValueError("front-only manual mode cannot claim an IK or VLA control route")
+    recording = args.record_root is not None
+    if recording and (control_route is None or control_route.mode != "ik_expert"):
+        raise ValueError("This recorder accepts only top+wrist IK expert demonstrations")
+    if recording and args.input != "keyboard":
+        raise ValueError("IK expert recording requires keyboard mode so Shift+V owns every saved action")
+    if args.input == "policy":
+        if control_route is None or control_route.mode != "vla":
+            raise ValueError("--input=policy requires --camera-set=wrist-only and the VLA route")
+        if args.policy_path is None:
+            raise ValueError("--policy-path is required when --input=policy")
+        if recording:
+            raise ValueError("Use lerobot-eval recording options for policy rollouts")
+        command = build_wrist_vla_eval_command(
+            python_executable=sys.executable,
+            policy_path=args.policy_path,
+            output_dir=args.output_dir,
+            episodes=args.episodes,
+            steps=args.steps,
+            height=args.height,
+            width=args.width,
+            seed=args.seed,
+            cube_randomization=args.cube_randomization,
+        )
+        print(f"control_route=vla cameras={camera_names}")
+        print(f"delegating_to_lerobot_eval={shlex.join(command)}")
+        subprocess.run(command, check=True)
+        return
+    if control_route is not None and control_route.mode == "vla":
+        raise ValueError("wrist-only mode requires --input=policy and --policy-path")
     if args.input == "keyboard" and args.no_viewer:
         raise ValueError("Keyboard input requires the MuJoCo viewer; remove --no-viewer")
     if args.input == "leader" and not args.leader_port:
         raise ValueError("--leader-port is required when --input=leader")
 
-    camera_names = ("front",) if args.front_only else CAMERA_NAMES
-    recording = args.record_root is not None
     env = SO101MujocoEnv(
         obs_type="pixels_agent_pos" if recording else "state",
         camera_names=camera_names,
@@ -605,6 +686,13 @@ def run(args: argparse.Namespace) -> None:
         if recording
         else None
     )
+    if recording:
+        control_contract_path = write_ik_expert_dataset_contract(
+            args.record_root,
+            wrist_camera_profile_id=WRIST_CAMERA_PROFILE_ID,
+            top_camera_profile_id=TOP_CAMERA_PROFILE_ID,
+        )
+        print(f"expert_dataset_contract={control_contract_path}")
     seed_sequence = ResetSeedSequence(args.seed)
     observation, info = env.reset(seed=seed_sequence.initial_seed)
     assert env.model is not None and env.data is not None
@@ -620,6 +708,9 @@ def run(args: argparse.Namespace) -> None:
         gripper_speed_percent=args.gripper_speed_percent,
         cartesian_speed_m=args.cartesian_speed_m,
         scripted_playback_enabled=not recording,
+        vision_automation_enabled=(control_route is not None and control_route.mode == "ik_expert"),
+        vision_source_camera=(control_route.perception_camera if control_route is not None else "wrist"),
+        control_mode=(control_route.mode if control_route is not None else "manual"),
     )
     keyboard.set_episode_seed(seed_sequence.initial_seed)
     action_source = (
@@ -632,10 +723,15 @@ def run(args: argparse.Namespace) -> None:
     successful_episodes = 0
     saved_episodes = 0
     viewer_camera_mode = "external"
+    viewer_camera_modes = ("external", *[name for name in ("top", "wrist") if name in camera_names])
+    print(
+        f"control_route={control_route.mode if control_route is not None else 'manual'} "
+        f"cameras={camera_names} recording={recording}"
+    )
     print(
         "keys: hold Shift+W/S X, Shift+A/D Y, Shift+R/F Z | Shift+O/L gripper | "
         "Shift+J/K joint select | Shift+Up/Down joint | Shift+G approach | "
-        "Shift+P reset+pick/lift | Shift+V wrist-RGB pick/place | Shift+C camera | "
+        "Shift+P reset+pick/lift | Shift+V top-RGB IK pick/place | Shift+C camera | "
         "Shift+H home | Shift+N new | Shift+Q quit"
     )
 
@@ -673,11 +769,14 @@ def run(args: argparse.Namespace) -> None:
                 if keyboard.stop_requested:
                     break
                 if viewer_handle is not None and keyboard.consume_camera_toggle_request():
-                    viewer_camera_mode = "external" if viewer_camera_mode == "wrist" else "wrist"
+                    viewer_index = viewer_camera_modes.index(viewer_camera_mode)
+                    viewer_camera_mode = viewer_camera_modes[(viewer_index + 1) % len(viewer_camera_modes)]
                     set_viewer_camera_mode(viewer_handle, env.model, keyboard, viewer_camera_mode)
 
                 automation_request = keyboard.consume_automation_reset_request()
                 if automation_request is not None:
+                    if dataset is not None and dataset.has_pending_frames():
+                        dataset.clear_episode_buffer(delete_images=True)
                     reset_seed = seed_sequence.next_seed()
                     with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
                         observation, info = env.reset(seed=reset_seed)
@@ -688,23 +787,25 @@ def run(args: argparse.Namespace) -> None:
                     elif automation_request == "vision_pick_place":
                         keyboard.start_vision_after_reset()
                         print(f"vision_seed={reset_seed}")
-                        if viewer_handle is not None and viewer_camera_mode != "wrist":
-                            viewer_camera_mode = "wrist"
+                        vision_camera = keyboard.vision_source_camera
+                        if viewer_handle is not None and viewer_camera_mode != vision_camera:
+                            viewer_camera_mode = vision_camera
                             set_viewer_camera_mode(viewer_handle, env.model, keyboard, viewer_camera_mode)
                     else:
                         raise AssertionError(f"Unknown automation request: {automation_request}")
 
                 if keyboard.vision_detection_requested:
                     try:
+                        vision_camera = keyboard.vision_source_camera
                         with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
-                            wrist_rgb = env.render("wrist")
-                            calibration = env.camera_calibration("wrist")
-                        estimate = estimate_blue_cube_world_position(wrist_rgb, calibration)
+                            rgb = env.render(vision_camera)
+                            calibration = env.camera_calibration(vision_camera)
+                        estimate = estimate_blue_cube_world_position(rgb, calibration)
                         plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2])
                         keyboard.provide_vision_plan(plan)
                         detection = estimate.detection
                         print(
-                            "vision_detection=PASS source=wrist_rgb "
+                            f"vision_detection=PASS source={vision_camera}_rgb "
                             f"pixel_xy={detection.center_pixel_xy} bbox={detection.bbox_xyxy} "
                             f"pixels={detection.pixel_count} "
                             "estimated_cube_xy_m="
@@ -728,7 +829,7 @@ def run(args: argparse.Namespace) -> None:
                 manually_ended = keyboard.consume_new_episode_request()
                 done = terminated or truncated or manually_ended
 
-                if dataset is not None:
+                if dataset is not None and keyboard.vision_episode_active:
                     add_dataset_frame(dataset, observation, action, reward, info, done, camera_names)
                 observation = next_observation
 
@@ -743,6 +844,7 @@ def run(args: argparse.Namespace) -> None:
                     successful_episodes += int(success)
                     saved = finish_episode(dataset, success=success, save_mode=args.save_mode)
                     saved_episodes += int(saved)
+                    keyboard.end_episode()
                     print(
                         f"attempt={attempts}/{args.episodes} place_success={success} "
                         f"saved={saved} total_saved={saved_episodes}"
@@ -783,9 +885,28 @@ def run(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", choices=("keyboard", "leader"), default="keyboard")
+    parser.add_argument("--input", choices=("keyboard", "leader", "policy"), default="keyboard")
     parser.add_argument("--leader-port", help="Serial port used only with --input=leader")
     parser.add_argument("--leader-id", default="so101_leader_main")
+    parser.add_argument("--policy-path", type=Path, help="SmolVLA/VLA checkpoint used with --input=policy")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("outputs/eval/so101_wrist_vla"),
+        help="LeRobot evaluation output used with --input=policy",
+    )
+    parser.add_argument(
+        "--camera-set",
+        choices=("expert", "wrist-only", "front-only"),
+        default="expert",
+        help="expert=top+wrist IK data; wrist-only=VLA inference; front-only=manual legacy view",
+    )
+    parser.add_argument(
+        "--control-mode",
+        choices=("auto", "ik_expert", "vla"),
+        default="auto",
+        help="Fail if the requested controller does not match the selected cameras",
+    )
     parser.add_argument("--episodes", type=int, default=20)
     parser.add_argument("--steps", type=int, default=1800)
     parser.add_argument("--fps", type=int, default=30)
@@ -803,7 +924,7 @@ def parse_args() -> argparse.Namespace:
         default=0.025,
         help="Half-width of cube XY randomization (default: 0.025 m; use zero for a fixed layout)",
     )
-    parser.add_argument("--front-only", action="store_true", help="Record only the front camera")
+    parser.add_argument("--front-only", action="store_true", help="Legacy alias for --camera-set=front-only")
     parser.add_argument("--no-viewer", action="store_true", help="Useful for unattended leader runs")
     parser.add_argument("--record-root", type=Path, help="Optional new dataset directory")
     parser.add_argument("--repo-id", default="local/so101_mujoco_teleop")
@@ -824,6 +945,10 @@ def parse_args() -> argparse.Namespace:
         parser.error("--cartesian-speed-m must be positive")
     if args.cube_randomization < 0:
         parser.error("--cube-randomization must be non-negative")
+    if args.seed < 0:
+        parser.error("--seed must be non-negative")
+    if args.front_only and args.camera_set != "expert":
+        parser.error("--front-only cannot be combined with an explicit --camera-set")
     return args
 
 

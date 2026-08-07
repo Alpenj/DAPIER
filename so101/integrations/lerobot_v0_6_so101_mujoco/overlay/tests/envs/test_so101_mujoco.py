@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -24,32 +25,42 @@ from lerobot.envs.configs import SO101MujocoEnvConfig
 from lerobot.envs.so101_mujoco import (
     ACTION_HIGH,
     ACTION_LOW,
-    CAMERA_NAMES,
     CUBE_SPAWN_POSITION,
     CUBE_TOP_PLANE_Z_M,
     FINGER_PAD_GEOM_NAMES,
     GOAL_TRAY_POSITION,
+    IK_OBSERVE_ACTION,
     JOINT_NAMES,
     PICK_CLEAR_ACTION,
     PICK_LIFT_FRAMES,
+    POLICY_CAMERA_NAMES,
+    TOP_CAMERA_PROFILE_ID,
     VISION_PICK_PLACE_FRAMES,
     WRIST_CAMERA_HOUSING_GEOM_NAME,
     WRIST_CAMERA_LENS_GEOM_NAME,
     WRIST_CAMERA_MOUNT_GEOM_NAME,
+    WRIST_CAMERA_PROFILE_ID,
     CameraCalibration,
     CartesianJogController,
     JointJogController,
     ResetSeedSequence,
     SO101MujocoEnv,
+    build_ik_expert_dataset_contract,
     build_vision_pick_place_plan,
+    build_wrist_student_dataset_command,
+    build_wrist_vla_eval_command,
+    build_wrist_vla_train_command,
+    camera_profile,
     detect_blue_cube,
     estimate_blue_cube_world_position,
     leader_action_dict_to_array,
     lerobot_action_to_qpos,
     project_pixel_to_horizontal_plane,
     qpos_to_lerobot_state,
+    resolve_control_route,
     scripted_pick_lift_action,
     should_save_episode,
+    write_ik_expert_dataset_contract,
 )
 
 
@@ -120,16 +131,112 @@ def test_every_scene_reset_gets_the_next_seed_without_rewinding():
         ResetSeedSequence(-1)
 
 
+def test_wrist_camera_profile_preserves_cad_provenance_without_claiming_physical_calibration():
+    profile = camera_profile("wrist")
+    assert profile.profile_id == WRIST_CAMERA_PROFILE_ID
+    assert profile.parent_body == "gripper"
+    np.testing.assert_allclose(profile.position_m, [0.0025, -0.072057361, 0.004150235])
+    np.testing.assert_allclose(
+        -np.cross(profile.xyaxes[:3], profile.xyaxes[3:]), [0, 0.422618262, -0.906307787]
+    )
+    assert profile.provenance["source_revision"] == "7629d2ad9853d10fb903093a33ef6114099d97e5"
+    assert profile.provenance["source_sha256"] == (
+        "b4345ccf23f1f2ed3f4885c205cac5afbed6ddd1b183617c4801751e3bafb7b4"
+    )
+    assert profile.verification["lens_optical_center"] == "unverified_zero_offset"
+    assert profile.physical_alignment_verified is False
+
+
+def test_camera_set_routes_top_wrist_to_ik_and_wrist_only_to_vla():
+    expert = resolve_control_route(("top", "wrist"))
+    assert expert.mode == "ik_expert"
+    assert expert.perception_camera == "top"
+    student = resolve_control_route(("wrist",))
+    assert student.mode == "vla"
+    assert student.perception_camera == "wrist"
+    with pytest.raises(ValueError, match="require"):
+        resolve_control_route(("top",))
+    with pytest.raises(ValueError, match="Requested"):
+        resolve_control_route(("top", "wrist"), requested_mode="vla")
+
+
+def test_ik_expert_sidecar_defines_wrist_only_student_derivation(tmp_path):
+    contract = build_ik_expert_dataset_contract(
+        wrist_camera_profile_id=WRIST_CAMERA_PROFILE_ID,
+        top_camera_profile_id=TOP_CAMERA_PROFILE_ID,
+    )
+    assert contract["teacher"]["controller"] == "ik"
+    assert contract["teacher"]["recorded_cameras"] == ["top", "wrist"]
+    assert contract["student"]["controller"] == "vla"
+    assert contract["student"]["inference_cameras"] == ["wrist"]
+    assert contract["student_dataset_derivation"]["remove_features"] == ["observation.images.top"]
+    assert contract["claims"]["vla_trained"] is False
+    path = write_ik_expert_dataset_contract(
+        tmp_path,
+        wrist_camera_profile_id=WRIST_CAMERA_PROFILE_ID,
+        top_camera_profile_id=TOP_CAMERA_PROFILE_ID,
+    )
+    assert path == tmp_path / "meta" / "dapier_control_route.json"
+    assert path.is_file()
+
+
+def test_wrist_vla_route_delegates_to_standard_lerobot_evaluator(tmp_path):
+    command = build_wrist_vla_eval_command(
+        python_executable="python",
+        policy_path=Path("checkpoints/wrist-smolvla"),
+        output_dir=tmp_path / "eval",
+        episodes=3,
+        steps=700,
+        height=240,
+        width=320,
+        seed=7,
+        cube_randomization=0.025,
+    )
+    assert command[:3] == ["python", "-m", "lerobot.scripts.lerobot_eval"]
+    assert "--env.camera_names=[wrist]" in command
+    assert "--policy.path=checkpoints/wrist-smolvla" in command
+
+
+def test_ik_dataset_derivation_removes_only_the_top_camera(tmp_path):
+    command = build_wrist_student_dataset_command(
+        python_executable="python",
+        teacher_repo_id="local/so101_ik_teacher",
+        teacher_root=tmp_path / "teacher",
+        student_repo_id="local/so101_wrist_student",
+        student_root=tmp_path / "student",
+    )
+    assert command[:3] == ["python", "-m", "lerobot.scripts.lerobot_edit_dataset"]
+    assert "--operation.type=remove_feature" in command
+    assert '--operation.feature_names=["observation.images.top"]' in command
+    assert all("observation.images.wrist" not in argument for argument in command)
+
+
+def test_wrist_student_trains_with_standard_smolvla_pipeline(tmp_path):
+    command = build_wrist_vla_train_command(
+        python_executable="python",
+        dataset_repo_id="local/so101_wrist_student",
+        dataset_root=tmp_path / "student",
+        output_dir=tmp_path / "train",
+        steps=1000,
+        batch_size=8,
+        seed=23,
+    )
+    assert command[:3] == ["python", "-m", "lerobot.scripts.lerobot_train"]
+    assert "--policy.type=smolvla" in command
+    assert "--policy.push_to_hub=false" in command
+    assert "--steps=1000" in command
+
+
 def test_config_exposes_real_robot_compatible_features():
     cfg = SO101MujocoEnvConfig(observation_height=120, observation_width=160)
     assert cfg.type == "so101_mujoco"
     assert cfg.features["action"].shape == (6,)
     assert cfg.features["agent_pos"].shape == (6,)
-    assert cfg.features["pixels"].shape == (120, 160, 3)
+    assert cfg.features["pixels_top"].shape == (120, 160, 3)
     assert cfg.features["pixels_wrist"].shape == (120, 160, 3)
-    assert cfg.features_map["pixels"] == "observation.images.front"
+    assert cfg.features_map["pixels_top"] == "observation.images.top"
     assert cfg.features_map["pixels_wrist"] == "observation.images.wrist"
-    assert cfg.camera_names == CAMERA_NAMES
+    assert cfg.camera_names == POLICY_CAMERA_NAMES
 
 
 @pytest.mark.timeout(30)
@@ -196,20 +303,30 @@ def test_reachable_scene_contains_support_goal_and_finger_pads():
         for fingertip_body_name in ("gripper", "moving_jaw_so101_v1"):
             body_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_BODY, fingertip_body_name)
             mesh_ids = np.flatnonzero(
-                (env.model.geom_bodyid == body_id)
-                & (env.model.geom_type == mujoco.mjtGeom.mjGEOM_MESH)
+                (env.model.geom_bodyid == body_id) & (env.model.geom_type == mujoco.mjtGeom.mjGEOM_MESH)
             )
             assert len(mesh_ids) > 0
             assert np.all(env.model.geom_contype[mesh_ids] == 0)
             assert np.all(env.model.geom_conaffinity[mesh_ids] == 0)
 
         camera_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_CAMERA, "wrist")
+        top_camera_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_CAMERA, "top")
         gripper_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_BODY, "gripper")
         housing_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, WRIST_CAMERA_HOUSING_GEOM_NAME)
         lens_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, WRIST_CAMERA_LENS_GEOM_NAME)
         mount_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, WRIST_CAMERA_MOUNT_GEOM_NAME)
         assert env.model.cam_bodyid[camera_id] == gripper_id
-        np.testing.assert_allclose(env.model.cam_pos[camera_id], [0.05, -0.07, 0.04])
+        assert env.model.cam_bodyid[top_camera_id] == 0
+        wrist_profile = camera_profile("wrist")
+        top_profile = camera_profile("top")
+        np.testing.assert_allclose(env.model.cam_pos[camera_id], wrist_profile.position_m)
+        np.testing.assert_allclose(env.model.cam_pos[top_camera_id], top_profile.position_m)
+        wrist_calibration = env.camera_calibration("wrist")
+        top_calibration = env.camera_calibration("top")
+        assert wrist_calibration.profile_id == WRIST_CAMERA_PROFILE_ID
+        assert top_calibration.profile_id == TOP_CAMERA_PROFILE_ID
+        assert wrist_calibration.physical_alignment_verified is False
+        assert top_calibration.physical_alignment_verified is False
         assert housing_id >= 0
         assert lens_id >= 0
         assert mount_id >= 0
@@ -327,17 +444,17 @@ def test_headless_dual_camera_render():
         obs_type="pixels",
         observation_height=96,
         observation_width=128,
-        camera_names=CAMERA_NAMES,
+        camera_names=POLICY_CAMERA_NAMES,
     )
     try:
         obs, _ = env.reset(seed=1)
-        assert obs["pixels"].shape == (96, 128, 3)
-        assert obs["pixels"].dtype == np.uint8
-        assert obs["pixels"].max() > obs["pixels"].min()
+        assert obs["pixels_top"].shape == (96, 128, 3)
+        assert obs["pixels_top"].dtype == np.uint8
+        assert obs["pixels_top"].max() > obs["pixels_top"].min()
         assert obs["pixels_wrist"].shape == (96, 128, 3)
         assert obs["pixels_wrist"].dtype == np.uint8
         assert obs["pixels_wrist"].max() > obs["pixels_wrist"].min()
-        assert not np.array_equal(obs["pixels"], obs["pixels_wrist"])
+        assert not np.array_equal(obs["pixels_top"], obs["pixels_wrist"])
     finally:
         env.close()
 
@@ -374,7 +491,7 @@ def test_rgb_detector_and_pinhole_plane_projection_are_auditable():
 
 
 @pytest.mark.timeout(30)
-def test_wrist_rgb_estimate_drives_a_bounded_plan_without_cube_state():
+def test_cad_mount_surface_wrist_view_moves_with_gripper_and_sees_cube():
     os.environ.setdefault("MUJOCO_GL", "egl")
     pytest.importorskip("mujoco")
     env = SO101MujocoEnv(
@@ -387,12 +504,40 @@ def test_wrist_rgb_estimate_drives_a_bounded_plan_without_cube_state():
         home_action=PICK_CLEAR_ACTION,
     )
     try:
-        _, info = env.reset(seed=3)
+        _, info = env.reset(seed=4)
+        start_position = env.camera_calibration("wrist").position
         for _ in range(30):
             _, _, _, _, info = env.step(PICK_CLEAR_ACTION)
         estimate = estimate_blue_cube_world_position(env.render("wrist"), env.camera_calibration("wrist"))
+        assert np.linalg.norm(estimate.world_xyz[:2] - info["cube_position"][:2]) < 0.003
+        for _ in range(15):
+            env.step(IK_OBSERVE_ACTION)
+        moved_position = env.camera_calibration("wrist").position
+        assert np.linalg.norm(moved_position - start_position) > 0.01
+    finally:
+        env.close()
+
+
+@pytest.mark.timeout(30)
+def test_top_rgb_estimate_drives_a_bounded_ik_plan_without_cube_state():
+    os.environ.setdefault("MUJOCO_GL", "egl")
+    pytest.importorskip("mujoco")
+    env = SO101MujocoEnv(
+        obs_type="state",
+        camera_names=("top", "wrist"),
+        observation_height=240,
+        observation_width=320,
+        cube_xy_randomization=0.025,
+        terminate_on_success=False,
+        home_action=PICK_CLEAR_ACTION,
+    )
+    try:
+        _, info = env.reset(seed=3)
+        for _ in range(30):
+            _, _, _, _, info = env.step(IK_OBSERVE_ACTION)
+        estimate = estimate_blue_cube_world_position(env.render("top"), env.camera_calibration("top"))
         assert estimate.world_xyz[2] == pytest.approx(CUBE_TOP_PLANE_Z_M)
-        assert np.linalg.norm(estimate.world_xyz[:2] - info["cube_position"][:2]) < 0.012
+        assert np.linalg.norm(estimate.world_xyz[:2] - info["cube_position"][:2]) < 0.003
 
         plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2])
         assert plan.actions.shape == (VISION_PICK_PLACE_FRAMES, 6)
@@ -408,12 +553,12 @@ def test_wrist_rgb_estimate_drives_a_bounded_plan_without_cube_state():
 
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("seed", range(5))
-def test_wrist_rgb_closed_loop_places_randomized_cube(seed):
+def test_top_rgb_ik_expert_places_randomized_cube(seed):
     os.environ.setdefault("MUJOCO_GL", "egl")
     pytest.importorskip("mujoco")
     env = SO101MujocoEnv(
         obs_type="state",
-        camera_names=("wrist",),
+        camera_names=("top", "wrist"),
         observation_height=240,
         observation_width=320,
         cube_xy_randomization=0.025,
@@ -424,8 +569,8 @@ def test_wrist_rgb_closed_loop_places_randomized_cube(seed):
     try:
         env.reset(seed=seed)
         for _ in range(30):
-            env.step(PICK_CLEAR_ACTION)
-        estimate = estimate_blue_cube_world_position(env.render("wrist"), env.camera_calibration("wrist"))
+            env.step(IK_OBSERVE_ACTION)
+        estimate = estimate_blue_cube_world_position(env.render("top"), env.camera_calibration("top"))
         plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2], goal_xy=GOAL_TRAY_POSITION[:2])
         info = None
         for action in plan.actions:

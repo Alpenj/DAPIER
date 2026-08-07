@@ -74,7 +74,7 @@ index 277fd04..d5d873d 100644
      "close_envs",
      "env_to_policy_features",
 diff --git a/src/lerobot/envs/configs.py b/src/lerobot/envs/configs.py
-index 3624357..4c82c1e 100644
+index 3624357..8535e37 100644
 --- a/src/lerobot/envs/configs.py
 +++ b/src/lerobot/envs/configs.py
 @@ -234,6 +234,84 @@ class PushtEnv(EnvConfig):
@@ -96,7 +96,7 @@ index 3624357..4c82c1e 100644
 +    reward_type: str = "dense"
 +    terminate_on_success: bool = True
 +    cube_xy_randomization: float = 0.04
-+    camera_names: tuple[str, ...] = ("front", "wrist")
++    camera_names: tuple[str, ...] = ("top", "wrist")
 +    features: dict[str, PolicyFeature] = field(
 +        default_factory=lambda: {
 +            ACTION: PolicyFeature(type=FeatureType.ACTION, shape=(6,)),

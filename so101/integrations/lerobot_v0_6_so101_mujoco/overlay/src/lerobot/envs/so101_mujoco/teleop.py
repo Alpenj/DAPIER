@@ -35,6 +35,7 @@ from .env import (
 
 PICK_APPROACH_ACTION = np.array([0.0, -14.8461, 24.4459, 67.3505, 0.0, 100.0], dtype=np.float32)
 PICK_CLEAR_ACTION = np.array([0.0, -45.0, 17.5, 90.0, 0.0, 100.0], dtype=np.float32)
+IK_OBSERVE_ACTION = np.array([70.0, -45.0, 20.0, 90.0, 0.0, 100.0], dtype=np.float32)
 PICK_LIFT_FRAMES = 390
 _PICK_PHASE_BOUNDARIES = (0, 30, 130, 210, 240, 360, PICK_LIFT_FRAMES)
 _PICK_CLOSED_PERCENT = 27.0
@@ -44,6 +45,7 @@ _PICK_NOMINAL_LIFT_ACTION = np.array(
 VISION_SETTLE_FRAMES = 30
 VISION_MAX_CUBE_OFFSET_M = 0.045
 VISION_PHASES = (
+    ("leave top observation pose", 60),
     ("approach", 100),
     ("close", 80),
     ("grasp", 30),
@@ -424,7 +426,7 @@ def build_vision_pick_place_plan(
 ) -> VisionPickPlacePlan:
     """Build a camera-conditioned pick-and-place plan without object-state access.
 
-    ``estimated_cube_xy`` is expected to come from the wrist RGB detector. The
+    ``estimated_cube_xy`` is expected to come from a calibrated RGB detector. The
     green tray is a fixed task destination, so its calibrated XY is supplied as
     task configuration rather than read from MuJoCo state.
     """
@@ -484,6 +486,7 @@ def build_vision_pick_place_plan(
     goal_open_action[5] = 100.0
 
     phase_actions = (
+        _action_segment(IK_OBSERVE_ACTION, PICK_CLEAR_ACTION, 60),
         _action_segment(PICK_CLEAR_ACTION, approach_action, 100),
         _action_segment(approach_action, grasp_action, 80),
         np.repeat(grasp_action[None, :], 30, axis=0),
