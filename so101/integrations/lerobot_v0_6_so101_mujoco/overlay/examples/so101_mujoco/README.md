@@ -50,16 +50,20 @@ plain-letter rendering shortcuts at the same time.
 - Press `Shift+J`/`Shift+K` to select the previous or next joint, then hold
   `Shift+Up`/`Shift+Down` for direct joint motion.
 - Press `Shift+G` for the known open-gripper cube-approach target.
-- Press `Shift+P` to replay the verified 300-frame scripted padded pick-and-lift demonstration. The
-  interactive viewer pauses physics at verified frame 299 so the result remains inspectable; any manual
+- Press `Shift+P` to replay the verified 390-frame CAD-aligned padded pick-and-lift demonstration. The
+  interactive viewer pauses physics at verified frame 389 so the result remains inspectable; any manual
   motion command resumes physics.
+- Press `Shift+V` to reset to the next randomized scene, detect the blue cube from wrist RGB, then run
+  the verified pick-and-place plan. Press `Shift+C` to switch between the external and wrist views.
 - Press `Shift+H` for the safe home target, `Shift+N` for a new episode, and `Shift+Q` to quit.
 
 The `Shift` chord is required because MuJoCo assigns plain letters such as `W`, `A`, `F`, `P`, and `Q`
 to rendering and visualization toggles. The hold behavior uses X11 key-state polling after a key press
 has arrived in the focused MuJoCo window; it does not depend on desktop key-repeat timing. The default
-interactive cube has no XY randomization. Use `--cube-randomization` only when variation is intentional.
-Use `--save-mode=all` only when failed demonstrations are intentionally needed.
+interactive cube randomization is `+-0.025 m` in XY. Pass `--cube-randomization 0` only for a fixed
+layout. Every `Shift+V` and `Shift+N` reset consumes the next seed from the same sequence, so the first
+automatic run does not repeat the initial layout. Use `--save-mode=all` only when failed demonstrations
+are intentionally needed.
 
 ## Optionally drive MuJoCo with the calibrated leader
 
@@ -131,15 +135,15 @@ span. It never guesses calibration paths.
 ## Scope and next tasks
 
 The current slice covers model loading, joint- and Cartesian-position control, deterministic reset, a
-reachable cube/support/goal-tray scene, thin simulated finger pads, front and wrist RGB rendering, a
+reachable cube/support/goal-tray scene, visible CAD-plane finger contact proxies, front and wrist RGB rendering, a
 Gymnasium/LeRobot adapter, keyboard/leader simulation teleoperation, success-only demonstration selection,
-and diagnostic dataset recording. The scripted `P` path has been verified for padded pick-and-lift in
-simulation. It is not a learned policy, a complete place trajectory, a physical-gripper validation, or
-sim-to-real evidence.
+and diagnostic dataset recording. The scripted `P` path has been verified for padded pick-and-lift, and
+the wrist-RGB `V` path placed `30/30` randomized seeds in the square goal tray in this simulation. This
+is not a learned policy, physical-gripper validation, or sim-to-real evidence.
 
 The next vertical slices are:
 
-1. extend the verified scripted lift into place and measure repeated-seed success rate;
+1. add in-motion RGB re-detection and measure recovery from calibration/noise errors;
 2. collect successful expert episodes and train/evaluate the ACT baseline;
 3. domain randomization for friction, backlash, latency, lighting, and camera pose;
 4. a 12-action bimanual scene made from two SO-101 instances;

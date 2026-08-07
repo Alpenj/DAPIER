@@ -69,31 +69,43 @@ X11 key state를 읽어 OS key repeat에 기대지 않으므로 `Shift+W`처럼 
 약 39 mm 이동했고 key release 뒤 추가 이동은 없었다. `Shift+W/S`,
 `Shift+A/D`, `Shift+R/F`는 world XYZ, `Shift+O/L`은 gripper,
 `Shift+Up/Down`은 선택 관절을 움직인다. `Shift+G`는 cube approach,
-`Shift+P`는 검증된 300-frame padded pick-and-lift를 재생한다.
+`Shift+P`는 검증된 390-frame padded pick-and-lift를 재생한다.
 
-interactive scene은 G1에서 직접 확인한 reachable cube 위치, raised support와
-finger pad 조건을 사용하고 별도 green goal tray를 둔다. `Shift+P` 실제 GUI
-재생에서 cube 최종 z `0.111 m`, process exit `0`을 확인했다. 다만 frame 299
-뒤에도 물리를 계속 진행하면 현재 pad 모델은 약 8 frame 안에 cube를 놓친다.
-이를 장기 hold 성공으로 쓰지 않고, viewer는 검증된 frame 299에서 물리를
-명시적으로 pause해 결과를 관찰하게 했다. 수동 이동 chord를 누르면 물리가 다시
-진행된다.
+interactive scene은 G1에서 직접 확인한 reachable cube 위치와 별도 green goal
+tray를 둔다. 이번 후속 수정에서는 `Shift+P`를 390 frame으로 다시 맞췄고,
+마지막 30 frame 동안 양쪽 pad 접촉과 support 비접촉을 직접 검사한다. viewer는
+자동 동작 끝에서 물리를 pause해 결과를 관찰하게 하며, 수동 이동 chord를 누르면
+다시 진행한다.
 
 같은 날 후속 실습에서 gripper에 wrist RGB camera와 비충돌 mount를 추가했다.
 `Shift+C`로 external/wrist view를 바꾸고, `Shift+V`로 reset부터 RGB 검출,
 pick, green tray place까지 실행한다. 검은 판처럼 보이던 finger contact geom은
-투명한 물리 envelope와 좁은 검은 rubber lining으로 분리했다.
+이번에 보이는 형상과 충돌 형상을 하나로 합쳤다. 양쪽 검은 rubber proxy는 각각
+`24 x 16 x 6 mm`이고 접촉면을 CAD fingertip의 측정 평면에 맞췄다. 기존처럼
+보이지 않는 큰 collision envelope가 cube를 받치지 않는다.
+
+upstream fingertip collision mesh는 MuJoCo에서 오목한 CAD가 아니라 convex hull로
+계산되어 빈 공간에서도 cube를 밀었다. `gripper`와 `moving_jaw_so101_v1`의 그
+collision 사본만 비활성화하고, 화면에 보이는 CAD mesh와 위 rubber proxy를
+남겼다. 회색 시작 tray의 높은 벽에도 cube가 걸렸기 때문에 visual과 collision을
+함께 낮은 rim으로 바꿨다. 보이는 벽만 낮추거나 보이지 않는 통과 영역을 만들지는
+않았다.
 
 planner는 wrist RGB의 blue mask, 현재 camera calibration, 알려진 cube top plane만
 사용한다. cube body pose, depth와 segmentation id는 사용하지 않는다. `+-25 mm`
-cube randomization에서 seed `0..29`를 직접 실행한 결과 `30/30`이 tray success
-조건을 만족했고, RGB XY 추정 오차는 평균 `2.715 mm`, 최대 `6.459 mm`였다. 현재
-SO-101 MuJoCo test는 `22/22 PASS`이며 Gymnasium warning 1건은 남아 있다. 자세한
+cube randomization에서 seed `101..130`을 직접 실행한 결과 `30/30`이 tray success
+조건을 만족했고, RGB XY 추정 오차는 평균 `3.08 mm`, 최대 `6.55 mm`였다. 현재
+SO-101 MuJoCo test는 `24/24 PASS`이며 Gymnasium warning 1건은 남아 있다. 자세한
 기록은
 [`2026-08-07-so101-wrist-vision-pick-place.md`](../../records/2026-08-07-so101-wrist-vision-pick-place.md)에
 남겼다. base revision을 임시 디렉터리에 다시 checkout하고 검증된 upstream asset
-`14/14`, tracked patch와 overlay를 차례로 적용한 재구성 환경에서도 `22/22`가
+`14/14`, tracked patch와 overlay를 차례로 적용한 재구성 환경에서도 `24/24`가
 통과했다.
+
+keyboard 실행의 cube randomization 기본값은 `+-25 mm`다. `--seed 101`이면 시작
+scene은 101을 쓰고 첫 `Shift+V` 또는 `Shift+N` reset은 102, 다음 reset은 103처럼
+하나의 seed sequence를 공유한다. 따라서 첫 `Shift+V`가 시작 위치를 반복하던
+문제도 남지 않는다. 고정 scene이 필요할 때만 `--cube-randomization 0`을 준다.
 
 ## 결과를 섞지 않는 규칙
 
