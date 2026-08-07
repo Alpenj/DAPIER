@@ -2,6 +2,12 @@
 
 `record_id: DAPIER-2026-08-07-so101-wrist-vision-pick-place`
 
+> 이 문서의 `(0.05, -0.07, 0.04) m` camera pose와 wrist-RGB `Shift+V`는 첫
+> 실습 당시의 실행 기록이다. 현재 기준은 공식 32×32 mount CAD를 사용하고
+> top RGB→IK / wrist-only→VLA를 분리한
+> [`2026-08-07-so101-camera-routing.md`](2026-08-07-so101-camera-routing.md)다.
+> 이전 수치를 현재 physical alignment 값으로 재사용하지 않는다.
+
 ## 오늘 확인하려던 것
 
 오늘 수업에서 만든 SO-101 MuJoCo 장면에 eye-in-hand 카메라를 직접 붙이고,

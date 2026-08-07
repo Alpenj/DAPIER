@@ -22,13 +22,16 @@ upstream 전체와 분리해 보존한다. 이 코드는 LeRobot 내부 경로�
 ## overlay에 포함한 것
 
 - `src/lerobot/envs/so101_mujoco/*.py`
-- `assets/pick_cube.xml`과 provenance 문서
+- `assets/pick_cube.xml`, camera profile JSON과 provenance 문서
+- top+wrist IK expert / wrist-only VLA fail-closed routing과 dataset sidecar
 - `examples/so101_mujoco/`
 - `tests/envs/test_so101_mujoco.py`
 
 약 16MB의 STL과 원본 `so101_new_calib.xml`은 직접 만든 코드가 아니어서 중복
-커밋하지 않았다. foundation 문서에 고정한 SO-ARM100 revision에서 자산을 준비한
-뒤 LeRobot checkout 루트에서 다음 해시를 확인해야 한다.
+커밋하지 않았다. wrist camera는 원본 MJCF를 수정하지 않고 environment load 때
+JSON profile에 따라 `gripper` body에 추가한다. foundation 문서에 고정한
+SO-ARM100 revision에서 자산을 준비한 뒤 LeRobot checkout 루트에서 다음 해시를
+확인해야 한다.
 
 ```bash
 sha256sum -c \
@@ -106,6 +109,40 @@ keyboard 실행의 cube randomization 기본값은 `+-25 mm`다. `--seed 101`이
 scene은 101을 쓰고 첫 `Shift+V` 또는 `Shift+N` reset은 102, 다음 reset은 103처럼
 하나의 seed sequence를 공유한다. 따라서 첫 `Shift+V`가 시작 위치를 반복하던
 문제도 남지 않는다. 고정 scene이 필요할 때만 `--cube-randomization 0`을 준다.
+
+## 2026-08-07 CAD camera profile과 IK/VLA 분기
+
+앞선 wrist RGB 실습에서 임의로 둔 `(0.05, -0.07, 0.04) m` 카메라는 현재
+기준값이 아니다. 공식 SO-101에는 모든 카메라에 공통인 URDF extrinsic이 없고
+카메라별 mount CAD가 여러 개라서, 이번에는 TheRobotStudio의 integrated 32×32
+UVC module mount를 명시적으로 선택했다. 해당 STL의 camera-board mounting face와
+공식 wrist-roll mesh pose에서 다음 `gripper` local profile을 계산했다.
+
+- position: `(0.0025, -0.072057361, 0.004150235) m`
+- camera X/Y axes: `(1, 0, 0)`, `(0, 0.906307787, 0.422618262)`
+- look direction: `(0, 0.422618262, -0.906307787)`
+- profile id: `therobotstudio_integrated_32x32_mount_surface_v1`
+
+실제 lens offset, 장착 방향, image rotation과 FOV는 아직 측정하지 못했으므로
+JSON에 `physical_alignment=false`를 유지한다. 이 값은 실제 영상과 동일하다는
+주장이 아니라 CAD 장착면이 gripper와 함께 움직이는 방식의 기준이다.
+
+기본 policy camera set은 `top,wrist`다. 이때 `Shift+V`는 팔을 top camera 관찰
+자세로 옮긴 뒤 top RGB만으로 cube XY를 구하고 IK expert trajectory를 만든다.
+동시에 wrist RGB, measured state와 commanded action을 기록해 student 데이터로
+남긴다. recorder는 `Shift+V` 자동 동작 frame만 받고 다른 수동 frame은 섞지
+않으며 `meta/dapier_control_route.json`에 teacher/student 계약을 쓴다.
+
+`wrist-only`는 IK로 자동 fallback하지 않는다. 반드시 `--input policy`와 VLA
+checkpoint를 요구하고 표준 `lerobot_eval`에 위임한다. IK expert 데이터에서
+`observation.images.top`만 제거하는 `lerobot_edit_dataset`, wrist-only 데이터로
+SmolVLA를 학습하는 `lerobot_train`, wrist-only 평가 명령 builder를 함께 테스트했다.
+
+최신 상태에서 정적 검사, `31/31` MuJoCo test, seed `0..9`의 top-RGB IK
+pick-and-place `10/10`이 통과했다. top RGB XY 오차는 평균 `0.670 mm`, 최대
+`0.939 mm`였다. clean v0.6.0 checkout에 patch와 overlay를 다시 적용하고 원본
+asset 해시 `14/14` 및 같은 `31/31` test도 확인했다. 실제 expert dataset 수집,
+SmolVLA 학습·평가와 physical camera alignment는 아직 실행하지 않았다.
 
 ## 결과를 섞지 않는 규칙
 

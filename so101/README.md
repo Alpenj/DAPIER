@@ -27,10 +27,12 @@ workspace symlink를 깨뜨리지 않기 위해 이미 검증한 두 소스 디�
 | 위치 | 분류 | 사용 규칙 |
 |---|---|---|
 | [`integrations/lerobot_v0_6_so101_mujoco`](integrations/lerobot_v0_6_so101_mujoco/README.md) | LeRobot v0.6.0 실험 overlay | upstream checkout에 적용하는 보존본이며 현재 sim 정본은 아님 |
+| [`integrations/so101_ros_physical_ai_camera`](integrations/so101_ros_physical_ai_camera/README.md) | 외부 ROS 2 camera-frame patch | CAD mount pose를 `gripper_link`에 붙이는 정적 URDF/launch 변경 |
 | [`integrations/feetech_ros2_driver`](integrations/feetech_ros2_driver/README.md) | 외부 ROS 2 driver 로컬 patch | hardware-facing 실험이므로 DAPIER mock 코어와 분리 |
 | [`hardware_tools`](hardware_tools/README.md) | 물리 장비 보조 도구 | `read_only`와 `writes_hardware`를 디렉터리부터 분리 |
 | [`records`](records/2026-08-07-so101-consolidation.md) | 통합 조사 기록 | 원본 위치, 크기, 해시와 오늘 검증 결과 |
 | [`interactive sim 기록`](records/2026-08-07-so101-interactive-sim-controls.md) | LeRobot viewer 조작 검증 | Shift chord, 연속 XYZ, reachable cube와 scripted lift 결과 |
+| [`camera/IK/VLA 기록`](records/2026-08-07-so101-camera-routing.md) | CAD camera profile과 controller routing | top+wrist IK teacher, wrist-only VLA student 경계와 검증 결과 |
 
 ## 홈 디렉터리에 보이는 비슷한 폴더의 의미
 
