@@ -4,7 +4,7 @@
 
 **결정(설계 추론):** 첫 구현은 ROS2·실기체 없이 `Virtual Leader → SimSOFollower → 기록/평가`로 고정한다. `so101-nexus` 0.5.1을 통째로 포크하지 않고, 그 `LeaderProtocol`에서 확인한 최소 계약을 DAPIER가 자체 소유하는 작은 래퍼에 Virtual Leader로 구현하는 방식을 권장한다. 이후 리더 어댑터만 SO-100/SO-101 물리 리더로 교체하고, 그 다음에만 실물 follower를 별도 안전 Gate로 연다. 이 설계는 LeRobot v3/정책/프로세서/보정/기존 SO 드라이버를 재사용하면서 CardBench v0의 양팔 계약을 보존한다.
 
-현재 작성 PC에서 MuJoCo 실행이 미검증 상태다. GUI, WSL, recording, training, 실제 하드웨어 및 sim-to-real 성공도 실행 검증하지 않았다.
+초기 작성 시점에는 이 PC의 MuJoCo 실행이 미검증 상태였다. 2026-08-07 Ubuntu PC에서 아래 실행 추가 기록의 G0와 task-adapted G1까지 검증했다. 사람이 조작한 recording, training, 실제 하드웨어 및 sim-to-real 성공은 여전히 검증하지 않았다.
 
 ## 사용자 목표와 범위
 
@@ -78,7 +78,7 @@ LeRobot은 LeRobot v3 dataset, policy, processor convention, calibration schema,
 
 ## 단계별 실행 계획과 Gate
 
-아래 명령은 아직 존재하지 않는 모듈의 **제안 placeholder**이며 현재 실행 가능한 모듈이라고 주장하지 않는다.
+아래 표 가운데 G0와 G1 명령은 2026-08-07 실행 추가 기록 시점에 구현했다. G2 이상 명령은 아직 존재하지 않는 모듈의 **제안 placeholder**이며 현재 실행 가능하다고 주장하지 않는다.
 
 **공통 Gate invariant/manifest(설계 추론):** 모든 실행은 DAPIER 밖의 새 `$RUN_ROOT=$HOME/dapier-runs/so101-foundation/<UTC-run-id>`를 사용하고, 승인된 hardware threshold는 별도 `$SAFETY_ROOT=$HOME/dapier-safety-manifests`에서 읽는다. 생성 전 `$RUN_ROOT`가 없어야 한다. immutable `run-manifest.json`은 DAPIER/upstream revision, report hash, gate, seed, control rate, exact `embodiment_id/revision`, ordered channels, units, `calibration_id=sha256:<선택한 calibration file의 64-hex>`, action bounds digest, command/input digest를 고정한다. SO-101 G1–G5는 30 Hz(`T=33.333 ms`, stale은 `age>66.667 ms`), CardBench G6는 15 Hz(`T=66.667 ms`, stale은 `age>133.333 ms`)다. seed는 G0=`0`, G1=`101`, G2=`102`, G3=`[201,202,203,204,205]`, G6=`[301,302,303,304,305]`; hardware G4/G5는 stochastic seed 대신 승인 manifest의 exact command plan digest를 쓴다. 모든 frame에서 channel order와 `calibration_id`는 exact match, `sequence_id`는 strictly increasing, `monotonic_timestamp_ns`는 nondecreasing이어야 하고 age가 두 control period 이하여야 한다. 위반 count는 Gate별 receipt에 기록한다. `receipt.json`은 gate/run-id/새 nonce/manifest hash/input hash/metrics/status를 포함하며, 기존 artifact나 과거 PASS receipt가 하나라도 있으면 실행하지 않는다. PASS receipt는 다른 run이나 Gate에서 재사용할 수 없다.
 
@@ -129,7 +129,7 @@ LeRobot은 LeRobot v3 dataset, policy, processor convention, calibration schema,
 
 ## 교육용 노트북 Codex CLI 실행 인계
 
-별도 하드웨어 승인이 없는 한 아래는 G0만 구현하는 미래 교육용 노트북 인계다. 이 authoring 작업에서는 아래 외부 쓰기를 실행하지 않았다. DAPIER checkout root에서 시작하며 첫 repository update action은 정확히 다음 명령이다.
+아래 블록은 최초 문서 작성 시 남긴 **G0 전용 인계 기록**이다. 이후 사용자가 G1 sim-only 범위를 별도로 승인해 아래 실행 추가 기록까지 진행했으므로 현재 실행 명령으로 오해하지 않는다. DAPIER checkout root에서 시작하도록 작성했던 원문은 다음과 같다.
 
 ```bash
 git status --short
@@ -167,7 +167,7 @@ serial 연결이나 물리 hardware movement 전에 멈추고 별도 승인을 �
 
 ## 실행 상태와 증거 경계
 
-이 문서는 **소스 사실**(위 고정 corpus와 로컬 contract), **설계 추론**(권장 wrapper/embodiment/Gate), **실행 미검증**(모든 Gate 결과)으로 나뉜다. 작성 시점의 Windows host는 Python 3.14.4 및 uv 0.10.2만 감지되었고 WSL 열거는 access denied였다. 그러므로 이 PC에서 MuJoCo, so101-nexus, GUI, WSL, dataset recording, training, physical hardware, simulator 또는 sim-to-real이 성공했다는 주장은 없다. 실제 증거는 교육용 노트북에서 해당 Gate가 만든 새 artifact와 metric으로만 승격된다.
+이 문서는 **소스 사실**(위 고정 corpus와 로컬 contract), **설계 추론**(권장 wrapper/embodiment/Gate), **실행 증거**(아래 Ubuntu PC G0/G1 artifact)로 나뉜다. 최초 작성 시 Windows host에서 확인했던 Python 3.14.4, uv 0.10.2와 WSL access denied는 역사적 발견 기록이다. 이후 Ubuntu PC에서 만든 새 Gate artifact로 G0와 task-adapted G1만 증거 수준을 승격했다. so101-nexus 조합, human recording, training, physical hardware와 sim-to-real 성공은 주장하지 않는다.
 
 ### 2026-08-07 Ubuntu PC G0 실행 추가 기록
 
@@ -197,3 +197,44 @@ schema/rejection-rule violation `0`이다. revision `5/5`는 이 문서가 고�
 정책, ROS 2 adapter, serial과 hardware control은 진행하지 않았다. 기존
 joint-sweep dataset 5 episodes/450 frames도 읽어 보니 success는 `0/5`라서
 물건 집기 성공이나 sim-to-real 결과로 승격하지 않는다.
+
+### 2026-08-07 Ubuntu PC G1 실행 추가 기록
+
+- `record_id`: `DAPIER-2026-08-07-so101-g1-scripted-pick`
+- 구현 commit: `da5b84ed7959483ddaf1c8ce557806254ad86e02`
+- 실행 기록: [`dapier_sim_first/README.md`](../dapier_sim_first/README.md)
+
+G0 이후 사용자가 sim-only 병렬 작업을 별도로 승인해 G1까지만 범위를
+확장했다. 먼저 기존 default cube 배치와 원본 jaw collision mesh로 두 가지
+controller를 실행해 양쪽 접촉까지 확인했지만, settled 높이 대비 약 7 mm
+오른 뒤 cube가 빠졌다. 팔 앞쪽 reachable 배치에서도 원본 mesh만 사용한
+grasp는 약 9 mm 안에서 끊겼다. 이 실패는 G1 PASS로 사용하지 않았다.
+
+내가 직접 실행해 본 task adaptation은 원본 50 mm, 50 g cube를 그대로 두고,
+green tray를 높인 지지대로 사용하며 fixed/moving jaw에 full thickness 4 mm인
+평면 finger pad를 하나씩 추가한다. pad sliding friction `2.0`, cube/support
+위치, controller waypoint와 phase, camera target을 모두 manifest의
+`task_config_digest`에 고정했다. 따라서 결과 task id는 default scene이 아닌
+`DAPIER-SO101-PaddedPickLift-v0`다. frame 0 이후 cube pose 직접 변경과
+weld/equality grasp는 사용하지 않았다.
+
+새 외부 run
+`$HOME/dapier-runs/so101-foundation/20260807T004658Z-g1`에서 seed 101,
+30 Hz, 300 frames를 실행해 `PASS`를 확인했다. episode `1/1`, accepted frame
+`300/300`, measured/action pair `300/300`, embedded front image `300/300`,
+schema/order/sequence/timestamp/stale/limit violation은 각각 `0`이다. LeRobot
+v3 Parquet을 별도로 다시 읽어 measured와 action을 각각 `300/300` round-trip
+검사했고 timestamp grid 최대 오차는 약 `4.45e-7 s`였다. provenance는
+`source=scripted`, `human_demo=false`다.
+
+접촉 evaluator를 controller와 분리해 frame trace를 다시 계산했다. settled
+높이 대비 maximum lift는 `47.15 mm`, 마지막 30 frames의 minimum lift는
+`42.12 mm`였다. 마지막 구간의 bilateral pad contact는 `30/30`, support
+contact는 `0/30`이며 총 `5000` MuJoCo substeps가 정확히 `10.0 s`를 만든다.
+preview도 160×120, 30 Hz, 300 frames, 10.0초로 다시 열었다. 같은 run 재실행은
+기존 artifact 때문에 exit code `2`로 거부됐다.
+
+이 결과는 scripted pipeline과 선언한 padded task의 sim 성공이다. 사람이
+만든 imitation demonstration, pad 없는 default scene 성공, learned policy,
+ROS 2 결합, serial, 실물 hardware 또는 sim-to-real 성공으로 승격하지 않는다.
+G2 이상과 하드웨어 제어는 진행하지 않았다.

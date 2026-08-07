@@ -34,7 +34,7 @@ AI는 제가 정한 방향을 코드와 문서로 옮길 때 ROS 2 개념을 다
 | 실제 Arduino 서보까지 제어 | `ros_arm` | 예 |
 | 양팔 카지노 딜러 계약·플래너 개발 | `casino_dealer` | 아니요 |
 | SO-101 자체 ROS 2 계약·안전 텔레옵 | `so101_ros2` | 현재 아니요(모의 검증) |
-| SO-101 sim-first 환경·6축 계약 G0 | `dapier_sim_first` | 아니요 |
+| SO-101 sim-first 환경·6축 계약 G0와 scripted pick G1 | `dapier_sim_first` | 아니요 |
 
 시뮬레이션만 실행하려면 [`jdcobot100_sim`](jdcobot100_sim/README.md)을
 사용합니다. 아래 내용은 실물 제어용 `ros_arm` 설명입니다.
@@ -56,8 +56,9 @@ torque 제어는 교체 장비에서 읽기 전용 검사 후 진행할 예정�
 기존 MuJoCo 실험을 ROS 2나 실물에 연결하기 전에 환경, 여섯 관절 순서,
 degree/radian·gripper 변환과 stale frame 거부 규칙을 확인하려면
 [`dapier_sim_first`](dapier_sim_first/README.md)를 사용합니다. 현재는 G0
-모델 smoke까지만 통과했으며 물건 집기 성공이나 episode 녹화를 뜻하지
-않습니다.
+모델 smoke와 task 설정을 명시한 G1 scripted pick-and-lift 1 episode를
+통과했습니다. G1 성공은 얇은 finger pad와 높인 지지대를 manifest에 고정한
+시뮬레이션 결과이며, 기본 장면·학습 policy·실물 로봇 성공을 뜻하지 않습니다.
 
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.

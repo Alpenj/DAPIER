@@ -1,9 +1,9 @@
-# SO-101 sim-first G0 학습 기록
+# SO-101 sim-first G0–G1 학습 기록
 
-- `record_id`: `DAPIER-2026-08-07-so101-g0`
+- `record_id`: `DAPIER-2026-08-07-so101-g0`, `DAPIER-2026-08-07-so101-g1-scripted-pick`
 - 실행일: 2026-08-07
-- 범위: G0 환경 smoke만
-- 구현 commit: `00b211a6fc8f965a83337786582320e34629d4f1`
+- 범위: G0 환경 smoke와 G1 scripted pick-and-lift 1 episode
+- 구현 commit: G0 `00b211a6fc8f965a83337786582320e34629d4f1`, G1 `da5b84ed7959483ddaf1c8ce557806254ad86e02`
 
 ## 이번에 확인하려는 것
 
@@ -13,9 +13,11 @@
 순서, degree/radian 변환, gripper `0..100` 변환, 보정 파일 identity, 오래된
 frame 거부 규칙을 검사한다.
 
-Virtual Leader 조작, episode 녹화, 정책 학습·평가, ROS 2 adapter, 시리얼
-연결과 실물 제어는 이번 범위가 아니다. `dapier_sim_first.gate` CLI도
-`init-g0`와 `g0`만 제공한다.
+G0를 통과한 뒤에는 scripted Virtual Leader, MuJoCo 접촉 기반 lift, front
+image와 measured/action episode 기록까지 G1으로 확인했다. 사람이 조작한
+demonstration, 정책 학습·평가, ROS 2 adapter, 시리얼 연결과 실물 제어는
+아직 범위가 아니다. `dapier_sim_first.gate` CLI는 `init-g0`, `g0`,
+`init-g1`, `g1`까지만 제공한다.
 
 ## 기존 작업과의 관계
 
@@ -120,26 +122,103 @@ revision `5/5`는 작업 계약에 적힌 다섯 SHA가 manifest와 exact match�
 구현 commit은 manifest와 현재 repository가
 `00b211a6fc8f965a83337786582320e34629d4f1`로 같은지도 별도로 검사했다.
 
-## 물건 집기 상태
+## G0 당시 물건 집기 공백
 
 G0와 물건 집기 성공은 다르다. 기존
 `$HOME/so101/sim_dataset/so101_mujoco_joint_sweep`을 읽어 보니 LeRobot v3
 형태로 5 episodes, 450 frames가 있고 6축 state/action과 front image가
-기록돼 있다. 하지만 `next.success`는 `0/450`, episode 성공은 `0/5`다.
-
+기록돼 있다. 하지만 `next.success`는 `0/450`, episode 성공은 `0/5`였다.
 이 dataset은 관절과 기록 파이프라인을 확인한 deterministic joint sweep이며
-집기 demonstration이 아니다. `PickCube-v0` 장면과 큐브·트레이 최종 위치
-평가기준은 구현돼 있지만, approach/grasp/lift/place trajectory와 실제 lift
-metric은 아직 없다. 따라서 현재 증거는 “모델·이미지·기록 경로가 동작한다”
-까지이고 “로봇팔이 물건을 집어 올린다”는 아직 확인하지 못한 부분이다.
+집기 demonstration이 아니다.
+
+G1을 시작하며 원본 장면의 뒤쪽 큐브를 두 가지 joint-space trajectory로
+접근해 보니 양쪽 jaw 접촉은 만들었지만 settled 높이 대비 약 7 mm 오른 뒤
+빠졌다. 큐브를 팔 앞쪽의 reachable 위치로 옮겨도 원본 mesh collision만으로는
+lift가 약 9 mm 안에서 끊겼다. 이 실패를 성공으로 표시하지 않고, task
+geometry 문제와 controller 문제를 분리했다.
+
+## G1에서 바꾼 task 조건
+
+오늘 수업에서 SO-101의 작은 gripper가 50 mm 큐브를 평면 접촉으로 물 수
+있도록 다음 조건을 `G1_TASK_CONFIG`와 manifest digest에 고정했다.
+
+- 원본 50 mm, 50 g 큐브의 크기와 질량은 바꾸지 않았다.
+- 큐브를 팔 앞쪽 작업공간의 `x=0.254531 m`, `y=-0.002931 m`에 두었다.
+- 기존 green tray를 목표물이 아니라 floor top `z=0.044 m`인 지지대로 썼다.
+- fixed/moving jaw에 half-size `20 × 20 × 2 mm`인 평면 finger pad를 하나씩
+  추가했다. full thickness는 4 mm이고 sliding friction은 `2.0`이다.
+- frame 0 이후 cube pose를 직접 바꾸거나 weld/equality로 붙이지 않았다.
+  position actuator, 접촉, 마찰, 중력만으로 5000 MuJoCo substeps를 진행했다.
+- evaluator는 controller와 분리해 settled 높이, 양쪽 pad 접촉, 지지대 접촉을
+  frame trace에서 다시 계산한다.
+
+따라서 이번 결과는 외부 checkout의 default `PickCube-v0` 성공이 아니라
+`DAPIER-SO101-PaddedPickLift-v0` task 성공이다. 이 pad 조건이 실물에서도
+같은 마찰을 낸다는 주장이나 sim-to-real 증거로 사용하지 않는다.
+
+## G1 실제 검증
+
+구현을 `da5b84ed7959483ddaf1c8ce557806254ad86e02`로 먼저 commit한 뒤,
+저장소 밖의 새 run에서 seed 101, 30 Hz, 300 frames를 직접 실행했다.
+
+```bash
+export RUN_ROOT="$HOME/dapier-runs/so101-foundation/20260807T004658Z-g1"
+MUJOCO_GL=egl HF_HUB_OFFLINE=1 \
+  "$HOME/so101/lerobot/.venv/bin/python" -m dapier_sim_first.gate init-g1 \
+  --run-root "$RUN_ROOT" --repo "$PWD" \
+  --model "$HOME/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/pick_cube.xml" \
+  --calibration "$HOME/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml" \
+  --lerobot-root "$HOME/so101/lerobot"
+MUJOCO_GL=egl HF_HUB_OFFLINE=1 \
+  "$HOME/so101/lerobot/.venv/bin/python" -m dapier_sim_first.gate g1 \
+  --manifest "$RUN_ROOT/run-manifest.json" --seed 101 --rate-hz 30 \
+  --frames 300 --out "$RUN_ROOT/G1"
+```
+
+```text
+$HOME/dapier-runs/so101-foundation/20260807T004658Z-g1/
+├── run-manifest.json
+└── G1/
+    ├── task-model.xml
+    ├── frame-trace.json
+    ├── task-evaluation.json
+    ├── provenance.json
+    ├── preview.mp4
+    ├── lerobot-v3/
+    └── receipt.json
+```
+
+| G1 metric | 결과 |
+|---|---:|
+| episode | 1/1 |
+| accepted frames | 300/300 |
+| measured/action pairs | 300/300 |
+| front image rows | 300/300 |
+| LeRobot codebase schema | v3.0 |
+| Parquet measured round-trip | 300/300 |
+| Parquet action round-trip | 300/300 |
+| schema/order/sequence/timestamp/stale/limit violation | 모두 0 |
+| maximum lift from settled | 47.15 mm |
+| minimum lift during final hold | 42.12 mm |
+| bilateral pad contact during final hold | 30/30 frames |
+| support contact during final hold | 0/30 frames |
+| simulated time | 10.0 s / 5000 substeps |
+| provenance | `source=scripted`, `human_demo=false` |
+
+`preview.mp4`도 160×120, 30 Hz, 300 frames, 10.0초로 다시 열어 확인했다.
+Parquet timestamp의 30 Hz grid 최대 오차는 약 `4.45e-7 s`였고 마지막
+frame의 `next.success=true`, `next.done=true`도 확인했다. 같은 run을 다시
+실행하면 기존 artifact 때문에 exit code `2`로 거부된다.
+
+시스템 Python과 기존 LeRobot venv에서 전체 단위 테스트 `13/13`, Ruff
+검사와 format check도 통과했다. LeRobot venv는 여전히 수정 중인 외부
+checkout이며 G1은 그 소스를 고쳤다고 주장하지 않는다. public
+`LeRobotDataset` writer와 exact file digest만 사용했다.
 
 ## 다음에 확인할 것
 
-별도 범위가 승인되면 단일 팔 scripted pick-lift-place부터 확인할 예정이다.
-큐브 초기 높이 대비 상승, gripper contact 유지, 트레이 최종 위치, seed별
-성공률과 영상을 저장소 밖 새 run에 기록해야 한다. 그 결과가 나온 뒤에야
-human demonstration, policy 학습, 한 팔 카드 조작, 마지막으로 CardBench 양팔
-계약으로 확장한다.
-
-이번 작업에서는 G1 이상, GUI/render, dataset 생성, 정책, ROS 2 launch,
-serial 연결, 물리 hardware movement를 진행하지 않았다.
+아직 확인하지 못한 부분은 pad 없는 기본 task의 안정적인 force-closure,
+여러 초기 위치와 seed에서의 성공률, 사람이 조작한 G2 demonstration, 정책
+학습·평가, 한 팔 카드 조작과 CardBench 양팔 확장이다. 이번 작업에서는 G2
+이상, ROS 2 build/launch, serial probe, 물리 hardware movement를 진행하지
+않았다.
