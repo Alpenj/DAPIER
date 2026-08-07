@@ -26,14 +26,27 @@ from lerobot.envs.so101_mujoco import (
     ACTION_LOW,
     CAMERA_NAMES,
     CUBE_SPAWN_POSITION,
+    CUBE_TOP_PLANE_Z_M,
     FINGER_PAD_GEOM_NAMES,
+    FINGER_PAD_VISUAL_GEOM_NAMES,
+    GOAL_TRAY_POSITION,
     JOINT_NAMES,
+    PICK_CLEAR_ACTION,
     PICK_LIFT_FRAMES,
+    VISION_PICK_PLACE_FRAMES,
+    WRIST_CAMERA_HOUSING_GEOM_NAME,
+    WRIST_CAMERA_LENS_GEOM_NAME,
+    WRIST_CAMERA_MOUNT_GEOM_NAME,
+    CameraCalibration,
     CartesianJogController,
     JointJogController,
     SO101MujocoEnv,
+    build_vision_pick_place_plan,
+    detect_blue_cube,
+    estimate_blue_cube_world_position,
     leader_action_dict_to_array,
     lerobot_action_to_qpos,
+    project_pixel_to_horizontal_plane,
     qpos_to_lerobot_state,
     scripted_pick_lift_action,
     should_save_episode,
@@ -142,8 +155,37 @@ def test_reachable_scene_contains_support_goal_and_finger_pads():
         np.testing.assert_allclose(info["cube_position"], CUBE_SPAWN_POSITION, atol=1e-7)
         assert info["cube_position"][0] > 0
         assert np.linalg.norm(info["cube_position"][:2] - info["tray_position"][:2]) > 0.1
-        for name in (*FINGER_PAD_GEOM_NAMES, "tray_floor", "goal_tray_floor"):
+        for name in (
+            *FINGER_PAD_GEOM_NAMES,
+            *FINGER_PAD_VISUAL_GEOM_NAMES,
+            "tray_floor",
+            "goal_tray_floor",
+        ):
             assert mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, name) >= 0
+        for name in FINGER_PAD_GEOM_NAMES:
+            geom_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, name)
+            assert env.model.geom_group[geom_id] == 3
+            assert env.model.geom_rgba[geom_id, 3] == 0
+            np.testing.assert_allclose(env.model.geom_size[geom_id], [0.0275, 0.02, 0.002])
+        for name in FINGER_PAD_VISUAL_GEOM_NAMES:
+            geom_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, name)
+            assert env.model.geom_group[geom_id] == 2
+            assert env.model.geom_contype[geom_id] == 0
+            np.testing.assert_allclose(env.model.geom_size[geom_id], [0.018, 0.0065, 0.0021])
+
+        camera_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_CAMERA, "wrist")
+        gripper_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_BODY, "gripper")
+        housing_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, WRIST_CAMERA_HOUSING_GEOM_NAME)
+        lens_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, WRIST_CAMERA_LENS_GEOM_NAME)
+        mount_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, WRIST_CAMERA_MOUNT_GEOM_NAME)
+        assert env.model.cam_bodyid[camera_id] == gripper_id
+        np.testing.assert_allclose(env.model.cam_pos[camera_id], [0.05, -0.07, 0.04])
+        assert housing_id >= 0
+        assert lens_id >= 0
+        assert mount_id >= 0
+        assert env.model.geom_contype[housing_id] == 0
+        assert env.model.geom_contype[lens_id] == 0
+        assert env.model.geom_contype[mount_id] == 0
     finally:
         env.close()
 
@@ -182,6 +224,7 @@ def test_scripted_pick_lifts_and_holds_cube_with_bilateral_contact():
         cube_xy_randomization=0,
         max_episode_steps=PICK_LIFT_FRAMES,
         terminate_on_success=False,
+        home_action=PICK_CLEAR_ACTION,
     )
     try:
         env.reset(seed=101)
@@ -258,6 +301,92 @@ def test_camera_configuration_validation():
         SO101MujocoEnv(camera_names=("front", "front"))
     with pytest.raises(ValueError, match="Unsupported"):
         SO101MujocoEnv(camera_names=("overhead",))
+
+
+def test_rgb_detector_and_pinhole_plane_projection_are_auditable():
+    image = np.zeros((100, 120, 3), dtype=np.uint8)
+    image[40:61, 50:71] = [40, 180, 250]
+    detection = detect_blue_cube(image)
+    assert detection.center_pixel_xy == (60.0, 50.0)
+    assert detection.bbox_xyxy == (50, 40, 70, 60)
+    assert detection.pixel_count == 21 * 21
+
+    calibration = CameraCalibration(
+        name="test",
+        position=np.array([0.0, 0.0, 1.0]),
+        rotation=np.eye(3),
+        vertical_fov_degrees=90.0,
+        image_height=101,
+        image_width=101,
+    )
+    intersection = project_pixel_to_horizontal_plane((50.0, 50.0), calibration, plane_z_m=0.0)
+    np.testing.assert_allclose(intersection, [0.0, 0.0, 0.0], atol=1e-12)
+    with pytest.raises(RuntimeError, match="not found"):
+        detect_blue_cube(np.zeros((32, 32, 3), dtype=np.uint8))
+
+
+@pytest.mark.timeout(30)
+def test_wrist_rgb_estimate_drives_a_bounded_plan_without_cube_state():
+    os.environ.setdefault("MUJOCO_GL", "egl")
+    pytest.importorskip("mujoco")
+    env = SO101MujocoEnv(
+        obs_type="state",
+        camera_names=("wrist",),
+        observation_height=240,
+        observation_width=320,
+        cube_xy_randomization=0.025,
+        terminate_on_success=False,
+        home_action=PICK_CLEAR_ACTION,
+    )
+    try:
+        _, info = env.reset(seed=3)
+        for _ in range(30):
+            _, _, _, _, info = env.step(PICK_CLEAR_ACTION)
+        estimate = estimate_blue_cube_world_position(env.render("wrist"), env.camera_calibration("wrist"))
+        assert estimate.world_xyz[2] == pytest.approx(CUBE_TOP_PLANE_Z_M)
+        assert np.linalg.norm(estimate.world_xyz[:2] - info["cube_position"][:2]) < 0.012
+
+        plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2])
+        assert plan.actions.shape == (VISION_PICK_PLACE_FRAMES, 6)
+        assert np.all(plan.actions >= ACTION_LOW)
+        assert np.all(plan.actions <= ACTION_HIGH)
+        shifted = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2] + np.array([0.005, 0.0]))
+        assert not np.array_equal(plan.approach_action, shifted.approach_action)
+        with pytest.raises(ValueError, match="outside the verified pick workspace"):
+            build_vision_pick_place_plan(env.model, CUBE_SPAWN_POSITION[:2] + 0.1)
+    finally:
+        env.close()
+
+
+@pytest.mark.timeout(60)
+@pytest.mark.parametrize("seed", range(5))
+def test_wrist_rgb_closed_loop_places_randomized_cube(seed):
+    os.environ.setdefault("MUJOCO_GL", "egl")
+    pytest.importorskip("mujoco")
+    env = SO101MujocoEnv(
+        obs_type="state",
+        camera_names=("wrist",),
+        observation_height=240,
+        observation_width=320,
+        cube_xy_randomization=0.025,
+        max_episode_steps=500,
+        terminate_on_success=False,
+        home_action=PICK_CLEAR_ACTION,
+    )
+    try:
+        env.reset(seed=seed)
+        for _ in range(30):
+            env.step(PICK_CLEAR_ACTION)
+        estimate = estimate_blue_cube_world_position(env.render("wrist"), env.camera_calibration("wrist"))
+        plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2], goal_xy=GOAL_TRAY_POSITION[:2])
+        info = None
+        for action in plan.actions:
+            _, _, _, _, info = env.step(action)
+        assert info is not None
+        assert info["is_success"] is True
+        assert np.linalg.norm(info["cube_position"][:2] - GOAL_TRAY_POSITION[:2]) < 0.055
+    finally:
+        env.close()
 
 
 @pytest.mark.timeout(30)

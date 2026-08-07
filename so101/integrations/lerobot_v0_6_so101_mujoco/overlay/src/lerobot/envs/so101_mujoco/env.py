@@ -26,6 +26,7 @@ Only the adapter in this module deals with MuJoCo radians.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -61,21 +62,58 @@ ACTION_LOW = np.concatenate((np.rad2deg(_JOINT_LOW_RAD[:5]), np.array([0.0]))).a
 ACTION_HIGH = np.concatenate((np.rad2deg(_JOINT_HIGH_RAD[:5]), np.array([100.0]))).astype(np.float32)
 DEFAULT_HOME_ACTION = np.array([0.0, -35.0, 55.0, 35.0, 0.0, 100.0], dtype=np.float32)
 CUBE_SPAWN_POSITION = np.array([0.25453126220736555, -0.002930872758779989, 0.075], dtype=np.float64)
+GOAL_TRAY_POSITION = np.array([0.20, 0.18, 0.031], dtype=np.float64)
+CUBE_HALF_SIZE_M = 0.025
+CUBE_SETTLED_CENTER_Z_M = 0.06881588
+CUBE_TOP_PLANE_Z_M = CUBE_SETTLED_CENTER_Z_M + CUBE_HALF_SIZE_M
 FINGER_PAD_GEOM_NAMES = ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")
+FINGER_PAD_VISUAL_GEOM_NAMES = (
+    "dapier_fixed_finger_pad_visual",
+    "dapier_moving_finger_pad_visual",
+)
+WRIST_CAMERA_HOUSING_GEOM_NAME = "dapier_wrist_camera_housing"
+WRIST_CAMERA_LENS_GEOM_NAME = "dapier_wrist_camera_lens"
+WRIST_CAMERA_MOUNT_GEOM_NAME = "dapier_wrist_camera_mount"
+_WRIST_CAMERA_POSITION = [0.05, -0.07, 0.04]
+_WRIST_CAMERA_QUATERNION = [
+    0.8976243763874222,
+    0.0994776440004103,
+    0.1271154174228951,
+    -0.4101418631554479,
+]
+_WRIST_CAMERA_HOUSING_POSITION = [
+    0.051612642922897835,
+    -0.07311143607055529,
+    0.05042680911794568,
+]
 _FINGER_PAD_SPECS = (
     {
         "body": "gripper",
         "name": FINGER_PAD_GEOM_NAMES[0],
-        "pos": [0.0251, -0.000218121, -0.0781274],
+        "visual_name": FINGER_PAD_VISUAL_GEOM_NAMES[0],
+        "pos": [0.0251, -0.000218121, -0.0831274],
         "quat": [0.707107, 0.0, 0.707107, 0.0],
     },
     {
         "body": "moving_jaw_so101_v1",
         "name": FINGER_PAD_GEOM_NAMES[1],
-        "pos": [-0.0124346, -0.0794335, 0.0190181],
+        "visual_name": FINGER_PAD_VISUAL_GEOM_NAMES[1],
+        "pos": [-0.0165797936, -0.0822294661, 0.0190181],
         "quat": [-0.206738, 0.206738, -0.67621, 0.67621],
     },
 )
+
+
+@dataclass(frozen=True)
+class CameraCalibration:
+    """Current calibrated pinhole pose for one MuJoCo RGB camera."""
+
+    name: str
+    position: np.ndarray
+    rotation: np.ndarray
+    vertical_fov_degrees: float
+    image_height: int
+    image_width: int
 
 
 def lerobot_action_to_qpos(action: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
@@ -216,19 +254,77 @@ class SO101MujocoEnv(gym.Env):
         self._mujoco = mujoco
         model_spec = mujoco.MjSpec.from_file(str(self.model_path))
         for pad in _FINGER_PAD_SPECS:
+            # The larger transparent contact envelope keeps the cube seated
+            # during transfer. A smaller, opaque rubber lining below shows the
+            # surface the operator should visually treat as the fingertip.
             model_spec.body(pad["body"]).add_geom(
                 name=pad["name"],
                 type=mujoco.mjtGeom.mjGEOM_BOX,
                 pos=pad["pos"],
                 quat=pad["quat"],
-                size=[0.02, 0.02, 0.002],
+                size=[0.0275, 0.02, 0.002],
                 contype=1,
                 conaffinity=1,
                 friction=[2.0, 0.01, 0.001],
-                rgba=[0.08, 0.08, 0.08, 1.0],
+                rgba=[0.08, 0.08, 0.08, 0.0],
                 group=3,
                 density=0,
             )
+            model_spec.body(pad["body"]).add_geom(
+                name=pad["visual_name"],
+                type=mujoco.mjtGeom.mjGEOM_BOX,
+                pos=pad["pos"],
+                quat=pad["quat"],
+                size=[0.018, 0.0065, 0.0021],
+                contype=0,
+                conaffinity=0,
+                rgba=[0.07, 0.07, 0.07, 1.0],
+                group=2,
+                density=0,
+            )
+
+        # Put the eye-in-hand camera above and slightly beside the fingers.
+        # A dead-centre overhead camera is physically occluded by the fixed
+        # finger, so this small lateral offset preserves the top-down view.
+        wrist_camera = model_spec.camera("wrist")
+        wrist_camera.pos = _WRIST_CAMERA_POSITION
+        wrist_camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_QUAT
+        wrist_camera.quat = _WRIST_CAMERA_QUATERNION
+        model_spec.body("gripper").add_geom(
+            name=WRIST_CAMERA_MOUNT_GEOM_NAME,
+            type=mujoco.mjtGeom.mjGEOM_CAPSULE,
+            fromto=[0.008, -0.018, 0.0, 0.0515, -0.073, 0.0505],
+            size=[0.0035, 0.0, 0.0],
+            contype=0,
+            conaffinity=0,
+            rgba=[0.7, 0.55, 0.08, 1.0],
+            group=2,
+            density=0,
+        )
+        model_spec.body("gripper").add_geom(
+            name=WRIST_CAMERA_HOUSING_GEOM_NAME,
+            type=mujoco.mjtGeom.mjGEOM_BOX,
+            pos=_WRIST_CAMERA_HOUSING_POSITION,
+            quat=_WRIST_CAMERA_QUATERNION,
+            size=[0.014, 0.01, 0.008],
+            contype=0,
+            conaffinity=0,
+            rgba=[0.025, 0.025, 0.025, 1.0],
+            group=2,
+            density=0,
+        )
+        model_spec.body("gripper").add_geom(
+            name=WRIST_CAMERA_LENS_GEOM_NAME,
+            type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+            pos=[0.050219905853122436, -0.07042428673689391, 0.04142183760699259],
+            quat=_WRIST_CAMERA_QUATERNION,
+            size=[0.005, 0.001, 0.0],
+            contype=0,
+            conaffinity=0,
+            rgba=[0.04, 0.13, 0.18, 1.0],
+            group=2,
+            density=0,
+        )
         self.model = model_spec.compile()
         self.data = mujoco.MjData(self.model)
 
@@ -359,6 +455,29 @@ class SO101MujocoEnv(gym.Env):
             )
         self._renderer.update_scene(self.data, camera=camera_name)
         return self._renderer.render().copy()
+
+    def camera_calibration(self, camera_name: str = "wrist") -> CameraCalibration:
+        """Return the current camera pose and intrinsic field of view.
+
+        The pose changes with the measured robot state because the wrist camera
+        is a child of the gripper body. Object state is intentionally absent.
+        """
+        if camera_name not in CAMERA_NAMES:
+            raise ValueError(f"Unsupported camera_name: {camera_name!r}")
+        self._load_model()
+        assert self._mujoco is not None and self.model is not None and self.data is not None
+        camera_id = self._mujoco.mj_name2id(self.model, self._mujoco.mjtObj.mjOBJ_CAMERA, camera_name)
+        if camera_id < 0:
+            raise RuntimeError(f"The MuJoCo model is missing camera {camera_name!r}")
+        self._mujoco.mj_forward(self.model, self.data)
+        return CameraCalibration(
+            name=camera_name,
+            position=self.data.cam_xpos[camera_id].astype(np.float64).copy(),
+            rotation=self.data.cam_xmat[camera_id].reshape(3, 3).astype(np.float64).copy(),
+            vertical_fov_degrees=float(self.model.cam_fovy[camera_id]),
+            image_height=self.observation_height,
+            image_width=self.observation_width,
+        )
 
     def close(self) -> None:
         if self._renderer is not None:

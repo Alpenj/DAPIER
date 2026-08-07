@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -24,7 +25,9 @@ import numpy as np
 from .env import (
     ACTION_HIGH,
     ACTION_LOW,
+    CUBE_SPAWN_POSITION,
     DEFAULT_HOME_ACTION,
+    GOAL_TRAY_POSITION,
     JOINT_NAMES,
     lerobot_action_to_qpos,
     qpos_to_lerobot_state,
@@ -36,6 +39,41 @@ PICK_LIFT_FRAMES = 300
 _PICK_PHASE_BOUNDARIES = (0, 30, 110, 170, 190, 260, PICK_LIFT_FRAMES)
 _PICK_CLOSED_PERCENT = 55.0
 _PICK_LIFT_FRACTION = 0.65
+VISION_SETTLE_FRAMES = 30
+VISION_MAX_CUBE_OFFSET_M = 0.045
+VISION_PHASES = (
+    ("approach", 80),
+    ("close", 60),
+    ("grasp", 20),
+    ("lift", 70),
+    ("lift hold", 30),
+    ("transfer", 45),
+    ("release", 15),
+    ("settle", 45),
+)
+VISION_PICK_PLACE_FRAMES = sum(frame_count for _, frame_count in VISION_PHASES)
+
+
+@dataclass(frozen=True)
+class VisionPickPlacePlan:
+    """Pixel-conditioned action plan with auditable kinematic waypoints."""
+
+    actions: np.ndarray
+    estimated_cube_xy: np.ndarray
+    approach_action: np.ndarray
+    lift_action: np.ndarray
+    goal_closed_action: np.ndarray
+    phase_ends: tuple[int, ...]
+
+    def stage_for_frame(self, frame_index: int) -> str:
+        if isinstance(frame_index, bool) or not isinstance(frame_index, int):
+            raise ValueError("frame_index must be an integer")
+        if not 0 <= frame_index < len(self.actions):
+            raise ValueError(f"frame_index must be in [0, {len(self.actions) - 1}]")
+        for (stage, _), phase_end in zip(VISION_PHASES, self.phase_ends, strict=True):
+            if frame_index < phase_end:
+                return stage
+        raise AssertionError("unreachable vision phase")
 
 
 class JointJogController:
@@ -241,6 +279,100 @@ def _smoothstep_actions(start: np.ndarray, stop: np.ndarray, fraction: float) ->
     weight = fraction * fraction * (3.0 - 2.0 * fraction)
     interpolated = start.astype(np.float64) * (1.0 - weight) + stop.astype(np.float64) * weight
     return np.clip(interpolated, ACTION_LOW, ACTION_HIGH).astype(np.float32)
+
+
+def _action_segment(start: np.ndarray, stop: np.ndarray, frames: int) -> np.ndarray:
+    if frames <= 0:
+        raise ValueError("frames must be positive")
+    return np.stack([_smoothstep_actions(start, stop, (index + 1) / frames) for index in range(frames)])
+
+
+def build_vision_pick_place_plan(
+    model: Any,
+    estimated_cube_xy: np.ndarray | list[float] | tuple[float, float],
+    *,
+    goal_xy: np.ndarray | list[float] | tuple[float, float] = GOAL_TRAY_POSITION[:2],
+) -> VisionPickPlacePlan:
+    """Build a camera-conditioned pick-and-place plan without object-state access.
+
+    ``estimated_cube_xy`` is expected to come from the wrist RGB detector. The
+    green tray is a fixed task destination, so its calibrated XY is supplied as
+    task configuration rather than read from MuJoCo state.
+    """
+    cube_xy = np.asarray(estimated_cube_xy, dtype=np.float64)
+    destination_xy = np.asarray(goal_xy, dtype=np.float64)
+    if cube_xy.shape != (2,) or destination_xy.shape != (2,):
+        raise ValueError("estimated_cube_xy and goal_xy must both have shape (2,)")
+    if not np.all(np.isfinite(cube_xy)) or not np.all(np.isfinite(destination_xy)):
+        raise ValueError("estimated_cube_xy and goal_xy must be finite")
+
+    cube_offset = cube_xy - CUBE_SPAWN_POSITION[:2]
+    if np.any(np.abs(cube_offset) > VISION_MAX_CUBE_OFFSET_M):
+        raise ValueError(
+            "Vision estimate is outside the verified pick workspace: "
+            f"offset={np.array2string(cube_offset, precision=4)} m"
+        )
+
+    controller = CartesianJogController(model, max_iterations=100)
+    controller.set_action(PICK_APPROACH_ACTION)
+    approach_action = controller.move([cube_offset[0], cube_offset[1], 0.0])
+    if controller.last_cartesian_error_m > 0.002:
+        raise RuntimeError(
+            f"Could not solve camera-guided approach waypoint: {controller.last_cartesian_error_m:.6f} m"
+        )
+    approach_action[5] = 100.0
+    grasp_action = approach_action.copy()
+    grasp_action[5] = _PICK_CLOSED_PERCENT
+
+    nominal_lift = scripted_pick_lift_action(PICK_LIFT_FRAMES - 1)
+    controller.set_action(nominal_lift)
+    lift_action = controller.move([cube_offset[0], cube_offset[1], 0.0])
+    if controller.last_cartesian_error_m > 0.002:
+        raise RuntimeError(
+            f"Could not solve camera-guided lift waypoint: {controller.last_cartesian_error_m:.6f} m"
+        )
+    lift_action[5] = _PICK_CLOSED_PERCENT
+
+    # The grasp transform is calibrated by the nominal padded task. Translating
+    # the gripper by destination - visually estimated cube position does not use
+    # the privileged cube body pose and leaves the final tray tolerance to the
+    # task evaluator.
+    lift_site = controller.site_position(lift_action)
+    goal_site = lift_site.copy()
+    goal_site[:2] += destination_xy - cube_xy
+    goal_site[2] += 0.02
+    controller.set_action(lift_action)
+    goal_closed_action = controller.move_to(goal_site)
+    if controller.last_cartesian_error_m > 0.003:
+        raise RuntimeError(
+            f"Could not solve camera-guided transfer waypoint: {controller.last_cartesian_error_m:.6f} m"
+        )
+    goal_closed_action[5] = _PICK_CLOSED_PERCENT
+    goal_open_action = goal_closed_action.copy()
+    goal_open_action[5] = 100.0
+
+    phase_actions = (
+        _action_segment(PICK_CLEAR_ACTION, approach_action, 80),
+        _action_segment(approach_action, grasp_action, 60),
+        np.repeat(grasp_action[None, :], 20, axis=0),
+        _action_segment(grasp_action, lift_action, 70),
+        np.repeat(lift_action[None, :], 30, axis=0),
+        _action_segment(lift_action, goal_closed_action, 45),
+        _action_segment(goal_closed_action, goal_open_action, 15),
+        np.repeat(goal_open_action[None, :], 45, axis=0),
+    )
+    actions = np.concatenate(phase_actions, axis=0).astype(np.float32)
+    if actions.shape != (VISION_PICK_PLACE_FRAMES, 6):
+        raise AssertionError(f"Unexpected vision plan shape: {actions.shape}")
+    phase_ends = tuple(np.cumsum([frame_count for _, frame_count in VISION_PHASES]).tolist())
+    return VisionPickPlacePlan(
+        actions=actions,
+        estimated_cube_xy=cube_xy.copy(),
+        approach_action=approach_action.copy(),
+        lift_action=lift_action.copy(),
+        goal_closed_action=goal_closed_action.copy(),
+        phase_ends=phase_ends,
+    )
 
 
 def scripted_pick_lift_action(frame_index: int) -> np.ndarray:

@@ -33,7 +33,11 @@ from lerobot.envs.so101_mujoco import (
     CAMERA_NAMES,
     CAMERA_OBSERVATION_KEYS,
     JOINT_NAMES,
+    VISION_SETTLE_FRAMES,
     SO101MujocoEnv,
+    VisionPickPlacePlan,
+    build_vision_pick_place_plan,
+    estimate_blue_cube_world_position,
 )
 from lerobot.envs.so101_mujoco.teleop import (
     PICK_APPROACH_ACTION,
@@ -107,6 +111,7 @@ class ViewerKeyboard:
         joint_speed_degrees: float,
         gripper_speed_percent: float,
         cartesian_speed_m: float,
+        scripted_playback_enabled: bool,
     ) -> None:
         import glfw
 
@@ -114,16 +119,23 @@ class ViewerKeyboard:
         self.joint_speed_degrees = float(joint_speed_degrees)
         self.gripper_speed_percent = float(gripper_speed_percent)
         self.cartesian_speed_m = float(cartesian_speed_m)
+        self.scripted_playback_enabled = bool(scripted_playback_enabled)
         self._lock = threading.Lock()
         self._new_episode_requested = False
+        self._automation_reset_requested: str | None = None
+        self._camera_toggle_requested = False
         self._stop_requested = False
         self._armed_keys: set[int] = set()
         self._pending_edge_keys: set[int] = set()
         self._handled_edge_keys: set[int] = set()
         self._scripted_frame: int | None = None
-        self._freeze_after_current_step = False
+        self._vision_settle_remaining: int | None = None
+        self._vision_plan: VisionPickPlacePlan | None = None
+        self._vision_frame = 0
+        self._freeze_after_current_step: str | None = None
         self._physics_paused = False
         self._mode = "manual"
+        self._viewer_camera_mode = "external"
         self._continuous_keys = {
             glfw.KEY_UP,
             glfw.KEY_DOWN,
@@ -142,6 +154,8 @@ class ViewerKeyboard:
             glfw.KEY_H,
             glfw.KEY_G,
             glfw.KEY_P,
+            glfw.KEY_V,
+            glfw.KEY_C,
             glfw.KEY_N,
             glfw.KEY_Q,
         }
@@ -163,6 +177,8 @@ class ViewerKeyboard:
             glfw.KEY_H: "h",
             glfw.KEY_G: "g",
             glfw.KEY_P: "p",
+            glfw.KEY_V: "v",
+            glfw.KEY_C: "c",
             glfw.KEY_N: "n",
             glfw.KEY_Q: "q",
             glfw.KEY_LEFT_SHIFT: "Shift_L",
@@ -177,6 +193,14 @@ class ViewerKeyboard:
                 self._armed_keys.add(keycode)
                 if keycode in self._edge_keys:
                     self._pending_edge_keys.add(keycode)
+
+    def _cancel_automation_locked(self) -> None:
+        self._automation_reset_requested = None
+        self._scripted_frame = None
+        self._vision_settle_remaining = None
+        self._vision_plan = None
+        self._vision_frame = 0
+        self._freeze_after_current_step = None
 
     def poll_controls(self, poller: X11HeldKeyPoller, elapsed_seconds: float) -> None:
         import glfw
@@ -202,25 +226,39 @@ class ViewerKeyboard:
                 self.controller.select_next_joint()
                 print(f"selected_joint={self.controller.selected_joint_name}")
             if glfw.KEY_H in new_edges:
+                self._cancel_automation_locked()
                 self.controller.reset()
-                self._scripted_frame = None
                 self._physics_paused = False
                 self._mode = "home"
                 print("target=home")
             if glfw.KEY_G in new_edges:
+                self._cancel_automation_locked()
                 self.controller.set_action(PICK_APPROACH_ACTION)
-                self._scripted_frame = None
                 self._physics_paused = False
                 self._mode = "cube approach"
                 print("target=cube_approach")
             if glfw.KEY_P in new_edges:
-                self._scripted_frame = 0
-                self._freeze_after_current_step = False
-                self._physics_paused = False
-                self._mode = "scripted pick 0/300"
-                print("scripted_pick=started (300 frames)")
+                if self.scripted_playback_enabled:
+                    self._cancel_automation_locked()
+                    self._automation_reset_requested = "scripted_lift"
+                    self._physics_paused = False
+                    self._mode = "scripted lift reset requested"
+                    print("scripted_pick=reset_requested")
+                else:
+                    print("scripted_pick=disabled_while_recording")
+            if glfw.KEY_V in new_edges:
+                if self.scripted_playback_enabled:
+                    self._cancel_automation_locked()
+                    self._automation_reset_requested = "vision_pick_place"
+                    self._physics_paused = False
+                    self._mode = "vision reset requested"
+                    print("vision_pick_place=reset_requested")
+                else:
+                    print("vision_pick_place=disabled_while_recording")
+            if glfw.KEY_C in new_edges:
+                self._camera_toggle_requested = True
             if glfw.KEY_N in new_edges:
-                self._scripted_frame = None
+                self._cancel_automation_locked()
                 self._physics_paused = False
                 self._mode = "new episode requested"
                 self._new_episode_requested = True
@@ -230,7 +268,7 @@ class ViewerKeyboard:
             active_continuous = active & self._continuous_keys
             if not active_continuous:
                 return
-            self._scripted_frame = None
+            self._cancel_automation_locked()
             self._physics_paused = False
             self._mode = "manual (Shift chord held)"
 
@@ -274,23 +312,120 @@ class ViewerKeyboard:
                 self._scripted_frame += 1
                 if self._scripted_frame >= PICK_LIFT_FRAMES:
                     self._scripted_frame = None
-                    self._freeze_after_current_step = True
+                    self._freeze_after_current_step = "scripted_lift"
                     self._mode = "scripted lift complete (pausing physics)"
                 else:
                     self._mode = f"scripted pick {self._scripted_frame}/300"
+            elif self._vision_settle_remaining is not None:
+                if self._vision_settle_remaining > 0:
+                    completed = VISION_SETTLE_FRAMES - self._vision_settle_remaining + 1
+                    self.controller.set_action(PICK_CLEAR_ACTION)
+                    self._vision_settle_remaining -= 1
+                    self._mode = f"vision camera settle {completed}/{VISION_SETTLE_FRAMES}"
+                elif self._vision_plan is not None:
+                    frame = self._vision_frame
+                    stage = self._vision_plan.stage_for_frame(frame)
+                    self.controller.set_action(self._vision_plan.actions[frame])
+                    self._vision_frame += 1
+                    if self._vision_frame >= len(self._vision_plan.actions):
+                        self._vision_settle_remaining = None
+                        self._vision_plan = None
+                        self._vision_frame = 0
+                        self._freeze_after_current_step = "vision_pick_place"
+                        self._mode = "vision pick/place complete (pausing physics)"
+                    else:
+                        self._mode = f"vision {stage} {self._vision_frame}/365"
+                else:
+                    self.controller.set_action(PICK_CLEAR_ACTION)
+                    self._mode = "vision RGB detection pending"
             return self.controller.get_action()
 
-    def after_step(self) -> None:
+    def after_step(self, info: dict[str, Any]) -> None:
         with self._lock:
-            if self._freeze_after_current_step:
-                self._freeze_after_current_step = False
-                self._physics_paused = True
-                self._mode = "verified frame 299 (physics paused)"
+            freeze_reason = self._freeze_after_current_step
+            if freeze_reason is None:
+                return
+            self._freeze_after_current_step = None
+            self._physics_paused = True
+            if freeze_reason == "scripted_lift":
+                cube_z = float(info["cube_position"][2])
+                passed = cube_z >= 0.09
+                result = "PASS" if passed else "FAIL"
+                self._mode = f"scripted lift {result}: cube z={cube_z:.3f} m (paused)"
+                print(f"scripted_lift_result={result} cube_z_m={cube_z:.6f}")
+            elif freeze_reason == "vision_pick_place":
+                passed = bool(info["is_success"])
+                result = "PASS" if passed else "FAIL"
+                cube = np.asarray(info["cube_position"], dtype=np.float64)
+                self._mode = (
+                    f"vision pick/place {result}: cube=({cube[0]:.3f}, {cube[1]:.3f}, "
+                    f"{cube[2]:.3f}) m (paused)"
+                )
+                print(
+                    f"vision_pick_place_result={result} "
+                    f"cube_position={np.array2string(cube, precision=6, suppress_small=True)}"
+                )
 
     def resume_physics(self) -> None:
         with self._lock:
-            self._freeze_after_current_step = False
+            self._freeze_after_current_step = None
             self._physics_paused = False
+
+    def consume_automation_reset_request(self) -> str | None:
+        with self._lock:
+            requested = self._automation_reset_requested
+            self._automation_reset_requested = None
+            return requested
+
+    def start_scripted_after_reset(self) -> None:
+        with self._lock:
+            self._cancel_automation_locked()
+            self.controller.reset()
+            self._scripted_frame = 0
+            self._physics_paused = False
+            self._mode = "scripted pick 0/300"
+            print("scripted_pick=started_from_reset frames=300")
+
+    def start_vision_after_reset(self) -> None:
+        with self._lock:
+            self._cancel_automation_locked()
+            self.controller.reset()
+            self._vision_settle_remaining = VISION_SETTLE_FRAMES
+            self._physics_paused = False
+            self._mode = f"vision camera settle 0/{VISION_SETTLE_FRAMES}"
+            print(f"vision_pick_place=started_from_reset settle_frames={VISION_SETTLE_FRAMES}")
+
+    @property
+    def vision_detection_requested(self) -> bool:
+        with self._lock:
+            return self._vision_settle_remaining == 0 and self._vision_plan is None
+
+    def provide_vision_plan(self, plan: VisionPickPlacePlan) -> None:
+        with self._lock:
+            if self._vision_settle_remaining != 0 or self._vision_plan is not None:
+                raise RuntimeError("Vision plan was supplied outside the RGB detection phase")
+            self._vision_plan = plan
+            self._vision_frame = 0
+            self._mode = "vision cube found; starting approach"
+
+    def abort_vision(self, reason: str) -> None:
+        with self._lock:
+            self._cancel_automation_locked()
+            self._physics_paused = True
+            self._mode = f"vision FAILED: {reason} (paused)"
+            print(f"vision_pick_place_result=FAIL reason={reason!r}")
+
+    def consume_camera_toggle_request(self) -> bool:
+        with self._lock:
+            requested = self._camera_toggle_requested
+            self._camera_toggle_requested = False
+            return requested
+
+    def set_viewer_camera_mode(self, mode: str) -> None:
+        if mode not in {"external", "wrist"}:
+            raise ValueError(f"Unsupported viewer camera mode: {mode!r}")
+        with self._lock:
+            self._viewer_camera_mode = mode
 
     @property
     def physics_paused(self) -> bool:
@@ -314,6 +449,7 @@ class ViewerKeyboard:
             action = self.controller.get_action()
             return (
                 f"mode: {self._mode}\n"
+                f"viewer camera: {self._viewer_camera_mode}\n"
                 f"selected: {self.controller.selected_joint_name}\n"
                 f"target: {np.array2string(action, precision=1, suppress_small=True)}"
             )
@@ -386,6 +522,58 @@ def wait_for_viewer_shutdown(viewer_handle, timeout_seconds: float = 2.0) -> Non
         time.sleep(0.01)
 
 
+VIEWER_HELP = (
+    "Shift+W/S: X   Shift+A/D: Y   Shift+R/F: Z\n"
+    "Shift+O/L: gripper open/close\n"
+    "Shift+Up/Down: selected joint   Shift+J/K: select\n"
+    "Shift+G: known cube approach\n"
+    "Shift+P: reset + scripted pick/lift\n"
+    "Shift+V: wrist RGB find + pick + place\n"
+    "Shift+C: wrist/external viewer camera\n"
+    "Shift+H: home   Shift+N: new   Shift+Q: quit"
+)
+
+
+def update_viewer_texts(viewer_handle, keyboard: ViewerKeyboard) -> None:
+    import mujoco
+
+    viewer_handle.set_texts(
+        [
+            (
+                None,
+                mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
+                "HOLD\nHOLD\nHOLD\nPRESS\nPRESS\nPRESS\nPRESS\nPRESS",
+                VIEWER_HELP,
+            ),
+            (
+                None,
+                mujoco.mjtGridPos.mjGRID_TOPRIGHT,
+                "SO-101 SIM",
+                keyboard.status_text,
+            ),
+        ]
+    )
+
+
+def set_viewer_camera_mode(viewer_handle, model, keyboard: ViewerKeyboard, mode: str) -> None:
+    import mujoco
+
+    with viewer_handle.lock():
+        if mode == "wrist":
+            camera_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, "wrist")
+            if camera_id < 0:
+                raise RuntimeError("The MuJoCo model is missing the wrist camera")
+            viewer_handle.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
+            viewer_handle.cam.fixedcamid = camera_id
+        elif mode == "external":
+            viewer_handle.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
+            viewer_handle.cam.fixedcamid = -1
+        else:
+            raise ValueError(f"Unsupported viewer camera mode: {mode!r}")
+    keyboard.set_viewer_camera_mode(mode)
+    print(f"viewer_camera={mode}")
+
+
 def run(args: argparse.Namespace) -> None:
     if args.input == "keyboard" and args.no_viewer:
         raise ValueError("Keyboard input requires the MuJoCo viewer; remove --no-viewer")
@@ -401,7 +589,7 @@ def run(args: argparse.Namespace) -> None:
         observation_width=args.width,
         fps=args.fps,
         max_episode_steps=args.steps,
-        terminate_on_success=True,
+        terminate_on_success=recording,
         cube_xy_randomization=args.cube_randomization,
         home_action=PICK_CLEAR_ACTION,
     )
@@ -423,6 +611,7 @@ def run(args: argparse.Namespace) -> None:
         joint_speed_degrees=args.joint_speed_degrees,
         gripper_speed_percent=args.gripper_speed_percent,
         cartesian_speed_m=args.cartesian_speed_m,
+        scripted_playback_enabled=not recording,
     )
     action_source = (
         SO101LeaderActionSource(port=args.leader_port, leader_id=args.leader_id)
@@ -433,10 +622,13 @@ def run(args: argparse.Namespace) -> None:
     attempts = 0
     successful_episodes = 0
     saved_episodes = 0
+    automation_runs = 0
+    viewer_camera_mode = "external"
     print(
         "keys: hold Shift+W/S X, Shift+A/D Y, Shift+R/F Z | Shift+O/L gripper | "
         "Shift+J/K joint select | Shift+Up/Down joint | Shift+G approach | "
-        "Shift+P scripted pick/lift | Shift+H home | Shift+N new | Shift+Q quit"
+        "Shift+P reset+pick/lift | Shift+V wrist-RGB pick/place | Shift+C camera | "
+        "Shift+H home | Shift+N new | Shift+Q quit"
     )
 
     try:
@@ -462,28 +654,7 @@ def run(args: argparse.Namespace) -> None:
                 if args.input == "keyboard":
                     key_poller = X11HeldKeyPoller(keyboard.key_names)
                     stack.callback(key_poller.close)
-                    viewer_handle.set_texts(
-                        [
-                            (
-                                None,
-                                mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
-                                "HOLD\nHOLD\nHOLD\nHOLD\nPRESS\nPRESS\nPRESS",
-                                "Shift+W/S: X   Shift+A/D: Y   Shift+R/F: Z\n"
-                                "Shift+O/L: gripper open/close\n"
-                                "Shift+Up/Down: selected joint\n"
-                                "Shift+J/K: previous/next joint\n"
-                                "Shift+G: approach cube\n"
-                                "Shift+P: verified scripted pick + lift\n"
-                                "Shift+H: home   Shift+N: new   Shift+Q: quit",
-                            ),
-                            (
-                                None,
-                                mujoco.mjtGridPos.mjGRID_TOPRIGHT,
-                                "SO-101 SIM",
-                                keyboard.status_text,
-                            ),
-                        ]
-                    )
+                    update_viewer_texts(viewer_handle, keyboard)
 
             while attempts < args.episodes and not keyboard.stop_requested:
                 if viewer_handle is not None and not viewer_handle.is_running():
@@ -493,8 +664,51 @@ def run(args: argparse.Namespace) -> None:
                     keyboard.poll_controls(key_poller, 1.0 / args.fps)
                 if keyboard.stop_requested:
                     break
+                if viewer_handle is not None and keyboard.consume_camera_toggle_request():
+                    viewer_camera_mode = "external" if viewer_camera_mode == "wrist" else "wrist"
+                    set_viewer_camera_mode(viewer_handle, env.model, keyboard, viewer_camera_mode)
+
+                automation_request = keyboard.consume_automation_reset_request()
+                if automation_request is not None:
+                    reset_seed = args.seed
+                    if automation_request == "vision_pick_place":
+                        reset_seed = args.seed + automation_runs
+                        automation_runs += 1
+                    with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
+                        observation, info = env.reset(seed=reset_seed)
+                    controller.reset()
+                    if automation_request == "scripted_lift":
+                        keyboard.start_scripted_after_reset()
+                    elif automation_request == "vision_pick_place":
+                        keyboard.start_vision_after_reset()
+                        print(f"vision_seed={reset_seed}")
+                        if viewer_handle is not None and viewer_camera_mode != "wrist":
+                            viewer_camera_mode = "wrist"
+                            set_viewer_camera_mode(viewer_handle, env.model, keyboard, viewer_camera_mode)
+                    else:
+                        raise AssertionError(f"Unknown automation request: {automation_request}")
+
+                if keyboard.vision_detection_requested:
+                    try:
+                        with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
+                            wrist_rgb = env.render("wrist")
+                            calibration = env.camera_calibration("wrist")
+                        estimate = estimate_blue_cube_world_position(wrist_rgb, calibration)
+                        plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2])
+                        keyboard.provide_vision_plan(plan)
+                        detection = estimate.detection
+                        print(
+                            "vision_detection=PASS source=wrist_rgb "
+                            f"pixel_xy={detection.center_pixel_xy} bbox={detection.bbox_xyxy} "
+                            f"pixels={detection.pixel_count} "
+                            "estimated_cube_xy_m="
+                            f"{np.array2string(estimate.world_xyz[:2], precision=6, suppress_small=True)}"
+                        )
+                    except (RuntimeError, ValueError) as exc:
+                        keyboard.abort_vision(str(exc))
                 if args.input == "keyboard" and keyboard.physics_paused:
                     if viewer_handle is not None:
+                        update_viewer_texts(viewer_handle, keyboard)
                         viewer_handle.sync()
                     remaining = 1.0 / args.fps - (time.perf_counter() - frame_started)
                     if remaining > 0:
@@ -504,7 +718,7 @@ def run(args: argparse.Namespace) -> None:
                 with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
                     next_observation, reward, terminated, truncated, info = env.step(action)
                 if args.input == "keyboard":
-                    keyboard.after_step()
+                    keyboard.after_step(info)
                 manually_ended = keyboard.consume_new_episode_request()
                 done = terminated or truncated or manually_ended
 
@@ -514,28 +728,7 @@ def run(args: argparse.Namespace) -> None:
 
                 if viewer_handle is not None:
                     if args.input == "keyboard":
-                        viewer_handle.set_texts(
-                            [
-                                (
-                                    None,
-                                    mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
-                                    "HOLD\nHOLD\nHOLD\nHOLD\nPRESS\nPRESS\nPRESS",
-                                    "Shift+W/S: X   Shift+A/D: Y   Shift+R/F: Z\n"
-                                    "Shift+O/L: gripper open/close\n"
-                                    "Shift+Up/Down: selected joint\n"
-                                    "Shift+J/K: previous/next joint\n"
-                                    "Shift+G: approach cube\n"
-                                    "Shift+P: verified scripted pick + lift\n"
-                                    "Shift+H: home   Shift+N: new   Shift+Q: quit",
-                                ),
-                                (
-                                    None,
-                                    mujoco.mjtGridPos.mjGRID_TOPRIGHT,
-                                    "SO-101 SIM",
-                                    keyboard.status_text,
-                                ),
-                            ]
-                        )
+                        update_viewer_texts(viewer_handle, keyboard)
                     viewer_handle.sync()
 
                 if done:
@@ -545,7 +738,7 @@ def run(args: argparse.Namespace) -> None:
                     saved = finish_episode(dataset, success=success, save_mode=args.save_mode)
                     saved_episodes += int(saved)
                     print(
-                        f"attempt={attempts}/{args.episodes} success={success} "
+                        f"attempt={attempts}/{args.episodes} place_success={success} "
                         f"saved={saved} total_saved={saved_episodes}"
                     )
                     if attempts >= args.episodes:
@@ -554,7 +747,7 @@ def run(args: argparse.Namespace) -> None:
                         keyboard.resume_physics()
                         controller.reset()
                     with viewer_handle.lock() if viewer_handle is not None else contextlib.nullcontext():
-                        observation, _ = env.reset(seed=args.seed + attempts)
+                        observation, info = env.reset(seed=args.seed + attempts)
 
                 remaining = 1.0 / args.fps - (time.perf_counter() - frame_started)
                 if remaining > 0:

@@ -48,7 +48,9 @@ def reorder_joint_positions(
     names = tuple(joint_names)
     values = np.asarray(positions, dtype=np.float64)
     if values.shape != (len(names),):
-        raise ValueError(f"Expected one position per joint name, got names={len(names)}, shape={values.shape}")
+        raise ValueError(
+            f"Expected one position per joint name, got names={len(names)}, shape={values.shape}"
+        )
     if len(names) != len(set(names)):
         raise ValueError(f"Joint names contain duplicates: {names}")
 
@@ -72,9 +74,7 @@ def ros_positions_to_lerobot_action(
     ordered = reorder_joint_positions(joint_names, positions)
     outside = (ordered < ROS_POSITION_LOW - 1e-9) | (ordered > ROS_POSITION_HIGH + 1e-9)
     if np.any(outside):
-        violations = {
-            JOINT_NAMES[index]: float(ordered[index]) for index in np.flatnonzero(outside)
-        }
+        violations = {JOINT_NAMES[index]: float(ordered[index]) for index in np.flatnonzero(outside)}
         raise ValueError(f"Joint command exceeds the SO-101 limits (radians): {violations}")
     return qpos_to_lerobot_state(ordered)
 
