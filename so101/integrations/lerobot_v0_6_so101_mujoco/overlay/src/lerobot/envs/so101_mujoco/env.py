@@ -195,7 +195,7 @@ class SO101MujocoEnv(gym.Env):
         max_episode_steps: int = 300,
         reward_type: str = "dense",
         terminate_on_success: bool = True,
-        cube_xy_randomization: float = 0.04,
+        cube_xy_randomization: float = 0.025,
         camera_names: tuple[str, ...] | list[str] = POLICY_CAMERA_NAMES,
         home_action: tuple[float, ...] | list[float] | np.ndarray = DEFAULT_HOME_ACTION,
     ):

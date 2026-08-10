@@ -25,6 +25,8 @@ from pathlib import Path
 from typing import Literal
 
 CONTROL_CONTRACT_SCHEMA_VERSION = "dapier.so101.control-route.v1"
+VLA_DATASET_HOME_ACTION_CLI = "[0,-45,17.5,90,0,100]"
+VLA_EVALUATION_ACTION_STEPS = 25
 ControlMode = Literal["ik_expert", "vla"]
 RequestedControlMode = Literal["auto", "ik_expert", "vla"]
 
@@ -242,6 +244,9 @@ def mark_wrist_vla_training_evaluated(
     training_seed_end: int,
     evaluation_seed_start: int,
     evaluation_episodes: int,
+    evaluation_action_steps: int,
+    evaluation_home_action: Sequence[float],
+    evaluation_cube_xy_randomization_m: float,
     successful_episodes: int,
     average_max_reward: float,
     average_sum_reward: float,
@@ -259,6 +264,18 @@ def mark_wrist_vla_training_evaluated(
         raise ValueError("seed ranges must be non-negative and ordered")
     if evaluation_episodes <= 0 or not 0 <= successful_episodes <= evaluation_episodes:
         raise ValueError("evaluation episode counts are invalid")
+    if (
+        isinstance(evaluation_action_steps, bool)
+        or not isinstance(evaluation_action_steps, int)
+        or evaluation_action_steps <= 0
+    ):
+        raise ValueError("evaluation_action_steps must be a positive integer")
+    evaluation_home = tuple(float(value) for value in evaluation_home_action)
+    if len(evaluation_home) != 6 or not all(math.isfinite(value) for value in evaluation_home):
+        raise ValueError("evaluation_home_action must contain six finite values")
+    evaluation_randomization = float(evaluation_cube_xy_randomization_m)
+    if not math.isfinite(evaluation_randomization) or evaluation_randomization < 0:
+        raise ValueError("evaluation_cube_xy_randomization_m must be finite and non-negative")
     if not 0 < success_threshold <= 1:
         raise ValueError("success_threshold must be in (0, 1]")
     metrics = (float(average_max_reward), float(average_sum_reward))
@@ -305,6 +322,9 @@ def mark_wrist_vla_training_evaluated(
         "expert_collection_seed_range": [training_seed_start, training_seed_end],
         "held_out_evaluation_seed_range": [evaluation_seed_start, evaluation_seed_end],
         "evaluation_episodes": evaluation_episodes,
+        "evaluation_action_steps": evaluation_action_steps,
+        "evaluation_home_action": list(evaluation_home),
+        "evaluation_cube_xy_randomization_m": evaluation_randomization,
         "successful_episodes": successful_episodes,
         "success_rate": success_rate,
         "success_threshold": success_threshold,
@@ -406,9 +426,11 @@ def build_wrist_vla_eval_command(
         "-m",
         "lerobot.scripts.lerobot_eval",
         f"--policy.path={policy_path}",
+        f"--policy.n_action_steps={VLA_EVALUATION_ACTION_STEPS}",
         "--env.type=so101_mujoco",
         "--env.camera_names=[wrist]",
         "--env.obs_type=pixels_agent_pos",
+        f"--env.home_action={VLA_DATASET_HOME_ACTION_CLI}",
         f"--env.episode_length={steps}",
         f"--env.observation_height={height}",
         f"--env.observation_width={width}",

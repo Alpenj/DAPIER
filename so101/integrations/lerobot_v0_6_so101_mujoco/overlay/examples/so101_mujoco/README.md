@@ -185,6 +185,17 @@ evaluation used seeds 800 through 809, 700 steps per episode, and scored `2/10 (
 reward was 0.5224936 and average summed reward was 143.9673. This is completed bounded training and
 evaluation, but it does not meet the 80% task threshold and is not a successful sim-to-real policy.
 
+A follow-up failure analysis found that the evaluator reset pose did not match the IK collector. Matching
+the teacher's `[0,-45,17.5,90,0,100]` pose raised the same checkpoint from 20% to 60%. A 25-step action
+execution horizon scored 80% on the configuration-selection seeds but only 40% on a fresh 20-episode set,
+so that 80% result is validation rather than a final claim.
+
+The v2 run added 60 successful IK episodes (39,600 frames, seeds 1000 through 1059) and fine-tuned the
+selected checkpoint for 10,000 updates at batch 4. It scored 80% on validation seeds 1100 through 1109
+and 70% on each of two distinct unseen 20-episode sets, seeds 1200 through 1219 and 1400 through 1419.
+Another 5,000 updates reduced validation success to 50%, so the earlier checkpoint remains selected.
+The verified bounded result is therefore 70%, still below the 80% release threshold.
+
 After evaluation, copy metrics from LeRobot's `eval_info.json` into the student provenance sidecar
 without retyping them:
 
@@ -199,11 +210,16 @@ uv run python examples/so101_mujoco/record_wrist_vla_evidence.py \
   --dataset-frames 19800 \
   --training-seed-start 400 \
   --training-seed-end 429 \
-  --evaluation-seed-start 800
+  --evaluation-seed-start 800 \
+  --evaluation-action-steps 25 \
+  --evaluation-home-action 0 -45 17.5 90 0 100 \
+  --evaluation-cube-xy-randomization-m 0.025
 ~~~
 
 The sidecar records `vla_trained=true` and `vla_evaluated=true` separately from
-`vla_success_threshold_met=false`. Physical-rollout and camera-alignment claims remain false.
+`vla_success_threshold_met=false`. It also stores the evaluation reset pose, action execution horizon,
+and cube XY range so a tuned rollout cannot be compared against a different task distribution without
+leaving evidence. Physical-rollout and camera-alignment claims remain false.
 
 ## Camera profile boundary
 
