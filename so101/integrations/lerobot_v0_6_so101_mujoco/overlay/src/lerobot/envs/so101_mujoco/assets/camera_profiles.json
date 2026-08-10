@@ -1,0 +1,42 @@
+{
+  "schema_version": "dapier.so101.camera-profiles.v1",
+  "profiles": {
+    "top_sim_v1": {
+      "camera_name": "top",
+      "parent_body": "world",
+      "position_m": [0.25, 0.0, 0.7],
+      "xyaxes": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+      "vertical_fov_degrees": 46.0,
+      "provenance": {
+        "kind": "simulation_only",
+        "description": "Fixed orthographic-style top placement for the PickCube work surface."
+      },
+      "verification": {
+        "extrinsics": "simulation_only",
+        "intrinsics": "simulation_only",
+        "physical_alignment": false
+      }
+    },
+    "therobotstudio_integrated_32x32_mount_surface_v1": {
+      "camera_name": "wrist",
+      "parent_body": "gripper",
+      "position_m": [0.0025, -0.072057361, 0.004150235],
+      "xyaxes": [1.0, 0.0, 0.0, 0.0, 0.906307787, 0.422618262],
+      "vertical_fov_degrees": 75.0,
+      "provenance": {
+        "kind": "cad_mount_surface",
+        "source_url": "https://github.com/TheRobotStudio/SO-ARM100/blob/7629d2ad9853d10fb903093a33ef6114099d97e5/Optional/Wrist_Cam_Mount_32x32_UVC_Module/stl/Wrist_Cam_Mount_32x32_UVC_Module_SO101.stl",
+        "source_revision": "7629d2ad9853d10fb903093a33ef6114099d97e5",
+        "source_sha256": "b4345ccf23f1f2ed3f4885c205cac5afbed6ddd1b183617c4801751e3bafb7b4",
+        "derivation": "The center and outward normal of the 35 mm camera-board mounting face were transformed by the wrist-roll mesh pose in the official SO-101 MJCF."
+      },
+      "verification": {
+        "extrinsics": "cad_mount_surface",
+        "lens_optical_center": "unverified_zero_offset",
+        "intrinsics": "simulation_only_unverified_75deg",
+        "image_rotation": "unverified",
+        "physical_alignment": false
+      }
+    }
+  }
+}

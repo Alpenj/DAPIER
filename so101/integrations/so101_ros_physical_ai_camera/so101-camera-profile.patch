@@ -1,0 +1,105 @@
+diff --git a/so101_bringup/launch/camera_tf.launch.py b/so101_bringup/launch/camera_tf.launch.py
+index 6b94c8c..ae3d182 100644
+--- a/so101_bringup/launch/camera_tf.launch.py
++++ b/so101_bringup/launch/camera_tf.launch.py
+@@ -29,4 +29,8 @@ def generate_launch_description():
+-                    "0.00", "0.0", "-0.02",
+-                    "-1.57", "0.0", "-1.57",
+-                    "follower/moving_jaw_so101_v1_link",
+-                    "follower/cam_wrist",
++                    "--x", "0.0025",
++                    "--y", "-0.072057361",
++                    "--z", "0.004150235",
++                    "--roll", "0.0",
++                    "--pitch", "1.134464014",
++                    "--yaw", "1.570796327",
++                    "--frame-id", "follower/gripper_link",
++                    "--child-frame-id", "follower/wrist_camera_link",
+diff --git a/so101_bringup/launch/follower.launch.py b/so101_bringup/launch/follower.launch.py
+index 113f7ab..d7ab988 100644
+--- a/so101_bringup/launch/follower.launch.py
++++ b/so101_bringup/launch/follower.launch.py
+@@ -161,2 +161,2 @@ def generate_launch_description():
+-                default_value="0.0 0.0 -0.02",
+-                description="Wrist camera position relative to end-effector link (x y z meters)",
++                default_value="0.0025 -0.072057361 0.004150235",
++                description="CAD mount-surface position relative to gripper_link (x y z meters)",
+@@ -166,2 +166,2 @@ def generate_launch_description():
+-                default_value="-1.5708 0.0 -1.5708",
+-                description="Wrist camera orientation relative to end-effector link (roll pitch yaw radians)",
++                default_value="0.0 1.134464014 1.570796327",
++                description="CAD mount-surface orientation relative to gripper_link (roll pitch yaw radians)",
+diff --git a/so101_bringup/launch/follower_recording.launch.py b/so101_bringup/launch/follower_recording.launch.py
+index 8062136..ed45c17 100644
+--- a/so101_bringup/launch/follower_recording.launch.py
++++ b/so101_bringup/launch/follower_recording.launch.py
+@@ -158,2 +158,2 @@ def generate_launch_description():
+-                default_value="0.0 0.0 -0.02",
+-                description="Wrist camera position relative to end-effector link (x y z meters)",
++                default_value="0.0025 -0.072057361 0.004150235",
++                description="CAD mount-surface position relative to gripper_link (x y z meters)",
+@@ -163,2 +163,2 @@ def generate_launch_description():
+-                default_value="-1.5708 0.0 -1.5708",
+-                description="Wrist camera orientation relative to end-effector link (roll pitch yaw radians)",
++                default_value="0.0 1.134464014 1.570796327",
++                description="CAD mount-surface orientation relative to gripper_link (roll pitch yaw radians)",
+diff --git a/so101_bringup/launch/follower_split.launch.py b/so101_bringup/launch/follower_split.launch.py
+index f811b9c..e0f46f7 100644
+--- a/so101_bringup/launch/follower_split.launch.py
++++ b/so101_bringup/launch/follower_split.launch.py
+@@ -162,2 +162,2 @@ def generate_launch_description():
+-                default_value="0.0 0.0 -0.02",
+-                description="Wrist camera position relative to end-effector link (x y z meters)",
++                default_value="0.0025 -0.072057361 0.004150235",
++                description="CAD mount-surface position relative to gripper_link (x y z meters)",
+@@ -167,2 +167,2 @@ def generate_launch_description():
+-                default_value="-1.5708 0.0 -1.5708",
+-                description="Wrist camera orientation relative to end-effector link (roll pitch yaw radians)",
++                default_value="0.0 1.134464014 1.570796327",
++                description="CAD mount-surface orientation relative to gripper_link (roll pitch yaw radians)",
+diff --git a/so101_bringup/launch/follower_vision.launch.py b/so101_bringup/launch/follower_vision.launch.py
+index 9e826f5..3c2dfe5 100644
+--- a/so101_bringup/launch/follower_vision.launch.py
++++ b/so101_bringup/launch/follower_vision.launch.py
+@@ -102,2 +102,2 @@ def generate_launch_description():
+-                default_value="0.0 0.0 -0.02",
+-                description="Wrist camera position relative to end-effector link (x y z meters)",
++                default_value="0.0025 -0.072057361 0.004150235",
++                description="CAD mount-surface position relative to gripper_link (x y z meters)",
+@@ -107,2 +107,2 @@ def generate_launch_description():
+-                default_value="-1.5708 0.0 -1.5708",
+-                description="Wrist camera orientation relative to end-effector link (roll pitch yaw radians)",
++                default_value="0.0 1.134464014 1.570796327",
++                description="CAD mount-surface orientation relative to gripper_link (roll pitch yaw radians)",
+diff --git a/so101_description/urdf/so101_arm.urdf.xacro b/so101_description/urdf/so101_arm.urdf.xacro
+index d1e3a98..a1a7bec 100644
+--- a/so101_description/urdf/so101_arm.urdf.xacro
++++ b/so101_description/urdf/so101_arm.urdf.xacro
+@@ -17,2 +17,2 @@
+-  <xacro:arg name="cam_wrist_xyz" default="0.0 0.0 -0.02"/>
+-  <xacro:arg name="cam_wrist_rpy" default="-1.5708 0.0 -1.5708"/>
++  <xacro:arg name="cam_wrist_xyz" default="0.0025 -0.072057361 0.004150235"/>
++  <xacro:arg name="cam_wrist_rpy" default="0.0 1.134464014 1.570796327"/>
+@@ -78 +78 @@
+-</robot>
+\ No newline at end of file
++</robot>
+diff --git a/so101_description/urdf/so101_cameras.xacro b/so101_description/urdf/so101_cameras.xacro
+index 1b6d609..98c0621 100644
+--- a/so101_description/urdf/so101_cameras.xacro
++++ b/so101_description/urdf/so101_cameras.xacro
+@@ -7,3 +7,4 @@
+-    Position and orientation are configurable via macro params,
+-    passed from launch args so each user can match their physical
+-    camera mounting.
++    Position and orientation are configurable via macro params. The wrist
++    defaults below are derived from TheRobotStudio's integrated 32x32 SO-101
++    camera-board mounting face at revision 7629d2ad. Lens offset, image rotation,
++    and intrinsics still require calibration against the installed camera.
+@@ -50,3 +51,3 @@
+-               params="xyz:='0.0 0.0 -0.02'
+-                       rpy:='-1.5708 0.0 -1.5708'
+-                       parent:='moving_jaw_so101_v1_link'
++               params="xyz:='0.0025 -0.072057361 0.004150235'
++                       rpy:='0.0 1.134464014 1.570796327'
++                       parent:='gripper_link'

@@ -1,0 +1,553 @@
+diff --git a/feetech_driver/include/feetech_driver/communication_protocol.hpp b/feetech_driver/include/feetech_driver/communication_protocol.hpp
+index ebddf7b..6da3898 100644
+--- a/feetech_driver/include/feetech_driver/communication_protocol.hpp
++++ b/feetech_driver/include/feetech_driver/communication_protocol.hpp
+@@ -8,6 +8,7 @@
+ #include <experimental/array>
+ #include <feetech_driver/serial_port.hpp>
+ #include <numeric>
++#include <thread>
+ 
+ namespace feetech_driver {
+ 
+@@ -201,31 +202,71 @@ class CommunicationProtocol {
+   /// @param data The buffer to store the data
+   template <std::size_t N>
+   Result read(const uint8_t id, const uint8_t memory_address, std::array<uint8_t, N>* data) {
+-    auto write_result = write_buffer(id, memory_address, std::array<uint8_t, 1>{N}, kInstructionRead).and_then([&] {
+-      return check_head();
+-    });
++    constexpr int kMaxAttempts = 3;
++    std::string last_error;
++
++    for (int attempt = 1; attempt <= kMaxAttempts; ++attempt) {
++      auto attempt_result = [&]() -> Result {
++        auto write_result =
++            write_buffer(id, memory_address, std::array<uint8_t, 1>{N}, kInstructionRead).and_then([&] {
++              return check_head();
++            });
+ 
+-    if (!write_result) {
+-      return tl::make_unexpected(fmt::format("CommunicationProtocol::read -> {}", write_result.error()));
+-    }
++        if (!write_result) {
++          return tl::make_unexpected(fmt::format("CommunicationProtocol::read -> {}", write_result.error()));
++        }
+ 
+-    // TODO: Refactor into a function
+-    std::array<uint8_t, 3> b_buf{};
+-    uint8_t checksum{};
+-    auto read_result = serial_port_->read(&b_buf).and_then([&] { return serial_port_->read(data); }).and_then([&] {
+-      return serial_port_->read_byte(&checksum);
+-    });
++        std::array<uint8_t, 3> response{};
++        uint8_t checksum{};
++        auto read_result = serial_port_->read(&response)
++                               .and_then([&] { return serial_port_->read(data); })
++                               .and_then([&] { return serial_port_->read_byte(&checksum); });
++        if (!read_result) {
++          return read_result;
++        }
+ 
+-    if (!read_result) {
+-      return read_result;
+-    }
+-    const auto calculated_checksum = ~(sum_bytes(b_buf) + sum_bytes(*data));
++        if (response[0] != id || response[1] != N + 2 || response[2] != 0) {
++          return tl::make_unexpected(fmt::format(
++              "CommunicationProtocol::read invalid status id={} length={} error={} (expected id={} length={})",
++              response[0],
++              response[1],
++              response[2],
++              id,
++              N + 2));
++        }
++
++        const auto calculated_checksum = static_cast<uint8_t>(~(sum_bytes(response) + sum_bytes(*data)));
++        if (calculated_checksum != checksum) {
++          return tl::make_unexpected(fmt::format(
++              "CommunicationProtocol::read [calculated_checksum={}, checksum={}]", calculated_checksum, checksum));
++        }
++        return {};
++      }();
+ 
+-    if (static_cast<std::byte>(calculated_checksum) != static_cast<std::byte>(checksum)) {
+-      return tl::make_unexpected(fmt::format(
+-          "CommunicationProtocol::read [calculated_checksum={}, checksum={}]", calculated_checksum, checksum));
++      if (attempt_result) {
++        std::this_thread::sleep_for(std::chrono::milliseconds(5));
++        return {};
++      }
++
++      last_error = attempt_result.error();
++      if (attempt < kMaxAttempts) {
++        spdlog::warn("Servo read retry {}/{}: id={} address={} cause={}",
++                     attempt,
++                     kMaxAttempts - 1,
++                     static_cast<unsigned int>(id),
++                     static_cast<unsigned int>(memory_address),
++                     last_error);
++        (void)serial_port_->flashInputBuffer();
++        std::this_thread::sleep_for(std::chrono::milliseconds(5));
++      }
+     }
+-    return {};
++
++    return tl::make_unexpected(fmt::format(
++        "CommunicationProtocol::read id={} address={} failed after {} attempts: {}",
++        id,
++        memory_address,
++        kMaxAttempts,
++        last_error));
+   }
+ 
+   /// Normal write command
+@@ -235,7 +276,39 @@ class CommunicationProtocol {
+   /// @param parameters Additional control information that needs to be supplemented
+   template <std::size_t N>
+   Result write(const uint8_t id, const uint8_t memory_address, const std::array<uint8_t, N>& parameters) {
+-    return write_buffer(id, memory_address, parameters, kInstructionWrite).and_then([&] { return read_response(id); });
++    constexpr int kMaxAttempts = 3;
++    std::string last_error;
++
++    for (int attempt = 1; attempt <= kMaxAttempts; ++attempt) {
++      auto result =
++          write_buffer(id, memory_address, parameters, kInstructionWrite).and_then([&] { return read_response(id); });
++      if (result) {
++        // STS3215 may acknowledge a write before it is ready for the next
++        // unicast transaction. Python SDK overhead hid this requirement;
++        // the C++ startup loop otherwise overruns the servo chain.
++        std::this_thread::sleep_for(std::chrono::milliseconds(10));
++        return {};
++      }
++
++      last_error = result.error();
++      if (attempt < kMaxAttempts) {
++        spdlog::warn("Servo write retry {}/{}: id={} address={} cause={}",
++                     attempt,
++                     kMaxAttempts - 1,
++                     static_cast<unsigned int>(id),
++                     static_cast<unsigned int>(memory_address),
++                     last_error);
++        (void)serial_port_->flashInputBuffer();
++        std::this_thread::sleep_for(std::chrono::milliseconds(5));
++      }
++    }
++
++    return tl::make_unexpected(fmt::format(
++        "CommunicationProtocol::write id={} address={} failed after {} attempts: {}",
++        id,
++        memory_address,
++        kMaxAttempts,
++        last_error));
+   }
+ 
+  private:
+diff --git a/feetech_driver/include/feetech_driver/serial_port.hpp b/feetech_driver/include/feetech_driver/serial_port.hpp
+index 2b5d5ec..e4bb37e 100644
+--- a/feetech_driver/include/feetech_driver/serial_port.hpp
++++ b/feetech_driver/include/feetech_driver/serial_port.hpp
+@@ -4,7 +4,6 @@
+ #include <libserial/SerialPort.h>
+ 
+ #include <chrono>
+-#include <cstring>
+ #include <feetech_driver/common.hpp>
+ #include <range/v3/all.hpp>
+ #include <string>
+@@ -31,31 +30,28 @@ class SerialPort {
+     return {};
+   }
+ 
+-  Result read_exact(uint8_t* dst, size_t n) {
+-    try {
+-      std::string s;
+-      s.resize(n);
+-      // Read exactly n bytes (or throw ReadTimeout)
+-      port_.Read(s, n, static_cast<std::size_t>(timeout_.count()));
+-      std::memcpy(dst, s.data(), n);
+-      return {};
+-    } catch (const LibSerial::ReadTimeout& e) {
+-      return tl::make_unexpected(fmt::format("SerialPort::read_exact [{}]", e.what()));
+-    } catch (const std::runtime_error& e) {
+-      return tl::make_unexpected(fmt::format("SerialPort::read_exact [{}]", e.what()));
+-    }
+-  }
+-
+   template <std::size_t N>
+   Result read(std::array<uint8_t, N>* buffer) {
+-    return check_port().and_then([&]() { return read_exact(buffer->data(), N); });
++    return check_port().and_then([&]() -> Result {
++      for (auto& byte : *buffer) {
++        if (const auto result = read_byte(&byte); !result) {
++          return tl::make_unexpected(fmt::format("SerialPort::read -> {}", result.error()));
++        }
++      }
++      return {};
++    });
+   }
+ 
+   template <std::size_t N>
+   Result write(const std::array<uint8_t, N>& buffer) {
+     return check_port().and_then([&]() -> Result {
+       try {
++        // Make sure a stale response cannot be mistaken for the response to
++        // this request, and wait until the complete packet is on the wire
++        // before switching to receive mode on the half-duplex bus.
++        port_.FlushInputBuffer();
+         port_.Write(std::string(buffer.begin(), buffer.end()));
++        port_.DrainWriteBuffer();
+       } catch (const std::runtime_error& e) {
+         return tl::make_unexpected(fmt::format("SerialPort::write [{}]", e.what()));
+       }
+@@ -66,7 +62,10 @@ class SerialPort {
+  private:
+   [[nodiscard]] Result check_port() const noexcept;
+   std::string dev_;
+-  std::chrono::milliseconds timeout_ = std::chrono::milliseconds(5);
++  // USB CDC adapters can occasionally deliver a valid servo status packet
++  // later than 5 ms, especially during controller startup. Successful reads
++  // still return immediately; this only raises the failure deadline.
++  std::chrono::milliseconds timeout_ = std::chrono::milliseconds(100);
+   LibSerial::SerialPort port_;
+ };
+ }  // namespace feetech_driver
+diff --git a/feetech_driver/src/communication_protocol.cpp b/feetech_driver/src/communication_protocol.cpp
+index bd56b1d..a47a751 100644
+--- a/feetech_driver/src/communication_protocol.cpp
++++ b/feetech_driver/src/communication_protocol.cpp
+@@ -28,13 +28,34 @@ Result CommunicationProtocol::read_response(const uint8_t id) {
+       return tl::make_unexpected(fmt::format("buffer[0][={}] != id[={}]", buffer[0], id));
+     }
+     if (buffer[1] != 2) {
++      spdlog::error(
++          "CommunicationProtocol::read_response unexpected packet "
++          "raw_after_header=[0x{:02X}, 0x{:02X}, 0x{:02X}, 0x{:02X}] expected_id={} expected_length=2",
++          static_cast<unsigned int>(buffer[0]),
++          static_cast<unsigned int>(buffer[1]),
++          static_cast<unsigned int>(buffer[2]),
++          static_cast<unsigned int>(buffer[3]),
++          static_cast<unsigned int>(id));
+       return tl::make_unexpected(fmt::format("buffer[1][={}] != 2", buffer[1]));
+     }
+-    const auto checksum = ~(buffer[0] + buffer[1] + buffer[2]);
+-    if (static_cast<std::byte>(checksum) != static_cast<std::byte>(buffer[3])) {
++    const auto checksum = static_cast<uint8_t>(~(buffer[0] + buffer[1] + buffer[2]));
++    if (checksum != buffer[3]) {
++      spdlog::error(
++          "CommunicationProtocol::read_response raw=[0x{:02X}, 0x{:02X}, 0x{:02X}, 0x{:02X}] "
++          "expected=0x{:02X} actual=0x{:02X}",
++          static_cast<unsigned int>(buffer[0]),
++          static_cast<unsigned int>(buffer[1]),
++          static_cast<unsigned int>(buffer[2]),
++          static_cast<unsigned int>(buffer[3]),
++          static_cast<unsigned int>(checksum),
++          static_cast<unsigned int>(buffer[3]));
+       return tl::make_unexpected(fmt::format(
+           "CommunicationProtocol::read_response [calculated_checksum={} != checksum={}]", checksum, buffer[3]));
+     }
++    if (buffer[2] != 0) {
++      return tl::make_unexpected(
++          fmt::format("CommunicationProtocol::read_response servo id={} status_error=0x{:02X}", id, buffer[2]));
++    }
+     return {};
+   });
+ }
+diff --git a/feetech_driver/src/serial_port.cpp b/feetech_driver/src/serial_port.cpp
+index a7cd4e9..972626b 100644
+--- a/feetech_driver/src/serial_port.cpp
++++ b/feetech_driver/src/serial_port.cpp
+@@ -89,6 +89,9 @@ Result SerialPort::configure(const LibSerial::BaudRate baud_rate) {
+ 
+   try {
+     port_.SetBaudRate(baud_rate);
++    // Discard bytes left by a previous client/session before the first
++    // request. The LeRobot SDK performs the same port cleanup on open.
++    port_.FlushIOBuffers();
+   } catch (const std::runtime_error& e) {
+     return tl::make_unexpected(fmt::format("Configuring the serial port failed: [{}]", e.what()));
+   }
+diff --git a/src/feetech_ros2_driver.cpp b/src/feetech_ros2_driver.cpp
+index af7ecd7..96d4188 100644
+--- a/src/feetech_ros2_driver.cpp
++++ b/src/feetech_ros2_driver.cpp
+@@ -9,8 +9,10 @@
+ #include <range/v3/range/conversion.hpp>
+ #include <range/v3/view/all.hpp>
+ #include <rclcpp/rclcpp.hpp>
++#include <chrono>
+ #include <string>
+ #include <string_view>
++#include <thread>
+ #include <tuple>
+ #include <vector>
+ 
+@@ -108,6 +110,12 @@ CallbackReturn FeetechHardwareInterface::load_yaml_config_and_warn_(JointIdConfi
+ 
+ CallbackReturn FeetechHardwareInterface::configure_joints_(const JointIdConfigMap& yaml_by_id) {
+   joint_ids_.assign(info_.joints.size(), 0);
++  const bool preserve_eeprom = yaml_by_id.empty();
++
++  if (preserve_eeprom) {
++    spdlog::info(
++        "No joint configuration file supplied: preserving servo EEPROM settings and applying torque state only");
++  }
+ 
+   for (size_t i = 0; i < info_.joints.size(); ++i) {
+     const auto& joint = info_.joints[i];
+@@ -134,97 +142,127 @@ CallbackReturn FeetechHardwareInterface::configure_joints_(const JointIdConfigMa
+       spdlog::warn("Joint '{}': 'offset' param is deprecated and ignored — use 'homing_offset' instead", joint_name);
+     }
+ 
+-    // Disable torque and unlock EPROM before writing parameters
+-    if (const auto result = communication_protocol_->disable_torque(joint_ids_[i]); !result) {
+-      spdlog::error("FeetechHardwareInterface::configure_joints_ disable_torque -> {}", result.error());
+-      return CallbackReturn::ERROR;
+-    }
++    if (!preserve_eeprom) {
++      // Disable torque and unlock EEPROM before writing an explicit YAML overlay.
++      if (const auto result = communication_protocol_->disable_torque(joint_ids_[i]); !result) {
++        spdlog::error("FeetechHardwareInterface::configure_joints_ joint='{}' id={} operation=disable_torque -> {}",
++                      joint_name,
++                      id,
++                      result.error());
++        return CallbackReturn::ERROR;
++      }
+ 
+-    // Single-byte parameters (0-255)
+-    for (const auto& [parameter_name, address] : {std::pair{"p_coefficient", SMS_STS_P_COEF},
+-                                                  {"d_coefficient", SMS_STS_D_COEF},
+-                                                  {"i_coefficient", SMS_STS_I_COEF},
+-                                                  {"overload_torque", SMS_STS_OVERLOAD_TORQUE},
+-                                                  {"return_delay_time", SMS_STS_RETURN_DELAY},
+-                                                  {"acceleration", SMS_STS_ACC}}) {
+-      if (const auto param_it = merged_params.find(parameter_name); param_it != merged_params.end()) {
+-        const auto result = communication_protocol_->write(
+-            joint_ids_[i], address, std::experimental::make_array(static_cast<uint8_t>(std::stoi(param_it->second))));
+-        if (!result) {
+-          spdlog::error("FeetechHardwareInterface::configure_joints_ -> {}", result.error());
+-          return CallbackReturn::ERROR;
++      // Single-byte parameters (0-255)
++      for (const auto& [parameter_name, address] : {std::pair{"p_coefficient", SMS_STS_P_COEF},
++                                                    {"d_coefficient", SMS_STS_D_COEF},
++                                                    {"i_coefficient", SMS_STS_I_COEF},
++                                                    {"overload_torque", SMS_STS_OVERLOAD_TORQUE},
++                                                    {"return_delay_time", SMS_STS_RETURN_DELAY},
++                                                    {"acceleration", SMS_STS_ACC}}) {
++        if (const auto param_it = merged_params.find(parameter_name); param_it != merged_params.end()) {
++          const auto result = communication_protocol_->write(
++              joint_ids_[i], address, std::experimental::make_array(static_cast<uint8_t>(std::stoi(param_it->second))));
++          if (!result) {
++            spdlog::error(
++                "FeetechHardwareInterface::configure_joints_ joint='{}' id={} parameter='{}' address={} -> {}",
++                joint_name,
++                id,
++                parameter_name,
++                address,
++                result.error());
++            return CallbackReturn::ERROR;
++          }
+         }
+       }
+-    }
+ 
+-    // Two-byte unsigned parameters
+-    for (const auto& [parameter_name, address] : {std::pair{"range_min", SMS_STS_MIN_ANGLE_LIMIT_L},
+-                                                  {"range_max", SMS_STS_MAX_ANGLE_LIMIT_L},
+-                                                  {"max_torque_limit", SMS_STS_MAX_TORQUE_L},
+-                                                  {"protection_current", SMS_STS_PROTECTION_CURRENT_L}}) {
+-      if (const auto param_it = merged_params.find(parameter_name); param_it != merged_params.end()) {
+-        std::array<uint8_t, 2> buf{};
+-        feetech_driver::to_sts(&buf[0], &buf[1], std::stoi(param_it->second));
+-        const auto result = communication_protocol_->write(joint_ids_[i], address, buf);
+-        if (!result) {
+-          spdlog::error("FeetechHardwareInterface::configure_joints_ -> {}", result.error());
+-          return CallbackReturn::ERROR;
++      // Two-byte unsigned parameters
++      for (const auto& [parameter_name, address] : {std::pair{"range_min", SMS_STS_MIN_ANGLE_LIMIT_L},
++                                                    {"range_max", SMS_STS_MAX_ANGLE_LIMIT_L},
++                                                    {"max_torque_limit", SMS_STS_MAX_TORQUE_L},
++                                                    {"protection_current", SMS_STS_PROTECTION_CURRENT_L}}) {
++        if (const auto param_it = merged_params.find(parameter_name); param_it != merged_params.end()) {
++          std::array<uint8_t, 2> buf{};
++          feetech_driver::to_sts(&buf[0], &buf[1], std::stoi(param_it->second));
++          const auto result = communication_protocol_->write(joint_ids_[i], address, buf);
++          if (!result) {
++            spdlog::error(
++                "FeetechHardwareInterface::configure_joints_ joint='{}' id={} parameter='{}' address={} -> {}",
++                joint_name,
++                id,
++                parameter_name,
++                address,
++                result.error());
++            return CallbackReturn::ERROR;
++          }
+         }
+       }
+-    }
+ 
+-    // Two-byte signed parameters (sign-magnitude encoding)
+-    for (const auto& [parameter_name, address, sign_bit] :
+-         {std::tuple{"homing_offset", SMS_STS_OFS_L, SMS_STS_SIGN_BIT_HOMING_OFFSET}}) {
+-      if (const auto param_it = merged_params.find(parameter_name); param_it != merged_params.end()) {
+-        std::array<uint8_t, 2> buf{};
+-        const int value = feetech_driver::encode_sign_magnitude(std::stoi(param_it->second), sign_bit);
+-        feetech_driver::to_sts(&buf[0], &buf[1], value);
+-        const auto result = communication_protocol_->write(joint_ids_[i], address, buf);
+-        if (!result) {
+-          spdlog::error("FeetechHardwareInterface::configure_joints_ -> {}", result.error());
+-          return CallbackReturn::ERROR;
++      // Two-byte signed parameters (sign-magnitude encoding)
++      for (const auto& [parameter_name, address, sign_bit] :
++           {std::tuple{"homing_offset", SMS_STS_OFS_L, SMS_STS_SIGN_BIT_HOMING_OFFSET}}) {
++        if (const auto param_it = merged_params.find(parameter_name); param_it != merged_params.end()) {
++          std::array<uint8_t, 2> buf{};
++          const int value = feetech_driver::encode_sign_magnitude(std::stoi(param_it->second), sign_bit);
++          feetech_driver::to_sts(&buf[0], &buf[1], value);
++          const auto result = communication_protocol_->write(joint_ids_[i], address, buf);
++          if (!result) {
++            spdlog::error(
++                "FeetechHardwareInterface::configure_joints_ joint='{}' id={} parameter='{}' address={} -> {}",
++                joint_name,
++                id,
++                parameter_name,
++                address,
++                result.error());
++            return CallbackReturn::ERROR;
++          }
+         }
+       }
+-    }
+-
+-    // Lock EPROM after writing parameters (for all joints)
+-    if (const auto result = communication_protocol_->lock_eprom(joint_ids_[i]); !result) {
+-      spdlog::error("FeetechHardwareInterface::configure_joints_ lock_eprom -> {}", result.error());
+-      return CallbackReturn::ERROR;
+-    }
+ 
+-    // Only enable torque for joints with command interfaces (Follower Arm)
+-    if (!joint.command_interfaces.empty()) {
+-      if (const auto result = communication_protocol_->set_torque(joint_ids_[i], true); !result) {
+-        spdlog::error("FeetechHardwareInterface::configure_joints_ set_torque -> {}", result.error());
++      // Lock EEPROM after writing parameters (for all joints).
++      if (const auto result = communication_protocol_->lock_eprom(joint_ids_[i]); !result) {
++        spdlog::error("FeetechHardwareInterface::configure_joints_ joint='{}' id={} operation=lock_eeprom -> {}",
++                      joint_name,
++                      id,
++                      result.error());
+         return CallbackReturn::ERROR;
+       }
+     }
++
++    // Keep every joint backdrivable during initialization. Follower torque is
++    // enabled only in on_activate(), after the current pose has been read and
++    // seeded as the initial goal position. Enabling torque here can make a
++    // servo chase a stale goal and brown out the shared bus.
++    if (const auto result = communication_protocol_->set_torque(joint_ids_[i], false); !result) {
++      spdlog::error("FeetechHardwareInterface::configure_joints_ joint='{}' id={} operation=disable_torque -> {}",
++                    joint_name,
++                    id,
++                    result.error());
++      return CallbackReturn::ERROR;
++    }
+   }
+ 
+   return CallbackReturn::SUCCESS;
+ }
+ 
+ CallbackReturn FeetechHardwareInterface::validate_model_series_() {
+-  const auto joint_model_series = joint_ids_ | ranges::views::transform([&](const auto id) {
+-                                    return communication_protocol_->read_model_number(id)
+-                                        .and_then(feetech_driver::get_model_name)
+-                                        .and_then(feetech_driver::get_model_series);
+-                                  });
+-
+-  if (std::ranges::any_of(joint_model_series, [](const auto& series) { return !series.has_value(); })) {
+-    spdlog::error("FeetechHardware::validate_model_series_ [One of the joints has an error]. Input: {}",
+-                  ranges::views::zip(joint_ids_, joint_model_series));
+-    return CallbackReturn::ERROR;
+-  }
+-
+-  const auto js = joint_model_series | ranges::views::transform([](const auto& series) { return series.value(); });
+-
+-  if (ranges::any_of(js, [](const auto& series) { return series != feetech_driver::ModelSeries::kSts; })) {
+-    spdlog::error("FeetechHardware::validate_model_series_ [Only STS series is supported]. Input (id, series): {}",
+-                  ranges::views::zip(joint_ids_, js));
+-    return CallbackReturn::ERROR;
++  // Materialize once. The previous lazy range was traversed twice, causing
++  // two physical model-number reads per servo during every startup.
++  std::vector<feetech_driver::ModelSeries> joint_model_series;
++  joint_model_series.reserve(joint_ids_.size());
++
++  for (const auto id : joint_ids_) {
++    auto series = communication_protocol_->read_model_number(id)
++                      .and_then(feetech_driver::get_model_name)
++                      .and_then(feetech_driver::get_model_series);
++    if (!series) {
++      spdlog::error("FeetechHardware::validate_model_series_ id={} -> {}", id, series.error());
++      return CallbackReturn::ERROR;
++    }
++    if (series.value() != feetech_driver::ModelSeries::kSts) {
++      spdlog::error("FeetechHardware::validate_model_series_ id={} is not an STS-series servo", id);
++      return CallbackReturn::ERROR;
++    }
++    joint_model_series.push_back(series.value());
+   }
+ 
+   return CallbackReturn::SUCCESS;
+@@ -306,10 +344,52 @@ hardware_interface::return_type FeetechHardwareInterface::write(const rclcpp::Ti
+ }
+ 
+ CallbackReturn FeetechHardwareInterface::on_activate(const rclcpp_lifecycle::State& /* previous_state */) {
+-  // Time/Duration are not used
+-  read(rclcpp::Time{}, rclcpp::Duration::from_seconds(0));
+-  // Set the initial command to current joint positions
++  // Read while torque is still off, then seed the current pose as the first
++  // goal. This prevents a jump toward a stale goal when torque is enabled.
++  if (read(rclcpp::Time{}, rclcpp::Duration::from_seconds(0)) != hardware_interface::return_type::OK) {
++    spdlog::error("FeetechHardwareInterface::on_activate failed to read the initial joint pose");
++    return CallbackReturn::ERROR;
++  }
++
+   hw_positions_ = state_hw_positions_;
++
++  if (write(rclcpp::Time{}, rclcpp::Duration::from_seconds(0)) != hardware_interface::return_type::OK) {
++    spdlog::error("FeetechHardwareInterface::on_activate failed to seed the initial goal pose");
++    return CallbackReturn::ERROR;
++  }
++
++  // Enable commanded joints with one broadcast packet. Waiting for an ACK
++  // from each servo while the chain powers up is unreliable: the transient
++  // load can corrupt or suppress the next status packet even though the write
++  // itself succeeded. Broadcast writes require no status response and match
++  // the packet pattern proven reliable on this bus.
++  std::vector<uint8_t> commanded_joint_ids;
++  for (size_t i = 0; i < info_.joints.size(); ++i) {
++    if (!info_.joints[i].command_interfaces.empty()) {
++      commanded_joint_ids.push_back(joint_ids_[i]);
++    }
++  }
++
++  if (!commanded_joint_ids.empty()) {
++    const auto torque_enable_parameters =
++        std::vector(commanded_joint_ids.size(), std::experimental::make_array(static_cast<uint8_t>(1)));
++    if (const auto result =
++            communication_protocol_->sync_write(commanded_joint_ids, SMS_STS_TORQUE_ENABLE, torque_enable_parameters);
++        !result) {
++      spdlog::error("FeetechHardwareInterface::on_activate broadcast enable_torque -> {}", result.error());
++      return CallbackReturn::ERROR;
++    }
++
++    std::this_thread::sleep_for(std::chrono::seconds(1));
++    if (read(rclcpp::Time{}, rclcpp::Duration::from_seconds(0)) != hardware_interface::return_type::OK) {
++      spdlog::error("FeetechHardwareInterface::on_activate failed post-enable communication check");
++      const auto torque_disable_parameters =
++          std::vector(joint_ids_.size(), std::experimental::make_array(static_cast<uint8_t>(0)));
++      (void)communication_protocol_->sync_write(joint_ids_, SMS_STS_TORQUE_ENABLE, torque_disable_parameters);
++      return CallbackReturn::ERROR;
++    }
++  }
++
+   return CallbackReturn::SUCCESS;
+ }
+ 
