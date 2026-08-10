@@ -7,3 +7,14 @@ casino_dealer/*.egg-info/
 **/*.part
 onshape/jdcobot100/assets/
 onshape/jdcobot100/jdcobot100.urdf
+exam_ws/build/
+exam_ws/install/
+exam_ws/log/
+turtlebot3_ws/build/
+turtlebot3_ws/install/
+turtlebot3_ws/log/
+# ROBOTIS-GIT upstream clones -- vendor code, not ours to track
+turtlebot3_ws/src/DynamixelSDK/
+turtlebot3_ws/src/turtlebot3/
+turtlebot3_ws/src/turtlebot3_msgs/
+turtlebot3_ws/src/turtlebot3_simulations/
