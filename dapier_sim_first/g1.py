@@ -33,6 +33,13 @@ G1_RECORD_ID = "DAPIER-2026-08-07-so101-g1-scripted-pick"
 G1_SEED = 101
 G1_RATE_HZ = 30
 G1_FRAMES = 300
+G1_EXECUTION_CONTRACT = {
+    "step_mode": "synchronous",
+    "observation_alignment": "post_action_readback",
+    "action_reference": "absolute_target",
+    "async_control": False,
+    "control_period_ns": round(1_000_000_000 / G1_RATE_HZ),
+}
 G1_CONTROL_PERIOD_NS = 33_333_333
 G1_TASK_DESCRIPTION = "Pick up the blue cube and hold it clear of the support."
 
@@ -143,6 +150,7 @@ def _g1_manifest_input_payload(manifest: dict[str, Any]) -> dict[str, Any]:
         "seed": manifest["seed"],
         "rate_hz": manifest["rate_hz"],
         "frames": manifest["frames"],
+        "execution_contract": manifest["execution_contract"],
         "implementation_revision": manifest["implementation"]["revision"],
         "source_revisions": manifest["source_revisions"],
         "embodiment": manifest["embodiment"],
@@ -207,6 +215,7 @@ def initialize_g1_manifest(
         "seed": G1_SEED,
         "rate_hz": G1_RATE_HZ,
         "frames": G1_FRAMES,
+        "execution_contract": G1_EXECUTION_CONTRACT,
         "repo_root": str(repo_root),
         "implementation": {
             "revision": _git_revision(repo_root),
@@ -468,6 +477,8 @@ def _validate_runtime_manifest(
         errors.append("pinned source revisions mismatch")
     if manifest.get("task_config") != G1_TASK_CONFIG:
         errors.append("task_config mismatch")
+    if manifest.get("execution_contract") != G1_EXECUTION_CONTRACT:
+        errors.append("execution_contract mismatch")
     if manifest.get("task_config_digest") != _digest_value(G1_TASK_CONFIG):
         errors.append("task_config digest mismatch")
     try:
