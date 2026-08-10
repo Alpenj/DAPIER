@@ -21,6 +21,8 @@
 - 왼팔은 덱을 고정하고 오른팔은 카드를 옮기는 첫 역할 분할을 코드로 확인함
 - 외부 장비 없이 unit test와 JSON 출력을 실행함
 - 기록된 episode를 사람이 검수할 수 있도록 manifest CLI를 추가함
+- 왼팔 deck 안정화와 오른팔 one-card pick/place를 분리한 3D 기구학
+  baseline을 bounded action으로 실행하고 seed별 receipt를 남김
 
 여기서 “확인”은 현재 코드와 테스트를 실행했다는 뜻입니다. 실제 카드,
 카메라, 모터, 진공 장치는 아직 이 패키지에서 연결하지 않았습니다.
@@ -61,6 +63,21 @@ cd casino_dealer
 python -m unittest discover -s test -v
 ```
 
+Run the non-actuating one-card baseline:
+
+~~~bash
+cd casino_dealer
+python -m casino_dealer.card_sim_cli \
+  --episodes 100 \
+  --seed 1000 \
+  --output /tmp/casino_one_card_kinematic_receipt.json
+~~~
+
+이 명령은 두 Cartesian tool point, vacuum attachment, table clearance와
+target radius만 계산합니다. 카메라·시리얼·모터를 열지 않으며 MuJoCo 같은
+동역학 엔진도 사용하지 않습니다. 따라서 결과는 task-level 기구학
+baseline이지 실제 카드 집기나 CardBench G6 physics 성공률이 아닙니다.
+
 Build as a ROS 2 Jazzy package:
 
 ```bash
@@ -100,6 +117,7 @@ The low-level action contract uses absolute joint targets. 지금은 이 형식�
 - vacuum 또는 SO-101 gripper adapter
 - episode를 자동으로 성공/실패 판정하는 센서
 - teleoperation 기록과 학습 policy의 실물 rollout
+- CardBench G6 physics/contact simulation
 
 ## 다음에 직접 해볼 순서
 

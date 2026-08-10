@@ -13,6 +13,17 @@ from casino_dealer.episode_manifest import (
     load_manifest,
     validate_manifest,
 )
+from casino_dealer.card_sim import (
+    CARD_SIM_RECEIPT_VERSION,
+    CardSimAction,
+    CardSimConfig,
+    CardSimState,
+    OneCardKinematicEnv,
+    OneCardScriptedPolicy,
+    Vec3,
+    run_one_card_baseline,
+    run_one_card_episode,
+)
 
 
 __all__ = [
@@ -28,4 +39,13 @@ __all__ = [
     'validate_manifest',
     'load_cardbench_contract',
     'validate_cardbench_contract',
+    'CARD_SIM_RECEIPT_VERSION',
+    'CardSimAction',
+    'CardSimConfig',
+    'CardSimState',
+    'OneCardKinematicEnv',
+    'OneCardScriptedPolicy',
+    'Vec3',
+    'run_one_card_baseline',
+    'run_one_card_episode',
 ]
