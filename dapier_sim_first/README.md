@@ -222,3 +222,34 @@ checkout이며 G1은 그 소스를 고쳤다고 주장하지 않는다. public
 학습·평가, 한 팔 카드 조작과 CardBench 양팔 확장이다. 이번 작업에서는 G2
 이상, ROS 2 build/launch, serial probe, 물리 hardware movement를 진행하지
 않았다.
+
+## Robot Control Stack 개념 채택 — 2026-08-11
+
+[Robot Control Stack 검토](../project-planning/2026-08-11-robot-control-stack-concept-adoption.md)를
+현재 DAPIER 계약과 대조했다. RCS source와 asset은 AGPL-3.0 및 개별 asset
+license 경계 때문에 복사하지 않았고, 전체 runtime도 의존성으로 추가하지 않았다.
+대신 다음 개념을 DAPIER가 독립 구현했다.
+
+- G1 manifest는 `synchronous`, `post_action_readback`, `absolute_target`,
+  `async_control=false`를 input digest에 포함한다.
+- [`digital_twin.py`](digital_twin.py)는 이미 동기화된 command/simulation/physical
+  joint trace를 offline으로 비교한다.
+- joint별 MAE, RMSE, p95, endpoint error, command delay gap과 timestamp skew를
+  JSON 가능한 `dapier.digital-twin.v1` 결과로 만든다.
+- 실측 threshold가 없으면 결과는 `MEASURED`이며 PASS 또는 sim-to-real 성공을
+  주장하지 않는다.
+- evaluator는 ROS 2, MuJoCo, LeRobot, serial 또는 hardware를 import하거나
+  command하지 않는다.
+
+새 contract test는 알려진 sim 1-step·physical 2-step 지연, threshold
+PASS/FAIL, joint-order mismatch, timestamp skew, NaN과 nonmonotonic timestamp를
+검사한다.
+
+```bash
+python -m unittest dapier_sim_first.test.test_digital_twin -v
+python -m unittest discover -s dapier_sim_first/test -v
+```
+
+다음 physical Gate에서는 observation sync가 만든 trace만 이 평가기에 넣는다.
+실제 팔의 threshold는 synthetic test 숫자를 복사하지 않고 반복 측정 후 별도
+승인 manifest로 고정한다.

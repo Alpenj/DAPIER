@@ -17,10 +17,13 @@ workspace symlink를 깨뜨리지 않기 위해 이미 검증한 두 소스 디�
 | 카지노 딜러 연결 순서 | [`SO101_CASINO_DEALER_RUNBOOK_KO.md`](../docs/SO101_CASINO_DEALER_RUNBOOK_KO.md) | 아직 끝나지 않은 실험 체크리스트 |
 | sim-to-real 계약 | [`2026-08-07-so101-sim-to-real-foundation.md`](../project-planning/2026-08-07-so101-sim-to-real-foundation.md) | Gate별 증거 수준과 중단 조건 |
 | LeRobot/ROS 2 분해 설계 | [`2026-08-06-dapier-lerobot-ros2-deconstruction-lab.md`](../project-planning/2026-08-06-dapier-lerobot-ros2-deconstruction-lab.md) | 별도 worktree에만 있던 설계 문서를 main에 통합 |
+| RCS 개념 채택 | [`2026-08-11-robot-control-stack-concept-adoption.md`](../project-planning/2026-08-11-robot-control-stack-concept-adoption.md) | 동일 sim/real 계약, 동기식 step, offline digital-twin metric |
 
 `dapier_sim_first`와 `so101_ros2`는 둘 다 DAPIER 소스지만 역할이 다르다.
 앞쪽은 ROS 2와 실기체가 없는 MuJoCo 검증 경로이고, 뒤쪽은 ROS 2 message와
 안전 경계를 학습하는 패키지다. 둘을 한 Python/colcon 패키지로 합치지 않는다.
+`dapier_sim_first/digital_twin.py`는 두 runtime을 합치는 새 제어 계층이 아니라,
+각 경로가 export한 동기화 trace를 읽기 전용으로 비교하는 평가 경계다.
 
 ## 가져온 실험 작업
 

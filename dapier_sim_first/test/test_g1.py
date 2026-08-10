@@ -9,6 +9,7 @@ import unittest
 
 from dapier_sim_first.embodiment import so101_new_calibration_spec
 from dapier_sim_first.g1 import (
+    G1_EXECUTION_CONTRACT,
     G1_FRAMES,
     G1_RATE_HZ,
     G1_RECORD_ID,
@@ -155,6 +156,7 @@ class G1ManifestSafetyTest(unittest.TestCase):
             self.assertEqual(payload["seed"], G1_SEED)
             self.assertEqual(payload["rate_hz"], G1_RATE_HZ)
             self.assertEqual(payload["frames"], G1_FRAMES)
+            self.assertEqual(payload["execution_contract"], G1_EXECUTION_CONTRACT)
             self.assertEqual(
                 payload["provenance_contract"],
                 {"source": "scripted", "human_demo": False},
