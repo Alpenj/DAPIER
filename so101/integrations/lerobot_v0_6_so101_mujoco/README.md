@@ -157,6 +157,34 @@ environment observation을 LeRobot 표준 nested `pixels` 구조로 고친 뒤 r
 실행 검증**, learned pick policy 성능은 **미검증**으로 분리한다. full training과
 physical camera alignment도 아직 확인하지 않았다.
 
+### 2026-08-10 bounded wrist-only 학습과 held-out 평가
+
+seed `400..429`에서 IK expert `30/30`, 총 `19,800` frame을 새로 수집했다.
+top RGB XY 오차는 평균 `0.817 mm`, 최대 `1.577 mm`였다. 변환 후 student에는
+`observation.images.top`이 없고 wrist/state/action과 teacher contract hash가
+남아 있다.
+
+RTX 5050 8GB에서 pretrained SmolVLM2-500M 기반 SmolVLA를 batch 4로 두 단계
+5,000 update씩 이어서 학습했다. 최종 checkpoint 기준 optimizer update는
+`10,000`, sample은 `40,000`, 데이터 기준 약 `2.02 epoch`이며 마지막
+logged loss는 `0.021`이다.
+
+학습에 쓰지 않은 seed `800..809`, episode당 700 step으로 wrist-only 평가한
+결과는 `2/10 (20%)`였다. 평균 max reward는 `0.5224936`, 평균 sum reward는
+`143.9673`이다. `record_wrist_vla_evidence.py`가 LeRobot `eval_info.json`을
+읽어 student sidecar에 이 수치를 복사한다. 학습·평가 완료와 정책 성능 통과를
+분리해 `vla_trained=true`, `vla_evaluated=true`,
+`vla_success_threshold_met=false`로 기록했다.
+
+같은 날 새 read-only hardware gate와 회귀 test를 추가했다. 실제 inventory에는
+ASUS 내장 FHD/IR video node만 있고 `/dev/serial/by-id` 장치가 없었다. 선택한
+32×32 wrist profile도 계속 `physical_alignment=false`다. receipt는 세 이유로
+`blocked`이며 device open, motor command, physical rollout은 모두 false다.
+새 gate를 포함한 SO-101 MuJoCo test는 `33/33 PASS`다.
+
+따라서 full training과 held-out evaluation은 완료했지만 80% sim 성능 기준,
+실물 camera calibration, sim-to-real과 실제 주행은 완료하지 않았다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450

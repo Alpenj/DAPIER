@@ -174,10 +174,36 @@ uv run python examples/so101_mujoco/teleoperate.py \
   --output-dir "<NEW_WRIST_ONLY_EVAL_PATH>"
 ```
 
-This command delegates policy rollout to LeRobot's standard evaluator. On the current 8 GB GPU, a bounded
-smoke run collected 3 successful IK episodes (1,980 frames), derived a top-free wrist dataset, trained one
-SmolVLA step with the pretrained SmolVLM2-500M backbone, and completed a five-step wrist-only rollout. The
-smoke policy scored `0/1`; one optimization step is pipeline verification, not a trained pick policy.
+This command delegates policy rollout to LeRobot's standard evaluator. The 2026-08-10 bounded run on the
+current 8 GB GPU collected 30 successful IK episodes (19,800 frames, seeds 400 through 429), then removed
+the top image while preserving wrist/state/action and the teacher-contract hash. Top-RGB XY error was
+0.817 mm on average and 1.577 mm at maximum.
+
+The final wrist checkpoint used two consecutive 5,000-update, batch-4 stages: 10,000 optimizer updates,
+40,000 samples seen, or approximately 2.02 passes over the recorded frames. A held-out wrist-only
+evaluation used seeds 800 through 809, 700 steps per episode, and scored `2/10 (20%)`. Average maximum
+reward was 0.5224936 and average summed reward was 143.9673. This is completed bounded training and
+evaluation, but it does not meet the 80% task threshold and is not a successful sim-to-real policy.
+
+After evaluation, copy metrics from LeRobot's `eval_info.json` into the student provenance sidecar
+without retyping them:
+
+~~~bash
+uv run python examples/so101_mujoco/record_wrist_vla_evidence.py \
+  --student-root "<WRIST_STUDENT_DATASET>" \
+  --checkpoint "<PRETRAINED_MODEL_DIR>" \
+  --evaluation-output "<LEROBOT_EVAL_OUTPUT>" \
+  --training-updates 10000 \
+  --batch-size 4 \
+  --dataset-episodes 30 \
+  --dataset-frames 19800 \
+  --training-seed-start 400 \
+  --training-seed-end 429 \
+  --evaluation-seed-start 800
+~~~
+
+The sidecar records `vla_trained=true` and `vla_evaluated=true` separately from
+`vla_success_threshold_met=false`. Physical-rollout and camera-alignment claims remain false.
 
 ## Camera profile boundary
 
@@ -186,6 +212,18 @@ attached to the fixed `gripper` body, not the moving jaw. `assets/camera_profile
 revision and hash. The physical lens center, module orientation, image rotation, intrinsics, and FOV have
 not been measured on this PC, so the profile deliberately reports `physical_alignment=false`. Calibrate
 those fields against the installed module before treating simulation pixels as real-camera-equivalent.
+
+Run the read-only physical gate before any real-camera session:
+
+~~~bash
+uv run python examples/so101_mujoco/audit_physical_wrist_gate.py \
+  --expected-camera-name "<OPERATOR_CONFIRMED_CAMERA_NAME_PART>" \
+  --output "<NEW_RECEIPT_PATH>"
+~~~
+
+The audit only lists video and stable serial nodes. It never opens a device or sends a motor command, and
+it exits with status 2 when the expected wrist camera, stable serial path, or physically verified camera
+profile is missing. A ready receipt still requires operator validation and never authorizes motion.
 
 ## Train the official LeRobot ACT policy
 

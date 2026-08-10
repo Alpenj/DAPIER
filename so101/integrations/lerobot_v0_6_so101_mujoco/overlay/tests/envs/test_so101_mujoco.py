@@ -30,6 +30,7 @@ from lerobot.envs.so101_mujoco import (
     CUBE_TOP_PLANE_Z_M,
     FINGER_PAD_GEOM_NAMES,
     GOAL_TRAY_POSITION,
+    HardwareInventory,
     IK_OBSERVE_ACTION,
     JOINT_NAMES,
     PICK_CLEAR_ACTION,
@@ -46,7 +47,9 @@ from lerobot.envs.so101_mujoco import (
     JointJogController,
     ResetSeedSequence,
     SO101MujocoEnv,
+    VideoDevice,
     build_ik_expert_dataset_contract,
+    build_physical_wrist_gate_receipt,
     build_vision_pick_place_plan,
     build_wrist_student_dataset_command,
     build_wrist_vla_eval_command,
@@ -57,6 +60,7 @@ from lerobot.envs.so101_mujoco import (
     leader_action_dict_to_array,
     lerobot_action_to_qpos,
     mark_ik_expert_dataset_verified,
+    mark_wrist_vla_training_evaluated,
     mark_wrist_vla_smoke_completed,
     project_pixel_to_horizontal_plane,
     qpos_to_lerobot_state,
@@ -64,6 +68,7 @@ from lerobot.envs.so101_mujoco import (
     scripted_pick_lift_action,
     should_save_episode,
     write_ik_expert_dataset_contract,
+    write_physical_wrist_gate_receipt,
     write_wrist_student_dataset_contract,
 )
 from lerobot.envs.utils import preprocess_observation
@@ -232,6 +237,105 @@ def test_wrist_vla_route_delegates_to_standard_lerobot_evaluator(tmp_path):
     assert command[:3] == ["python", "-m", "lerobot.scripts.lerobot_eval"]
     assert "--env.camera_names=[wrist]" in command
     assert "--policy.path=checkpoints/wrist-smolvla" in command
+
+
+def test_full_vla_evidence_separates_training_from_success_threshold(tmp_path):
+    teacher_root = tmp_path / "teacher"
+    student_root = tmp_path / "student"
+    write_ik_expert_dataset_contract(
+        teacher_root,
+        wrist_camera_profile_id=WRIST_CAMERA_PROFILE_ID,
+        top_camera_profile_id=TOP_CAMERA_PROFILE_ID,
+    )
+    mark_ik_expert_dataset_verified(teacher_root, episodes=30, frames=19800)
+    sidecar_path = write_wrist_student_dataset_contract(
+        teacher_root,
+        student_root,
+        student_features=("observation.images.wrist", "observation.state", "action"),
+        episodes=30,
+        frames=19800,
+    )
+    checkpoint = tmp_path / "checkpoint"
+    evaluation = tmp_path / "evaluation"
+    checkpoint.mkdir()
+    evaluation.mkdir()
+    mark_wrist_vla_training_evaluated(
+        student_root,
+        checkpoint_path=checkpoint,
+        evaluation_output_path=evaluation,
+        training_updates=10000,
+        batch_size=4,
+        dataset_episodes=30,
+        dataset_frames=19800,
+        training_seed_start=400,
+        training_seed_end=429,
+        evaluation_seed_start=800,
+        evaluation_episodes=10,
+        successful_episodes=2,
+        average_max_reward=0.525,
+        average_sum_reward=147.69,
+    )
+    evidence = json.loads(sidecar_path.read_text())
+    assert evidence["claims"]["vla_trained"] is True
+    assert evidence["claims"]["vla_evaluated"] is True
+    assert evidence["claims"]["vla_success_threshold_met"] is False
+    assert evidence["claims"]["physical_camera_alignment_verified"] is False
+    assert evidence["vla_training_evaluation"]["training_samples_seen"] == 40000
+    assert evidence["vla_training_evaluation"]["success_rate"] == 0.2
+    assert evidence["vla_training_evaluation"]["physical_rollout_executed"] is False
+    with pytest.raises(ValueError, match="must not overlap"):
+        mark_wrist_vla_training_evaluated(
+            student_root,
+            checkpoint_path=checkpoint,
+            evaluation_output_path=evaluation,
+            training_updates=10000,
+            batch_size=4,
+            dataset_episodes=30,
+            dataset_frames=19800,
+            training_seed_start=400,
+            training_seed_end=429,
+            evaluation_seed_start=420,
+            evaluation_episodes=10,
+            successful_episodes=2,
+            average_max_reward=0.525,
+            average_sum_reward=147.69,
+        )
+
+
+def test_physical_wrist_gate_is_read_only_and_fail_closed(tmp_path):
+    blocked = build_physical_wrist_gate_receipt(
+        HardwareInventory(
+            video_devices=(VideoDevice(device="/dev/video0", name="ASUS FHD webcam"),),
+            serial_by_id=(),
+        ),
+        expected_camera_name_substrings=("SO101", "32x32"),
+        camera_profile_id=WRIST_CAMERA_PROFILE_ID,
+        physical_alignment_verified=False,
+    )
+    assert blocked["status"] == "blocked"
+    assert set(blocked["blocking_reasons"]) == {
+        "expected_wrist_camera_not_detected",
+        "stable_robot_serial_device_not_detected",
+        "wrist_camera_profile_physical_alignment_unverified",
+    }
+    assert blocked["claims"]["device_nodes_opened"] is False
+    assert blocked["claims"]["motor_commands_sent"] is False
+    assert blocked["claims"]["physical_motion_authorized"] is False
+    output = write_physical_wrist_gate_receipt(tmp_path / "receipt.json", blocked)
+    assert json.loads(output.read_text())["status"] == "blocked"
+
+    ready_for_human = build_physical_wrist_gate_receipt(
+        HardwareInventory(
+            video_devices=(VideoDevice(device="/dev/video2", name="SO101 32x32 wrist camera"),),
+            serial_by_id=("/dev/serial/by-id/usb-robot",),
+        ),
+        expected_camera_name_substrings=("SO101",),
+        camera_profile_id=WRIST_CAMERA_PROFILE_ID,
+        physical_alignment_verified=True,
+    )
+    assert ready_for_human["status"] == "ready_for_operator_validation"
+    assert ready_for_human["claims"]["physical_motion_authorized"] is False
+    assert ready_for_human["claims"]["physical_rollout_executed"] is False
 
 
 def test_ik_dataset_derivation_removes_only_the_top_camera(tmp_path):

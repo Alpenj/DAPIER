@@ -78,6 +78,12 @@ target radius만 계산합니다. 카메라·시리얼·모터를 열지 않으�
 동역학 엔진도 사용하지 않습니다. 따라서 결과는 task-level 기구학
 baseline이지 실제 카드 집기나 CardBench G6 physics 성공률이 아닙니다.
 
+2026-08-10에 seed `1000..1099`를 실제로 실행한 receipt는 `100/100`,
+평균 `32.92` step, 최대 Cartesian action delta `0.02 m`였습니다.
+`casino_dealer` unit test는 `20/20 PASS`였고 3인 블랙잭 planner JSON도
+직접 생성했습니다. 이 숫자는 위 기구학 state machine의 결정론적 결과이며
+실제 카드·흡착·양팔 충돌·학습 policy 성공률로 해석하지 않습니다.
+
 Build as a ROS 2 Jazzy package:
 
 ```bash

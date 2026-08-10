@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -118,6 +119,7 @@ def build_ik_expert_dataset_contract(
             "vla_inference_smoke_completed": False,
             "vla_trained": False,
             "vla_evaluated": False,
+            "vla_success_threshold_met": False,
             "physical_camera_alignment_verified": False,
         },
     }
@@ -222,6 +224,94 @@ def mark_wrist_vla_smoke_completed(
         "rollout_steps": rollout_steps,
         "rollout_success": bool(rollout_success),
         "scope": "pipeline_smoke_not_trained_policy_performance",
+    }
+    output_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output_path
+
+
+def mark_wrist_vla_training_evaluated(
+    student_root: Path,
+    *,
+    checkpoint_path: Path,
+    evaluation_output_path: Path,
+    training_updates: int,
+    batch_size: int,
+    dataset_episodes: int,
+    dataset_frames: int,
+    training_seed_start: int,
+    training_seed_end: int,
+    evaluation_seed_start: int,
+    evaluation_episodes: int,
+    successful_episodes: int,
+    average_max_reward: float,
+    average_sum_reward: float,
+    success_threshold: float = 0.8,
+) -> Path:
+    """Record bounded wrist-only training and held-out evaluation evidence.
+
+    A trained checkpoint is not the same claim as a task-qualified policy. The
+    latter is recorded independently against ``success_threshold`` so a weak
+    policy cannot be presented as a successful physical or sim-to-real result.
+    """
+    if training_updates <= 1 or min(batch_size, dataset_episodes, dataset_frames) <= 0:
+        raise ValueError("training_updates must exceed smoke scope and dataset counts must be positive")
+    if min(training_seed_start, evaluation_seed_start) < 0 or training_seed_end < training_seed_start:
+        raise ValueError("seed ranges must be non-negative and ordered")
+    if evaluation_episodes <= 0 or not 0 <= successful_episodes <= evaluation_episodes:
+        raise ValueError("evaluation episode counts are invalid")
+    if not 0 < success_threshold <= 1:
+        raise ValueError("success_threshold must be in (0, 1]")
+    metrics = (float(average_max_reward), float(average_sum_reward))
+    if not all(math.isfinite(value) for value in metrics):
+        raise ValueError("evaluation rewards must be finite")
+    evaluation_seed_end = evaluation_seed_start + evaluation_episodes - 1
+    ranges_overlap = not (
+        evaluation_seed_end < training_seed_start or evaluation_seed_start > training_seed_end
+    )
+    if ranges_overlap:
+        raise ValueError("held-out evaluation seeds must not overlap the expert collection seeds")
+
+    checkpoint = Path(checkpoint_path)
+    evaluation_output = Path(evaluation_output_path)
+    if not checkpoint.is_dir():
+        raise FileNotFoundError(f"Missing trained checkpoint directory: {checkpoint}")
+    if not evaluation_output.is_dir():
+        raise FileNotFoundError(f"Missing evaluation output directory: {evaluation_output}")
+
+    output_path = Path(student_root) / "meta" / "dapier_control_route.json"
+    if not output_path.is_file():
+        raise FileNotFoundError(f"Missing wrist student contract: {output_path}")
+    contract = json.loads(output_path.read_text(encoding="utf-8"))
+    if contract.get("schema_version") != CONTROL_CONTRACT_SCHEMA_VERSION:
+        raise ValueError("Cannot record VLA evidence for an unsupported control contract")
+    if contract.get("student_dataset_derivation", {}).get("verified") is not True:
+        raise ValueError("Wrist student derivation must be verified before recording VLA evidence")
+
+    success_rate = successful_episodes / evaluation_episodes
+    threshold_met = success_rate >= success_threshold
+    contract["claims"]["vla_trained"] = True
+    contract["claims"]["vla_evaluated"] = True
+    contract["claims"]["vla_success_threshold_met"] = threshold_met
+    contract["vla_training_evaluation"] = {
+        "scope": "bounded_local_wrist_only_training_not_physical_validation",
+        "checkpoint_path": str(checkpoint.resolve()),
+        "evaluation_output_path": str(evaluation_output.resolve()),
+        "training_updates": training_updates,
+        "batch_size": batch_size,
+        "training_samples_seen": training_updates * batch_size,
+        "dataset_episodes": dataset_episodes,
+        "dataset_frames": dataset_frames,
+        "approximate_dataset_epochs": round(training_updates * batch_size / dataset_frames, 6),
+        "expert_collection_seed_range": [training_seed_start, training_seed_end],
+        "held_out_evaluation_seed_range": [evaluation_seed_start, evaluation_seed_end],
+        "evaluation_episodes": evaluation_episodes,
+        "successful_episodes": successful_episodes,
+        "success_rate": success_rate,
+        "success_threshold": success_threshold,
+        "success_threshold_met": threshold_met,
+        "average_max_reward": metrics[0],
+        "average_sum_reward": metrics[1],
+        "physical_rollout_executed": False,
     }
     output_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
