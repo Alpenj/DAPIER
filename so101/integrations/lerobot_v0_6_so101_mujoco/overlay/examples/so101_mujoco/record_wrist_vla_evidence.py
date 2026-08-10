@@ -23,6 +23,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--training-seed-start", type=int, required=True)
     parser.add_argument("--training-seed-end", type=int, required=True)
     parser.add_argument("--evaluation-seed-start", type=int, required=True)
+    parser.add_argument("--evaluation-action-steps", type=int, required=True)
+    parser.add_argument("--evaluation-home-action", type=float, nargs=6, required=True)
+    parser.add_argument("--evaluation-cube-xy-randomization-m", type=float, required=True)
     parser.add_argument("--success-threshold", type=float, default=0.8)
     return parser.parse_args()
 
@@ -79,6 +82,9 @@ def main() -> int:
         training_seed_start=args.training_seed_start,
         training_seed_end=args.training_seed_end,
         evaluation_seed_start=args.evaluation_seed_start,
+        evaluation_action_steps=args.evaluation_action_steps,
+        evaluation_home_action=args.evaluation_home_action,
+        evaluation_cube_xy_randomization_m=args.evaluation_cube_xy_randomization_m,
         success_threshold=args.success_threshold,
         **metrics,
     )

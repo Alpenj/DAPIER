@@ -77,7 +77,7 @@ diff --git a/src/lerobot/envs/configs.py b/src/lerobot/envs/configs.py
 index 3624357..8535e37 100644
 --- a/src/lerobot/envs/configs.py
 +++ b/src/lerobot/envs/configs.py
-@@ -234,6 +234,84 @@ class PushtEnv(EnvConfig):
+@@ -234,6 +234,88 @@ class PushtEnv(EnvConfig):
          }
  
  
@@ -95,8 +95,11 @@ index 3624357..8535e37 100644
 +    observation_width: int = 640
 +    reward_type: str = "dense"
 +    terminate_on_success: bool = True
-+    cube_xy_randomization: float = 0.04
++    cube_xy_randomization: float = 0.025
 +    camera_names: tuple[str, ...] = ("top", "wrist")
++    # Match the reset pose used by collect_ik_expert.py so policy evaluation
++    # begins inside the demonstrated state distribution.
++    home_action: tuple[float, ...] = (0.0, -45.0, 17.5, 90.0, 0.0, 100.0)
 +    features: dict[str, PolicyFeature] = field(
 +        default_factory=lambda: {
 +            ACTION: PolicyFeature(type=FeatureType.ACTION, shape=(6,)),
@@ -146,6 +149,7 @@ index 3624357..8535e37 100644
 +            "terminate_on_success": self.terminate_on_success,
 +            "cube_xy_randomization": self.cube_xy_randomization,
 +            "camera_names": self.camera_names,
++            "home_action": self.home_action,
 +        }
 +
 +    def create_envs(self, n_envs: int, use_async_envs: bool = False):

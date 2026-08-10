@@ -30,7 +30,6 @@ from lerobot.envs.so101_mujoco import (
     CUBE_TOP_PLANE_Z_M,
     FINGER_PAD_GEOM_NAMES,
     GOAL_TRAY_POSITION,
-    HardwareInventory,
     IK_OBSERVE_ACTION,
     JOINT_NAMES,
     PICK_CLEAR_ACTION,
@@ -44,6 +43,7 @@ from lerobot.envs.so101_mujoco import (
     WRIST_CAMERA_PROFILE_ID,
     CameraCalibration,
     CartesianJogController,
+    HardwareInventory,
     JointJogController,
     ResetSeedSequence,
     SO101MujocoEnv,
@@ -60,8 +60,8 @@ from lerobot.envs.so101_mujoco import (
     leader_action_dict_to_array,
     lerobot_action_to_qpos,
     mark_ik_expert_dataset_verified,
-    mark_wrist_vla_training_evaluated,
     mark_wrist_vla_smoke_completed,
+    mark_wrist_vla_training_evaluated,
     project_pixel_to_horizontal_plane,
     qpos_to_lerobot_state,
     resolve_control_route,
@@ -236,6 +236,9 @@ def test_wrist_vla_route_delegates_to_standard_lerobot_evaluator(tmp_path):
     )
     assert command[:3] == ["python", "-m", "lerobot.scripts.lerobot_eval"]
     assert "--env.camera_names=[wrist]" in command
+    assert "--env.cube_xy_randomization=0.025" in command
+    assert "--env.home_action=[0,-45,17.5,90,0,100]" in command
+    assert "--policy.n_action_steps=25" in command
     assert "--policy.path=checkpoints/wrist-smolvla" in command
 
 
@@ -271,6 +274,9 @@ def test_full_vla_evidence_separates_training_from_success_threshold(tmp_path):
         training_seed_end=429,
         evaluation_seed_start=800,
         evaluation_episodes=10,
+        evaluation_action_steps=25,
+        evaluation_home_action=PICK_CLEAR_ACTION,
+        evaluation_cube_xy_randomization_m=0.025,
         successful_episodes=2,
         average_max_reward=0.525,
         average_sum_reward=147.69,
@@ -282,6 +288,9 @@ def test_full_vla_evidence_separates_training_from_success_threshold(tmp_path):
     assert evidence["claims"]["physical_camera_alignment_verified"] is False
     assert evidence["vla_training_evaluation"]["training_samples_seen"] == 40000
     assert evidence["vla_training_evaluation"]["success_rate"] == 0.2
+    assert evidence["vla_training_evaluation"]["evaluation_action_steps"] == 25
+    assert evidence["vla_training_evaluation"]["evaluation_home_action"] == PICK_CLEAR_ACTION.tolist()
+    assert evidence["vla_training_evaluation"]["evaluation_cube_xy_randomization_m"] == 0.025
     assert evidence["vla_training_evaluation"]["physical_rollout_executed"] is False
     with pytest.raises(ValueError, match="must not overlap"):
         mark_wrist_vla_training_evaluated(
@@ -296,6 +305,29 @@ def test_full_vla_evidence_separates_training_from_success_threshold(tmp_path):
             training_seed_end=429,
             evaluation_seed_start=420,
             evaluation_episodes=10,
+            evaluation_action_steps=25,
+            evaluation_home_action=PICK_CLEAR_ACTION,
+            evaluation_cube_xy_randomization_m=0.025,
+            successful_episodes=2,
+            average_max_reward=0.525,
+            average_sum_reward=147.69,
+        )
+    with pytest.raises(ValueError, match="positive integer"):
+        mark_wrist_vla_training_evaluated(
+            student_root,
+            checkpoint_path=checkpoint,
+            evaluation_output_path=evaluation,
+            training_updates=10000,
+            batch_size=4,
+            dataset_episodes=30,
+            dataset_frames=19800,
+            training_seed_start=400,
+            training_seed_end=429,
+            evaluation_seed_start=800,
+            evaluation_episodes=10,
+            evaluation_action_steps=25.0,
+            evaluation_home_action=PICK_CLEAR_ACTION,
+            evaluation_cube_xy_randomization_m=0.025,
             successful_episodes=2,
             average_max_reward=0.525,
             average_sum_reward=147.69,
@@ -379,6 +411,8 @@ def test_config_exposes_real_robot_compatible_features():
     assert cfg.features_map["pixels/top"] == "observation.images.top"
     assert cfg.features_map["pixels/wrist"] == "observation.images.wrist"
     assert cfg.camera_names == POLICY_CAMERA_NAMES
+    np.testing.assert_allclose(cfg.gym_kwargs["home_action"], PICK_CLEAR_ACTION)
+    assert cfg.gym_kwargs["cube_xy_randomization"] == pytest.approx(0.025)
 
 
 @pytest.mark.timeout(30)

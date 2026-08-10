@@ -185,6 +185,29 @@ ASUS 내장 FHD/IR video node만 있고 `/dev/serial/by-id` 장치가 없었다.
 따라서 full training과 held-out evaluation은 완료했지만 80% sim 성능 기준,
 실물 camera calibration, sim-to-real과 실제 주행은 완료하지 않았다.
 
+### 2026-08-10 wrist-only VLA 실패 분석과 v2 재학습
+
+rollout 영상은 실패가 approach/grasp에서 갈린다는 것을 보였다. 더 큰 계약 오류는
+IK collector가 `[0,-45,17.5,90,0,100]`에서 시작하지만 evaluator가 다른
+home pose로 reset된다는 점이었다. 같은 checkpoint에서 reset만 정렬하면
+`2/10 (20%)`이 `6/10 (60%)`으로 올랐다. action 실행 horizon을 25로
+줄인 validation은 `8/10`이었지만 새 seed `900..919`는 `8/20 (40%)`라
+30개 demonstration의 일반화 한계도 분리해 확인했다.
+
+seed `1000..1059`에서 IK success `60/60`, `39,600` frame을 더 모아
+top image만 제거하고 기존 checkpoint에서 10,000 update를 추가했다. 선택용
+seed `1100..1109`는 `8/10 (80%)`였고, 서로 다른 미사용 seed
+`1200..1219`와 `1400..1419`는 모두 `14/20 (70%)`였다. 추가
+5,000 update checkpoint는 validation이 `5/10 (50%)`로 악화돼 선택하지
+않았다. 따라서 v2는 20% 기준선보다 개선됐지만 여전히
+`vla_success_threshold_met=false`다.
+
+config와 command builder는 teacher home, action horizon 25와 XY ±25 mm를
+명시하고 evidence sidecar도 세 값을 함께 저장한다. 자세한 실패 phase, 공간
+방향 분석과 실험별 수치는
+[`2026-08-10-so101-vla-failure-analysis.md`](../../records/2026-08-10-so101-vla-failure-analysis.md)에
+남겼다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450
