@@ -33,6 +33,7 @@ workspace symlink를 깨뜨리지 않기 위해 이미 검증한 두 소스 디�
 | [`records`](records/2026-08-07-so101-consolidation.md) | 통합 조사 기록 | 원본 위치, 크기, 해시와 오늘 검증 결과 |
 | [`interactive sim 기록`](records/2026-08-07-so101-interactive-sim-controls.md) | LeRobot viewer 조작 검증 | Shift chord, 연속 XYZ, reachable cube와 scripted lift 결과 |
 | [`camera/IK/VLA 기록`](records/2026-08-07-so101-camera-routing.md) | CAD camera profile과 controller routing | top+wrist IK teacher, wrist-only VLA student 경계와 검증 결과 |
+| [`VLA·카지노 완료 기록`](records/2026-08-10-so101-vla-casino-completion.md) | 30-episode IK, bounded SmolVLA, one-card baseline | 학습·평가 수치와 물리 gate의 현재 blocker |
 
 ## 홈 디렉터리에 보이는 비슷한 폴더의 의미
 
@@ -41,7 +42,7 @@ workspace symlink를 깨뜨리지 않기 위해 이미 검증한 두 소스 디�
 | `$HOME/so101` | LeRobot checkout, 7.7GB venv, 실험 dataset과 로컬 증거가 섞인 실행 작업장 | 고유 소스만 이 디렉터리의 integration/hardware tools로 가져옴 |
 | `$HOME/so101_ros2_ws` | `build/install/log`가 생기는 colcon 작업장 | `src/dapier-so101-ros2`가 DAPIER의 `so101_ros2`를 가리키는 symlink |
 | `$HOME/DAPIER/so101_ros2` | DAPIER가 직접 소유하는 ROS 2 정본 | 수정과 커밋은 여기에서만 함 |
-| `$HOME/DAPIER-lerobot-ros2-lab` | 2026-08-06에 만든 별도 Git worktree | 유일했던 계획 문서는 main에 이력째 합쳤고 원 worktree는 보존 중 |
+| `$HOME/DAPIER-lerobot-ros2-lab` | 2026-08-06에 만든 별도 Git worktree였음 | 계획 문서가 이미 DAPIER에 있음을 확인한 뒤 2026-08-10 worktree만 안전 해제; branch/commit은 보존 |
 
 ## Git에 복제하지 않은 것
 
@@ -55,5 +56,6 @@ workspace symlink를 깨뜨리지 않기 위해 이미 검증한 두 소스 디�
 - SO-ARM100에서 온 약 16MB STL/MJCF 원본 자산
 
 원시 데이터와 실행 증거는 Git에 넣지 않고, 재현에 필요한 revision·metric·해시는
-통합 기록에 남긴다. 기존 외부 폴더는 이번 작업에서 삭제하지 않았다. 새 정본을
-한 번 더 사용해 본 뒤에만 중복 worktree나 오래된 실행 작업장의 정리를 판단한다.
+통합 기록에 남긴다. 실행 checkout과 원시 evidence는 삭제하지 않았다.
+`DAPIER-lerobot-ros2-lab`만 중복 파일 이동 대신 Git worktree 절차로 해제했고,
+그 안의 계획 문서는 DAPIER `project-planning/` 정본에 계속 남아 있다.

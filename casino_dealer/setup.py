@@ -34,6 +34,7 @@ setup(
         'console_scripts': [
             'casino_blackjack_plan = casino_dealer.cli:main',
             'casino_episode = casino_dealer.episode_cli:main',
+            'casino_card_sim = casino_dealer.card_sim_cli:main',
         ],
     },
 )

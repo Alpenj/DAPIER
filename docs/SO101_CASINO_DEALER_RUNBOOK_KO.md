@@ -60,7 +60,25 @@ python3 -m casino_dealer.episode_cli --help
 `casino_dealer`를 설치하지 않은 상태에서도 위 명령을 실행할 수 있다.
 실패하면 Python 경로가 패키지 디렉터리를 보고 있는지 확인한다.
 
-### 1-2. 첫 episode manifest 만들기
+### 1-2. 비구동 one-card 기구학 기준선
+
+실제 장비 전에 왼팔 deck 안정화와 오른팔 one-card pick/place 순서를 bounded
+Cartesian action으로 고정한다.
+
+~~~bash
+cd ~/DAPIER/casino_dealer
+python3 -m casino_dealer.card_sim_cli \
+  --episodes 100 \
+  --seed 1000 \
+  --output /tmp/casino_one_card_kinematic_receipt.json
+~~~
+
+2026-08-10 실행 결과는 `100/100`, 평균 `32.92` step, 최대 action delta
+`0.02 m`였다. 이 baseline은 3D point, vacuum attachment, table clearance만
+계산한다. dynamics/contact engine, 실제 카드 인식, vacuum, 카메라, serial과
+모터를 사용하지 않았으므로 실제 양팔 성공으로 체크하지 않는다.
+
+### 1-3. 첫 episode manifest 만들기
 
 실제 데이터가 없어도 manifest 형식과 사람 검수 흐름을 미리 시험할 수 있다.
 
@@ -351,7 +369,8 @@ episode를 먼저 쌓고, 두 번째 팔이 준비되면 새로운 dual-arm 데�
 
 ## 완료 판정
 
-- [ ] `casino_dealer` 테스트와 planner JSON 생성 성공
+- [x] `casino_dealer` 테스트 `20/20`과 3인 planner JSON 생성 성공
+- [x] 비구동 one-card 기구학 baseline seed `1000..1099` `100/100`
 - [ ] follower·leader 포트가 안정적으로 식별됨
 - [ ] 두 팔 calibration JSON이 검증기를 통과함
 - [ ] 저속 텔레옵에서 방향·발열·케이블·통신 이상 없음
