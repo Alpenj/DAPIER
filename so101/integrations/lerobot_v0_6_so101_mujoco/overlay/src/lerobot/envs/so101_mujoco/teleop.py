@@ -38,12 +38,15 @@ PICK_CLEAR_ACTION = np.array([0.0, -45.0, 17.5, 90.0, 0.0, 100.0], dtype=np.floa
 IK_OBSERVE_ACTION = np.array([70.0, -45.0, 20.0, 90.0, 0.0, 100.0], dtype=np.float32)
 PICK_LIFT_FRAMES = 390
 _PICK_PHASE_BOUNDARIES = (0, 30, 130, 210, 240, 360, PICK_LIFT_FRAMES)
-_PICK_CLOSED_PERCENT = 27.0
+_SCRIPTED_PICK_CLOSED_PERCENT = 27.0
 _PICK_NOMINAL_LIFT_ACTION = np.array(
-    [0.0, -13.5897, 1.8477, 88.5845, 0.0, _PICK_CLOSED_PERCENT], dtype=np.float32
+    [0.0, -13.5897, 1.8477, 88.5845, 0.0, _SCRIPTED_PICK_CLOSED_PERCENT], dtype=np.float32
 )
 VISION_SETTLE_FRAMES = 30
 VISION_MAX_CUBE_OFFSET_M = 0.045
+VISION_GRASP_CLOSE_PERCENT = 35.0
+VISION_GRASP_Z_OFFSET_M = -0.015
+VISION_MAX_PAD_PENETRATION_M = 0.001
 VISION_PHASES = (
     ("leave top observation pose", 60),
     ("approach", 100),
@@ -446,7 +449,9 @@ def build_vision_pick_place_plan(
 
     controller = CartesianJogController(model, max_iterations=250)
     controller.set_action(PICK_APPROACH_ACTION)
-    approach_action = controller.move_preserving_orientation([cube_offset[0], cube_offset[1], 0.0])
+    approach_action = controller.move_preserving_orientation(
+        [cube_offset[0], cube_offset[1], VISION_GRASP_Z_OFFSET_M]
+    )
     if controller.last_cartesian_error_m > 0.002 or controller.last_orientation_error_rad > 0.04:
         raise RuntimeError(
             "Could not solve camera-guided approach waypoint: "
@@ -455,7 +460,7 @@ def build_vision_pick_place_plan(
         )
     approach_action[5] = 100.0
     grasp_action = approach_action.copy()
-    grasp_action[5] = _PICK_CLOSED_PERCENT
+    grasp_action[5] = VISION_GRASP_CLOSE_PERCENT
 
     controller.set_action(approach_action)
     lift_action = controller.move_preserving_orientation([0.0, 0.0, 0.05])
@@ -465,7 +470,7 @@ def build_vision_pick_place_plan(
             f"position={controller.last_cartesian_error_m:.6f} m "
             f"orientation={controller.last_orientation_error_rad:.6f} rad"
         )
-    lift_action[5] = _PICK_CLOSED_PERCENT
+    lift_action[5] = VISION_GRASP_CLOSE_PERCENT
 
     # The grasp transform is calibrated by the CAD-aligned padded task. Translating
     # the gripper by destination - visually estimated cube position does not use
@@ -481,7 +486,7 @@ def build_vision_pick_place_plan(
         raise RuntimeError(
             f"Could not solve camera-guided transfer waypoint: {controller.last_cartesian_error_m:.6f} m"
         )
-    goal_closed_action[5] = _PICK_CLOSED_PERCENT
+    goal_closed_action[5] = VISION_GRASP_CLOSE_PERCENT
     goal_open_action = goal_closed_action.copy()
     goal_open_action[5] = 100.0
 
@@ -521,7 +526,7 @@ def scripted_pick_lift_action(frame_index: int) -> np.ndarray:
     high_open = PICK_CLEAR_ACTION
     low_open = PICK_APPROACH_ACTION
     low_closed = low_open.copy()
-    low_closed[5] = _PICK_CLOSED_PERCENT
+    low_closed[5] = _SCRIPTED_PICK_CLOSED_PERCENT
     lifted = _PICK_NOMINAL_LIFT_ACTION
     _, settle, descend, close, grasp, lift, end = _PICK_PHASE_BOUNDARIES
 

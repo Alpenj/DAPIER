@@ -30,6 +30,8 @@ from lerobot.envs.so101_mujoco import (
     CUBE_SPAWN_POSITION,
     CUBE_TOP_PLANE_Z_M,
     DEFAULT_VLA_ACTION_MAX_DELTA,
+    FINGER_PAD_CUBE_CONTACT_FRICTION,
+    FINGER_PAD_CUBE_CONTACT_SOLREF,
     FINGER_PAD_GEOM_NAMES,
     GOAL_TRAY_POSITION,
     HUMAN_AUTHORITY,
@@ -40,6 +42,9 @@ from lerobot.envs.so101_mujoco import (
     POLICY_AUTHORITY,
     POLICY_CAMERA_NAMES,
     TOP_CAMERA_PROFILE_ID,
+    VISION_GRASP_CLOSE_PERCENT,
+    VISION_GRASP_Z_OFFSET_M,
+    VISION_MAX_PAD_PENETRATION_M,
     VISION_PICK_PLACE_FRAMES,
     WRIST_CAMERA_HOUSING_GEOM_NAME,
     WRIST_CAMERA_LENS_GEOM_NAME,
@@ -370,7 +375,9 @@ def test_wrist_vla_parallel_route_uses_batched_policy_and_worker_traces(tmp_path
         parallel_envs=4,
     )
     assert "--eval.batch_size=4" in command
-    assert f"--env.action_trace_path={tmp_path / 'eval' / 'action_traces' / 'env_{env_index}.jsonl'}" in command
+    assert (
+        f"--env.action_trace_path={tmp_path / 'eval' / 'action_traces' / 'env_{env_index}.jsonl'}" in command
+    )
     with pytest.raises(ValueError, match="cannot exceed"):
         build_wrist_vla_eval_command(
             python_executable="python",
@@ -666,6 +673,11 @@ def test_env_writes_rcs_compatible_action_trace(tmp_path):
     assert record["chunk_boundary"] is True
     assert len(record["command_positions_rad"]) == 6
     assert len(record["simulation_positions_rad"]) == 6
+    assert len(record["cube_position_m"]) == 3
+    assert len(record["gripper_position_m"]) == 3
+    assert len(record["tray_position_m"]) == 3
+    assert isinstance(record["finger_pad_cube_bilateral_contact"], bool)
+    assert record["finger_pad_cube_max_penetration_m"] >= 0.0
     assert isinstance(record["reward"], float)
     assert record["is_success"] is False
     assert record["terminated"] is False
@@ -732,6 +744,14 @@ def test_reachable_scene_contains_support_goal_and_finger_pads():
             assert env.model.geom_rgba[geom_id, 3] == 1
             np.testing.assert_allclose(env.model.geom_pos[geom_id], expected_pos)
             np.testing.assert_allclose(env.model.geom_size[geom_id], expected_size)
+            pair_id = mujoco.mj_name2id(
+                env.model,
+                mujoco.mjtObj.mjOBJ_PAIR,
+                f"{name}_cube_contact",
+            )
+            assert pair_id >= 0
+            np.testing.assert_allclose(env.model.pair_friction[pair_id], FINGER_PAD_CUBE_CONTACT_FRICTION)
+            np.testing.assert_allclose(env.model.pair_solref[pair_id], FINGER_PAD_CUBE_CONTACT_SOLREF)
         for wall_name in (
             "tray_wall_left",
             "tray_wall_right",
@@ -988,6 +1008,9 @@ def test_top_rgb_estimate_drives_a_bounded_ik_plan_without_cube_state():
         assert plan.actions.shape == (VISION_PICK_PLACE_FRAMES, 6)
         assert np.all(plan.actions >= ACTION_LOW)
         assert np.all(plan.actions <= ACTION_HIGH)
+        assert plan.approach_action[5] == 100
+        assert plan.lift_action[5] == VISION_GRASP_CLOSE_PERCENT
+        assert pytest.approx(-0.015) == VISION_GRASP_Z_OFFSET_M
         shifted = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2] + np.array([0.005, 0.0]))
         assert not np.array_equal(plan.approach_action, shifted.approach_action)
         with pytest.raises(ValueError, match="outside the verified pick workspace"):
@@ -1018,11 +1041,20 @@ def test_top_rgb_ik_expert_places_randomized_cube(seed):
         estimate = estimate_blue_cube_world_position(env.render("top"), env.camera_calibration("top"))
         plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2], goal_xy=GOAL_TRAY_POSITION[:2])
         info = None
+        max_penetration_m = 0.0
+        bilateral_contact_frames = 0
         for action in plan.actions:
             _, _, _, _, info = env.step(action)
+            max_penetration_m = max(
+                max_penetration_m,
+                float(info["finger_pad_cube_max_penetration_m"]),
+            )
+            bilateral_contact_frames += int(info["finger_pad_cube_bilateral_contact"])
         assert info is not None
         assert info["is_success"] is True
         assert np.all(np.abs(info["cube_position"][:2] - GOAL_TRAY_POSITION[:2]) < 0.05)
+        assert bilateral_contact_frames > 0
+        assert max_penetration_m <= VISION_MAX_PAD_PENETRATION_M
     finally:
         env.close()
 
