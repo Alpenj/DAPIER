@@ -137,18 +137,30 @@ ros_gz_bridge parameter_bridge --config ros_dd_bridge.yaml
 - 전체 워크스페이스 재빌드(7패키지) 및 헤드리스 gz-sim 실행으로
   `ground_plane`/`sun`/`hexa` 정상 로드, `gz model --list`에 `hexa`로
   올바르게 표시되는 것까지 확인.
-- `models/hexa/meshes/{wall,hexagon}.dae`의 `<unit name="inch"
-  meter="0.0254"/>` → `<unit name="centimeter" meter="0.01"/>`. **이게
-  진짜 물리 버그였다**: raw 정점 좌표가 수백 단위(wall.dae는 X 900,
-  Y 1039 span)라 inch로 해석하면 `model.sdf`의 `<scale>0.25~0.8>`을
+- `models/hexa/meshes/{wall,hexagon}.dae`가 실제로 raw 정점 좌표
+  수백 단위(wall.dae는 X 900, Y 1039 span)에 `<unit name="inch"
+  meter="0.0254"/>`가 선언돼 있어서, `model.sdf`의 `<scale>0.25~0.8>`을
   곱해도 최종 크기가 5~10m대 — 6.5m×6m밖에 안 되는 이 테스트 월드
-  전체를 뒤덮는 크기였다. 로봇이 실제로는 거의 못 움직이고(스폰
-  근처에 갇힘), 제자리에서 계속 회전하고, Nav2 플래너가 로봇 자기
-  위치조차 거의 lethal(cost 99)로 보던 게 전부 이 때문이었다. cm로
-  바꾸면 최종 크기가 사람 크기 조형물(머리 ~0.9m, 손/발 ~0.55m,
-  배경 벽 ~2.25m×2.6m)로 의도에 맞게 줄어든다.
+  전체를 뒤덮는 크기다. 로봇이 실제로는 거의 못 움직이고(스폰 근처에
+  갇힘), 제자리에서 계속 회전하고, Nav2 플래너가 로봇 자기 위치조차
+  거의 lethal(cost 99)로 보던 증상이 전부 이걸로 설명된다.
+  **한때 `meter="0.01"`(cm)로 바꿔서 "사람 크기 조형물"처럼 줄였었는데,
+  이건 검증 안 된 추측이었고 실제 교재 화면과 비교해보니 명백히
+  다른 모양이라 원본(inch)으로 되돌림.** 이 `hexa` 모델 자체가 애초에
+  교재의 SLAM/Nav2 실습(1.6.1절, `turtlebot3_gazebo
+  turtlebot3_world.launch.py`)과는 무관한 별개 커스텀 오브젝트로
+  보인다 — 교재의 해당 실습은 `turtlebot3_ws`(Chapter 1)에서 이미
+  올바르게 재현했음. `hexa`가 정확히 어떤 모양이어야 하는지는
+  미해결.
 
 ## 6. Nav2 자율주행 (Chapter 6)
+
+> **주의**: 아래 SLAM 지도(`maps/ros_dd_map.*`)와 성공한 `NavigateToPose`
+> 검증은 `hexa` 오브젝트를 임시로 cm 스케일(작게)로 고친 상태에서
+> 진행한 것이다. `hexa`를 원본(inch, 거대한 크기)으로 되돌렸으므로
+> 이 지도는 더 이상 실제 world 상태와 안 맞고, Nav2 파라미터 수정
+> 내용(플러그인 네이밍·`enable_stamped_cmd_vel` 등)은 Jazzy 마이그레이션
+> 자체는 여전히 유효하지만 재검증이 필요하다.
 
 `ros_dd_navigation/config/nav2_params.yaml`은 훨씬 예전 Nav2(Foxy/Galactic
 시절 turtlebot3 예제) 스타일로 작성돼 있어서, Jazzy의 `nav2_bringup`으로

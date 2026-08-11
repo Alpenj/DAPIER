@@ -2,7 +2,7 @@
  <asset>
   <created>2017-03-30T01:06:40</created>
   <modified>2017-03-30T01:06:40</modified>
-  <unit name="centimeter" meter="0.01"/>
+  <unit name="inch" meter="0.0254"/>
   <up_axis>Y_UP</up_axis>
  </asset>
  <library_visual_scenes>
