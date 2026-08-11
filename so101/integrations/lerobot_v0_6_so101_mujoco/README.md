@@ -208,6 +208,26 @@ config와 command builder는 teacher home, action horizon 25와 XY ±25 mm를
 [`2026-08-10-so101-vla-failure-analysis.md`](../../records/2026-08-10-so101-vla-failure-analysis.md)에
 남겼다.
 
+### 2026-08-11 wrist-only VLA action smoothing과 RCS trace
+
+rollout에서 보인 action chunk 경계 떨림을 정책 성공과 별도 제어 문제로 다뤘다.
+VLA route에는 25-action chunk의 첫 3 frame blend, IK teacher action delta에서 정한
+관절별 slew limit, 1% gripper deadband를 적용한다. generic environment 기본값은
+off라서 IK와 수동 제어에는 자동으로 섞이지 않는다.
+
+같은 seed 5개 A/B는 baseline과 smoothing 모두 `4/5`였고, shoulder-pan의
+chunk-boundary 최대 target jump는 `9.405°`에서 `1.750°`, gripper는
+`12.887`에서 `4.282` percentage point로 줄었다. 새 seed 20개는 `16/20
+(80%)`였지만 이전 두 held-out 20-episode 결과가 각각 70%였으므로 checkpoint의
+안정적 80% 일반화 성공으로 올리지는 않는다.
+
+JSONL에는 raw/applied action, filter 결정, radian command와 동기식 MuJoCo
+post-action readback을 같은 contract hash와 전역 단조 timestamp로 기록한다. 이는
+RCS 개념을 따른 비교 evidence이며 smoothing 자체의 원인은 blend/limit/deadband다.
+재현 방법과 실물 gate는
+[`2026-08-11-so101-vla-action-smoothing.md`](../../records/2026-08-11-so101-vla-action-smoothing.md)에
+남겼다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450
