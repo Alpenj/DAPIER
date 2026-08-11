@@ -403,6 +403,7 @@ class SO101MujocoEnv(gym.Env):
         self._action_trace_file: TextIO | None = None
         self._trace_sample_index = 0
         self._episode_index = -1
+        self._episode_seed: int | None = None
         self._model_source_revision = "sha256:" + hashlib.sha256(self.model_path.read_bytes()).hexdigest()
 
         self.metadata = {**self.metadata, "render_fps": fps}
@@ -620,7 +621,15 @@ class SO101MujocoEnv(gym.Env):
             )
         return info
 
-    def _write_action_trace(self, result: ActionFilterResult) -> None:
+    def _write_action_trace(
+        self,
+        result: ActionFilterResult,
+        *,
+        reward: float,
+        success: bool,
+        terminated: bool,
+        truncated: bool,
+    ) -> None:
         if self.action_trace_path is None:
             return
         assert self.data is not None
@@ -634,6 +643,7 @@ class SO101MujocoEnv(gym.Env):
             "source_revision": self._model_source_revision,
             "joint_names": list(JOINT_NAMES),
             "episode_index": self._episode_index,
+            "episode_seed": self._episode_seed,
             "step_index": result.step_index,
             # RCS JointTrace requires timestamps to increase across the whole
             # trace. Keep the reset-local MuJoCo clock as separate evidence.
@@ -653,6 +663,11 @@ class SO101MujocoEnv(gym.Env):
             "gripper_deadband_applied": result.gripper_deadband_applied,
             "command_positions_rad": lerobot_action_to_qpos(result.applied_action).tolist(),
             "simulation_positions_rad": self._joint_qpos().astype(np.float64).tolist(),
+            "reward": reward,
+            "is_success": success,
+            "terminated": terminated,
+            "truncated": truncated,
+            "episode_done": terminated or truncated,
         }
         self._action_trace_file.write(json.dumps(record, separators=(",", ":")) + "\n")
 
@@ -663,6 +678,7 @@ class SO101MujocoEnv(gym.Env):
         options: dict[str, Any] | None = None,
     ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
         super().reset(seed=seed)
+        self._episode_seed = seed
         self._load_model()
         assert self._mujoco is not None and self.model is not None and self.data is not None
         assert self._joint_qpos_addresses is not None and self._actuator_ids is not None
@@ -708,11 +724,17 @@ class SO101MujocoEnv(gym.Env):
         self._simulated_substeps += substeps
 
         self._step_count += 1
-        self._write_action_trace(filter_result)
         success, dense_reward = self._task_metrics()
         reward = float(success) if self.reward_type == "sparse" else dense_reward
         terminated = bool(success and self.terminate_on_success)
         truncated = self._step_count >= self.max_episode_steps
+        self._write_action_trace(
+            filter_result,
+            reward=reward,
+            success=success,
+            terminated=terminated,
+            truncated=truncated,
+        )
         return (
             self._get_observation(),
             reward,
@@ -781,8 +803,12 @@ def create_so101_mujoco_envs(
 ) -> dict[str, dict[int, gym.vector.VectorEnv]]:
     """Build the nested environment mapping expected by LeRobot."""
 
-    def _make_one():
-        return SO101MujocoEnv(**gym_kwargs)
+    def _make_one(env_index: int):
+        worker_kwargs = dict(gym_kwargs)
+        action_trace_path = worker_kwargs.get("action_trace_path")
+        if action_trace_path is not None:
+            worker_kwargs["action_trace_path"] = str(action_trace_path).format(env_index=env_index)
+        return SO101MujocoEnv(**worker_kwargs)
 
     extra_kwargs: dict[str, Any] = {}
     if env_cls is gym.vector.AsyncVectorEnv:
@@ -791,10 +817,13 @@ def create_so101_mujoco_envs(
         from gymnasium.vector import AutoresetMode
 
         vector_env = env_cls(
-            [_make_one for _ in range(n_envs)],
+            [lambda env_index=env_index: _make_one(env_index) for env_index in range(n_envs)],
             autoreset_mode=AutoresetMode.SAME_STEP,
             **extra_kwargs,
         )
     except ImportError:
-        vector_env = env_cls([_make_one for _ in range(n_envs)], **extra_kwargs)
+        vector_env = env_cls(
+            [lambda env_index=env_index: _make_one(env_index) for env_index in range(n_envs)],
+            **extra_kwargs,
+        )
     return {"so101_mujoco": {0: vector_env}}

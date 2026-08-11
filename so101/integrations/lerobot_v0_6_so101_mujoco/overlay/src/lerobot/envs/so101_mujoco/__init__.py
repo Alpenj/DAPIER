@@ -21,6 +21,7 @@ from .camera_profiles import (
 )
 from .control_routing import (
     CONTROL_CONTRACT_SCHEMA_VERSION,
+    PARALLEL_ROLLOUT_SCHEMA_VERSION,
     ControlRoute,
     build_ik_expert_dataset_contract,
     build_wrist_student_dataset_command,
@@ -31,6 +32,7 @@ from .control_routing import (
     mark_wrist_vla_training_evaluated,
     resolve_control_route,
     write_ik_expert_dataset_contract,
+    write_parallel_rollout_manifest,
     write_wrist_student_dataset_contract,
 )
 from .env import (
@@ -109,6 +111,7 @@ __all__ = [
     "CAMERA_OBSERVATION_KEYS",
     "CAMERA_PROFILE_SCHEMA_VERSION",
     "CONTROL_CONTRACT_SCHEMA_VERSION",
+    "PARALLEL_ROLLOUT_SCHEMA_VERSION",
     "CameraCalibration",
     "CameraProfile",
     "CUBE_HALF_SIZE_M",
@@ -172,6 +175,7 @@ __all__ = [
     "scripted_pick_lift_action",
     "should_save_episode",
     "write_ik_expert_dataset_contract",
+    "write_parallel_rollout_manifest",
     "write_physical_wrist_gate_receipt",
     "write_wrist_student_dataset_contract",
 ]
