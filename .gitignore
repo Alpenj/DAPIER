@@ -13,6 +13,9 @@ exam_ws/log/
 turtlebot3_ws/build/
 turtlebot3_ws/install/
 turtlebot3_ws/log/
+ros_dd_ws/build/
+ros_dd_ws/install/
+ros_dd_ws/log/
 # ROBOTIS-GIT upstream clones -- vendor code, not ours to track
 turtlebot3_ws/src/DynamixelSDK/
 turtlebot3_ws/src/turtlebot3/

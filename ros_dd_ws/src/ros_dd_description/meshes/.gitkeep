@@ -1,0 +1,3 @@
+# ros_dd.xacro uses only primitive geometry (box/cylinder/sphere), no mesh
+# files needed. This placeholder exists because CMakeLists.txt's
+# install(DIRECTORY ... meshes ...) fails if the directory doesn't exist.
