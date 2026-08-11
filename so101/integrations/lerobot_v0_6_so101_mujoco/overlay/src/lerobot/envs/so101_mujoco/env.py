@@ -609,6 +609,9 @@ class SO101MujocoEnv(gym.Env):
                 {
                     "action_filtered": action_filter_result.action_filtered,
                     "action_chunk_boundary": action_filter_result.chunk_boundary,
+                    "action_raw": action_filter_result.raw_action.copy(),
+                    "action_bounded": action_filter_result.bounded_action.copy(),
+                    "action_applied": action_filter_result.applied_action.copy(),
                     "action_raw_delta": action_filter_result.raw_delta.copy(),
                     "action_applied_delta": action_filter_result.applied_delta.copy(),
                     "action_slew_limited_axes": action_filter_result.slew_limited_axes.copy(),

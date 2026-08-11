@@ -647,6 +647,37 @@ def run(args: argparse.Namespace) -> None:
             raise ValueError("--policy-path is required when --input=policy")
         if recording:
             raise ValueError("Use lerobot-eval recording options for policy rollouts")
+        if not args.no_viewer:
+            command = [
+                sys.executable,
+                str(Path(__file__).with_name("intervene_vla.py")),
+                "--policy-path",
+                str(args.policy_path),
+                "--output-dir",
+                str(args.output_dir),
+                "--episodes",
+                str(args.episodes),
+                "--steps",
+                str(args.steps),
+                "--seed",
+                str(args.seed),
+                "--height",
+                str(args.height),
+                "--width",
+                str(args.width),
+                "--cube-randomization",
+                str(args.cube_randomization),
+                "--joint-speed-degrees",
+                str(args.joint_speed_degrees),
+                "--gripper-speed-percent",
+                str(args.gripper_speed_percent),
+                "--cartesian-speed-m",
+                str(args.cartesian_speed_m),
+            ]
+            print(f"control_route=vla-intervention cameras={camera_names}")
+            print(f"delegating_to_interactive_vla={shlex.join(command)}")
+            subprocess.run(command, check=True)
+            return
         command = build_wrist_vla_eval_command(
             python_executable=sys.executable,
             policy_path=args.policy_path,
