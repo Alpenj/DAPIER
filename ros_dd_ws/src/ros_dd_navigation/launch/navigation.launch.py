@@ -13,7 +13,7 @@ def generate_launch_description():
 
     # 1. Launch Arguments 선언
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    map_yaml_file = LaunchConfiguration('map', default=os.path.join(pkg_share_dir, 'map.yaml'))
+    map_yaml_file = LaunchConfiguration('map', default=os.path.join(pkg_share_dir, 'maps', 'ros_dd_map.yaml'))
     params_file = LaunchConfiguration('params_file', default=os.path.join(pkg_share_dir, 'config', 'nav2_params.yaml'))
     
     # 2. Nav2 Bringup 실행

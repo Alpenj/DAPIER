@@ -16,6 +16,8 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.py'))),
         # 🌟 Config 파일 설치 (nav2_params.yaml)
         (os.path.join('share', package_name, 'config'), glob(os.path.join('config', '*.yaml'))),
+        # 🌟 저장된 지도 설치 (navigation.launch.py 기본 map 인자가 참조함)
+        (os.path.join('share', package_name, 'maps'), glob(os.path.join('maps', '*'))),
 
     ],
     install_requires=['setuptools'],
