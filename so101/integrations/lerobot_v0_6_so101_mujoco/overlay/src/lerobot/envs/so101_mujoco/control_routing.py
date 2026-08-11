@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Literal
 
 CONTROL_CONTRACT_SCHEMA_VERSION = "dapier.so101.control-route.v1"
+PARALLEL_ROLLOUT_SCHEMA_VERSION = "dapier.so101.parallel-rollout.v1"
 VLA_DATASET_HOME_ACTION_CLI = "[0,-45,17.5,90,0,100]"
 VLA_EVALUATION_ACTION_STEPS = 25
 VLA_ACTION_BLEND_STEPS = 3
@@ -419,6 +420,7 @@ def build_wrist_vla_eval_command(
     seed: int,
     cube_randomization: float,
     action_smoothing: bool = True,
+    parallel_envs: int = 1,
 ) -> list[str]:
     """Build the standard LeRobot evaluator command for wrist-only VLA rollout."""
     resolve_control_route(("wrist",), requested_mode="vla")
@@ -426,13 +428,19 @@ def build_wrist_vla_eval_command(
         raise ValueError("python_executable must be non-empty")
     if not str(policy_path):
         raise ValueError("policy_path must be non-empty")
-    if min(episodes, steps, height, width) <= 0:
-        raise ValueError("episodes, steps, height, and width must be positive")
+    if min(episodes, steps, height, width, parallel_envs) <= 0:
+        raise ValueError("episodes, steps, height, width, and parallel_envs must be positive")
+    if parallel_envs > episodes:
+        raise ValueError("parallel_envs cannot exceed episodes")
     if seed < 0 or cube_randomization < 0:
         raise ValueError("seed and cube_randomization must be non-negative")
     if not isinstance(action_smoothing, bool):
         raise ValueError("action_smoothing must be a boolean")
-    action_trace_path = Path(output_dir) / "action_trace.jsonl"
+    action_trace_path = (
+        Path(output_dir) / "action_trace.jsonl"
+        if parallel_envs == 1
+        else Path(output_dir) / "action_traces" / "env_{env_index}.jsonl"
+    )
     return [
         python_executable,
         "-m",
@@ -454,7 +462,101 @@ def build_wrist_vla_eval_command(
         f"--env.observation_width={width}",
         f"--env.cube_xy_randomization={cube_randomization}",
         f"--eval.n_episodes={episodes}",
-        "--eval.batch_size=1",
+        f"--eval.batch_size={parallel_envs}",
         f"--seed={seed}",
         f"--output_dir={output_dir}",
     ]
+
+
+def write_parallel_rollout_manifest(
+    *,
+    eval_info_path: Path,
+    policy_path: Path,
+    episodes: int,
+    parallel_envs: int,
+    seed: int,
+) -> Path:
+    """Summarize batched rollout evidence for later filtering and retraining."""
+    if min(episodes, parallel_envs) <= 0 or seed < 0:
+        raise ValueError("episodes and parallel_envs must be positive and seed must be non-negative")
+    if parallel_envs > episodes:
+        raise ValueError("parallel_envs cannot exceed episodes")
+    eval_info_path = eval_info_path.expanduser().resolve(strict=True)
+    policy_path = policy_path.expanduser().resolve(strict=True)
+    payload = json.loads(eval_info_path.read_text(encoding="utf-8"))
+    per_task = payload.get("per_task")
+    if not isinstance(per_task, list) or len(per_task) != 1:
+        raise ValueError("SO101 parallel rollout manifest requires exactly one evaluated task")
+    metrics = per_task[0].get("metrics", {})
+    rewards = metrics.get("sum_rewards")
+    max_rewards = metrics.get("max_rewards")
+    successes = metrics.get("successes")
+    if not all(isinstance(values, list) and len(values) == episodes for values in (rewards, max_rewards, successes)):
+        raise ValueError("eval_info per-episode metric lengths do not match episodes")
+
+    trace_dir = eval_info_path.parent / "action_traces"
+    trace_episode_by_seed: dict[int, tuple[Path, int]] = {}
+    for worker_index in range(parallel_envs):
+        trace_path = trace_dir / f"env_{worker_index}.jsonl"
+        if not trace_path.is_file():
+            raise ValueError(f"Missing parallel worker action trace: {trace_path}")
+        for line_number, line in enumerate(trace_path.read_text(encoding="utf-8").splitlines(), start=1):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON in {trace_path}:{line_number}") from exc
+            episode_seed = row.get("episode_seed")
+            episode_index = row.get("episode_index")
+            if isinstance(episode_seed, int) and isinstance(episode_index, int):
+                trace_episode_by_seed.setdefault(episode_seed, (trace_path, episode_index))
+    missing_seeds = [episode_seed for episode_seed in range(seed, seed + episodes) if episode_seed not in trace_episode_by_seed]
+    if missing_seeds:
+        raise ValueError(f"Parallel worker traces are missing episode seeds: {missing_seeds}")
+
+    per_episode = [
+        {
+            "episode_index": index,
+            "seed": seed + index,
+            "sum_reward": float(rewards[index]),
+            "max_reward": float(max_rewards[index]),
+            "success": bool(successes[index]),
+            "learning_candidate": "successful_policy_rollout" if successes[index] else "failure_or_human_correction",
+            "action_trace": str(trace_episode_by_seed[seed + index][0]),
+            "trace_episode_index": trace_episode_by_seed[seed + index][1],
+        }
+        for index in range(episodes)
+    ]
+    successful_episodes = sum(item["success"] for item in per_episode)
+    manifest = {
+        "schema_version": PARALLEL_ROLLOUT_SCHEMA_VERSION,
+        "execution": {
+            "architecture": "one_policy_batched_inference_with_async_mujoco_workers",
+            "parallel_envs": parallel_envs,
+            "episodes": episodes,
+            "seed_start": seed,
+            "seed_end": seed + episodes - 1,
+        },
+        "policy": {
+            "path": str(policy_path),
+            "training_mutated": False,
+        },
+        "results": {
+            "successful_episodes": successful_episodes,
+            "success_rate": successful_episodes / episodes,
+            "eval_s": float(payload["overall"]["eval_s"]),
+            "eval_ep_s": float(payload["overall"]["eval_ep_s"]),
+            "per_episode": per_episode,
+        },
+        "learning_boundary": {
+            "stage": "parallel_experience_generation",
+            "optimizer_updates": 0,
+            "dataset_conversion_required": True,
+            "successful_rollouts_may_be_filtered_for_self_imitation": True,
+            "failed_rollouts_require_human_or_ik_correction_before_imitation_training": True,
+            "trace_selection": "select trace_episode_index=0 through the first episode_done=true row",
+        },
+        "evidence": {"eval_info": str(eval_info_path)},
+    }
+    output_path = eval_info_path.parent / "parallel_rollout_manifest.json"
+    output_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return output_path

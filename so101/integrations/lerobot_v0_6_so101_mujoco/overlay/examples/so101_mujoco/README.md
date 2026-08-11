@@ -184,7 +184,27 @@ requested and actually applied actions. The manifest labels this as conversion-r
 not silently presented as a ready-to-train LeRobot dataset.
 
 Add `--no-viewer` to delegate an unattended policy rollout to LeRobot's standard evaluator instead. The
-2026-08-10 bounded run on the
+same headless route accepts `--parallel-envs N`. It keeps one policy on the GPU, batches observations from
+`N` asynchronous MuJoCo workers, writes one action trace per worker, and emits
+`parallel_rollout_manifest.json`. On the RTX 5050 8 GB test, four workers did not reduce wall time for four
+episodes because one failed worker ran to the 700-step horizon; use one worker for reproducible performance
+comparison and parallel workers for bounded failure harvesting. Parallel rollout is experience generation,
+not an optimizer update or a ready-to-train dataset.
+
+```bash
+uv run python examples/so101_mujoco/teleoperate.py \
+  --input policy --camera-set wrist-only --control-mode vla --no-viewer \
+  --policy-path "<SMOLVLA_PRETRAINED_MODEL_DIR>" \
+  --episodes 8 --parallel-envs 4 --steps 700 --seed 1800 \
+  --output-dir "<NEW_PARALLEL_EVAL_PATH>"
+```
+
+The unattended subprocess defaults to EGL unless `MUJOCO_GL` is already set. Trace rows include the reset
+seed, reward, success, termination, truncation, and `episode_done`. The manifest resolves each evaluator
+episode to its worker file and local `trace_episode_index` by seed, including runs where the number of
+episodes exceeds the number of workers; select that local episode through its first `episode_done=true` row.
+
+The 2026-08-10 bounded run on the
 current 8 GB GPU collected 30 successful IK episodes (19,800 frames, seeds 400 through 429), then removed
 the top image while preserving wrist/state/action and the teacher-contract hash. Top-RGB XY error was
 0.817 mm on average and 1.577 mm at maximum.

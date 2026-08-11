@@ -75,6 +75,7 @@ from lerobot.envs.so101_mujoco import (
     scripted_pick_lift_action,
     should_save_episode,
     write_ik_expert_dataset_contract,
+    write_parallel_rollout_manifest,
     write_physical_wrist_gate_receipt,
     write_wrist_student_dataset_contract,
 )
@@ -352,6 +353,105 @@ def test_wrist_vla_route_delegates_to_standard_lerobot_evaluator(tmp_path):
     assert "--env.gripper_action_deadband=1.0" in command
     assert f"--env.action_trace_path={tmp_path / 'eval' / 'action_trace.jsonl'}" in command
     assert "--policy.path=checkpoints/wrist-smolvla" in command
+    assert "--eval.batch_size=1" in command
+
+
+def test_wrist_vla_parallel_route_uses_batched_policy_and_worker_traces(tmp_path):
+    command = build_wrist_vla_eval_command(
+        python_executable="python",
+        policy_path=Path("checkpoints/wrist-smolvla"),
+        output_dir=tmp_path / "eval",
+        episodes=8,
+        steps=700,
+        height=240,
+        width=320,
+        seed=1600,
+        cube_randomization=0.025,
+        parallel_envs=4,
+    )
+    assert "--eval.batch_size=4" in command
+    assert f"--env.action_trace_path={tmp_path / 'eval' / 'action_traces' / 'env_{env_index}.jsonl'}" in command
+    with pytest.raises(ValueError, match="cannot exceed"):
+        build_wrist_vla_eval_command(
+            python_executable="python",
+            policy_path=Path("checkpoints/wrist-smolvla"),
+            output_dir=tmp_path / "bad",
+            episodes=2,
+            steps=10,
+            height=24,
+            width=32,
+            seed=0,
+            cube_randomization=0,
+            parallel_envs=3,
+        )
+
+
+def test_parallel_rollout_manifest_labels_experience_without_claiming_training(
+    tmp_path,
+):
+    policy_path = tmp_path / "policy"
+    policy_path.mkdir()
+    eval_dir = tmp_path / "eval"
+    eval_dir.mkdir()
+    trace_dir = eval_dir / "action_traces"
+    trace_dir.mkdir()
+    (trace_dir / "env_0.jsonl").write_text(
+        json.dumps({"episode_seed": 1700, "episode_index": 0})
+        + "\n"
+        + json.dumps({"episode_seed": 1702, "episode_index": 3})
+        + "\n",
+        encoding="utf-8",
+    )
+    (trace_dir / "env_1.jsonl").write_text(
+        json.dumps({"episode_seed": 1701, "episode_index": 0})
+        + "\n"
+        + json.dumps({"episode_seed": 1703, "episode_index": 2})
+        + "\n",
+        encoding="utf-8",
+    )
+    eval_info_path = eval_dir / "eval_info.json"
+    eval_info_path.write_text(
+        json.dumps(
+            {
+                "per_task": [
+                    {
+                        "task_group": "so101_mujoco",
+                        "task_id": 0,
+                        "metrics": {
+                            "sum_rewards": [10.0, 20.0, 30.0, 40.0],
+                            "max_rewards": [0.1, 0.2, 0.3, 0.4],
+                            "successes": [False, True, True, False],
+                        },
+                    }
+                ],
+                "overall": {"eval_s": 8.0, "eval_ep_s": 2.0},
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = write_parallel_rollout_manifest(
+        eval_info_path=eval_info_path,
+        policy_path=policy_path,
+        episodes=4,
+        parallel_envs=2,
+        seed=1700,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["execution"]["architecture"] == ("one_policy_batched_inference_with_async_mujoco_workers")
+    assert manifest["results"]["successful_episodes"] == 2
+    assert manifest["results"]["success_rate"] == 0.5
+    assert [row["seed"] for row in manifest["results"]["per_episode"]] == [
+        1700,
+        1701,
+        1702,
+        1703,
+    ]
+    assert manifest["results"]["per_episode"][1]["action_trace"].endswith("action_traces/env_1.jsonl")
+    assert manifest["results"]["per_episode"][1]["trace_episode_index"] == 0
+    assert manifest["results"]["per_episode"][2]["action_trace"].endswith("action_traces/env_0.jsonl")
+    assert manifest["results"]["per_episode"][2]["trace_episode_index"] == 3
+    assert manifest["learning_boundary"]["optimizer_updates"] == 0
+    assert manifest["learning_boundary"]["dataset_conversion_required"] is True
 
 
 def test_full_vla_evidence_separates_training_from_success_threshold(tmp_path):
@@ -535,7 +635,7 @@ def test_env_writes_rcs_compatible_action_trace(tmp_path):
     trace_path = tmp_path / "action_trace.jsonl"
     env = SO101MujocoEnv(
         obs_type="state",
-        max_episode_steps=2,
+        max_episode_steps=1,
         action_smoothing=True,
         action_chunk_steps=2,
         action_blend_steps=1,
@@ -560,11 +660,17 @@ def test_env_writes_rcs_compatible_action_trace(tmp_path):
     record = records[0]
     assert record["contract_id"] == ACTION_TRACE_CONTRACT_ID
     assert record["schema_version"] == "dapier.so101.vla-action-trace.v1"
+    assert record["episode_seed"] == 7
     assert record["joint_names"] == list(JOINT_NAMES)
     assert record["action_smoothing"] is True
     assert record["chunk_boundary"] is True
     assert len(record["command_positions_rad"]) == 6
     assert len(record["simulation_positions_rad"]) == 6
+    assert isinstance(record["reward"], float)
+    assert record["is_success"] is False
+    assert record["terminated"] is False
+    assert record["truncated"] is True
+    assert record["episode_done"] is True
     assert [item["trace_sample_index"] for item in records] == [1, 2]
     assert records[0]["timestamp_ns"] < records[1]["timestamp_ns"]
     assert records[0]["episode_timestamp_ns"] == records[1]["episode_timestamp_ns"]

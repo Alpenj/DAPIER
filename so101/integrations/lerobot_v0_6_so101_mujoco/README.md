@@ -249,6 +249,21 @@ IK grasp target 수정, demonstration 재수집, 재학습 대상으로 남겼�
 [`2026-08-11-so101-vla-intervention.md`](../../records/2026-08-11-so101-vla-intervention.md)에
 있다.
 
+### 2026-08-11 batched VLA와 병렬 MuJoCo worker
+
+headless VLA route에 `--parallel-envs`를 추가해 하나의 GPU policy가 여러 asynchronous
+MuJoCo worker 관측을 batch inference한다. worker마다 action trace 파일을 분리하고,
+seed별 success와 후속 교정 분류를 `parallel_rollout_manifest.json`에 남긴다. trace에는
+reset seed와 reward/success/termination/truncation/episode-done도 들어간다. manifest는
+seed로 worker 파일과 local episode를 찾아 autoreset 뒤의 불필요한 frame을 구분한다.
+
+RTX 5050 8 GB에서 같은 seed 4개를 비교하니 순차 1-env는 30.726초에 `4/4`, 4-env는
+31.763초에 `3/4`였다. 실패 worker가 horizon까지 batch를 붙잡았고 batch별 확률
+샘플링도 달라져, 이번 결과는 가속이나 성공률 개선이 아니다. trace frame 처리량은
+1,505에서 2,800으로 늘어 병렬 route는 우선 실패 수집용으로 사용한다. 실제 명령과
+경계는 [`2026-08-11-so101-parallel-rollout.md`](../../records/2026-08-11-so101-parallel-rollout.md)에
+기록했다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450
