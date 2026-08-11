@@ -82,6 +82,8 @@ CUBE_SETTLED_CENTER_Z_M = 0.06881588
 CUBE_TOP_PLANE_Z_M = CUBE_SETTLED_CENTER_Z_M + CUBE_HALF_SIZE_M
 _GOAL_TRAY_CUBE_CENTER_HALF_EXTENT_M = 0.05
 FINGER_PAD_GEOM_NAMES = ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")
+FINGER_PAD_CUBE_CONTACT_FRICTION = (1.6, 1.6, 0.02, 0.001, 0.001)
+FINGER_PAD_CUBE_CONTACT_SOLREF = (-200_000.0, -400.0)
 WRIST_CAMERA_HOUSING_GEOM_NAME = "dapier_wrist_camera_housing"
 WRIST_CAMERA_LENS_GEOM_NAME = "dapier_wrist_camera_lens"
 WRIST_CAMERA_MOUNT_GEOM_NAME = "dapier_wrist_camera_mount"
@@ -435,6 +437,8 @@ class SO101MujocoEnv(gym.Env):
         self._actuator_ids: np.ndarray | None = None
         self._cube_qpos_address: int | None = None
         self._cube_body_id: int | None = None
+        self._cube_geom_id: int | None = None
+        self._finger_pad_geom_ids: frozenset[int] = frozenset()
         self._tray_site_id: int | None = None
         self._gripper_site_id: int | None = None
         self._simulated_substeps = 0
@@ -479,6 +483,16 @@ class SO101MujocoEnv(gym.Env):
                 rgba=[0.07, 0.07, 0.07, 1.0],
                 group=2,
                 density=0,
+            )
+        for pad_name in FINGER_PAD_GEOM_NAMES:
+            model_spec.add_pair(
+                name=f"{pad_name}_cube_contact",
+                geomname1=pad_name,
+                geomname2="cube_geom",
+                condim=4,
+                friction=FINGER_PAD_CUBE_CONTACT_FRICTION,
+                solref=FINGER_PAD_CUBE_CONTACT_SOLREF,
+                solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
             )
 
         wrist_profile = camera_profile("wrist")
@@ -547,6 +561,10 @@ class SO101MujocoEnv(gym.Env):
         cube_joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "cube_joint")
         self._cube_qpos_address = int(self.model.jnt_qposadr[cube_joint_id])
         self._cube_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "cube")
+        self._cube_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "cube_geom")
+        self._finger_pad_geom_ids = frozenset(
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name) for name in FINGER_PAD_GEOM_NAMES
+        )
         self._tray_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "tray_target")
         self._gripper_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "gripperframe")
 
@@ -584,6 +602,22 @@ class SO101MujocoEnv(gym.Env):
         dense_reward = float(1.0 - np.tanh(5.0 * distance)) + float(success)
         return bool(success), dense_reward
 
+    def _finger_pad_cube_contact_metrics(self) -> tuple[bool, float]:
+        assert self.data is not None and self._cube_geom_id is not None
+        touching_pads: set[int] = set()
+        max_penetration_m = 0.0
+        for contact_index in range(self.data.ncon):
+            contact = self.data.contact[contact_index]
+            geom_pair = {int(contact.geom1), int(contact.geom2)}
+            if self._cube_geom_id not in geom_pair:
+                continue
+            touched = geom_pair & self._finger_pad_geom_ids
+            if not touched:
+                continue
+            touching_pads.update(touched)
+            max_penetration_m = max(max_penetration_m, -float(contact.dist))
+        return touching_pads == self._finger_pad_geom_ids, max_penetration_m
+
     def _get_info(
         self,
         action_clipped: bool = False,
@@ -591,6 +625,7 @@ class SO101MujocoEnv(gym.Env):
     ) -> dict[str, Any]:
         assert self.data is not None and self._cube_body_id is not None and self._tray_site_id is not None
         success, dense_reward = self._task_metrics()
+        bilateral_contact, max_penetration_m = self._finger_pad_cube_contact_metrics()
         gripper_position = (
             self.data.site_xpos[self._gripper_site_id].astype(np.float32).copy()
             if self._gripper_site_id is not None
@@ -604,6 +639,8 @@ class SO101MujocoEnv(gym.Env):
             "cube_position": self.data.xpos[self._cube_body_id].astype(np.float32).copy(),
             "tray_position": self.data.site_xpos[self._tray_site_id].astype(np.float32).copy(),
             "gripper_position": gripper_position,
+            "finger_pad_cube_bilateral_contact": bilateral_contact,
+            "finger_pad_cube_max_penetration_m": max_penetration_m,
         }
         if action_filter_result is not None:
             info.update(
@@ -633,10 +670,12 @@ class SO101MujocoEnv(gym.Env):
         if self.action_trace_path is None:
             return
         assert self.data is not None
+        assert self._cube_body_id is not None and self._gripper_site_id is not None and self._tray_site_id is not None
         if self._action_trace_file is None:
             self.action_trace_path.parent.mkdir(parents=True, exist_ok=True)
             self._action_trace_file = self.action_trace_path.open("w", encoding="utf-8", buffering=1)
         self._trace_sample_index += 1
+        bilateral_contact, max_penetration_m = self._finger_pad_cube_contact_metrics()
         record = {
             "schema_version": "dapier.so101.vla-action-trace.v1",
             "contract_id": ACTION_TRACE_CONTRACT_ID,
@@ -663,6 +702,11 @@ class SO101MujocoEnv(gym.Env):
             "gripper_deadband_applied": result.gripper_deadband_applied,
             "command_positions_rad": lerobot_action_to_qpos(result.applied_action).tolist(),
             "simulation_positions_rad": self._joint_qpos().astype(np.float64).tolist(),
+            "cube_position_m": self.data.xpos[self._cube_body_id].astype(np.float64).tolist(),
+            "gripper_position_m": self.data.site_xpos[self._gripper_site_id].astype(np.float64).tolist(),
+            "tray_position_m": self.data.site_xpos[self._tray_site_id].astype(np.float64).tolist(),
+            "finger_pad_cube_bilateral_contact": bilateral_contact,
+            "finger_pad_cube_max_penetration_m": max_penetration_m,
             "reward": reward,
             "is_success": success,
             "terminated": terminated,

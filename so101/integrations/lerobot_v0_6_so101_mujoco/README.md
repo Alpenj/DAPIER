@@ -264,6 +264,27 @@ RTX 5050 8 GB에서 같은 seed 4개를 비교하니 순차 1-env는 30.726초�
 경계는 [`2026-08-11-so101-parallel-rollout.md`](../../records/2026-08-11-so101-parallel-rollout.md)에
 기록했다.
 
+### 2026-08-11 corrected IK와 contact-physics 재평가
+
+기존 27% gripper target에서 보인 최대 8.3 mm cube 관통을 renderer 문제가 아닌
+contact-model 결함으로 처리했다. visible pad/cube named pair, 두 tangential 축을 포함한
+friction `[1.6,1.6,0.02,0.001,0.001]`, direct solref `[-200000,-400]`를 적용하고
+bilateral contact와 최대 penetration을 info/action trace에 기록한다. trace에는 cube,
+gripper, tray의 3D 위치도 포함한다.
+
+35% close와 -15 mm grasp offset corrected IK는 seed `2000..2059` sweep `60/60`, 최대
+0.310 mm였고, fail-closed collector로 seed `2000..2029`의 `30/30`, 19,800 frame
+teacher/student 데이터를 만들었다. 하지만 새-from-base 10k와 기존 v2에서 5k
+fine-tune한 두 student는 각각 unseen `0/20`, `0/10`이라 선택하지 않았다.
+
+대조군인 기존 선택 v2 checkpoint는 corrected physics에서 unseen seed `2100..2119`
+`11/20 (55%)`, 최대 penetration `0.663 mm`였다. 따라서 현재 선택은 기존 v2 policy와
+새 contact physics 조합이며 80% release gate는 계속 닫혀 있다. 27% action은 physics가
+막는 position-servo preload로 해석할 수 있지만, 실제 servo 허용 전류나 안전 torque를
+검증한 결과는 아니다. 전체 sweep, rejected seed 2027 데이터, 학습 실패와 선택 근거는
+[`2026-08-11-so101-corrected-ik-retraining.md`](../../records/2026-08-11-so101-corrected-ik-retraining.md)에
+남겼다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450

@@ -238,6 +238,18 @@ that rollout reached 8.3 mm. A 35% target gives a 49.3 mm free gap, but clamping
 that value made the replay fail. Correcting this requires changing the IK teacher grasp target, collecting
 new demonstrations, and retraining; changing only renderer geometry would hide the error.
 
+The 2026-08-11 correction run added explicit named pad/cube contact pairs, a 1 mm fail-closed penetration
+gate, and bilateral-contact evidence. A 35% gripper target with a -15 mm grasp offset passed 60/60
+pre-collection seeds; the accepted 30-episode teacher dataset contains 19,800 frames and 0.309 mm maximum
+penetration. Its wrist-only student was verified to contain no top image.
+
+Neither a 10,000-update new-from-base student nor a 5,000-update adaptation of the selected v2 policy
+completed its held-out set. The control run retained the original selected v2 checkpoint and changed only
+the contact physics: it completed 11/20 unseen episodes at seeds 2100 through 2119 while staying at or
+below 0.663 mm penetration. Keep that original checkpoint selected, treat both corrected-grasp students as
+failure-analysis artifacts, and keep the 80% release gate closed. Action traces now also contain cube,
+gripper, and tray positions for direct lift/transfer diagnosis.
+
 A follow-up failure analysis found that the evaluator reset pose did not match the IK collector. Matching
 the teacher's `[0,-45,17.5,90,0,100]` pose raised the same checkpoint from 20% to 60%. A 25-step action
 execution horizon scored 80% on the configuration-selection seeds but only 40% on a fresh 20-episode set,
