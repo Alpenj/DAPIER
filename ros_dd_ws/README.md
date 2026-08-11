@@ -179,9 +179,78 @@ bridge 2개, rviz2 5개까지 쌓였었다) `/odom` 중복 발행으로 cartogra
 `pkill` 실행 후 반드시 `ps aux`로 실제로 죽었는지 재확인하고, 의심되면
 PID를 직접 뽑아 `kill -9`할 것.
 
+## 7. TF Frame / REP 105 (Chapter 3)
+
+`ros2 run tf2_tools view_frames`로 실제 구동 중(gz-sim + robot_state_publisher
++ cartographer)인 TF 트리를 떠보면:
+
+```
+map --(cartographer, ~201Hz)--> odom --(DiffDrive plugin, ~50Hz)--> base_footprint
+  --(고정, robot_state_publisher)--> base_link
+      ├─(고정)─→ front_caster_link
+      ├─(고정)─→ rear_caster_link
+      ├─(고정)─→ laser_link
+      ├─(~20Hz)─→ left_wheel_link
+      └─(~20Hz)─→ right_wheel_link
+```
+
+[REP 105](https://www.ros.org/reps/rep-0105.html)가 정의하는 표준 좌표계
+체계가 그대로 나타난다.
+
+### `map` → `odom` → `base_link`: 왜 두 단계로 나뉘나
+
+REP 105는 로봇 위치 추정을 정확히 두 가지 성격으로 나눈다.
+
+| 구간 | 발행 주체(이 워크스페이스) | 성격 |
+|---|---|---|
+| `map` → `odom` | `cartographer_node` (SLAM) | **불연속적**(discontinuous) 보정 가능. 루프 클로저·재정렬로 순간적으로 점프할 수 있다. "지도 기준 절대 위치"의 최신 추정치. |
+| `odom` → `base_footprint` | gz-sim `DiffDrive` 플러그인(→`ros_gz_bridge`) | **연속적**(continuous). 절대 점프하지 않지만, 바퀴 적분(dead reckoning) 특성상 시간이 지나면 드리프트가 누적된다. |
+| `base_footprint` → `base_link` → 나머지 | `robot_state_publisher`(URDF 고정 관절) | 로봇 강체에 고정. 시뮬레이션/실물 관계없이 절대 안 바뀜(바퀴 조인트만 예외 — 회전각이 계속 갱신됨). |
+
+이 둘을 분리해두는 이유는 **컨슈머(costmap, 컨트롤러)가 필요에 따라 골라
+쓸 수 있게** 하기 위함이다 — 로컬 장애물 회피처럼 "지금 이 순간의 상대
+움직임"만 필요하면 튀지 않는 `odom` 프레임을 쓰고(`local_costmap`의
+`global_frame: odom`이 바로 이 이유), 전역 경로 계획처럼 "지도 위 절대
+위치"가 필요하면 `map` 프레임을 쓴다(`global_costmap`의
+`global_frame: map`). 이번 세션에서 AMCL이 발산했을 때(6절 참고)
+`/amcl_pose`(=`map`→`base_link`의 원천)만 몇 미터씩 튀고 `odom`→`base_link`
+자체는 멀쩡했던 것도 이 분리 덕분에 진단이 가능했다.
+
+### `base_footprint` vs `base_link`
+
+REP 105는 `base_footprint`를 "로봇을 지면에 투영한 2D 프레임"으로 정의한다
+(z=0, roll/pitch 없음). 이 워크스페이스에서는 `base_joint`(고정, xacro
+`base_footprint`→`base_link`, `z=wheel_radius`만큼 오프셋)로 구현돼 있다.
+2D 평면 내비게이션(Nav2 costmap의 `robot_base_frame`)은 `base_link`를
+직접 쓰기도 하고 `base_footprint`를 쓰기도 하는데, 이 워크스페이스의
+`nav2_params.yaml`은 costmap엔 `base_link`를, AMCL엔 `base_footprint`를
+쓰도록 섞여 있다 — 로봇이 z축으로 기울어지지 않는(캐스터 바퀴형) 형태라
+실질적 차이는 거의 없지만, 엄밀한 REP 105 준수를 원하면 전부
+`base_footprint`로 통일하는 게 맞다.
+
+### 정적(static) vs 동적(dynamic) 브로드캐스터
+
+`view_frames` 출력에서 `rate: 10000.000`, `buffer_length: 0.000`으로 나오는
+간선(`base_footprint`→`base_link`, `base_link`→캐스터/`laser_link`)은
+`/tf_static`으로 **한 번만** 발행되는 고정 변환이다. 반대로 `odom`(~50Hz,
+buffer 10s)·바퀴 조인트(~20Hz)·`map`→`odom`(~201Hz)은 `/tf`로 주기적으로
+갱신되는 동적 변환이다. `robot_state_publisher`는 URDF의 `fixed` 조인트는
+자동으로 `/tf_static`에, `continuous`/`revolute` 조인트는 `joint_states`
+갱신마다 `/tf`에 발행하도록 구분해서 처리한다 — 이 구분을 사람이 직접
+관리할 필요는 없고, URDF의 조인트 타입 선언만 정확하면 된다.
+
+### 참고: 하루 전 캡처와 달라진 점
+
+`frames_2026-08-10_16.35.3{2,8}.pdf`(어제 URDF만 띄운 상태로 캡처)는
+`map`/`odom`도 없고 바퀴 조인트도 안 잡혀 있는데다, 캐스터 링크 이름이
+`caster_link_front`/`caster_link_rear`로 지금(`front_caster_link`/
+`rear_caster_link`)과 순서가 반대다 — 그 사이에 xacro를 손본 흔적.
+오늘 캡처(`frames_2026-08-11_11.08.07.pdf`)가 현재 상태를 반영한 최신본.
+
 ## 참고
 
 - [gz-sim(Harmonic) Migration Guide](https://gazebosim.org/api/sim/8/migrationsdf.html)
 - [ros_gz_bridge README](https://github.com/gazebosim/ros_gz)
+- [REP 105 -- Coordinate Frames for Mobile Platforms](https://www.ros.org/reps/rep-0105.html)
 - `~/DAPIER/turtlebot3_ws/README.md` — 같은 Jazzy/gz-sim 포팅 과정을 먼저
   겪은 참고 워크스페이스 (Chapter 1)
