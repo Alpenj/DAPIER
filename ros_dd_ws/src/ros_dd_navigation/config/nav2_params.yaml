@@ -1,6 +1,6 @@
 amcl:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2
@@ -41,64 +41,52 @@ amcl:
 
 amcl_map_client:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
 
 amcl_rclcpp_node:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
 
 bt_navigator:
   ros__parameters:
-    use_sim_time: False
+    # NOTE (2026-08-11, Jazzy port): the old 'default_bt_xml_filename' +
+    # 'plugin_lib_names' style is gone. Jazzy's bt_navigator auto-registers
+    # all built-in BT node plugins itself -- re-listing them here (as the
+    # original 30-entry plugin_lib_names did) makes it try to register each
+    # one a second time, which throws 'ID [ComputePathToPose] already
+    # registered' and SIGSEGVs the whole component container (this took
+    # down every other Nav2 node sharing the container, not just
+    # bt_navigator). Also 'navigate_w_replanning_and_recovery.xml' doesn't
+    # exist in Jazzy's nav2_bt_navigator/behavior_trees/ -- the equivalent
+    # default is navigate_to_pose_w_replanning_and_recovery.xml, which we
+    # don't even need to name explicitly since it's the built-in default.
+    use_sim_time: True
     global_frame: map
     robot_base_frame: base_link
     odom_topic: /odom
-    default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
     bt_loop_duration: 10
     default_server_timeout: 20
-    enable_groot_monitoring: True
-    groot_zmq_publisher_port: 1666
-    groot_zmq_server_port: 1667
-    plugin_lib_names:
-    - nav2_compute_path_to_pose_action_bt_node
-    - nav2_compute_path_through_poses_action_bt_node
-    - nav2_follow_path_action_bt_node
-    - nav2_back_up_action_bt_node
-    - nav2_spin_action_bt_node
-    - nav2_wait_action_bt_node
-    - nav2_clear_costmap_service_bt_node
-    - nav2_is_stuck_condition_bt_node
-    - nav2_goal_reached_condition_bt_node
-    - nav2_goal_updated_condition_bt_node
-    - nav2_initial_pose_received_condition_bt_node
-    - nav2_reinitialize_global_localization_service_bt_node
-    - nav2_rate_controller_bt_node
-    - nav2_distance_controller_bt_node
-    - nav2_speed_controller_bt_node
-    - nav2_truncate_path_action_bt_node
-    - nav2_goal_updater_node_bt_node
-    - nav2_recovery_node_bt_node
-    - nav2_pipeline_sequence_bt_node
-    - nav2_round_robin_node_bt_node
-    - nav2_transform_available_condition_bt_node
-    - nav2_time_expired_condition_bt_node
-    - nav2_distance_traveled_condition_bt_node
-    - nav2_single_trigger_bt_node
-    - nav2_is_battery_low_condition_bt_node
-    - nav2_navigate_through_poses_action_bt_node
-    - nav2_navigate_to_pose_action_bt_node
-    - nav2_remove_passed_goals_action_bt_node
-    - nav2_planner_selector_bt_node
-    - nav2_controller_selector_bt_node
-    - nav2_goal_checker_selector_bt_node
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
 
 bt_navigator_rclcpp_node:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
 
 controller_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
+    # NOTE (2026-08-11): defaults to False in Jazzy, which makes every
+    # cmd_vel-publishing node in this chain (controller_server ->
+    # velocity_smoother -> collision_monitor -> docking_server, all of
+    # which have the same flag) emit plain geometry_msgs/Twist. Our
+    # ros_gz_bridge/DiffDrive plugin subscribe to TwistStamped, so with
+    # this False the whole chain silently never reached the robot --
+    # no error anywhere, the robot just never moved for a Nav2 goal.
+    enable_stamped_cmd_vel: true
     controller_frequency: 10.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
@@ -165,7 +153,7 @@ controller_server:
 
 controller_server_rclcpp_node:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
 
 local_costmap:
   local_costmap:
@@ -174,7 +162,7 @@ local_costmap:
       publish_frequency: 2.0
       global_frame: odom
       robot_base_frame: base_link
-      use_sim_time: False
+      use_sim_time: True
       rolling_window: true
       width: 3
       height: 3
@@ -220,10 +208,10 @@ local_costmap:
       always_send_full_costmap: True
   local_costmap_client:
     ros__parameters:
-      use_sim_time: False
+      use_sim_time: True
   local_costmap_rclcpp_node:
     ros__parameters:
-      use_sim_time: False
+      use_sim_time: True
 
 global_costmap:
   global_costmap:
@@ -281,19 +269,19 @@ global_costmap:
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:
-      use_sim_time: False
+      use_sim_time: True
   global_costmap_rclcpp_node:
     ros__parameters:
-      use_sim_time: False
+      use_sim_time: True
 
 map_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     yaml_filename: "map.yaml"
 
 map_saver:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
@@ -302,33 +290,50 @@ map_saver:
 planner_server:
   ros__parameters:
     expected_planner_frequency: 20.0
-    use_sim_time: False
+    use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
+      plugin: "nav2_navfn_planner::NavfnPlanner"
       tolerance: 0.5
       use_astar: false
       allow_unknown: true
 
 planner_server_rclcpp_node:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
 
-recoveries_server:
+behavior_server:
   ros__parameters:
-    costmap_topic: local_costmap/costmap_raw
-    footprint_topic: local_costmap/published_footprint
+    # NOTE (2026-08-11, Jazzy port): this section used to be named
+    # 'recoveries_server' with 'nav2_recoveries/<X>' plugin names -- that
+    # lifecycle node and pluginlib class naming predates Jazzy. Current
+    # nav2_bringup starts a node literally named 'behavior_server' and
+    # registers plugins under the 'nav2_behaviors::' namespace (see
+    # /opt/ros/jazzy/share/nav2_bringup/params/nav2_params.yaml). Under
+    # the old name this section was silently dead -- behavior_server ran
+    # entirely on defaults.
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
     cycle_frequency: 10.0
-    recovery_plugins: ["spin", "backup", "wait"]
+    # Also has enable_stamped_cmd_vel (same reasoning as controller_server
+    # above) -- it publishes on cmd_vel_nav during Spin/BackUp, same topic
+    # controller_server publishes on; leaving this False while
+    # controller_server is True crashes bringup outright: "create_publisher()
+    # called for existing topic name rt/cmd_vel_nav with incompatible type".
+    enable_stamped_cmd_vel: true
+    behavior_plugins: ["spin", "backup", "wait"]
     spin:
-      plugin: "nav2_recoveries/Spin"
+      plugin: "nav2_behaviors::Spin"
     backup:
-      plugin: "nav2_recoveries/BackUp"
+      plugin: "nav2_behaviors::BackUp"
     wait:
-      plugin: "nav2_recoveries/Wait"
-    global_frame: odom
+      plugin: "nav2_behaviors::Wait"
+    local_frame: odom
+    global_frame: map
     robot_base_frame: base_link
-    transform_timeout: 0.1
+    transform_tolerance: 0.1
     use_sim_time: true
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.0
@@ -337,7 +342,73 @@ recoveries_server:
 
 robot_state_publisher:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
+
+# NOTE (2026-08-11, Jazzy port): velocity_smoother/collision_monitor are new
+# lifecycle nodes nav2_bringup's bringup_launch.py starts unconditionally in
+# Jazzy -- they didn't exist when this params file was originally written.
+# collision_monitor crashes on activation without an explicit
+# 'observation_sources' param, so it needs a real config, not just defaults.
+# Values below mirror /opt/ros/jazzy/share/nav2_bringup/params/nav2_params.yaml,
+# adapted to this robot's frame ids (base_footprint/odom, already matching).
+velocity_smoother:
+  ros__parameters:
+    enable_stamped_cmd_vel: true
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.22, 0.0, 1.0]
+    min_velocity: [-0.22, 0.0, -1.0]
+    max_accel: [2.5, 0.0, 3.2]
+    max_decel: [-2.5, 0.0, -3.2]
+    odom_topic: "odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+collision_monitor:
+  ros__parameters:
+    enable_stamped_cmd_vel: true
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: "/local_costmap/published_footprint"
+      time_before_collision: 1.2
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: False
+      enabled: True
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "scan"
+      min_height: 0.15
+      max_height: 2.0
+      enabled: True
+
+# NOTE (2026-08-11): another node bringup_launch.py starts that this file
+# never mentioned -- route_server is nav2_route's graph-based routing (a
+# separate feature from the GridBased/BT NavigateToPose flow this exercise
+# actually uses; we have no route graph). Left entirely unconfigured it
+# defaults use_sim_time to False, so its internal TF lookups stamp "now" in
+# wall-clock epoch time against a TF buffer that only has sim-time data --
+# every lookup fails as "Transform data too old" (e.g. comparing timestamp
+# 1786411995 against 1618, off by the Unix epoch). Setting use_sim_time
+# here is enough to quiet that; no graph_filepath means route features
+# just aren't used.
+route_server:
+  ros__parameters:
+    use_sim_time: true
 
 waypoint_follower:
   ros__parameters:
@@ -348,3 +419,43 @@ waypoint_follower:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: True
       waypoint_pause_duration: 200
+
+# NOTE (2026-08-11, Jazzy port): another node bringup_launch.py starts
+# unconditionally that didn't exist when this file was written. This robot
+# has no charging dock, so an empty dock_plugins list would be the honest
+# config -- but ROS2's YAML->parameter loader can't type an empty array
+# ("Expected 'value' to be one of [...], but got '()' of type 'tuple'",
+# crashing bringup before any node even starts). Loading the stock
+# 'simple_charging_dock' plugin (unmodified nav2_bringup default below)
+# is the workaround: it just needs to construct successfully, and it's
+# never invoked since nothing calls the dock/undock action here.
+docking_server:
+  ros__parameters:
+    use_sim_time: true
+    enable_stamped_cmd_vel: true
+    controller_frequency: 50.0
+    initial_perception_timeout: 5.0
+    wait_charge_timeout: 5.0
+    dock_approach_timeout: 30.0
+    undock_linear_tolerance: 0.05
+    undock_angular_tolerance: 0.1
+    max_retries: 3
+    base_frame: "base_link"
+    fixed_frame: "odom"
+    dock_backwards: false
+    dock_prestaging_tolerance: 0.5
+    dock_plugins: ['simple_charging_dock']
+    simple_charging_dock:
+      plugin: 'opennav_docking::SimpleChargingDock'
+      docking_threshold: 0.05
+      staging_x_offset: -0.7
+      use_external_detection_pose: true
+      use_battery_status: false
+      use_stall_detection: false
+      external_detection_timeout: 1.0
+      external_detection_translation_x: -0.18
+      external_detection_translation_y: 0.0
+      external_detection_rotation_roll: -1.57
+      external_detection_rotation_pitch: -1.57
+      external_detection_rotation_yaw: 0.0
+      filter_coef: 0.1

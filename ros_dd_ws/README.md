@@ -137,6 +137,47 @@ ros_gz_bridge parameter_bridge --config ros_dd_bridge.yaml
 - 전체 워크스페이스 재빌드(7패키지) 및 헤드리스 gz-sim 실행으로
   `ground_plane`/`sun`/`hexa` 정상 로드, `gz model --list`에 `hexa`로
   올바르게 표시되는 것까지 확인.
+- `models/hexa/meshes/{wall,hexagon}.dae`의 `<unit name="inch"
+  meter="0.0254"/>` → `<unit name="centimeter" meter="0.01"/>`. **이게
+  진짜 물리 버그였다**: raw 정점 좌표가 수백 단위(wall.dae는 X 900,
+  Y 1039 span)라 inch로 해석하면 `model.sdf`의 `<scale>0.25~0.8>`을
+  곱해도 최종 크기가 5~10m대 — 6.5m×6m밖에 안 되는 이 테스트 월드
+  전체를 뒤덮는 크기였다. 로봇이 실제로는 거의 못 움직이고(스폰
+  근처에 갇힘), 제자리에서 계속 회전하고, Nav2 플래너가 로봇 자기
+  위치조차 거의 lethal(cost 99)로 보던 게 전부 이 때문이었다. cm로
+  바꾸면 최종 크기가 사람 크기 조형물(머리 ~0.9m, 손/발 ~0.55m,
+  배경 벽 ~2.25m×2.6m)로 의도에 맞게 줄어든다.
+
+## 6. Nav2 자율주행 (Chapter 6)
+
+`ros_dd_navigation/config/nav2_params.yaml`은 훨씬 예전 Nav2(Foxy/Galactic
+시절 turtlebot3 예제) 스타일로 작성돼 있어서, Jazzy의 `nav2_bringup`으로
+그대로 돌리면 단계마다 다르게 깨진다. 헤드리스로 SLAM 지도 저장 →
+`ros2 launch ros_dd_navigation navigation.launch.py`로 bringup → `ros2 action
+send_goal /navigate_to_pose ...`까지 실제로 성공(`SUCCEEDED`, ground-truth
+위치도 목표 근처 확인)시키기까지 만난 버그들:
+
+| 증상 | 원인 | 수정 |
+|---|---|---|
+| `planner_server` 활성화 실패, "class ... does not exist" | `plugin: "nav2_navfn_planner/NavfnPlanner"` — `/` 구분자는 옛날 pluginlib 네이밍 | `"nav2_navfn_planner::NavfnPlanner"` (`::`) |
+| `recoveries_server`(구 이름) 섹션이 통째로 죽은 설정 | Jazzy는 노드 이름 자체가 `behavior_server`, 플러그인도 `nav2_recoveries/Spin` → `nav2_behaviors::Spin`로 변경됨 | 섹션명·플러그인명 전부 교체 |
+| `bt_navigator` 설정 중 세그폴트, 컨테이너 전체 다운 | 옛 `plugin_lib_names`(30개 BT 노드 나열)를 그대로 두면 Jazzy가 이미 자동 등록한 것과 중복 등록 시도 → `ID [ComputePathToPose] already registered` | `plugin_lib_names`/`default_bt_xml_filename` 삭제, `navigators`+`navigate_to_pose`/`navigate_through_poses` 플러그인 선언으로 교체 |
+| `collision_monitor` 활성화 실패: `observation_sources` not initialized | Jazzy에서 새로 생긴 필수 lifecycle 노드인데 원본 파일엔 섹션 자체가 없었음 | `/opt/ros/jazzy/share/nav2_bringup/params/nav2_params.yaml` 기본값 그대로 추가 |
+| `docking_server` 활성화 실패, 이어서 `dock_plugins: []`로 하니 launch 자체가 `Expected 'value' to be one of [...] but got '()' of type 'tuple'`로 죽음 | 이 노드도 Jazzy 신규. 도킹 스테이션이 없어 빈 리스트를 주고 싶었지만 ROS2 파라미터 로더가 빈 배열의 타입을 못 정함 | 실제 도킹 하드웨어가 없어도 `simple_charging_dock` 플러그인을 그대로 로드(호출은 안 됨)하도록 기본값 유지 |
+| `route_server`가 "Transform data too old" 스팸(map→odom, 시각 1786411995 vs 1618) | 이 노드도 Jazzy 신규, `use_sim_time` 미설정 → wall-clock(유닉스 epoch)으로 TF 조회 | `use_sim_time: true` 추가 (원래 이 워크스페이스는 route-graph 기능 자체를 안 씀) |
+| 파일 전역에 흩어진 `use_sim_time: False` 17곳 | 실물 로봇 기준으로 작성된 원본이라 시뮬레이션 파라미터가 아예 없었음 | 전부 `True`로 일괄 치환 |
+| Nav2가 목표를 받아도 로봇이 안 움직임(에러도 없음) | Jazzy Nav2는 `enable_stamped_cmd_vel` 기본값이 `False` → `controller_server`/`velocity_smoother`/`collision_monitor`/`docking_server`/`behavior_server` 전부 plain `Twist`를 발행하는데, 우리 `ros_gz_bridge`/DiffDrive 플러그인은 `TwistStamped`만 구독 — 타입이 달라 아무도 못 받음. `behavior_server`만 빼먹으면 `cmd_vel_nav` 토픽에 타입이 다른 퍼블리셔 2개가 붙으려다 `create_publisher() ... incompatible type`로 bringup이 죽는다 | 위 5개 노드 전부에 `enable_stamped_cmd_vel: true` |
+| Nav2 자동 bringup이 `Failed to activate ... before timeout`으로 통째로 실패 | `turtlebot3_ws`에서도 겪은 것과 같은 초기 위치 타이밍 이슈 — `/initialpose`를 늦게 쏘면 `global_costmap`/`local_costmap`이 이미 포기한 뒤임 | launch 시작 후 5초 안에 `/initialpose` 발행. 놓치면 개별 노드 복구보다 Nav2 재시작이 빠름 |
+| `/initialpose` 발행해도 AMCL이 계속 "cannot publish a pose" | 쿼터니언이 완벽히 정규화 안 됨(예: `z=0.93, w=0.36`, norm≈0.9995) — AMCL이 "malformed"로 거부 | identity(`w=1`) 또는 `math.sin/cos(yaw/2)`로 정확히 계산한 쿼터니언만 사용 |
+| AMCL이 수렴 안 하고 `/amcl_pose`가 로봇이 정지해 있는데도 몇 미터씩 계속 튐 | **RViz2 인스턴스가 5개나 동시에 떠 있었음** — 이 세션 내내 재시작할 때마다 이전 RViz가 안 죽고 쌓여서(각 ~25% CPU) 시스템이 과부하 상태였고, AMCL이 스캔을 실시간으로 못 따라감 | `pkill`이 놓친 프로세스를 PID로 직접 `kill -9`, 살아있는 RViz를 1개로 정리 → 부하 낮추자 즉시 `/amcl_pose`가 실제 위치 근처(오차 ~0.02~0.04m)로 안정 수렴 |
+
+**핵심 교훈**: 이 세션 내내 `pkill -f "패턴"`이 조용히 실패해서(이유
+불명 — 아마 세션 하나에 gz-sim 서버 2개, robot_state_publisher 2개,
+bridge 2개, rviz2 5개까지 쌓였었다) `/odom` 중복 발행으로 cartographer가
+크래시하고, CPU 과부하로 AMCL이 발산하는 등 순수 설정 문제가 아닌
+증상들이 한동안 진짜 버그처럼 보였다. Nav2/시뮬레이션을 재시작할 땐
+`pkill` 실행 후 반드시 `ps aux`로 실제로 죽었는지 재확인하고, 의심되면
+PID를 직접 뽑아 `kill -9`할 것.
 
 ## 참고
 
