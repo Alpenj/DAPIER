@@ -287,16 +287,20 @@ ros2 run turtlebot3_teleop teleop_keyboard   # gentle_explorer.py는 시뮬레�
 ros2 run nav2_map_server map_saver_cli -f ~/map
 ```
 
-- [x] `robot.launch.py` 정상 기동 — 라이다는 아직 미연결이라
-      `hlds_laser_publisher`만 예상대로 죽음(exit code 255), `odom`은
-      정상 발행. 나머지 노드(`turtlebot3_node`, `diff_drive_controller`,
-      `robot_state_publisher`)는 라이다와 무관하게 독립적으로 정상 기동
+- [x] `robot.launch.py` 정상 기동 — `turtlebot3_node`, `diff_drive_
+      controller`, `robot_state_publisher`, `hlds_laser_publisher`
+      전부 살아있음
 - [x] **바퀴 실제 이동 확인 완료(2026-08-11)** — `ros2 topic pub -r 5
-      /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.08}}"`로 실제
-      전진, `odom.pose.pose.position.x`가 0→0.35m로 변화 + 사용자가
-      눈으로 직접 회전 확인. 아래 트러블슈팅 참고(원인은 하드웨어가
-      아니라 테스트 방법 문제였음)
-- [ ] 지도 저장 성공 — 라이다 연결 후 진행 예정
+      /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.08}}"`로 전진,
+      `{angular: {z: 0.3}}`로 제자리 회전. `odom` 위치·orientation
+      quaternion 둘 다 유의미하게 변화, 사용자가 눈으로 직접 전진·회전
+      확인. 아래 11절 트러블슈팅 참고(원인은 하드웨어가 아니라 테스트
+      방법 문제였음)
+- [x] **라이다 `/scan` 정상 발행 확인(2026-08-11)** — 물리적으로도
+      회전 중이고, `ros2 topic hz /scan`으로 ~4.99Hz 안정적 발행,
+      `ranges` 값도 0.38~0.68m대 실측치로 확인. 아래 12절 트러블슈팅
+      참고(컨테이너에 `--device=/dev/ttyUSB0` 누락이 원인이었음)
+- [ ] 지도 저장 — 다음 단계
 
 ## 9. 실물 Nav2 자율주행 (교재 Part2와 동일 목적, 실물판)
 
@@ -359,5 +363,40 @@ ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/map.yaml
 도달했는지부터**(구독자 매칭, discovery 시간, `--once` vs 반복 발행의
 차이) 확인해야 한다. 이번 경우 하드웨어·펌웨어·배선 전부 처음부터
 멀쩡했다.
+
+## 12. 라이다 조립 후 `hlds_laser_publisher`가 계속 죽던 문제
+
+라이다를 나중에 조립해서 USB로 연결한 뒤 `robot.launch.py`를 다시
+띄웠는데, `hlds_laser_publisher`가 `exit code 255`로 계속 죽었다.
+`/dev/ttyUSB0`는 udev rule 덕분에 호스트에선 정상 인식됐는데(모터도
+물리적으로 실제 회전 중이었음), 소프트웨어만 실패하는 게 이상했다.
+
+디버깅 순서:
+1. `hlds_laser_publisher`를 launch 없이 직접 실행해보니 처음엔
+   `frame_id` 파라미터 누락 예외 — 이건 내가 파라미터를 안 챙겨서
+   생긴 재현 오류였고 실제 원인이 아니었음
+2. `port`/`frame_id`를 제대로 넘겨서 재실행해도 여전히 조용히
+   `exit 255`. 소스(`hlds_laser_publisher.cpp`)를 보니
+   `catch (boost::system::system_error & ex) { return -1; }`로
+   **예외 메시지 자체를 버리고 종료 코드만 반환**하는 구조라 로그로는
+   원인을 알 수 없는 게 정상이었음
+3. `stty -F /dev/ttyUSB0 ...`로 직접 열어보려 하니
+   `stty: /dev/ttyUSB0: No such file or directory` — **호스트에는
+   있는데 Docker 컨테이너 안에는 이 장치 노드가 없었다**
+4. 원인: 라이다가 아직 연결 안 된 시점에 컨테이너를 만들면서
+   `--device=/dev/ttyACM0`만 넣었었고, 나중에 라이다를 연결해도
+   이미 떠있는 컨테이너에는 새 장치가 자동으로 추가되지 않음
+   (Docker `--device`는 컨테이너 생성 시점에 고정)
+5. **해결**: 컨테이너를 `--device=/dev/ttyACM0 --device=/dev/ttyUSB0`
+   둘 다 넣어서 재생성. 이후 `hlds_laser_publisher`가 안 죽고
+   `/scan`이 `ros2 topic hz`로 ~4.99Hz 안정적으로 발행되는 것 확인
+
+**교훈**: USB 주변기기를 나중에 추가로 연결할 계획이면, 컨테이너를
+처음 만들 때 **아직 안 꽂혀 있어도 예상되는 `/dev/ttyACM*`,
+`/dev/ttyUSB*` 전부 미리 `--device`로 넣어두는 게 낫다** (또는
+`--device-cgroup-rule`로 문자 디바이스 클래스 전체를 허용하거나,
+`--privileged`로 띄우는 방법도 있지만 이번엔 device 목록을 명시하는
+쪽을 택함). 나중에 장치를 추가했으면 컨테이너 재생성이 필요하다는 것도
+기억해둘 것.
 
 Related: [[turtlebot3-ros-dd-study-book-progress]]
