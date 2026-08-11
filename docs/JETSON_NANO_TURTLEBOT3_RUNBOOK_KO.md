@@ -287,11 +287,16 @@ ros2 run turtlebot3_teleop teleop_keyboard   # gentle_explorer.py는 시뮬레�
 ros2 run nav2_map_server map_saver_cli -f ~/map
 ```
 
-- [ ] `robot.launch.py` 정상 기동 (라이다 스캔, odom 발행 확인:
-      `ros2 topic echo /scan --once`, `ros2 topic echo /odom --once`)
-- [ ] 실물 teleop으로 바퀴 실제 이동 확인 (제일 먼저 확인할 것 — 여기서
-      막히면 SLAM/Nav2로 넘어가지 않는다)
-- [ ] 지도 저장 성공
+- [x] `robot.launch.py` 정상 기동 — 라이다는 아직 미연결이라
+      `hlds_laser_publisher`만 예상대로 죽음(exit code 255), `odom`은
+      정상 발행. 나머지 노드(`turtlebot3_node`, `diff_drive_controller`,
+      `robot_state_publisher`)는 라이다와 무관하게 독립적으로 정상 기동
+- [x] **바퀴 실제 이동 확인 완료(2026-08-11)** — `ros2 topic pub -r 5
+      /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.08}}"`로 실제
+      전진, `odom.pose.pose.position.x`가 0→0.35m로 변화 + 사용자가
+      눈으로 직접 회전 확인. 아래 트러블슈팅 참고(원인은 하드웨어가
+      아니라 테스트 방법 문제였음)
+- [ ] 지도 저장 성공 — 라이다 연결 후 진행 예정
 
 ## 9. 실물 Nav2 자율주행 (교재 Part2와 동일 목적, 실물판)
 
@@ -315,5 +320,44 @@ ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/map.yaml
 - `turtlebot3_ws`(Jazzy) 교재에서 겪은 `/cmd_vel` 타입 이슈
   (`TwistStamped` vs `Twist`)는 Humble 쪽엔 없음 — Jazzy 전용 이슈였다는
   점을 착각하지 말 것
+
+## 11. 바퀴 첫 구동 디버깅 — "하드웨어 문제인 줄 알았는데 테스트 방법 문제였다"
+
+`teleop_keyboard`는 raw 터미널 입력(termios)이 필요해서 SSH 비대화형
+세션으로는 못 돌리므로, 대신 `ros2 topic pub`으로 `/cmd_vel`을 직접
+발행해서 테스트했다. 처음 몇 번은 전혀 안 움직였는데, 다음 순서로
+원인을 좁혔다:
+
+1. **배터리 연결·전원 확인** — 문제 없음(OpenCR 정상 부팅)
+2. **손으로 바퀴 돌려보기** — 단단히 고정(토크 ON 확인, 통신 자체는
+   살아있다는 뜻)
+3. **`turtlebot3_node`의 `cmd_vel_callback` 소스 확인** — 실제 쓰기
+   실패 메시지(`sdk_msg`)가 `RCLCPP_DEBUG`로만 찍혀서 기본 로그
+   레벨에선 안 보인다는 걸 발견
+4. **`--log-level debug`를 `ros2 launch`에 직접 못 넘김** (이 CLI
+   버전은 `--log-level NODE:=LEVEL` 문법 미지원, `unrecognized
+   arguments` 에러) → `turtlebot3_ros` 바이너리를 launch 없이 직접
+   실행(`-i /dev/ttyACM0 --ros-args --params-file ... --log-level
+   debug`)해서 우회. 이 과정에서 `namespace` 파라미터가 launch가 암묵적으로
+   채워주던 값이라 직접 실행하면 `UninitializedStaticallyTypedParameterException`으로
+   죽음 → `--params-file`로 `namespace: ""`를 명시하는 별도 yaml을 추가해서 해결
+5. **디버그 로그로 실제 원인 확인**: `timeout 1.5 ros2 topic pub -r 5
+   ...`로 보낸 명령이 `turtlebot3_node`의 `lin_vel` 디버그 로그에
+   **한 줄도 안 찍힘** — 즉 애초에 노드까지 도달을 안 했다. 원인은
+   **DDS discovery 지연**: 새로 띄운 `ros2 topic pub` 퍼블리셔가
+   기존 구독자(`turtlebot3_node`)와 매칭되는 데 1\~2초가 걸리는데,
+   `timeout 1.5`가 매칭 완료 전에 프로세스를 죽여버려서 메시지가
+   단 하나도 실제로 발행되지 않았다(`--once`는 자체적으로 매칭을
+   기다리는 로직이 있어서 이 문제를 안 겪음 — 그래서 정지 명령만
+   항상 성공한 것처럼 보였다).
+6. **해결**: `timeout`을 4초로 늘려서 재시도 → `lin_vel: 0.080000 ...
+   msg: Succeeded to write data`가 9번 정상 로깅, `odom.pose.pose.
+   position.x`가 0→0.35m로 실측 변화, 사용자가 바퀴 회전 육안 확인.
+
+**교훈**: 실물 로봇에서 "명령을 보냈는데 안 움직인다"는 하드웨어
+문제라고 바로 단정하지 말고, **명령이 애초에 목적지 노드까지
+도달했는지부터**(구독자 매칭, discovery 시간, `--once` vs 반복 발행의
+차이) 확인해야 한다. 이번 경우 하드웨어·펌웨어·배선 전부 처음부터
+멀쩡했다.
 
 Related: [[turtlebot3-ros-dd-study-book-progress]]
