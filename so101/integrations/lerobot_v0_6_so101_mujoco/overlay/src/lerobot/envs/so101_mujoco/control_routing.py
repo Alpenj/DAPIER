@@ -27,6 +27,9 @@ from typing import Literal
 CONTROL_CONTRACT_SCHEMA_VERSION = "dapier.so101.control-route.v1"
 VLA_DATASET_HOME_ACTION_CLI = "[0,-45,17.5,90,0,100]"
 VLA_EVALUATION_ACTION_STEPS = 25
+VLA_ACTION_BLEND_STEPS = 3
+VLA_ACTION_MAX_DELTA_CLI = "[1.75,0.65,0.30,0.35,0.12,5.50]"
+VLA_GRIPPER_ACTION_DEADBAND = 1.0
 ControlMode = Literal["ik_expert", "vla"]
 RequestedControlMode = Literal["auto", "ik_expert", "vla"]
 
@@ -113,7 +116,12 @@ def build_ik_expert_dataset_contract(
         },
         "student_dataset_derivation": {
             "remove_features": ["observation.images.top"],
-            "retain_features": ["observation.images.wrist", "observation.state", "action", "task"],
+            "retain_features": [
+                "observation.images.wrist",
+                "observation.state",
+                "action",
+                "task",
+            ],
         },
         "claims": {
             "ik_teacher_verified_in_sim": False,
@@ -410,6 +418,7 @@ def build_wrist_vla_eval_command(
     width: int,
     seed: int,
     cube_randomization: float,
+    action_smoothing: bool = True,
 ) -> list[str]:
     """Build the standard LeRobot evaluator command for wrist-only VLA rollout."""
     resolve_control_route(("wrist",), requested_mode="vla")
@@ -421,6 +430,9 @@ def build_wrist_vla_eval_command(
         raise ValueError("episodes, steps, height, and width must be positive")
     if seed < 0 or cube_randomization < 0:
         raise ValueError("seed and cube_randomization must be non-negative")
+    if not isinstance(action_smoothing, bool):
+        raise ValueError("action_smoothing must be a boolean")
+    action_trace_path = Path(output_dir) / "action_trace.jsonl"
     return [
         python_executable,
         "-m",
@@ -431,6 +443,12 @@ def build_wrist_vla_eval_command(
         "--env.camera_names=[wrist]",
         "--env.obs_type=pixels_agent_pos",
         f"--env.home_action={VLA_DATASET_HOME_ACTION_CLI}",
+        f"--env.action_smoothing={str(action_smoothing).lower()}",
+        f"--env.action_chunk_steps={VLA_EVALUATION_ACTION_STEPS}",
+        f"--env.action_blend_steps={VLA_ACTION_BLEND_STEPS}",
+        f"--env.action_max_delta={VLA_ACTION_MAX_DELTA_CLI}",
+        f"--env.gripper_action_deadband={VLA_GRIPPER_ACTION_DEADBAND}",
+        f"--env.action_trace_path={action_trace_path}",
         f"--env.episode_length={steps}",
         f"--env.observation_height={height}",
         f"--env.observation_width={width}",

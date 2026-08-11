@@ -185,6 +185,23 @@ evaluation used seeds 800 through 809, 700 steps per episode, and scored `2/10 (
 reward was 0.5224936 and average summed reward was 143.9673. This is completed bounded training and
 evaluation, but it does not meet the 80% task threshold and is not a successful sim-to-real policy.
 
+The wrist-only route now blends the first three frames of each 25-action chunk, applies per-axis target
+slew limits derived from the verified v2 IK demonstrations, and holds gripper changes below one percentage
+point. The generic environment keeps smoothing disabled unless the VLA route requests it. Evaluation also
+writes `action_trace.jsonl` with raw/applied actions plus radian command and synchronous MuJoCo readback.
+Summarize a completed trace with:
+
+```bash
+uv run python examples/so101_mujoco/analyze_action_trace.py \
+  <WRIST_ONLY_EVAL_PATH>/action_trace.jsonl \
+  --episode-length 700
+```
+
+On 2026-08-11, a same-seed five-episode A/B retained `4/5` success while reducing the maximum
+shoulder-pan chunk-boundary jump from `9.405°` to `1.750°`. A new 20-episode set scored `16/20`; the two
+earlier held-out sets remained `14/20` each, so this is evidence for smoother execution rather than a claim
+of stable 80% generalization or physical readiness.
+
 A follow-up failure analysis found that the evaluator reset pose did not match the IK collector. Matching
 the teacher's `[0,-45,17.5,90,0,100]` pose raised the same checkpoint from 20% to 60%. A 25-step action
 execution horizon scored 80% on the configuration-selection seeds but only 40% on a fresh 20-episode set,
