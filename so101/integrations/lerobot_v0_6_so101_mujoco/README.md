@@ -228,6 +228,27 @@ RCS 개념을 따른 비교 evidence이며 smoothing 자체의 원인은 blend/l
 [`2026-08-11-so101-vla-action-smoothing.md`](../../records/2026-08-11-so101-vla-action-smoothing.md)에
 남겼다.
 
+### 2026-08-11 VLA human intervention과 파지 관통 분석
+
+viewer가 있는 `teleoperate.py --input policy` 경로에 policy/human authority switch를
+추가했다. `Space`에서 measured state를 수동 target으로 고정하고 VLA queue를
+비우며, 키보드 보정 뒤 `Enter`에서 queue가 없는 새 policy chunk로 재개한다.
+각 frame은 policy/human source, wrist PNG, state, requested/applied action과 success를
+JSONL로 남긴다. 이 결과는 아직 LeRobot dataset 변환 전 evidence임을 manifest에
+명시한다. `--no-viewer`는 기존 표준 evaluator 경로를 유지한다.
+
+실제 checkpoint를 사용한 6-step smoke에서 source sequence
+`policy,human,human,policy,policy,policy`, 개입 1구간/2 frame, PNG 6장을 확인했다.
+SO-101 MuJoCo test는 `38/38 PASS`였다.
+
+성공 replay에서 보인 cube 관통도 수치화했다. 50 mm cube에 대해 IK teacher와
+VLA의 약 27% close target은 pad gap이 39.1 mm이고, seed 1600 replay의 최대
+contact penetration은 8.3 mm였다. 35%에서는 gap이 49.3 mm지만 기존 checkpoint를
+그 값으로 제한하면 같은 trajectory가 실패했다. 따라서 renderer만 바꾸지 않고
+IK grasp target 수정, demonstration 재수집, 재학습 대상으로 남겼다. 세부 기록은
+[`2026-08-11-so101-vla-intervention.md`](../../records/2026-08-11-so101-vla-intervention.md)에
+있다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450

@@ -174,7 +174,17 @@ uv run python examples/so101_mujoco/teleoperate.py \
   --output-dir "<NEW_WRIST_ONLY_EVAL_PATH>"
 ```
 
-This command delegates policy rollout to LeRobot's standard evaluator. The 2026-08-10 bounded run on the
+With a viewer, this command runs the interactive intervention loop. Press `Space` to transfer authority
+from VLA to the keyboard, correct the pose with the same `Shift+W/S`, `Shift+A/D`, `Shift+R/F`,
+`Shift+O/L`, and selected-joint chords documented above, then press `Enter` to resume VLA. Resume clears
+the policy's remaining action-chunk queue so pre-intervention commands cannot execute afterward.
+`Shift+C` cycles external/top/wrist views, `Shift+N` ends the attempt, and `Shift+Q` quits. Every frame is
+written under `<OUTPUT>/interventions/episode_NNNN/` as source-labeled JSONL plus wrist PNG, including
+requested and actually applied actions. The manifest labels this as conversion-required evidence; it is
+not silently presented as a ready-to-train LeRobot dataset.
+
+Add `--no-viewer` to delegate an unattended policy rollout to LeRobot's standard evaluator instead. The
+2026-08-10 bounded run on the
 current 8 GB GPU collected 30 successful IK episodes (19,800 frames, seeds 400 through 429), then removed
 the top image while preserving wrist/state/action and the teacher-contract hash. Top-RGB XY error was
 0.817 mm on average and 1.577 mm at maximum.
@@ -201,6 +211,12 @@ On 2026-08-11, a same-seed five-episode A/B retained `4/5` success while reducin
 shoulder-pan chunk-boundary jump from `9.405°` to `1.750°`. A new 20-episode set scored `16/20`; the two
 earlier held-out sets remained `14/20` each, so this is evidence for smoother execution rather than a claim
 of stable 80% generalization or physical readiness.
+
+The successful seed-1600 replay also exposed a simulation-fidelity defect: the 50 mm cube is commanded
+with a learned gripper target near 27%, where the measured pad gap is only 39.1 mm. Contact penetration in
+that rollout reached 8.3 mm. A 35% target gives a 49.3 mm free gap, but clamping the existing checkpoint to
+that value made the replay fail. Correcting this requires changing the IK teacher grasp target, collecting
+new demonstrations, and retraining; changing only renderer geometry would hide the error.
 
 A follow-up failure analysis found that the evaluator reset pose did not match the IK collector. Matching
 the teacher's `[0,-45,17.5,90,0,100]` pose raised the same checkpoint from 20% to 60%. A 25-step action

@@ -32,10 +32,12 @@ from lerobot.envs.so101_mujoco import (
     DEFAULT_VLA_ACTION_MAX_DELTA,
     FINGER_PAD_GEOM_NAMES,
     GOAL_TRAY_POSITION,
+    HUMAN_AUTHORITY,
     IK_OBSERVE_ACTION,
     JOINT_NAMES,
     PICK_CLEAR_ACTION,
     PICK_LIFT_FRAMES,
+    POLICY_AUTHORITY,
     POLICY_CAMERA_NAMES,
     TOP_CAMERA_PROFILE_ID,
     VISION_PICK_PLACE_FRAMES,
@@ -46,11 +48,13 @@ from lerobot.envs.so101_mujoco import (
     CameraCalibration,
     CartesianJogController,
     HardwareInventory,
+    InterventionEpisodeRecorder,
     JointJogController,
     ResetSeedSequence,
     SO101MujocoEnv,
     VideoDevice,
     VLAActionFilter,
+    VLAInterventionSession,
     build_ik_expert_dataset_contract,
     build_physical_wrist_gate_receipt,
     build_vision_pick_place_plan,
@@ -99,6 +103,61 @@ def test_joint_contract_rejects_wrong_shapes():
         lerobot_action_to_qpos(np.zeros(5))
     with pytest.raises(ValueError, match="shape \\(6,\\)"):
         qpos_to_lerobot_state(np.zeros(7))
+
+
+def test_vla_intervention_authority_switch_discards_implicit_policy_control():
+    session = VLAInterventionSession()
+    policy_action = np.array([1, -40, 20, 80, 0, 90], dtype=np.float32)
+    measured_action = np.array([2, -39, 21, 79, 1, 88], dtype=np.float32)
+    human_action = measured_action.copy()
+    human_action[5] = 92
+
+    policy_decision = session.choose_action(policy_action=policy_action)
+    assert policy_decision.source == POLICY_AUTHORITY
+    np.testing.assert_array_equal(policy_decision.action, policy_action)
+
+    assert session.take_over(measured_action) is True
+    assert session.take_over(measured_action) is False
+    human_decision = session.choose_action(policy_action=None, human_action=human_action)
+    assert human_decision.source == HUMAN_AUTHORITY
+    assert human_decision.intervention_segment == 1
+    np.testing.assert_array_equal(human_decision.action, human_action)
+    assert session.intervention_frames == 1
+
+    assert session.resume_policy() is True
+    assert session.resume_policy() is False
+    with pytest.raises(ValueError, match="policy_action is required"):
+        session.choose_action(policy_action=None)
+
+
+def test_intervention_recorder_writes_source_labeled_evidence(tmp_path: Path):
+    recorder = InterventionEpisodeRecorder(tmp_path)
+    episode_dir = recorder.start_episode(episode_index=0, seed=17, task="pick")
+    action = np.array([0, -45, 17.5, 90, 0, 100], dtype=np.float32)
+    recorder.record_frame(
+        step_index=0,
+        source=HUMAN_AUTHORITY,
+        intervention_segment=1,
+        observation_state=action,
+        wrist_rgb=np.zeros((8, 10, 3), dtype=np.uint8),
+        requested_action=action,
+        applied_action=action,
+        last_policy_action=None,
+        reward=0.5,
+        success=False,
+        done=False,
+    )
+    manifest_path = recorder.finish_episode(
+        success=False, termination_reason="manual_next", intervention_segments=1
+    )
+
+    event = json.loads((episode_dir / "events.jsonl").read_text())
+    manifest = json.loads(manifest_path.read_text())
+    assert event["source"] == HUMAN_AUTHORITY
+    assert event["intervention_segment"] == 1
+    assert (episode_dir / event["wrist_image"]).is_file()
+    assert manifest["human_intervention_frames"] == 1
+    assert manifest["training_status"] == "evidence_only_requires_dataset_conversion"
 
 
 def test_vla_action_filter_blends_chunk_boundaries_and_limits_outliers():
