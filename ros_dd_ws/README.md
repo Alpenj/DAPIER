@@ -259,6 +259,204 @@ buffer 10s)·바퀴 조인트(~20Hz)·`map`→`odom`(~201Hz)은 `/tf`로 주기�
 `rear_caster_link`)과 순서가 반대다 — 그 사이에 xacro를 손본 흔적.
 오늘 캡처(`frames_2026-08-11_11.08.07.pdf`)가 현재 상태를 반영한 최신본.
 
+## 8. 좌표계 관점에서 보는 Cartographer 연산 원리 (Chapter 4)
+
+Cartographer는 **Local SLAM(front-end)**과 **Global SLAM(back-end)**
+두 층으로 나뉜다. 실제로 로봇을 돌려서(전진 8s → 회전 4s → 전진 8s)
+`/submap_list`와 `map`→`odom` TF를 관찰한 결과:
+
+```
+submap 0: pose (0, 0, 0)                    -- 궤적 시작점, map 프레임 원점
+submap 1: pose (0.44, 0.60), yaw -12.9°
+submap 2: pose (-1.53, -0.38), yaw -12.2°
+submap 3: pose (-1.86, -0.57), yaw -12.3°
+
+map -> odom: translation (3.221, 0.120, -0.235), yaw 119.8°
+```
+
+### Local SLAM (front-end) — submap 단위 스캔 매칭
+
+`TRAJECTORY_BUILDER_2D`가 매 스캔을 **현재 활성 submap**에 정합
+(scan matching)한다. `ros_dd_cartographer.lua`의
+`use_online_correlative_scan_matching: true`가 이 단계 — 현재 위치
+추정치 근처를 격자 탐색(correlative)하며 스캔과 submap이 가장 잘
+겹치는 위치를 찾는다. 이동 거리가 쌓이면 현재 submap을 "완료"
+처리하고 새 submap을 연다 — 위 데이터에서 submap 0→1→2→3으로
+번호가 늘어난 게 이 과정이다. **이 단계의 좌표계는 `odom` 프레임
+기준 상대 운동**(로컬)이며, `tracking_frame: laser_link` 설정대로
+라이다 프레임의 움직임을 추적한다.
+
+### Global SLAM (back-end) — pose graph 최적화
+
+여러 submap이 쌓이면 `POSE_GRAPH`가 백그라운드에서 submap들 사이의
+**제약조건(constraint)**을 계산한다 — 인접 submap과는 항상, 멀리
+떨어진 submap끼리도 스캔이 겹칠 만큼 가까워지면(루프 클로저 후보)
+추가로 계산한다. 이 제약조건들을 최소자승 최적화로 한꺼번에 풀어서
+전체 submap 배치를 보정하는 게 pose graph 최적화다 — 위 데이터에서
+각 submap의 `pose`가 전부 미세한 회전(-12°대)을 공유하는 게 이
+전역 보정의 흔적이다. **이 단계의 좌표계는 `map` 프레임**(전역,
+불연속 보정 가능) — 3절에서 정리한 REP 105의 `map`→`odom`이 바로
+이 back-end 결과물이다.
+
+### `map` → `odom`이 곧 "front-end 대비 back-end의 순수 보정량"
+
+`odom`은 DiffDrive 플러그인의 순수 바퀴 적분값(드리프트 있음,
+연속적)이고 `map`은 SLAM이 보정한 절대 추정치이므로, 그 사이의
+`map`→`odom` 변환 자체가 "지금까지 얼마나 보정했는가"를 그대로
+보여준다. 위 캡처에서 이 변환이 `(3.221, 0.120)` 이동 +
+`119.8°` 회전인 것은 — 이 세션에서 로봇이 8초 직진 + 90°대
+회전 + 8초 직진을 했으니 odom이 그 정도 각도로 드리프트했고
+Cartographer가 그걸 보정하고 있다는 뜻이다(값 자체보다 **0이
+아니라는 것, 그리고 회전 방향/크기가 실제 주행 궤적과 방향이 맞다는
+것**이 이 단계에서 확인할 포인트).
+
+### 실행 중 GUI로 확인하는 법
+
+```bash
+# submap 목록(위치/버전) 확인
+ros2 topic echo /submap_list --once
+
+# map->odom 보정량 직접 확인
+ros2 run tf2_ros tf2_echo map odom --ros-args -p use_sim_time:=true
+
+# RViz의 ros_dd_cartographer.rviz 설정에는 Map, LaserScan, TF가
+# 이미 포함돼 있어 submap 경계가 늘어나는 것과 라이다 스캔이
+# 기존 지도에 정렬되는 것을 실시간으로 볼 수 있다.
+```
+
+## 9. Cartographer LUA 설정 심층 분석 (Chapter 5)
+
+### 실행에 관여하는 노드는 2개, 역할이 다르다
+
+| 노드 | 실행 파일 | 역할 |
+|---|---|---|
+| `cartographer_node` | `cartographer_ros/cartographer_node` | **실제 SLAM 연산**(8절의 local/global SLAM). `scan`/`odom`/`imu` 구독, `submap_list`·`map`→`odom` TF·trajectory 발행. `-configuration_directory`/`-configuration_basename` 인자로 이 LUA 파일을 읽는다. |
+| `cartographer_occupancy_grid_node` | `cartographer_ros/cartographer_occupancy_grid_node` | SLAM 연산에는 관여하지 않는 **별도 변환기**. `cartographer_node`가 내부적으로 들고 있는 submap 데이터를 구독해 익숙한 `nav_msgs/OccupancyGrid`(`/map` 토픽)로 래스터화만 한다. `map_saver_cli`나 Nav2의 `map_server`가 소비하는 포맷이 바로 이거다. |
+
+`ros_dd_cartograph.launch.py`가 이 둘을 같이 띄우는데, `occupancy_grid_node`
+쪽 인자(`-resolution`, `-publish_period_sec`)는 **래스터 해상도/갱신
+주기**일 뿐 SLAM 자체의 정밀도와는 무관하다 — SLAM 내부 submap
+해상도는 `TRAJECTORY_BUILDER_2D.submaps.grid_options_2d.resolution`
+(이 파일에서는 오버라이드 안 해서 기본값 0.05 그대로 사용)이 따로
+결정한다.
+
+### `options` 블록 — LUA가 SLAM에게 "이 로봇/환경은 이렇다"고 알려주는 부분
+
+| 파라미터 | 값 | 의미 |
+|---|---|---|
+| `tracking_frame` | `laser_link` | Cartographer가 **추적하는 대상 프레임**. 라이다 프레임으로 잡으면 라이다 장착 오프셋(URDF의 `laser_joint`)을 자동으로 고려해 계산한다. |
+| `published_frame` | `odom` | Cartographer가 TF로 **직접 발행하는 하위 프레임**. `base_link`가 아니라 `odom`으로 잡은 이유가 바로 아래 `provide_odom_frame: false`와 짝을 이룬다. |
+| `provide_odom_frame` | `false` | gz-sim의 DiffDrive 플러그인이 이미 `odom`→`base_footprint`를 발행하고 있으니, Cartographer가 또 그 역할을 만들지 않겠다는 뜻. 이 설정 덕분에 최종적으로 `map`→`odom`(Cartographer)과 `odom`→`base_footprint`(DiffDrive)가 **겹치지 않고 이어진다** — 8절에서 관찰한 REP 105 3단 구조가 이 두 옵션의 조합으로 만들어진다. |
+| `use_odometry` | `true` | `odom` 토픽(오도메트리)을 스캔 매칭의 초기 추정치로 같이 쓴다 — 순수 스캔 매칭보다 빠르고 안정적으로 수렴한다. |
+| `use_imu_data`(TRAJECTORY_BUILDER_2D) | `false` | "터틀봇 원본과 동일" 주석대로 IMU는 안 씀 — 이 로봇의 IMU 노이즈(σ=0.005, `ros_dd.xacro`)가 오히려 방해될 수 있다는 판단으로 보인다. |
+| `min_range` / `max_range` | `0.1` / `8.0` | 라이다 센서의 실제 스펙(`ros_dd.xacro`의 gpu_lidar range 0.05~8.0)에 맞춰서 범위 밖 데이터를 걸러낸다. `max_range`가 너무 크면(예: Nav2 AMCL 6절에서 겪은 `laser_max_range: 100` 실수처럼) 범위 밖 노이즈까지 스캔 매칭에 섞여 들어간다. |
+| `use_online_correlative_scan_matching` | `true` | 8절의 front-end 스캔 매칭 방식 지정 — 현재 추정 위치 근처를 격자 탐색하는 방식. 계산량은 늘지만 초기 추정이 부정확해도 잘 버틴다(오도메트리 드리프트가 있는 저가 로봇에 유리). |
+| `motion_filter.max_angle_radians` | `math.rad(0.1)`(약 5.7°) | 로봇이 이 각도 이상 회전해야 새 스캔을 "의미 있는 이동"으로 인정하고 처리한다 — 정지 중 노이즈로 인한 불필요한 재계산을 막는 필터. |
+| `submap_publish_period_sec` / `pose_publish_period_sec` / `trajectory_publish_period_sec` | `0.3` / `0.005` / `0.03` | 각각 submap, pose, trajectory를 얼마나 자주 발행하는지 — pose가 가장 빠른(200Hz) 이유는 `map`→`odom` TF가 실시간성이 가장 중요하기 때문. |
+
+### 교재 vs 실측 — `optimize_every_n_nodes`
+
+Notion 학습 기록(2026-08-10)에서 이미 지적한 부분과 동일하게 확인됨:
+이 LUA 파일은 `POSE_GRAPH.optimize_every_n_nodes = 0`을 **주석 처리**해
+뒀다(60번째 줄). 즉 이 값을 오버라이드하지 않고 `pose_graph.lua`의
+기본값을 그대로 쓴다는 뜻인데, 이 PC에 설치된 Cartographer(Jazzy용
+바이너리)의 기본값을 직접 열어보면:
+
+```
+$ grep optimize_every_n_nodes /opt/ros/jazzy/share/cartographer/configuration_files/pose_graph.lua
+optimize_every_n_nodes = 90,
+```
+
+**노드 90개마다 한 번씩 전역 최적화(8절의 back-end)를 돌린다**는
+뜻 — 매 스캔마다 최적화하면 느리니 일정량 쌓아서 배치로 처리하는
+설계. 주석 처리된 `= 0`은 "매번 최적화"를 의도했던 흔적일 수도,
+단순히 실험 중 꺼둔 것일 수도 있다 — 문서·주석의 숫자를 그대로
+믿지 말고 실제 설치된 바이너리의 기본값을 열어 확인하는 습관이
+여기서도 유효했다.
+
+## 10. 데이터 흐름 파이프라인 및 디버깅 (Chapter 7)
+
+### 전체 데이터 흐름 (센서 → 액추에이터, 실측 토픽 그래프)
+
+```
+[gz-sim 물리엔진]
+  gpu_lidar 센서 ──gz-transport──┐
+  IMU 센서 ────────gz-transport──┤
+  DiffDrive(조인트→odom) ─gz-tr──┤
+                                  │  ros_gz_bridge (params/ros_dd_bridge.yaml)
+                                  ▼
+        /scan  /imu/data  /odom  /tf(odom→base_footprint)  /clock
+                                  │
+                                  ├──▶ cartographer_node ──▶ /submap_list, /tf(map→odom),
+                                  │                          /trajectory_node_list,
+                                  │                          /scan_matched_points2, /constraint_list
+                                  │        │
+                                  │        ▼
+                                  │   cartographer_occupancy_grid_node ──▶ /map, /map_updates
+                                  │
+                                  ├──▶ (map 저장 후) Nav2: map_server → amcl ──▶ /tf(map→odom)
+                                  │                  → planner_server/controller_server
+                                  │                  → behavior_server/bt_navigator
+                                  ▼
+                              /cmd_vel (TwistStamped) ──ros_gz_bridge──▶ gz-transport
+                                  │
+                                  ▼
+                          [gz-sim: DiffDrive 플러그인이 바퀴 조인트 속도로 변환]
+```
+
+`robot_state_publisher`는 이 흐름과 별도로 URDF 고정/회전 관절을
+`/tf`, `/tf_static`, `/robot_description`으로 항상 발행 — 3절에서 다룬
+`base_footprint`→`base_link`→센서 체인이 여기서 나온다.
+
+### 디버깅 순서 — 오늘 실제로 쓴 방법
+
+증상이 나오면 launch를 계속 재실행하기보다 아래 순서로 범위를 좁히는
+쪽이 훨씬 빠르다(Notion 학습 기록 8절의 체크리스트를 이 워크스페이스
+실전에서 그대로 검증함):
+
+1. **노드가 살아 있는가** — `ps aux | grep <프로세스>`. 오늘 가장 많이
+   당한 함정: `pkill -f`가 조용히 실패해서 gz-sim 서버 2개·bridge
+   2개·rviz2 5개가 겹쳐 돈 적이 있다. `pkill` 뒤엔 반드시 `ps aux`로
+   실제 사망을 재확인, 의심되면 PID 직접 `kill -9`.
+2. **필요한 topic이 존재하는가** — `ros2 topic list`. 위 파이프라인
+   표와 대조해서 빠진 게 있으면 그 앞 단계(브리지/노드)부터 의심.
+3. **message type이 맞는가** — `ros2 topic info <topic> -v`.
+   6절의 `/cmd_vel` 사고가 정확히 이거였다: `enable_stamped_cmd_vel`
+   불일치로 발행측(Twist)과 구독측(TwistStamped) 타입이 달라
+   "Publisher count: 2, Subscription count: 1"인데도 서로 안
+   이어지고 있었다 — topic이 "존재"하는 것과 "실제로 연결돼 있는
+   것"은 다르다.
+4. **topic rate가 0이 아닌가** — `ros2 topic hz <topic>`.
+5. **`header.frame_id`가 예상과 같은가** — `ros2 topic echo --once`.
+6. **`use_sim_time`이 전 노드에서 일치하는가** — 6절의
+   `route_server`가 이걸 놓쳐서 "Transform data too old"를 스팸했다
+   (wall-clock epoch 시각 대 sim-time 시각을 비교하다 실패).
+7. **TF tree가 연결되는가** — `ros2 run tf2_tools view_frames`,
+   `ros2 run tf2_ros tf2_echo <target> <source> --ros-args -p
+   use_sim_time:=true`(sim 사용 중이면 `use_sim_time` 빼먹으면
+   엉뚱하게 "frame does not exist"로 보인다 — 실제로 겪음).
+8. **같은 TF edge의 publisher가 둘 이상인가** —
+   `ros2 topic info /odom -v`로 publisher 목록 확인. 오늘 세션에서
+   좀비 bridge 2개가 `/odom`을 중복 발행해 cartographer가
+   `PoseExtrapolator::AddOdometryData` CHECK 실패로 실제로 죽었다.
+9. **파라미터 파일 경로·초기화 타이밍이 맞는가** — 6절의 Nav2 자동
+   bringup처럼 launch 후 몇 초 안에 `/initialpose`를 못 쏘면
+   `global_costmap`/`local_costmap`이 통째로 활성화를 포기한다.
+10. **lifecycle 노드가 active인가** — `ros2 lifecycle get <node>`.
+
+### 증상 → 원인 빠른 참조표 (전부 이 워크스페이스에서 실제로 겪은 것)
+
+| 증상 | 실제 원인 |
+|---|---|
+| 로봇이 명령대로 안 움직이는데 에러도 없음 | `/cmd_vel` 발행측·구독측 메시지 타입 불일치(`Twist` vs `TwistStamped`) |
+| 로봇이 명령 없이도 제자리에서 계속 회전 | (a) 마지막 비영(非零) 각속도 명령이 아직 도달 안 함, 또는 (b) 물리적으로 거대한 충돌체에 끼어있음(hexa 메시 스케일 이슈) |
+| SLAM/Nav2 노드가 launch 직후 죽음 | 좀비 프로세스가 같은 토픽을 중복 발행(예: `/odom` 이중 publisher → cartographer CHECK 실패) |
+| Nav2 bringup 전체가 "Failed to activate" | 초기 위치 타이밍 — costmap의 내부 타임아웃(~10초)을 놓침 |
+| `/initialpose` 보내도 AMCL이 계속 거부 | 쿼터니언이 완벽히 정규화 안 됨("malformed"로 거부) |
+| AMCL이 정지 상태에서도 위치가 몇 미터씩 튐 | CPU 과부하(주로 GUI/RViz 중복 실행)로 스캔 처리가 실시간을 못 따라감 |
+| planner가 시작/목표 지점을 lethal로 봄 | 근처 충돌체 크기가 실제보다 훨씬 커서 costmap 전체가 오염됨 |
+| 특정 노드만 계속 "Transform too old" | 그 노드에 `use_sim_time`이 빠져서 wall-clock으로 TF를 조회 중 |
+
 ## 참고
 
 - [gz-sim(Harmonic) Migration Guide](https://gazebosim.org/api/sim/8/migrationsdf.html)
