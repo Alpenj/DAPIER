@@ -1,0 +1,12 @@
+diff --git a/turtlebot3_bringup/launch/robot.launch.py b/turtlebot3_bringup/launch/robot.launch.py
+--- a/turtlebot3_bringup/launch/robot.launch.py
++++ b/turtlebot3_bringup/launch/robot.launch.py
+@@ -120,5 +120,7 @@ def generate_launch_description():
+                 tb3_param_dir,
+                 {'namespace': namespace}],
+             arguments=['-i', usb_port],
+-            output='screen'),
++            output='screen',
++            respawn=True,
++            respawn_delay=5.0),
+     ])

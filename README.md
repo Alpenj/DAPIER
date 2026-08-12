@@ -63,6 +63,12 @@ degree/radian·gripper 변환과 stale frame 거부 규칙을 확인하려면
 SO-101 관련 디렉터리의 역할, 외부 LeRobot/ROS 2 checkout과 DAPIER 정본의
 경계는 [`so101` 작업 허브](so101/README.md)에 모아 두었습니다.
 
+Jetson Nano 기반 TurtleBot3 Burger에서 실제 SLAM 지도를 만들고 저장한 뒤
+Nav2로 이어가는 매번의 명령은
+[`TurtleBot3 실물 SLAM·Nav2 따라 하기`](docs/TURTLEBOT3_REAL_SLAM_NAV2_QUICKSTART_KO.md)에
+정리했습니다. 실제 지도 저장까지 완료했고, 좌측 모터 보호 오류를 해결한
+뒤 6개 웨이포인트의 19.52m 경로를 실물로 완주해 최종 검증했습니다.
+
 Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
 `sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
 

@@ -2,9 +2,8 @@
 
 이 문서는 [`turtlebot3_ws`](../turtlebot3_ws/README.md)에서 Gazebo로만 검증한
 SLAM·Nav2 절차를, 실제 TurtleBot3(온보드 SBC = Jetson Nano)로 옮길 때 같은
-실수를 반복하지 않으려고 적어둔 작업 순서다. **아직 실물로 검증한 항목은
-하나도 없다** — 체크박스는 실제로 명령을 실행하고 화면·로그·로봇 움직임을
-확인한 뒤에만 채운다.
+실수를 반복하지 않으려고 적어둔 작업 순서다. 체크박스는 실제로 명령을
+실행하고 화면·로그·로봇 움직임을 확인한 뒤에만 채운다.
 
 보드 각인 확인 결과 정확한 모델은 **Jetson Nano Developer Kit (P3450 =
 모듈 P3448 + 캐리어보드 P3449)**, 즉 2019년형 오리지널 Jetson Nano다.
@@ -57,9 +56,10 @@ Humble 우회가 불가피하다. 결과적으로 **PC=Jazzy, Nano=Docker Humble
 - [x] microSD 카드 32GB(실사용 29.8G), 노트북 USB 카드리더로 굽기
 - [x] 노트북(ASUS TUF A16) — 이미지 굽기 + 이후 SSH 원격작업 겸용
 - [x] 모니터+키보드+마우스로 최초 부팅 계정 생성 완료, 이후 SSH 전환
-- [ ] TurtleBot3 실물 섀시 + Dynamixel 모터 — 조립/배선 상태 미확인
+- [x] TurtleBot3 실물 섀시 + Dynamixel 모터 — 조립·배선 및 실제
+      전진·회전 확인(저전압 발생 후 재검증은 13절에 별도 미완료로 기록)
 - [x] OpenCR 보드, Nano와 USB로 연결 확인(`/dev/ttyACM0`)
-- [ ] LDS(라이다) 연결 — 아직 확인 안 됨
+- [x] LDS-01(라이다) USB 연결 — 물리 회전과 `/scan` 약 4.99Hz 확인
 
 ## 3. Nano 접근 경로 확보 — SD카드 굽기 → 최초 부팅
 
@@ -260,7 +260,8 @@ cd opencr_update
       flash_write 0.69s / CRC Check 일치(D92222 D92222) / jump_to_fw
       전부 OK. (리커버리 모드는 필요 없었음 — ModemManager 끄고 나니
       바로 성공)
-- [ ] OpenCR 테스트 시 바퀴가 실제로 도는지 — **아직 미확인, 다음 단계**
+- [x] OpenCR와 Dynamixel 실제 구동 확인 — 전진·제자리 회전 및 odom 변화
+      모두 확인(11절)
 
 ## 7. PC 쪽: 기존 `turtlebot3_ws`(Jazzy) 그대로 사용
 
@@ -268,28 +269,48 @@ cd opencr_update
 SLAM/Navigation/Teleop/Simulation 전 영역에서 정식 지원하므로, 이미 있는
 `~/DAPIER/turtlebot3_ws`를 그대로 실물 로봇 연결에 쓴다.
 
-- [ ] PC↔Nano 같은 `ROS_DOMAIN_ID=30`, 같은 네트워크(공유기, Nano 유선
-      권장)에서 `ros2 topic list`로 서로 topic 보이는지 확인 (DDS
-      discovery 확인 — 방화벽 때문에 안 보이면 멀티캐스트 허용 확인)
-- [ ] `/cmd_vel` 타입 불일치(Nano=Humble plain `Twist` vs PC Nav2가
-      `enable_stamped_cmd_vel`에 따라 `TwistStamped` 발행) 발생하면
-      PC측 `nav2_params.yaml`의 `enable_stamped_cmd_vel: False`로 맞춘다
+- [x] PC↔Nano DDS discovery 확인(2026-08-12) — PC의
+      `ROS_LOCALHOST_ONLY=1`을 실물 전용 셸에서 해제하고, 양쪽
+      처음에는 `ROS_DOMAIN_ID=30` + `rmw_cyclonedds_cpp` + 기본 멀티캐스트로
+      연결. 전체 토픽 발견, `/odom` 19~20Hz, `/cmd_vel` 구독자 1개 확인.
+      Claude가 만든 `~/cyclonedds_pc.xml`은 multicast를 끄고 static peer를
+      지정했지만 실제 discovery에 실패했으므로 실물 스크립트에서 사용하지
+      않는다.
+- [x] **실물 전용 domain 73으로 격리(2026-08-12)** — 공유 Wi-Fi의 domain
+      30에서 로봇과 무관한 `TwistStamped /cmd_vel` endpoint가 발견됐고,
+      `/odom`도 기대 주기보다 많이 수신되며 timestamp가 역행했다.
+      PC 실물 환경과 Jetson systemd bringup을 함께 domain 73으로 옮겨
+      다른 ROS participant가 같은 이름의 토픽에 섞이지 않게 분리한다.
+- [x] teleop의 `/cmd_vel` 타입 불일치 해결 — PC Jazzy의 ROBOTIS
+      `teleop_keyboard`는 `TwistStamped`를 발행하지만 Nano Humble의
+      `turtlebot3_node`는 plain `Twist`를 구독한다. 실물 전용
+      `scripts/tb3_real_teleop.py`가 plain `Twist`를 20Hz로 발행하도록
+      분리했다. 직선 가속도는 0.35m/s², 각가속도는 1.2rad/s²로 제한해
+      `a/d` 조향이 갑자기 튀지 않게 했고, `s`·Space·종료 시 정지는
+      지연 없이 즉시 보낸다.
 
 ## 8. 실물 SLAM (교재 Part1과 동일 목적, 실물판)
 
 ```bash
-# Nano
-ros2 launch turtlebot3_bringup robot.launch.py
+# Nano bringup은 turtlebot3-bringup.service가 부팅 시 자동 실행
 
-# PC
-ros2 launch turtlebot3_cartographer cartographer.launch.py
-ros2 run turtlebot3_teleop teleop_keyboard   # gentle_explorer.py는 시뮬레이션 전용, 실물은 직접 조작 권장(첫 시도)
-ros2 run nav2_map_server map_saver_cli -f ~/map
+# 터미널 1: Cartographer + RViz (지도 저장 전까지 열어둘 것)
+tb3-slam
+
+# 터미널 2: 고정 저속 teleop
+tb3-teleop
+
+# 터미널 3: 지도 상태 확인 후 저장
+tb3-slam-check
+tb3-map-save my_room
 ```
 
 - [x] `robot.launch.py` 정상 기동 — `turtlebot3_node`, `diff_drive_
       controller`, `robot_state_publisher`, `hlds_laser_publisher`
-      전부 살아있음
+      전부 살아있음. Jetson 호스트의 `turtlebot3-bringup.service`로
+      등록해 Docker 이후 자동 시작한다. 단, `Restart=on-failure`는 부모
+      launch가 살아 있는 상태의 자식 노드 사망을 감지하지 못했으며,
+      이 문제의 수정·재검증 상태는 13절에 기록한다.
 - [x] **바퀴 실제 이동 확인 완료(2026-08-11)** — `ros2 topic pub -r 5
       /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.08}}"`로 전진,
       `{angular: {z: 0.3}}`로 제자리 회전. `odom` 위치·orientation
@@ -300,19 +321,149 @@ ros2 run nav2_map_server map_saver_cli -f ~/map
       회전 중이고, `ros2 topic hz /scan`으로 ~4.99Hz 안정적 발행,
       `ranges` 값도 0.38~0.68m대 실측치로 확인. 아래 12절 트러블슈팅
       참고(컨테이너에 `--device=/dev/ttyUSB0` 누락이 원인이었음)
-- [ ] 지도 저장 — 다음 단계
+- [x] **PC 키보드 teleop 경로 검증(2026-08-12)** — 실물 실행 전 점검,
+      plain `Twist` publisher/subscriber 매칭, 0속도 메시지, Ctrl-C 때
+      정지 메시지 3회 발행 후 정상 종료까지 확인. 바퀴를 띄운 실물에서
+      전진·후진·좌회전·우회전·좌곡선·우곡선 6단계를 실행했고, 모든
+      단계에서 좌우 wheel joint 위치와 속도가 명령 방향대로 변해 통과했다.
+- [x] **실물 Cartographer 지도 생성 확인(2026-08-12)** — `/scan`
+      약 4.99Hz와 `/odom` 약 19.27Hz를 입력으로 받아 `/map` 발행,
+      `map -> odom` TF 연속 발행 확인. 정지 상태의 첫 지도는 0.05m/cell,
+      61x71 cells로 생성됨
+- [x] **지도 저장 경로 확인(2026-08-12)** — `map_saver_cli`로 생성 중인
+      지도를 임시 경로에 저장해 61x71 `PGM`과 `YAML`이 모두 생성되고
+      YAML의 image/resolution/origin 메타데이터가 정상임을 확인.
+      사용자 명령은 `tb3-map-save <이름>`, 결과는 `~/maps/`에 저장
+- [x] **실제 주행 지도 최종 저장(2026-08-12)** — 복도와 장애물 주변을
+      TELEOP으로 주행한 뒤 정지 상태를 25초 동안 확인하고
+      `~/maps/dapier_real_20260812.{yaml,pgm}`으로 저장했다. 최종 지도는
+      0.05m/cell, 887x206 cells이며 PGM에 장애물 3,225셀, 자유 공간
+      44,367셀, 미확인 공간 135,130셀이 들어 있다. YAML/PGM 구조,
+      raster 길이, 비정상 픽셀 0개와 SHA-256까지 확인했다. 진행 중
+      체크포인트 `dapier_real_checkpoint_20260812`도 별도로 보존했다.
+- [x] **Cartographer odometry 시간 역행 근본 해결(2026-08-12)** — domain
+      30에서는 12초 동안 PC 수신 338개 중 70회 timestamp 역행이 있었고
+      Cartographer가 fatal 종료됐다. 전용 domain 73 격리 후 직접 콜백
+      audit 결과 PC 238개/Jetson 241개 모두 중복 0, 역행 0이었다.
+      따라서 `use_odometry=false` 임시안은 채택하지 않고 삭제했으며,
+      ROBOTIS 공식 `use_odometry=true` 설정을 그대로 사용한다.
+
+### 새 터미널에서 실제로 갖고 놀면서 지도 만들기
+
+1. 로봇 전원을 켜고 약 30초 기다린다. Jetson의 Docker 컨테이너와
+   `turtlebot3-bringup.service`는 자동 시작하므로 SSH 터미널은 필요 없다.
+2. **터미널 1**에서 `tb3-slam`을 실행한다. 연결 점검이 통과하면 RViz가
+   열리고 지도가 나타난다. 지도 저장 전까지 이 터미널을 닫지 않는다.
+   모터/OpenCR 전원만 껐다 켜고 Jetson은 계속 살아 있었다면 먼저
+   `tb3-restart`를 한 번 실행한다. 이 명령은 Jetson bringup을 재시작하고,
+   CycloneDDS의 이전 endpoint가 사라져 `/cmd_vel` 구독자와 `/odom`
+   발행자가 각각 정확히 1개가 될 때까지 기다린다. 그 다음
+   `tb3-slam`을 실행한다.
+   평상시 실행은 `tb3-ready --mode slam`을 자동 호출한다. ROS daemon을
+   재시작하지 않고 odom 5개, TF 2개, 배터리/torque 2개, 라이다 2개를
+   동시에 받아 조건이 채워지는 즉시 Cartographer를 시작한다. endpoint가
+   정확히 하나인지, timestamp 중복·역행이 없는지, 배터리가 11.1V
+   이상인지, torque가 켜졌는지, 라이다에 유효 거리값이 있는지는 그대로
+   검사한다. 즉 안전 조건을 빼서 빨라진 것이 아니라 순차 대기와 반복적인
+   daemon reset을 없앤 것이다.
+3. **터미널 2**에서 `tb3-teleop`을 실행한다. `w` 전진, `x` 후진,
+   `a/d` 주행 중 좌/우 조향, `r` 직진 복귀, `s` 또는 Space 정지다.
+   직선 속도는 0.02m/s 단계로 최대 +/-0.18m/s, 회전은 0.15rad/s 단계다.
+   곡선주행은 최대 1.10rad/s, 제자리 회전은 최대 1.50rad/s다. 좌우 바퀴
+   각각 0.22m/s 이하이고 안쪽 바퀴가 바깥쪽의 20% 이상 돌도록 자동
+   제한된다. 스포츠 최고속에서 조향하면 직선속도를 필요한 만큼 자동으로
+   낮춘다. 명령은 20Hz로 갱신하고, 전진·조향은 가속도 제한을 거쳐
+   부드럽게 바뀌지만 정지 키는 즉시 0속도를 보낸다. 처음 설치한 날에만
+   `tb3-wheel-test`로 바퀴를 띄워 6방향을 확인한 뒤 바닥에 내려놓는다.
+   넓은 바닥에서 지도 작성이 아닌 주행만 할 때는
+   `tb3-teleop --sport`로 공식 직선 상한 0.22m/s를 쓸 수 있다.
+4. 직선과 완만한 회전을 섞고, 지나간 곳을 다시 방문하면서 천천히
+   주행한다. 라이다 앞을 손이나 몸으로 가리지 않는다.
+5. **터미널 3**에서 `tb3-slam-check`을 실행한다. `OK`와 지도 크기가
+   나오면 `tb3-map-save my_room`처럼 저장한다. 결과는
+   `~/maps/my_room.yaml`과 `~/maps/my_room.pgm`이다.
+6. 저장 파일 두 개가 출력된 것을 확인한 뒤 터미널 2에서 `Ctrl+C`,
+   터미널 1에서 `Ctrl+C` 순서로 종료한다.
+
+### 빠른 시작 점검과 정밀 진단의 구분
+
+- `tb3-ready`: 평상시 시작용이다. `tb3-teleop`, `tb3-slam`, `tb3-nav`가
+  목적에 맞는 mode로 자동 실행한다. TELEOP은 라이다를 사용하지 않으므로
+  drive mode에서는 라이다를 기다리지 않는다.
+- `tb3-check`: 전원을 껐다 켠 뒤, 빨간 LED/비프음/모터 이상이 있었을 때,
+  DDS endpoint가 중복됐을 때, 또는 `tb3-ready` 실패 원인을 자세히 볼 때
+  수동 실행한다. ROS daemon을 초기화하고 각 항목을 더 길게 순차 검사한다.
+- `tb3-restart`: Jetson bringup을 실제로 재시작해 예전 DDS endpoint가
+  사라지는지까지 봐야 하므로 의도적으로 `tb3-check` 정밀 경로를 유지한다.
+
+로봇 전원이 꺼진 상태의 빠른 점검은 실제 측정에서 약 3.1초 안에 실패했고,
+0개의 endpoint/odom/TF/배터리/torque를 구체적으로 보고했다. 정상 로봇의
+실제 통과 시간은 다음 가동 때 별도로 기록한다.
 
 ## 9. 실물 Nav2 자율주행 (교재 Part2와 동일 목적, 실물판)
 
 ```bash
-ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/map.yaml
+tb3-nav my_room
 ```
 
-- [ ] `/initialpose` 전송 후 AMCL 수렴
-- [ ] `/navigate_to_pose` 액션으로 목표까지 실제 이동 + `SUCCEEDED` 수신
-- [ ] 충돌·이탈 없이 완료
+`tb3-nav`은 `~/maps/my_room.yaml`과 PGM을 확인하고, SLAM이 완전히
+종료된 뒤에만 추적 가능한 독립 패키지 `dapier_turtlebot3_real`의 Nav2를
+시작한다. 타입이 보존된 실물 전용 YAML에서 모든
+`enable_stamped_cmd_vel`을 false로 두고 자율주행 직선 속도는 0.18m/s로
+제한한다. 전달받은 지도 절대경로를 `map_server`에 직접 주입하므로 패키지의
+가상 예제 `map.yaml`을 잘못 여는 일이 없다. RViz에서 먼저
+**2D Pose Estimate**로 로봇의 실제 위치·방향을 찍고, AMCL이 수렴한 뒤
+새 터미널에서 `tb3-nav-check my_room`이 `OK`인지 확인한다. 이 검사는
+`map_server`가 지정한 YAML을 정확히 열었는지와 실시간 `/map`의
+크기·해상도가 저장된 PGM/YAML 쌍과 일치하는지까지 검사한다. 그 다음에만
+새 터미널에서 `tb3-nav-watch`를 실행하고 **Nav2 Goal**을 찍는다. watcher는
+실행 전에 남아 있던 action status를 기준선에서 제외하고 새 goal UUID의
+상태만 추적하며, `SUCCEEDED`일 때만 성공 종료한다. `CANCELED`, `ABORTED`,
+action server 없음과 timeout은 모두 실패다.
 
-## 10. 예상 트러블 포인트 (아직 실물로 안 겪어봤으므로 추정 — 겪으면 갱신)
+- [x] 실물 전용 패키지 빌드, YAML 타입, 지도 경로 로드 확인 — 정지 상태
+      검증 지도 `domain73_official_validation`을 정확히 37x32 cells로 로드
+- [x] 충전된 배터리로 `/odom` 및 `odom -> base_footprint` TF 재검증
+- [x] `/initialpose` 전송 후 AMCL 수렴 — 라이다 끝점 82.3%가 지도 벽
+      10cm 이내에 일치
+- [x] `FollowWaypoints`로 6개 목표 실제 이동 + `SUCCEEDED` 수신
+- [x] 충돌·이탈·누락 없이 19.52m 계획 완주, odometry 누적 21.69m
+
+2026-08-12 첫 시도는 preflight에서 좌측 Dynamixel 빨간 LED와
+`torque=false`를 검출해 목표를 보내지 않았다. 충전·냉각 후 재시작한 두 번째
+시도에서 정밀 preflight(odom 74개, 중복/역행 0, 배터리 최저 11.76V,
+torque true, 라이다 18 scan)를 통과했다. 초기 자세가 늦게 들어오며 Nav2가
+부분 활성화된 상태는 lifecycle manager `RESUME`으로 정상화했고 이후 필수
+노드는 모두 active였다.
+
+처음 0.30m 목표는 upstream `SimpleGoalChecker.xy_goal_tolerance=0.25` 때문에
+약 0.11m만 움직이고도 `SUCCEEDED`가 됐다. 성공으로 과장하지 않고 tolerance를
+0.08m, yaw tolerance를 0.15rad로 낮췄다. 그 뒤 3m → 6m → 9m → 6m →
+3m → 출발점의 6개 웨이포인트를 `ComputePathThroughPoses`로 먼저 검사했다.
+계획은 757 pose, 19.52m였고 실제 결과는 `status=4`, `error_code=0`,
+`missed=[]`, odometry 누적 21.69m였다. `/cmd_vel_nav`,
+`/cmd_vel_smoothed`, 최종 `/cmd_vel` 모두 최대 0.18m/s와 1.0rad/s를 기록해
+계획·제어·충돌감시·실물 전달 전체를 확인했다.
+
+재현 명령은 다음과 같다. 첫 명령은 좌표를 실행하지 않고 전체 연결 경로만
+검사한다. 두 번째 명령의 `--execute`는 실물 구동을 명시적으로 허용한다.
+
+```bash
+tb3-waypoints \
+  --pose 3.025 0.152 0 --pose 6.025 0.152 0 \
+  --pose 9.025 0.102 180 --pose 6.025 0.152 180 \
+  --pose 3.025 0.152 180 --pose 0.100 0.030 -47.3
+
+tb3-waypoints --execute \
+  --pose 3.025 0.152 0 --pose 6.025 0.152 0 \
+  --pose 9.025 0.102 180 --pose 6.025 0.152 180 \
+  --pose 3.025 0.152 180 --pose 0.100 0.030 -47.3
+```
+
+다른 지도에서 이 좌표를 재사용하지 않는다. RViz에서 새 지도의 흰색
+자유공간 좌표를 확인해 바꾸고, 계획 명령의 `PLAN OK`를 먼저 확인한다.
+
+## 10. 예상 트러블 포인트
 
 - Nano USB 배럴잭 5V/2A 전원으로는 Wi-Fi+카메라+USB 허브(OpenCR+LDS) 동시
   부하 시 브라운아웃 가능 → 문제 생기면 5V/4A 배럴잭 전원으로 교체
@@ -322,8 +473,9 @@ ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/map.yaml
 - PC(Jazzy 계열 최근 설치)에 Humble을 apt 네이티브로 못 깔면 PC도 Docker로
   통일 — 이 경우 절차 7을 Docker 버전으로 다시 씀
 - `turtlebot3_ws`(Jazzy) 교재에서 겪은 `/cmd_vel` 타입 이슈
-  (`TwistStamped` vs `Twist`)는 Humble 쪽엔 없음 — Jazzy 전용 이슈였다는
-  점을 착각하지 말 것
+  (`TwistStamped` vs `Twist`)는 실물 전용 teleop 스크립트에서 plain
+  `Twist`로 해결했다. Jazzy↔Humble 연결 시 출력되는 type-hash 경고는
+  관찰되지만, 실제 topic discovery·구독 매칭·odom 데이터 수신은 정상이다.
 
 ## 11. 바퀴 첫 구동 디버깅 — "하드웨어 문제인 줄 알았는데 테스트 방법 문제였다"
 
@@ -399,4 +551,105 @@ ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=$HOME/map.yaml
 쪽을 택함). 나중에 장치를 추가했으면 컨테이너 재생성이 필요하다는 것도
 기억해둘 것.
 
+## 13. OpenCR USER3 빨간 LED + 반복 비프음 (2026-08-12)
+
+실물 Nav2 검증 직전 `turtlebot3_node`에서 Dynamixel
+`There is no status packet`이 연속 발생했고, 이어 stack-smashing으로
+프로세스가 종료됐다. 부모 `ros2 launch`는 살아 있어 systemd 서비스는
+`active`로 보였지만 `/odom`과 `odom -> base_footprint` TF는 사라진
+상태였다. 재시작 직후에는 `Failed connection with Devices`로 다시 종료됐다.
+
+현장에서 확인한 **OpenCR USER3 빨간 LED + 반복 비프음**은 공식 OpenCR
+TurtleBot3 펌웨어 소스상 저전압 경보다. `LED_LOW_BATTERY=2`가 USER LED
+배열의 세 번째인 USER3을 가리키고, 입력이 11.1V 미만이면 점등한다. 평균
+전압이 약 11.0V 미만으로 5회 확인되면 Dynamixel 전원을 끄고 1kHz 비프를
+0.5초씩 반복한다. 따라서 이번 `No status packet`은 저전압 보호로 모터
+전원이 차단된 결과와 일치한다.
+
+복구 순서:
+
+1. 로봇 전원을 즉시 끈다.
+2. 방전 배터리를 OpenCR에서 분리한다.
+3. 정품/규격에 맞는 3S LiPo 충전기로 완충한다. OpenCR에 연결한 채 충전과
+   방전을 동시에 하지 않는다.
+4. 충전된 배터리를 다시 연결하고 전원을 켠 뒤 USER3과 반복 비프가 없는지
+   확인한다.
+5. `tb3-restart` 후 `/cmd_vel` 구독자, `/odom`, TF, 실제 양쪽 바퀴를 다시
+   확인한다. 이 검증 전에는 SLAM/Nav2 성공으로 기록하지 않는다.
+
+자식 `turtlebot3_ros`가 죽어도 부모 launch가 살아 systemd가 놓치는 문제는
+`turtlebot3_ws/patches/turtlebot3_bringup_respawn.patch`로 노드에 5초
+respawn을 적용했다. 2026-08-12 충전 후 Jetson의 Humble 소스에 패치를
+적용해 `turtlebot3_bringup` 재빌드와 서비스 재시작을 완료했다. 정상 상태의
+`turtlebot3_ros` PID 490을 의도적으로 `SIGTERM` 종료하자 5초째 PID 565로
+재생성됐고, 이어서 `/odom` 81개(중복·역행 0), typed TF 2회, 배터리 최저
+12.240V, torque 3회 연속 true, LiDAR 19스캔(유효 거리점 4,833개)을 모두
+다시 통과했다. 따라서 이 자동복구 경로는 실물에서 검증 완료다.
+
+### 2022년 OpenCR ROS2 모터 무반응 결함과의 구분
+
+ROBOTIS 포럼의 2022-06-10 게시글(Post 2591905)은 토픽·라이다·SLAM은
+정상인데 teleop/Nav2 명령에 모터가 전혀 반응하지 않은 사례다. 공식 답변은
+당시 OpenCR ROS2 펌웨어 결함이라고 밝혔고, 연결된 수정 커밋은 초기화 중
+누락된 `dxl_slave.begin()`을 추가한다. 이 수정은 OpenCR 1.5.0부터 포함돼
+있고, 공식 ROS2 바이너리 저장소에도 2022-06-24에 수정 펌웨어가 올라왔다.
+
+현재 보드에 실제로 업로드한 파일은 공식 `ROS2/latest`와 같은
+**0.2.1 / `V230127R1`** 바이너리다. 이는 위 수정 배포보다 뒤 버전이고,
+같은 펌웨어에서 실제 전진·제자리 회전도 이미 성공했다. 따라서 2022년의
+`dxl_slave.begin()` 누락을 이번 USER3+비프음의 직접 원인으로 보지 않는다.
+USER3과 반복 비프는 공식 펌웨어의 저전압 분기와 정확히 일치한다.
+
+다만 충전 후 다음 두 조건을 별도로 다시 확인한다.
+
+1. `tb3-check`에서 배터리 11.1V 이상, OpenCR torque `true`, `/odom`과
+   `/scan`이 모두 정상인지 확인한다.
+2. 바퀴를 띄운 상태에서 `tb3-teleop`으로 전진·회전시켜 양쪽 모터가 모두
+   반응하는지 확인한다. 센서·SLAM은 정상인데 모터만 계속 무반응이면 그때
+   펌웨어 재플래시와 Dynamixel 통신을 다시 조사한다.
+
+참고: ROBOTIS Forum Post 2591905, ROBOTIS-GIT/OpenCR PR #309 commit
+`4e60a84e`, ROBOTIS-GIT/OpenCR-Binaries ROS2 0.2.1.
+
 Related: [[turtlebot3-ros-dd-study-book-progress]]
+
+## 14. 좌측 XL430 빨간 LED + Torque OFF (2026-08-12)
+
+실제 매핑을 끝내고 Nav2로 전환하던 중 좌측 XL430의 빨간 LED가 다시
+점등됐다. 이번에는 OpenCR USER3 저전압 LED와 구분해야 한다. Nav2
+preflight가 읽은 OpenCR 배터리는 최저 11.87V였지만 `/sensor_state.torque`가
+`false`로 바뀌었고 곧 Jetson endpoint도 사라졌다. 저장 지도에는 영향이
+없으며 자율주행 목표도 보내기 전이었다.
+
+XL430 공식 제어표에서 보호 shutdown의 기본 원인은 과부하(bit 5), 회로
+충격/구동 전력 부족(bit 4), 과열(bit 2)이다. 설정에 따라 엔코더(bit 3)와
+입력전압(bit 0)도 원인이 될 수 있다. shutdown이 발생하면 Torque Enable이
+0으로 지워지고 모터 출력이 0%가 되며, 펌웨어 v41 이상에서는 모터 LED가
+1초 주기로 깜빡인다. 재부팅 전까지 torque를 다시 켤 수 없고, 과열이면
+최소 20분 이상 식힌 뒤 재사용하라는 것이 공식 지침이다.
+
+현재 ROS2 OpenCR 펌웨어와 `turtlebot3_node`가 노출하는 외부 제어표에는
+두 모터의 현재 전류·속도·위치와 합산 torque 상태만 있고, 각 XL430의
+`Hardware Error Status(70)`, `Present Input Voltage(144)`, `Present
+Temperature(146)`는 없다. 따라서 이번 기록만으로 과열·과부하·전원 중
+하나를 단정하지 않는다. 다음 재시도 순서는 다음과 같다.
+
+1. 전원을 끄고 모터가 뜨거우면 20분 이상 식힌다. 뜨거운 상태에서 바로
+   재가동하지 않는다.
+2. 전원이 꺼진 상태에서 좌우 바퀴를 손으로 같은 힘으로 돌려 좌측만
+   뻑뻑한지, 타이어/프레임/혼이 닿는지, 축이 비뚤어졌는지 확인한다.
+   전원이 들어온 상태에서는 케이블을 뽑거나 끼우지 않는다.
+3. 좌측 XL430의 양쪽 TTL 케이블과 OpenCR 연결부가 완전히 체결됐는지
+   확인한다. 케이블 피복 손상과 눌림도 확인한다.
+4. 바퀴를 바닥에서 띄우고 전원을 켠 뒤 `tb3-restart`, `tb3-check`를
+   실행한다. LED가 다시 켜지거나 torque가 한 번이라도 false면 주행하지
+   않는다.
+5. 냉간·무부하에서도 좌측만 곧바로 재발하면 단순 배터리 문제로 처리하지
+   않는다. 정확한 오류 비트를 읽으려면 OpenCR에 공식 `usb_to_dxl`
+   진단 스케치를 올려 DYNAMIXEL Wizard 2.0으로 좌측 모터를 검사해야 한다.
+   이 작업은 현재 TurtleBot3 펌웨어를 지우므로 진단 후 ROS2 Burger
+   펌웨어를 다시 플래시해야 하며, 실제 재발 시 별도 정비 단계로 수행한다.
+
+참고: ROBOTIS XL430-W250 e-Manual의 Shutdown(63), Hardware Error
+Status(70), Present Input Voltage(144), Present Temperature(146), ROBOTIS
+DYNAMIXEL Wizard 2.0 문서, ROBOTIS-GIT/OpenCR `turtlebot3_ros2` 소스.

@@ -1,0 +1,17 @@
+[Unit]
+Description=TurtleBot3 Burger ROS 2 bringup in Docker
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+ExecStartPre=/usr/bin/docker start turtlebot3_humble
+ExecStart=/usr/bin/docker exec -e ROS_DOMAIN_ID=73 turtlebot3_humble /bin/bash -lc "source /opt/ros/humble/install/setup.bash; source /turtlebot3_ws/install/setup.bash; exec ros2 launch turtlebot3_bringup robot.launch.py"
+ExecStop=-/usr/bin/docker exec turtlebot3_humble /bin/bash -lc "pkill -INT -f '[r]os2 launch turtlebot3_bringup robot.launch.py' || true"
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
