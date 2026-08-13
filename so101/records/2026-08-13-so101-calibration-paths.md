@@ -37,7 +37,8 @@ teleoperation을 금지하고 calibration을 다시 수행한다.
 `calibrate_follower_safe.py`는 기존 torque-off interlock에 다음을 추가했다.
 
 1. 관절별 최소 span을 충족하지 못하면 저장하지 않는다.
-2. 진행 중인 `SPAN`과 `OK` 상태를 한 줄에서 갱신해 출력 폭주를 막는다.
+2. 진행 중인 `SPAN`을 80열 이내의 `P/L/E/F/G` 한 줄에서 갱신해,
+   좁은 터미널에서도 줄바꿈 출력 폭주를 막는다.
 3. Enter를 누르면 즉시 판정하고, 미달이면 부족한 축을 표시한 뒤 실패 종료한다.
 4. `q` 또는 Ctrl+C로 즉시 안전 취소할 수 있다.
 5. 모든 축이 기준을 넘은 뒤 Enter를 눌러야 공식 LeRobot 저장 단계로 간다.

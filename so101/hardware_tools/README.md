@@ -55,7 +55,8 @@ Follower는 로컬 안전 래퍼를 사용한다. 이 래퍼는 LeRobot의 공�
 - 6축 `Torque_Enable=0`을 확인한 뒤에만 진행
 - shoulder pan/lift/wrist flex 1000 tick, elbow 800 tick, gripper 500 tick
   미만이면 저장 거부
-- 진행 상태를 한 줄에서 갱신하고 Enter를 누르면 즉시 저장 또는 실패 종료
+- 진행 상태를 80열 이내의 `P/L/E/F/G` 한 줄에서 갱신하고 Enter를 누르면
+  즉시 저장 또는 실패 종료
 - `q`/Ctrl+C에서 즉시 안전 취소
 - 성공·실패와 관계없이 종료 전에 torque를 다시 끔
 

@@ -31,6 +31,13 @@ MIN_RANGE_SPAN_TICKS = {
     "gripper": 500,
 }
 DISPLAY_PERIOD_SECONDS = 0.25
+STATUS_LABELS = {
+    "shoulder_pan": "P",
+    "shoulder_lift": "L",
+    "elbow_flex": "E",
+    "wrist_flex": "F",
+    "gripper": "G",
+}
 
 
 class CalibrationIncompleteError(RuntimeError):
@@ -47,6 +54,15 @@ def _read_command() -> str | None:
     if not ready:
         return None
     return sys.stdin.readline().strip().lower()
+
+
+def _format_status_line(spans: dict[str, int]) -> str:
+    """Build a terminal-width-safe status line; ``*`` means span gate passed."""
+    values = []
+    for name, minimum in MIN_RANGE_SPAN_TICKS.items():
+        passed = "*" if spans[name] >= minimum else ""
+        values.append(f"{STATUS_LABELS[name]}:{spans[name]}{passed}")
+    return "SPAN " + " ".join(values) + "  [*=OK Enter=stop q=cancel]"
 
 
 def _safe_record_ranges(
@@ -70,7 +86,8 @@ def _safe_record_ranges(
 
     print("\nSafety recorder is active.")
     print("Move every listed joint through its safe full range now.")
-    print("The status stays on one line: ENTER=check and stop, q=cancel safely.")
+    print("P=pan L=lift E=elbow F=wrist-flex G=gripper; *=minimum span reached.")
+    print("The status stays on one short line: ENTER=check and stop, q=cancel safely.")
 
     while True:
         positions = {
@@ -88,13 +105,8 @@ def _safe_record_ranges(
         ready = all(spans[name] >= MIN_RANGE_SPAN_TICKS[name] for name in motor_names)
 
         if display_values and now - last_display >= DISPLAY_PERIOD_SECONDS:
-            status = " | ".join(
-                f"{name}:{spans[name]}/{MIN_RANGE_SPAN_TICKS[name]}"
-                + (" OK" if spans[name] >= MIN_RANGE_SPAN_TICKS[name] else "")
-                for name in motor_names
-            )
-            line = "SPAN " + status + "  [Enter=check, q=cancel]"
-            sys.stdout.write("\r" + line.ljust(last_status_width))
+            line = _format_status_line(spans)
+            sys.stdout.write("\r\033[2K" + line.ljust(last_status_width))
             sys.stdout.flush()
             last_status_width = max(last_status_width, len(line))
             last_display = now
