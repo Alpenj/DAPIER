@@ -116,6 +116,20 @@ def test_safe_recorder_stops_immediately_on_incomplete_enter(
         safe._safe_record_ranges(FakeBus(), list(center), display_values=False)
 
 
+def test_safe_recorder_status_fits_an_80_column_terminal() -> None:
+    spans = {
+        "shoulder_pan": 1234,
+        "shoulder_lift": 1234,
+        "elbow_flex": 999,
+        "wrist_flex": 1234,
+        "gripper": 999,
+    }
+    line = safe._format_status_line(spans)
+    assert len(line) <= 79
+    assert "P:1234*" in line
+    assert "G:999*" in line
+
+
 def test_safe_recorder_returns_after_complete_motion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
