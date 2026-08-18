@@ -5,6 +5,10 @@ import argparse
 import subprocess
 from pathlib import Path
 
+from runtime_bootstrap import ensure_course_environment
+
+ensure_course_environment()
+
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 

@@ -35,6 +35,20 @@ python project5_error_analysis.py --data-dir ~/DAPIER/so101_imitation_learning/1
 
 P2와 P5는 학습된 baseline 체크포인트를 읽으므로 P3 뒤에 실행한다. P4는 P3가 기록한 세 실험의 TensorBoard 태그가 실제로 존재하는지 독립적으로 검증한다.
 
+## VS Code에서 실행
+
+이 폴더 자체를 VS Code workspace로 열면 `.vscode/settings.json`이 `lerobot-vision` conda 환경을 선택하고 이 PyTorch 프로젝트에서만 ROS의 Python 3.12 경로 혼입을 차단한다. 우측 상단의 Python 실행 버튼으로 과제 파일을 바로 실행할 수 있다. 기존 수업용 CIFAR-10 데이터가 있으면 인자 없이 자동으로 재사용한다.
+
+왼쪽 `실행 및 디버그`에서 다음 구성을 각각 선택할 수도 있다.
+
+- 과제 1 - 증강 시각화
+- 과제 2 - 피처맵
+- 과제 3 - 절제 실험 (30 epoch)
+- 과제 4 - TensorBoard 검증
+- 과제 5 - 오류 분석
+
+과제 4 실행 뒤 VS Code 안에서 보려면 `Ctrl+Shift+P` → `Simple Browser: Show`를 고르고 `http://127.0.0.1:6006`을 입력한다. P1·P2·P3·P5의 PNG 결과는 `artifacts/figures/`에서 클릭하면 VS Code 이미지 탭으로 열린다.
+
 TensorBoard 이벤트는 `artifacts/tensorboard/`에 생성된다.
 
 ```bash

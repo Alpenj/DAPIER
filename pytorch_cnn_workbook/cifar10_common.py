@@ -25,7 +25,6 @@ import torch.nn.functional as F
 from sklearn.metrics import classification_report, confusion_matrix
 from torch import nn
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 
 CLASSES = (
@@ -58,6 +57,21 @@ RUN_CONFIGS = (
     RunConfig("no_bn", use_bn=False, use_dropout=True),
     RunConfig("no_dropout", use_bn=True, use_dropout=False),
 )
+
+
+def default_data_dir() -> Path:
+    """Reuse the course CIFAR-10 download when it is already present."""
+
+    course_data = (
+        Path.home()
+        / "DAPIER"
+        / "so101_imitation_learning"
+        / "101_pytorch_basic"
+        / "data"
+    )
+    if (course_data / "cifar-10-batches-py").is_dir():
+        return course_data
+    return Path.home() / ".cache" / "dapier" / "cifar10"
 
 
 def resolve_device(requested: str) -> torch.device:
@@ -410,6 +424,8 @@ def train_one_run(
     device: torch.device,
 ) -> dict[str, Any]:
     """Train one ablation condition and emit CSV, checkpoint, and TensorBoard data."""
+
+    from torch.utils.tensorboard import SummaryWriter
 
     set_seed(seed)
     train_loader, test_loader = make_loaders(data_dir, batch_size, num_workers, seed)

@@ -4,14 +4,16 @@
 import argparse
 from pathlib import Path
 
-from cifar10_common import prepare_output_dirs, run_p1
+from runtime_bootstrap import ensure_course_environment
+
+ensure_course_environment()
+
+from cifar10_common import default_data_dir, prepare_output_dirs, run_p1
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--data-dir", type=Path, default=Path.home() / ".cache/dapier/cifar10"
-    )
+    parser.add_argument("--data-dir", type=Path, default=default_data_dir())
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).parent / "artifacts"
     )
