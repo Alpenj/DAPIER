@@ -1,0 +1,5 @@
+data/
+artifacts/checkpoints/
+artifacts/tensorboard/
+__pycache__/
+*.pyc
