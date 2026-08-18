@@ -1,0 +1,19 @@
+{
+  "command": "tensorboard --logdir=artifacts/tensorboard --port=6006",
+  "runs": [
+    "baseline_bn_dropout",
+    "no_bn",
+    "no_dropout"
+  ],
+  "tracked": [
+    "loss/train",
+    "loss/test",
+    "accuracy/train",
+    "accuracy/test",
+    "lr",
+    "gradients/conv1_norm",
+    "gradients/conv4_norm",
+    "weights/conv1",
+    "weights/conv4"
+  ]
+}
