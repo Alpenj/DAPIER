@@ -75,7 +75,7 @@
 | LeRobot import/install | import 실패, pip package 없음 | installed package로 가정하지 않음 |
 | LeRobot source | /home/dapier-jhj/so101/lerobot, detached 30da8e6, v0.6.0 | source reference는 있으나 dirty |
 | LeRobot source dirty | .gitignore, pyproject.toml, env files, uv.lock, tests 등 수정·추가 | 이 보고서가 수정하지 않음 |
-| DAPIER packages | ros_arm, jdcobot100_sim, casino_dealer, so101_ros2 | 기존 학습 자산의 출발점 |
+| DAPIER packages | ros_arm, jdcobot100_sim, casino_dealer, so101/ros2_ws | 기존 학습 자산의 출발점 |
 | 실기체 승인 | 수량·운영실 규정·사용 승인 미확인 | 실기체 단계는 보류 |
 | model/data license | 각 checkpoint·dataset별 미확인 | 배포 전 확인 필요 |
 
@@ -88,7 +88,7 @@
 | ros_arm | ROS2 Jazzy와 Arduino serial을 이용하는 4-axis SG90/MG90 경로, sensor_msgs/msg/JointState, radian↔servo degree 변환 | 실제 hardware adapter의 참고. 저수준 command를 ROS policy loop와 섞지 않음 |
 | jdcobot100_sim | Ubuntu 24.04·ROS2 Jazzy·Gazebo Harmonic 기반 simulation-only, RViz/Gazebo/ROS2 경계 | simulation adapter와 rosbag/mock 검증의 기준 |
 | casino_dealer | CardBench v0, 15 Hz, 양쪽 4 joint measured state/radian, vacuum measured kPa, absolute joint/vacuum action | contract regression fixture. 실제 driver로 오해하지 않음 |
-| so101_ros2 | dapier_so101_core, dapier_so101_teleop, 문서·ADR가 존재 | 현재 ROS2 작업을 연결할 existing code |
+| so101/ros2_ws | dapier_so101_core, dapier_so101_teleop, 문서·ADR가 존재 | 현재 ROS2 작업을 연결할 existing code |
 | main 상태 | 시작 시 기존 untracked AGENTS.md, onshape/jdcobot100/jdcobot100.xml, scene.xml이 있었음 | 기존 사용자 변경을 보존하고 이 worktree에서는 건드리지 않음 |
 
 CardBench v0의 관측과 행동을 섞지 않는 것이 핵심이다.
