@@ -52,22 +52,20 @@ dapier_so101_teleop은 ROS 메시지 수신, 시간 확인, enable 서비스, �
 담당한다. 모터 register나 calibration EEPROM을 직접 만지지 않는다. 시리얼
 포트의 소유자는 미래의 dapier_so101_hardware 하나로 제한할 계획이다.
 
-자세한 결정 근거는 [ADR 0001](docs/adr/0001-own-ros2-runtime.md), 코드 읽는
-순서는 [core 학습 노트](docs/modules/01-core.md)와
-[safe teleop 학습 노트](docs/modules/02-safe-teleop.md)에 기록했다.
+자세한 결정 근거는 [ADR 0001](../docs/adr/0001-own-ros2-runtime.md), 코드 읽는
+순서는 [core 학습 노트](../docs/modules/01-core.md)와
+[safe teleop 학습 노트](../docs/modules/02-safe-teleop.md)에 기록했다.
 이번 구현 과정과 검증 경계는
-[GitHub 블로그 초안](docs/blog/2026-08-04-own-so101-ros2-stack.md)에도 별도로
+[GitHub 블로그 초안](../docs/blog/2026-08-04-own-so101-ros2-stack.md)에도 별도로
 정리했다.
 
 ## 빌드와 테스트
 
-이 저장소가 ~/DAPIER에 clone되어 있다는 기준이다.
+이 저장소가 `~/DAPIER`에 clone되어 있다는 기준이다. 별도 symlink workspace를
+만들지 않고 이 디렉터리에서 바로 빌드한다.
 
 ~~~bash
-mkdir -p ~/so101_ros2_ws/src
-ln -s ~/DAPIER/so101_ros2 ~/so101_ros2_ws/src/dapier-so101-ros2
-
-cd ~/so101_ros2_ws
+cd ~/DAPIER/so101/ros2_ws
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install --packages-up-to dapier_so101_teleop
 source install/setup.bash
@@ -91,7 +89,7 @@ colcon test-result --verbose
 
 ~~~bash
 source /opt/ros/jazzy/setup.bash
-source ~/so101_ros2_ws/install/setup.bash
+source ~/DAPIER/so101/ros2_ws/install/setup.bash
 
 ros2 launch dapier_so101_teleop safe_teleop.launch.py
 ~~~

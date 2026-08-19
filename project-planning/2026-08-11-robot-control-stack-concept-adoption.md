@@ -151,7 +151,7 @@ FR3 scripted simulation에서는 3,000 episode 중 73%인 2,193개를 success fi
 ### 보류 또는 채택하지 않음
 
 - RCS 전체 runtime, SO-101 extension 또는 asset의 직접 복사
-- ROS 2 제거 또는 현재 `so101_ros2`의 대체
+- ROS 2 제거 또는 현재 `so101/ros2_ws`의 대체
 - DAPIER public gripper contract를 0..1로 변경
 - 환경별 Python/OMPL/RealSense dependency를 DAPIER 기본 환경에 추가
 - RCS의 `DigitalTwin` wrapper를 safety gate로 간주

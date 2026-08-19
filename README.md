@@ -31,7 +31,7 @@ pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진
 | [`so101/`](so101/README.md) | SO-101 코드·integration·실험 기록·hardware tool을 찾는 최신 인덱스 |
 | [`dapier_sim_first/`](dapier_sim_first/README.md) | ROS 2와 실기체 없이 실행하는 G0/G1 Gate와 offline digital-twin evaluator |
 | [`so101/integrations/lerobot_v0_6_so101_mujoco/`](so101/integrations/lerobot_v0_6_so101_mujoco/README.md) | LeRobot v0.6.0용 SO-101 MuJoCo overlay, IK/VLA 실험과 action trace 보존본 |
-| [`so101_ros2/`](so101_ros2/README.md) | DAPIER가 직접 구성한 ROS 2 Jazzy core와 mock safe teleop |
+| [`so101/ros2_ws/`](so101/ros2_ws/README.md) | DAPIER가 직접 구성한 ROS 2 Jazzy core와 mock safe teleop |
 | [`so101/hardware_tools/`](so101/hardware_tools/README.md) | read-only inventory, 안전 calibration wrapper와 STS3215 감사·복구 도구 |
 | [`casino_dealer/`](casino_dealer/README.md) | CardBench 계약, blackjack planner, episode manifest와 one-card 기구학 baseline |
 | [`docs/SO101_CASINO_DEALER_RUNBOOK_KO.md`](docs/SO101_CASINO_DEALER_RUNBOOK_KO.md) | calibration부터 episode 검수와 policy 평가까지 사람이 따라 하는 실행 순서 |
@@ -121,7 +121,7 @@ python3 -m unittest discover -s dapier_sim_first/test -v
 
 ROS 2 실습은 Ubuntu 24.04와 ROS 2 Jazzy 기준이다.
 
-- SO-101 mock safe teleop: [`so101_ros2/README.md`](so101_ros2/README.md)
+- SO-101 mock safe teleop: [`so101/ros2_ws/README.md`](so101/ros2_ws/README.md)
 - TurtleBot3 SLAM·Nav2: [`turtlebot3_ws/README.md`](turtlebot3_ws/README.md)
 - 커스텀 차동구동 로봇: [`ros_dd_ws/README.md`](ros_dd_ws/README.md)
 - 4축 시뮬레이션: [`jdcobot100_sim/README.md`](jdcobot100_sim/README.md)

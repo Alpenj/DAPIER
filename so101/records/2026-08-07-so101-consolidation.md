@@ -2,6 +2,9 @@
 
 `record_id: DAPIER-2026-08-07-so101-consolidation`
 
+> 현재 ROS 2 정본은 2026-08-19 폴더 정리 후
+> `$HOME/DAPIER/so101/ros2_ws`로 이동했다. 아래 경로는 정리 당시 조사 기록이다.
+
 ## 오늘 확인하려던 것
 
 파일 관리자에서 `so101`, `so101_ros2_ws`, `DAPIER/so101_ros2`,
