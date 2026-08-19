@@ -46,6 +46,12 @@ pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진
 | [`ros_arm/`](ros_arm/README.md) | Arduino Uno + SG90/MG90 4축 제어 | `JointState`→USB serial, sequence GUI, firmware와 안전 범위 |
 | [`onshape/jdcobot100/`](onshape/jdcobot100/) | CAD·mesh·MJCF 자산 | jdcobot100 visual과 MuJoCo reference model |
 
+### PyTorch·컴퓨터 비전 실습
+
+| 경로 | 내용 | 공개 범위 |
+|---|---|---|
+| [`pytorch/resnet_dataset_studio_step1/`](pytorch/resnet_dataset_studio_step1/README.md) | 웹캠 기반 4클래스 × 1,000장 데이터 수집기와 ImageFolder 무결성 검사 | 코드·테스트·카페 공유 ZIP만 포함하며 개인 촬영 이미지는 제외 |
+
 설계 판단과 중단 조건은 [`project-planning/`](project-planning/)에 남긴다.
 원시 dataset이나 실행 영상 대신 사람이 다시 확인할 수 있는 revision, contract,
 metric과 hash를 기록한다.
