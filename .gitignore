@@ -1,6 +1,7 @@
 .env
 **/.env
 **/__pycache__/
+**/.ruff_cache/
 casino_dealer/build/
 casino_dealer/*.egg-info/
 **/robot.pkl
