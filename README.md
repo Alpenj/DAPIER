@@ -10,7 +10,7 @@ pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진
 
 ## 지금 상태
 
-저장소에 남아 있는 최신 실물 기록은 2026-08-13이다.
+저장소에 남아 있는 최신 실물 기록은 2026-08-20이다.
 
 | 영역 | 현재 판단 |
 |---|---|
@@ -20,6 +20,7 @@ pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진
 | SO-101 ROS 2 | 관절 계약, calibration 변환, 제한 계산과 합성 `JointState` 기반 safe teleop까지만 검증했다. 실제 motor driver는 미구현이다. |
 | 카지노 딜러 | blackjack planner, episode manifest와 one-card 기구학 baseline이 있다. 실제 카드·흡착·양팔 동작은 아직 없다. |
 | 이동로봇 | TurtleBot3 SLAM·Nav2는 Jazzy/gz-sim에서 end-to-end로 확인했다. 커스텀 `ros_dd_ws`는 현재 world와 저장 map이 어긋나 Nav2 재검증이 필요하다. |
+| 이동형 양팔 신발 정리 | JDcobot200 두 팔의 STS3215 12개를 읽기 전용으로 확인했고 TurtleBot3 stationary baseline과 들린 바퀴 속도 응답을 기록했다. 팔 동작·RGB-D stream·실제 신발 집기는 아직 미검증이다. |
 | 4축 로봇암 | RViz/Gazebo 시뮬레이션과 Arduino Uno 서보 제어를 별도 패키지로 보관한다. SO-101 결과와 섞지 않는다. |
 
 ## 저장소 구성
@@ -41,6 +42,7 @@ pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진
 | 경로 | 내용 | 현재 범위 |
 |---|---|---|
 | [`turtlebot3_ws/`](turtlebot3_ws/README.md) | TurtleBot3 SLAM·Nav2 | Humble/Gazebo Classic 교재를 Jazzy/gz-sim Harmonic으로 옮겨 지도 저장과 목표 전송을 확인 |
+| [`2ARM_ROBOT/`](2ARM_ROBOT/README.md) | JDcobot200 양팔 + TurtleBot3 Waffle Pi 신발 정리 | 5축+그리퍼 episode 계약, 비식별 실측 evidence, 전력·URDF·sim-to-real 계획과 ROS 2 Jazzy 검증 |
 | [`ros_dd_ws/`](ros_dd_ws/README.md) | 커스텀 differential-drive robot | 7개 package build, gz-sim, TF와 Cartographer 학습 기록. `hexa` scale 원복 뒤 기존 map/Nav2 결과는 재검증 필요 |
 | [`jdcobot100_sim/`](jdcobot100_sim/README.md) | jdcobot100 시뮬레이션 | RViz, Gazebo, `ros2_control` 연결 학습 |
 | [`ros_arm/`](ros_arm/README.md) | Arduino Uno + SG90/MG90 4축 제어 | `JointState`→USB serial, sequence GUI, firmware와 안전 범위 |
@@ -123,6 +125,7 @@ ROS 2 실습은 Ubuntu 24.04와 ROS 2 Jazzy 기준이다.
 
 - SO-101 mock safe teleop: [`so101_ros2/README.md`](so101_ros2/README.md)
 - TurtleBot3 SLAM·Nav2: [`turtlebot3_ws/README.md`](turtlebot3_ws/README.md)
+- 이동형 양팔 신발 정리: [`2ARM_ROBOT/README.md`](2ARM_ROBOT/README.md)
 - 커스텀 차동구동 로봇: [`ros_dd_ws/README.md`](ros_dd_ws/README.md)
 - 4축 시뮬레이션: [`jdcobot100_sim/README.md`](jdcobot100_sim/README.md)
 - Arduino 4축 실물 제어: [`ros_arm/README.md`](ros_arm/README.md)
