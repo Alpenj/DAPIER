@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 
-EPISODE_SCHEMA_VERSION = "dapier.shoe-episode.v0.1"
+EPISODE_SCHEMA_VERSION = "dapier.shoe-episode.v0.2"
+SUPPORTED_EPISODE_SCHEMA_VERSIONS = {"dapier.shoe-episode.v0.1", EPISODE_SCHEMA_VERSION}
 OUTCOME_STATUSES = {"recorded", "accepted", "rejected", "aborted"}
 
 
@@ -26,7 +27,7 @@ def build_manifest(
     episode_id: str,
     sample_count: int,
     samples_sha256: str,
-    arm_dof: int = 6,
+    arm_dof: int = 5,
     gripper_dof: int = 1,
     operator_id: str = "operator_unknown",
     session_id: str = "session_unknown",
@@ -64,7 +65,7 @@ def build_manifest(
             "base_motion_allowed": False,
         },
         "robot": {
-            "platform": "JDcobot300_dual_arm_on_turtlebot3_waffle_pi",
+            "platform": "JDcobot200_dual_arm_on_turtlebot3_waffle_pi",
             "robot_config_version": "pending_hardware_introspection",
             "controller_version": "phase0_no_hardware",
             "calibration_version": "synthetic_v1" if synthetic else "pending_calibration",
@@ -81,7 +82,8 @@ def build_manifest(
         "quality_limits": {
             "max_camera_skew_ns": 50_000_000,
             "max_joint_step_radian": 0.35,
-            "base_stationary_tolerance": 0.0001,
+            "base_linear_stationary_tolerance_mps": 0.0025,
+            "base_angular_stationary_tolerance_radps": 0.0021,
         },
         "outcome": {
             "status": outcome_status,
@@ -150,7 +152,7 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
     missing = sorted(required - set(manifest))
     if missing:
         raise ValueError(f"manifest is missing keys: {missing}")
-    if manifest["schema_version"] != EPISODE_SCHEMA_VERSION:
+    if manifest["schema_version"] not in SUPPORTED_EPISODE_SCHEMA_VERSIONS:
         raise ValueError(f"unsupported schema_version: {manifest['schema_version']!r}")
     _require_text(manifest, "episode_id")
     _require_text(manifest, "created_at_utc")
@@ -185,7 +187,17 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
     _validate_stream_specs(_require_mapping(recording, "action_streams"), "action_streams")
 
     limits = _require_mapping(manifest, "quality_limits")
-    for key in ("max_camera_skew_ns", "max_joint_step_radian", "base_stationary_tolerance"):
+    limit_keys = ["max_camera_skew_ns", "max_joint_step_radian"]
+    if manifest["schema_version"] == "dapier.shoe-episode.v0.1":
+        limit_keys.append("base_stationary_tolerance")
+    else:
+        limit_keys.extend(
+            [
+                "base_linear_stationary_tolerance_mps",
+                "base_angular_stationary_tolerance_radps",
+            ]
+        )
+    for key in limit_keys:
         value = limits.get(key)
         if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
             raise ValueError(f"quality_limits.{key} must be a non-negative number")

@@ -7,6 +7,25 @@ from shoe_sorting_data.contract import build_manifest, load_manifest, save_manif
 
 
 class EpisodeContractTest(unittest.TestCase):
+    def test_default_dimensions_match_observed_jdcobot200(self):
+        manifest = build_manifest(
+            episode_id="episode_000001",
+            sample_count=10,
+            samples_sha256=hashlib.sha256(b"samples").hexdigest(),
+        )
+        self.assertEqual(manifest["recording"]["state_streams"]["left_arm"]["dimension"], 5)
+        self.assertEqual(manifest["recording"]["state_streams"]["left_gripper"]["dimension"], 1)
+        self.assertEqual(
+            manifest["robot"]["platform"],
+            "JDcobot200_dual_arm_on_turtlebot3_waffle_pi",
+        )
+        self.assertEqual(
+            manifest["quality_limits"]["base_linear_stationary_tolerance_mps"], 0.0025
+        )
+        self.assertEqual(
+            manifest["quality_limits"]["base_angular_stationary_tolerance_radps"], 0.0021
+        )
+
     def test_round_trip_preserves_configurable_dimensions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest = build_manifest(

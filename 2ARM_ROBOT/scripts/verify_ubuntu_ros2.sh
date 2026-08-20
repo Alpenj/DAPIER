@@ -40,7 +40,9 @@ cd "${PROJECT_ROOT}"
 colcon build --symlink-install --packages-select shoe_sorting_data
 
 # shellcheck disable=SC1091
+set +u
 source "${PROJECT_ROOT}/install/setup.bash"
-shoe_episode --help >/dev/null
+set -u
+ros2 run shoe_sorting_data shoe_episode --help >/dev/null
 
 echo "PASS: Phase 0 tests, ROS 2 build, and CLI smoke check completed."

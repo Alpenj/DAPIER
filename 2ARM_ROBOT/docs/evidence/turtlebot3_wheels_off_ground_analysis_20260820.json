@@ -1,0 +1,51 @@
+{
+  "analysis": {
+    "angular": {
+      "first_bilateral_positive_command_radps": 0.05,
+      "first_detectable_positive_command_radps": 0.02,
+      "recommended_tracking_ceiling": {
+        "absolute_wheel_speed_asymmetry_fraction": 0.0,
+        "command": 1.2,
+        "measured_encoder_response": 1.1911868496089344,
+        "tracking_ratio": 0.9926557080074454
+      },
+      "tested_positive_command_ceiling": {
+        "absolute_wheel_speed_asymmetry_fraction": 0.060200668896320995,
+        "command": 1.82,
+        "measured_encoder_response": 1.599278640678662,
+        "tracking_ratio": 0.8787245278454187
+      }
+    },
+    "battery_current_informative": false,
+    "battery_voltage_range_v": [
+      11.300000190734863,
+      11.399999618530273
+    ],
+    "criteria": {
+      "angular_stationary_tolerance_radps": 0.0021,
+      "linear_stationary_tolerance_mps": 0.0025,
+      "maximum_absolute_wheel_speed_asymmetry_fraction": 0.05,
+      "maximum_tracking_error_fraction": 0.05
+    },
+    "linear": {
+      "first_bilateral_positive_command_mps": 0.01,
+      "first_detectable_positive_command_mps": 0.01,
+      "recommended_tracking_ceiling": {
+        "absolute_wheel_speed_asymmetry_fraction": 0.003984063745020001,
+        "command": 0.2,
+        "measured_encoder_response": 0.19823748095453686,
+        "tracking_ratio": 0.9911874047726843
+      },
+      "tested_positive_command_ceiling": {
+        "absolute_wheel_speed_asymmetry_fraction": 0.060200668896320995,
+        "command": 0.26,
+        "measured_encoder_response": 0.229496484937388,
+        "tracking_ratio": 0.8826787882207231
+      }
+    }
+  },
+  "created_at_utc": "2026-08-20T08:56:23.634238Z",
+  "schema_version": "dapier.turtlebot-wheel-analysis.v0.1",
+  "source_file": "output/hardware_characterization/turtlebot3_wheels_off_ground_20260820_1750_v02.json",
+  "source_schema_version": "dapier.turtlebot-wheel-characterization.v0.2"
+}

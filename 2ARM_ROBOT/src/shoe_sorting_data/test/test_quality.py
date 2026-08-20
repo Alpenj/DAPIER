@@ -1,3 +1,5 @@
+import hashlib
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -59,6 +61,23 @@ class EpisodeQualityTest(unittest.TestCase):
             codes = {issue.code for issue in report.errors}
             self.assertIn("sample_count_mismatch", codes)
             self.assertIn("checksum_mismatch", codes)
+
+    def test_stationary_gate_uses_separate_linear_and_angular_tolerances(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = generate_episode(Path(temp_dir) / "episode_000001", sample_count=4)
+            manifest = load_manifest(manifest_path)
+            sample_path = manifest_path.parent / "samples.jsonl"
+            samples = [json.loads(line) for line in sample_path.read_text(encoding="utf-8").splitlines()]
+            samples[1]["state"]["base_velocity"] = [0.0024, 0.0022]
+            payload = "".join(
+                json.dumps(sample, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+                for sample in samples
+            ).encode("utf-8")
+            sample_path.write_bytes(payload)
+            manifest["checksums"]["samples_sha256"] = hashlib.sha256(payload).hexdigest()
+            save_manifest(manifest_path, manifest)
+            report = validate_episode(manifest_path)
+            self.assertIn("base_interlock_violation", {issue.code for issue in report.errors})
 
     def test_pending_hardware_versions_and_review_are_not_training_usable(self):
         with tempfile.TemporaryDirectory() as temp_dir:

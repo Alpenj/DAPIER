@@ -67,7 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--root", type=Path, required=True)
     generate.add_argument("--count", type=int, default=20)
     generate.add_argument("--samples", type=int, default=40)
-    generate.add_argument("--arm-dof", type=int, default=6)
+    generate.add_argument("--arm-dof", type=int, default=5)
     generate.add_argument("--gripper-dof", type=int, default=1)
     generate.add_argument("--seed", type=int, default=42)
     generate.add_argument("--fault", choices=sorted(FAULTS), default="none")

@@ -196,6 +196,16 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
                     previous_joint_state[stream_name] = vector
 
         if not manifest["task"]["base_motion_allowed"]:
+            if "base_stationary_tolerance" in limits:
+                base_tolerances = [
+                    limits["base_stationary_tolerance"],
+                    limits["base_stationary_tolerance"],
+                ]
+            else:
+                base_tolerances = [
+                    limits["base_linear_stationary_tolerance_mps"],
+                    limits["base_angular_stationary_tolerance_radps"],
+                ]
             for group_name in ("state", "action"):
                 group = sample.get(group_name)
                 if isinstance(group, Mapping):
@@ -205,7 +215,10 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
                 if isinstance(base, Sequence) and not isinstance(base, (str, bytes)) and all(
                     _is_number(value) for value in base
                 ):
-                    if any(abs(float(value)) > limits["base_stationary_tolerance"] for value in base):
+                    if len(base) == 2 and any(
+                        abs(float(value)) > float(tolerance)
+                        for value, tolerance in zip(base, base_tolerances)
+                    ):
                         report.add(
                             "base_interlock_violation",
                             f"{group_name}.base_velocity is non-zero during stationary manipulation",

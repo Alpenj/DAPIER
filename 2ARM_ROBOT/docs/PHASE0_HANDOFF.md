@@ -2,21 +2,21 @@
 
 ## 목표
 
-실물 장비가 준비되기 전에 ACT 학습 데이터의 형태와 품질 판정을 고정한다.
-Ubuntu ROS 2 교육 PC에서는 먼저 이 문서의 검증 명령을 통과시킨 뒤 recorder
+ACT 학습 데이터의 형태와 품질 판정을 고정하고, 실측 하드웨어 프로필을 실제 recorder에
+연결한다. Ubuntu ROS 2 교육 PC에서는 먼저 이 문서의 검증 명령을 통과시킨 뒤 recorder
 adapter 개발을 이어간다.
 
 ## 확정 장비와 제약
 
 | 항목 | 현재 값 |
 |---|---|
-| 양팔 | JDcobot300 |
+| 양팔 | JDcobot200 두 대 / 팔당 STS3215 6개(관절 5 + 그리퍼 1) |
 | 모바일 베이스 | TurtleBot3 Waffle Pi / XM430-W210-T |
-| RGB-D | Orbbec Astra Pro |
+| RGB-D | 라벨 AADJA1300GX / USB Orbbec Astra 계열, driver 미확인 |
 | 연산 장치 | ASUS TUF Gaming A16 / RTX 5050 |
 | 인원·기간 | 4명 / 핵심 개발 6주 |
 | 추가 장비 예산 | 0원 |
-| 현재 조립 | 부분 조립 |
+| 현재 조립 | 양팔 USB 연결 확인, TurtleBot 실측 완료, 카메라 현재 분리 |
 
 ## 구현 완료
 
@@ -66,28 +66,53 @@ bash scripts/verify_ubuntu_ros2.sh
 
 - Python 단위 테스트 전부 통과
 - `colcon build --symlink-install --packages-select shoe_sorting_data` 통과
-- `shoe_episode --help` 실행 가능
+- `ros2 run shoe_sorting_data shoe_episode --help` 실행 가능
 - 합성 20 episode를 index했을 때 `indexed=20`, `usable=20`
 
-## 아직 실물 검증되지 않은 값
+## 실측으로 확정된 값과 남은 값
 
-합성 fixture의 `arm_dof=6`, `gripper_dof=1`은 기본 예시다. 다음 항목을
-실기체 introspection 결과 없이 정본으로 확정하면 안 된다.
+팔당 모터 6개가 응답했으며 데이터 계약은 `arm_dof=5`, `gripper_dof=1`로 분리한다.
+TurtleBot stationary tolerance는 선속도 0.0025m/s, 각속도 0.0021rad/s다. 다음 항목은
+아직 실기체 검증 없이 정본으로 확정하면 안 된다.
 
-- 좌·우 joint name, order, sign, unit와 제어 주기
-- gripper state/action dimension과 단위
+- 물리적 좌·우 arm label, 각 모터 역할과 회전 sign, 안전한 관절 limit
+- 그리퍼 정규화 단위와 열린/닫힌 방향
 - robot/controller/firmware/calibration version
-- Astra Pro RGB/Depth timestamp source와 허용 skew
+- Astra RGB/Depth driver, timestamp source, intrinsics/extrinsics와 허용 skew
 - Nav2 도킹 완료 및 base 정지를 증명할 실제 topic
+- 양팔 작업 전류와 current/load-to-torque 보정
+
+실물 driver가 실행된 교육 PC에서는 motion command를 보내기 전에 다음 read-only
+snapshot을 먼저 수집한다.
+
+```bash
+bash scripts/capture_ros2_hardware_snapshot.sh \
+  output/hardware_snapshots/first_connected
+```
+
+snapshot은 ROS graph와 selected metadata만 저장하고 이미지 pixel이나 제어
+명령은 기록하지 않는다. 이 결과가 없으면 mock 이름·차원·주기를 실제 계약으로
+승격하지 않는다.
 
 ## 다음 구현 단위
 
-### 1. Mock ROS 2 recorder
+### 1. Mock ROS 2 recorder — 구현 완료
 
 - 합성 `JointState`, 좌·우 action, base velocity, RGB/Depth metadata topic 발행
 - approximate time synchronization 결과를 Phase 0 contract로 저장
 - stop/abort를 outcome과 failure reason으로 기록
 - 현재 quality validator를 그대로 호출
+
+one-shot 검증 명령:
+
+```bash
+ros2 run shoe_sorting_data shoe_mock_demo \
+  --output output/mock_episodes/episode_000001 \
+  --samples 40
+```
+
+실제 장비 topic 이름과 joint order는 아직 연결하지 않았으며, 현재 publisher는
+metadata-only `Image`와 합성 관절값을 사용한다.
 
 ### 2. ACT/LeRobot adapter
 

@@ -1,0 +1,50 @@
+{
+  "schema_version": "dapier.dual-arm-read-only-summary.v0.1",
+  "captured_at_local_date": "2026-08-20",
+  "source_snapshot_sha256": "0b10e226320a636f88ca1aa4e03c725107731e8f49e01282d196d573cb425752",
+  "read_only": true,
+  "motion_commands_sent": false,
+  "torque_commands_sent": false,
+  "unique_usb_serials_removed": true,
+  "baudrate": 1000000,
+  "servo_model": "STS3215",
+  "servo_model_number_raw": 777,
+  "motor_count_per_arm": 6,
+  "role_hypothesis_pending_motion_validation": {
+    "1": "base_yaw",
+    "2": "shoulder_pitch",
+    "3": "elbow_pitch",
+    "4": "wrist_pitch",
+    "5": "wrist_roll",
+    "6": "gripper"
+  },
+  "arms": {
+    "arm_a": {
+      "semantic_side": null,
+      "position_offset_signed_ticks_by_motor_id": [85, 85, 85, 85, 85, 85],
+      "position_limits_ticks_by_motor_id": [
+        [0, 4095], [0, 4095], [0, 4095], [0, 4095], [0, 4095], [0, 4095]
+      ],
+      "observed_voltage_range_v": [12.2, 12.3],
+      "observed_temperature_range_c": [31, 34],
+      "all_torque_disabled": true,
+      "all_hardware_error_status_zero": true
+    },
+    "arm_b": {
+      "semantic_side": null,
+      "position_offset_signed_ticks_by_motor_id": [-793, 467, 44, -70, 79, -1958],
+      "position_limits_ticks_by_motor_id": [
+        [0, 4095], [0, 4095], [900, 3300], [900, 3300], [300, 3600], [0, 4095]
+      ],
+      "observed_voltage_range_v": [12.1, 12.2],
+      "observed_temperature_range_c": [32, 35],
+      "all_torque_disabled": true,
+      "all_hardware_error_status_zero": true
+    }
+  },
+  "interpretation_limits": [
+    "motor roles and direction signs require guarded low-speed motion validation",
+    "device offsets and position limits are captured settings, not proven safe calibration",
+    "static load/current telemetry is not a calibrated joint torque measurement"
+  ]
+}
