@@ -1,13 +1,15 @@
+import json
 from pathlib import Path
 import tempfile
 import unittest
 
 from shoe_sorting_data.contract import load_manifest
+from shoe_sorting_data.camera_payload import CameraFramePayload, read_camera_payload
 from shoe_sorting_data.recorder import ApproximateEpisodeRecorder, REQUIRED_STREAMS
 
 
 class ApproximateEpisodeRecorderTest(unittest.TestCase):
-    def _feed_sample(self, recorder, index, *, skew_ns=3_000_000):
+    def _feed_sample(self, recorder, index, *, skew_ns=3_000_000, with_payload=False):
         timestamp_ns = 1_000_000_000 + index * 50_000_000
         joints = [index * 0.005] * 5 + [0.5]
         emitted = []
@@ -19,6 +21,18 @@ class ApproximateEpisodeRecorderTest(unittest.TestCase):
                         name,
                         timestamp_ns=timestamp_ns + offset,
                         frame_id=index,
+                        camera_payload=(
+                            CameraFramePayload(
+                                width=2,
+                                height=2,
+                                encoding="rgb8" if name == "workspace_rgb" else "16UC1",
+                                is_bigendian=0,
+                                step=6 if name == "workspace_rgb" else 4,
+                                data=(bytes(range(12)) if name == "workspace_rgb" else b"\x01\x00" * 4),
+                            )
+                            if with_payload
+                            else None
+                        ),
                     )
                 )
             elif name in {"base_velocity", "base_command"}:
@@ -70,6 +84,36 @@ class ApproximateEpisodeRecorderTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not empty"):
                 ApproximateEpisodeRecorder(episode_dir)
             self.assertEqual((episode_dir / "notes.txt").read_text(encoding="utf-8"), "keep")
+
+    def test_required_camera_payload_is_persisted_and_verified(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            episode_dir = Path(temp_dir) / "payload_episode"
+            recorder = ApproximateEpisodeRecorder(episode_dir, require_camera_payload=True)
+            self._feed_sample(recorder, 0, with_payload=True)
+            self._feed_sample(recorder, 1, with_payload=True)
+            manifest_path, report = recorder.finalize(outcome_status="accepted")
+
+            self.assertTrue(report.usable, report.to_dict())
+            manifest = load_manifest(manifest_path)
+            self.assertEqual(manifest["recording"]["camera_payload"]["mode"], "required")
+            first_sample = json.loads(
+                (episode_dir / "samples.jsonl").read_text(encoding="utf-8").splitlines()[0]
+            )
+            rgb = read_camera_payload(
+                episode_dir,
+                "workspace_rgb",
+                first_sample["cameras"]["workspace_rgb"]["payload"],
+            )
+            self.assertEqual(rgb.encoding, "rgb8")
+
+    def test_required_camera_payload_rejects_metadata_only_update(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recorder = ApproximateEpisodeRecorder(
+                Path(temp_dir) / "payload_episode",
+                require_camera_payload=True,
+            )
+            with self.assertRaisesRegex(ValueError, "requires a camera pixel payload"):
+                recorder.update("workspace_rgb", timestamp_ns=1, frame_id=0)
 
 
 if __name__ == "__main__":

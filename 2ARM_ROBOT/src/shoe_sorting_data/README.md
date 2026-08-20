@@ -16,6 +16,7 @@ episode의 관측·행동 순서와 품질 기준부터 고정합니다.
 - SQLite manifest 생성과 train/validation, usable, success, shoe pair 질의
 - one-shot perception exemplar의 유사도/margin 기반 match 또는 abstain
 - accepted episode 기반 typed skill exemplar와 evaluation leakage audit
+- lossless ROS2 RGB/Depth raw row payload와 SHA-256·timing·finalized 계약
 
 SQLite manifest는 원본이 아닌 파생 snapshot이다. provenance column이 추가된
 버전으로 갱신한 뒤에는 `shoe_episode index`를 다시 실행해 DB를 재생성한다.
@@ -48,6 +49,131 @@ python -m shoe_sorting_data.cli query `
   --usable true `
   --split validation
 ```
+
+## ACT/LeRobot interchange preflight
+
+이 단계는 native LeRobot Dataset v3를 생성하지 않습니다. accepted quality gate를
+통과한 원본 episode를 변경하지 않고 다음을 먼저 검증합니다.
+
+- 좌팔 5 + 좌 gripper 1 + 우팔 5 + 우 gripper 1의 12차원 state/action 순서
+- base velocity를 정책 출력에서 제외하고 stationary interlock으로 유지
+- train split만 사용한 mean/std/min/max 통계
+- object instance, session, recording span의 split 누수 차단
+- 모든 입력·출력 파일의 SHA-256 conversion receipt
+- RGB/Depth 픽셀 payload가 없을 때 native ACT 준비 완료로 표시하지 않는 blocker
+
+```bash
+ros2 run shoe_sorting_data shoe_episode act-export \
+  --root output/golden_episodes \
+  --output output/act_interchange_v001
+
+ros2 run shoe_sorting_data shoe_episode act-verify \
+  --root output/act_interchange_v001
+```
+
+출력 경로가 이미 존재하면 비어 있더라도 덮어쓰지 않습니다. 현재 mock camera는
+metadata만 기록하므로 `act_numeric_contract_ready=true`,
+`native_lerobot_ready=false`가 정상 결과입니다. 실제 RGB-D pixel writer와 native
+LeRobot encoder를 구현한 뒤에만 image-conditioned ACT 학습 준비 완료로 승격합니다.
+
+## Astra RGB-D raw payload fixture
+
+`--camera-payload`는 작은 `rgb8`/`16UC1` 합성 frame을 ROS2 raw row 계약으로
+저장합니다. 실제 Astra 검증을 대신하지 않으며, encoder와 quality gate의 입력
+fixture로만 사용합니다.
+
+```bash
+ros2 run shoe_sorting_data shoe_episode generate \
+  --root output/rgbd_fixture \
+  --count 5 \
+  --samples 4 \
+  --camera-payload
+```
+
+raw frame은 `raw/workspace_rgb`와 `raw/workspace_depth` 아래에 저장되고 기존 파일을
+덮어쓰지 않습니다. manifest v0.3의 `lifecycle.state=finalized`와
+`integrity_verified=true`, payload byte count/SHA-256, stream header/receive timestamp,
+sync delta가 모두 검증되어야 학습용 episode로 승인됩니다.
+
+## Optional native LeRobot v3 encoder
+
+기본 ROS2 package에는 LeRobot, Torch, Pillow, Datasets, PyArrow를 의존성으로
+추가하지 않습니다. 다음 명령은 설치 없이 optional 환경 상태와 raw preflight를
+확인합니다.
+
+```bash
+ros2 run shoe_sorting_data shoe_episode native-status
+
+ros2 run shoe_sorting_data shoe_episode native-preflight \
+  --root output/rgbd_fixture \
+  --depth-unit mm
+```
+
+`native-export`는 optional stack이 모두 있을 때만 lazy import됩니다. 기존 raw와
+output을 덮어쓰지 않고, `create→add_frame→save_episode→finalize` 결과와 source/output
+hash를 `dapier_encoder_receipt.json`에 남깁니다. 실제 Astra depth unit을 확인하기
+전에는 합성 fixture 외 데이터에 `--depth-unit mm`를 가정해서 사용하면 안 됩니다.
+
+Stage 3의 native round-trip/ACT 입력 gate는 별도 ML 환경에서 실행합니다.
+
+```bash
+python -m shoe_sorting_data.cli generate \
+  --root /tmp/dapier_stage3/raw \
+  --count 2 --samples 3 --camera-payload \
+  --camera-width 64 --camera-height 64
+
+python -m shoe_sorting_data.cli native-export \
+  --root /tmp/dapier_stage3/raw \
+  --output /tmp/dapier_stage3/lerobot \
+  --repo-id local/dapier-shoe-smoke \
+  --depth-unit mm
+
+python -m shoe_sorting_data.cli native-act-smoke \
+  --root /tmp/dapier_stage3/lerobot \
+  --repo-id local/dapier-shoe-smoke \
+  --chunk-size 3
+```
+
+이 명령은 2 episode×3 frame fixture에서 official FPS delta, tail padding,
+cross-episode no-leak, DataLoader shape와 ACT one-forward만 검사합니다. 실제 학습
+성능을 주장하지 않으며, 1채널 depth는 native dataset에 보존하되 3채널 ResNet을
+쓰는 ACT RGB baseline 입력에서는 제외합니다.
+
+## Offline action-chunk evaluator
+
+offline evaluator는 held-out validation/test prediction만 받고, `action_is_pad`가
+False인 timestep의 horizon×joint/group error를 계산합니다. arm radian과 gripper
+normalized position을 하나의 global MAE로 섞지 않습니다.
+
+```bash
+python -m shoe_sorting_data.cli offline-eval-fixture \
+  --root /tmp/dapier_stage4/fixture \
+  --padded-prediction 1000000
+
+python -m shoe_sorting_data.cli offline-eval \
+  --manifest /tmp/dapier_stage4/fixture/evaluation_manifest.json \
+  --output /tmp/dapier_stage4/offline_evaluation_report.json
+```
+
+synthetic fixture의 결과는 padding/split/metric 계약 검증일 뿐 model 성능이
+아닙니다. 실제 task success와 supervisor intervention은 Stage 5 real rollout에서
+별도 측정합니다.
+
+## JDcobot rollout safety dry-run
+
+다음 명령은 motor나 ROS2 command topic을 열지 않습니다. policy proposal을
+독립 supervisor의 lifecycle/freshness/base/joint/E-stop/watchdog gate에 통과시키고,
+PASS action만 좌·우 `JointTrajectory` 형태의 dry-run envelope로 매핑합니다.
+
+```bash
+python -m shoe_sorting_data.cli rollout-safety-smoke \
+  --output /tmp/dapier_stage5/rollout_safety_trace.json
+```
+
+fixture에는 실제 JDcobot topic/limit을 넣지 않았습니다. controller topic은 `null`,
+limit source는 `synthetic_fixture_only`, `published=false`, `executed_action=null`입니다.
+실물 연결은 joint sign/zero/limit, E-stop, watchdog, controller/QoS, human approval을
+현장에서 검증한 뒤 별도 live transport로 추가해야 합니다.
 
 Ubuntu에서는 상위 `2ARM_ROBOT` 폴더를 ROS 2 workspace로 사용합니다.
 
@@ -157,5 +283,5 @@ python -m shoe_sorting_data.cli generate `
 4. Astra Pro RGB/Depth frame timestamp와 허용 skew
 5. Nav2 도킹 완료 후 base velocity가 0인지 판정하는 실제 신호
 
-다음 구현 단계는 recorder가 만든 Phase 0 episode를 원본 변경 없이
-ACT/LeRobot 입력으로 변환하는 adapter입니다.
+다음 구현 단계는 JDcobot ROS2 rollout adapter와 policy 밖의 독립 safety
+supervisor입니다.

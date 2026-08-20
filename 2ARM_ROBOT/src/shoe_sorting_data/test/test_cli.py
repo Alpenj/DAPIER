@@ -37,6 +37,81 @@ class CliTest(unittest.TestCase):
                     1,
                 )
 
+    def test_act_export_and_verify_flow(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            episodes = root / "episodes"
+            interchange = root / "act_interchange"
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(["generate", "--root", str(episodes), "--count", "5"]), 0)
+                self.assertEqual(
+                    main(["act-export", "--root", str(episodes), "--output", str(interchange)]),
+                    0,
+                )
+                self.assertEqual(main(["act-verify", "--root", str(interchange)]), 0)
+            rendered = output.getvalue()
+            self.assertIn('"state_dim": 12', rendered)
+            self.assertIn('"native_lerobot_ready": false', rendered)
+            self.assertIn('"passed": true', rendered)
+
+    def test_native_status_and_preflight_do_not_require_lerobot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            episodes = root / "episodes"
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(["generate", "--root", str(episodes), "--count", "2", "--samples", "3", "--camera-payload"]), 0)
+                self.assertEqual(main(["native-status"]), 0)
+                self.assertEqual(
+                    main(["native-preflight", "--root", str(episodes), "--depth-unit", "mm"]),
+                    0,
+                )
+            rendered = output.getvalue()
+            self.assertIn('"base_recorder_affected": false', rendered)
+            self.assertIn('"episode_count": 2', rendered)
+            self.assertIn('"depth_unit": "mm"', rendered)
+
+    def test_offline_evaluator_fixture_cli_flow(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            fixture = root / "fixture"
+            report = root / "report.json"
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(["offline-eval-fixture", "--root", str(fixture)]), 0)
+                self.assertEqual(
+                    main(
+                        [
+                            "offline-eval",
+                            "--manifest",
+                            str(fixture / "evaluation_manifest.json"),
+                            "--output",
+                            str(report),
+                        ]
+                    ),
+                    0,
+                )
+            rendered = output.getvalue()
+            self.assertIn('"synthetic_fixture_only": true', rendered)
+            self.assertIn('"valid_timestep_count": 12', rendered)
+            self.assertIn('"closed_loop_status": "NOT_MEASURED"', rendered)
+
+    def test_rollout_safety_smoke_cli_never_publishes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "rollout_trace.json"
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    main(["rollout-safety-smoke", "--output", str(output_path)]),
+                    0,
+                )
+            rendered = output.getvalue()
+            self.assertIn('"scenario_count": 6', rendered)
+            self.assertIn('"reject_count": 5', rendered)
+            self.assertIn('"published_command_count": 0', rendered)
+            self.assertIn('"hardware_dispatch_authorized_count": 0', rendered)
+
     def test_pair_and_skill_exemplar_cli_flow(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

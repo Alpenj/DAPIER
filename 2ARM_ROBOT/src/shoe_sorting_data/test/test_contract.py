@@ -25,6 +25,8 @@ class EpisodeContractTest(unittest.TestCase):
         self.assertEqual(
             manifest["quality_limits"]["base_angular_stationary_tolerance_radps"], 0.0021
         )
+        self.assertEqual(manifest["recording"]["camera_payload"]["mode"], "required")
+        self.assertEqual(manifest["lifecycle"], {"state": "finalized", "integrity_verified": True})
 
     def test_round_trip_preserves_configurable_dimensions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -49,6 +51,16 @@ class EpisodeContractTest(unittest.TestCase):
         )
         manifest["outcome"] = {"status": "rejected", "success": False, "failure_reason": None}
         with self.assertRaisesRegex(ValueError, "failure_reason"):
+            validate_manifest(manifest)
+
+    def test_unfinalized_v03_manifest_is_rejected(self):
+        manifest = build_manifest(
+            episode_id="episode_000001",
+            sample_count=10,
+            samples_sha256=hashlib.sha256(b"samples").hexdigest(),
+        )
+        manifest["lifecycle"]["state"] = "recording"
+        with self.assertRaisesRegex(ValueError, "finalized"):
             validate_manifest(manifest)
 
 
