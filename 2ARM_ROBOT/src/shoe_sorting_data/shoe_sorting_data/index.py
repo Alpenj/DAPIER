@@ -14,7 +14,7 @@ from shoe_sorting_data.quality import validate_episode
 
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS episodes (
+CREATE TABLE episodes (
     path TEXT PRIMARY KEY,
     episode_id TEXT NOT NULL,
     schema_version TEXT NOT NULL,
@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS episodes (
     robot_config_version TEXT NOT NULL,
     pipeline_version TEXT NOT NULL,
     data_origin TEXT NOT NULL,
+    object_instance_id TEXT NOT NULL,
+    background_id TEXT NOT NULL,
+    fixture_id TEXT NOT NULL,
+    recording_span_id TEXT NOT NULL,
+    attempt_id TEXT NOT NULL,
     sample_count INTEGER NOT NULL,
     duration_ns INTEGER NOT NULL,
     error_count INTEGER NOT NULL,
@@ -48,7 +53,7 @@ def _utc_now() -> str:
 
 
 def build_index(root: str | Path, database_path: str | Path) -> dict[str, int]:
-    """Validate and upsert every episode below ``root``."""
+    """Rebuild a derived SQLite snapshot for every episode below ``root``."""
     manifest_paths = sorted(Path(root).rglob("episode_manifest.json"))
     if not manifest_paths:
         raise ValueError(f"no episode_manifest.json files found below: {root}")
@@ -58,8 +63,8 @@ def build_index(root: str | Path, database_path: str | Path) -> dict[str, int]:
     invalid_manifest = 0
     usable = 0
     with closing(sqlite3.connect(database)) as connection:
+        connection.execute("DROP TABLE IF EXISTS episodes")
         connection.execute(SCHEMA)
-        connection.execute("DELETE FROM episodes")
         for path in manifest_paths:
             report = validate_episode(path)
             try:
@@ -69,64 +74,41 @@ def build_index(root: str | Path, database_path: str | Path) -> dict[str, int]:
                 continue
             success = manifest["outcome"]["success"]
             success_db = None if success is None else int(success)
-            values = (
-                str(path.resolve()),
-                manifest["episode_id"],
-                manifest["schema_version"],
-                manifest["task"]["name"],
-                manifest["task"]["skill"],
-                manifest["task"]["shoe_pair_id"],
-                manifest["outcome"]["status"],
-                success_db,
-                manifest["outcome"]["failure_reason"],
-                manifest["provenance"]["source_split"],
-                manifest["provenance"]["operator_id"],
-                manifest["provenance"]["session_id"],
-                manifest["robot"]["calibration_version"],
-                manifest["robot"]["robot_config_version"],
-                manifest["provenance"]["pipeline_version"],
-                manifest["provenance"]["data_origin"],
-                report.sample_count,
-                report.duration_ns,
-                len(report.errors),
-                len(report.warnings),
-                int(report.usable),
-                json.dumps(sorted({issue.code for issue in report.issues})),
-                manifest["checksums"]["samples_sha256"],
-                _utc_now(),
-            )
-            connection.execute(
-                """
-                INSERT INTO episodes VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                )
-                ON CONFLICT(path) DO UPDATE SET
-                    episode_id=excluded.episode_id,
-                    schema_version=excluded.schema_version,
-                    task_name=excluded.task_name,
-                    skill=excluded.skill,
-                    shoe_pair_id=excluded.shoe_pair_id,
-                    outcome_status=excluded.outcome_status,
-                    success=excluded.success,
-                    failure_reason=excluded.failure_reason,
-                    source_split=excluded.source_split,
-                    operator_id=excluded.operator_id,
-                    session_id=excluded.session_id,
-                    calibration_version=excluded.calibration_version,
-                    robot_config_version=excluded.robot_config_version,
-                    pipeline_version=excluded.pipeline_version,
-                    data_origin=excluded.data_origin,
-                    sample_count=excluded.sample_count,
-                    duration_ns=excluded.duration_ns,
-                    error_count=excluded.error_count,
-                    warning_count=excluded.warning_count,
-                    usable=excluded.usable,
-                    issue_codes_json=excluded.issue_codes_json,
-                    samples_sha256=excluded.samples_sha256,
-                    indexed_at_utc=excluded.indexed_at_utc
-                """,
-                values,
-            )
+            provenance = manifest["provenance"]
+            record = {
+                "path": str(path.resolve()),
+                "episode_id": manifest["episode_id"],
+                "schema_version": manifest["schema_version"],
+                "task_name": manifest["task"]["name"],
+                "skill": manifest["task"]["skill"],
+                "shoe_pair_id": manifest["task"]["shoe_pair_id"],
+                "outcome_status": manifest["outcome"]["status"],
+                "success": success_db,
+                "failure_reason": manifest["outcome"]["failure_reason"],
+                "source_split": provenance["source_split"],
+                "operator_id": provenance["operator_id"],
+                "session_id": provenance["session_id"],
+                "calibration_version": manifest["robot"]["calibration_version"],
+                "robot_config_version": manifest["robot"]["robot_config_version"],
+                "pipeline_version": provenance["pipeline_version"],
+                "data_origin": provenance["data_origin"],
+                "object_instance_id": provenance.get("object_instance_id", "object_unknown"),
+                "background_id": provenance.get("background_id", "background_unknown"),
+                "fixture_id": provenance.get("fixture_id", "fixture_unknown"),
+                "recording_span_id": provenance.get("recording_span_id", "span_unknown"),
+                "attempt_id": provenance.get("attempt_id", "attempt_unknown"),
+                "sample_count": report.sample_count,
+                "duration_ns": report.duration_ns,
+                "error_count": len(report.errors),
+                "warning_count": len(report.warnings),
+                "usable": int(report.usable),
+                "issue_codes_json": json.dumps(sorted({issue.code for issue in report.issues})),
+                "samples_sha256": manifest["checksums"]["samples_sha256"],
+                "indexed_at_utc": _utc_now(),
+            }
+            columns = ", ".join(record)
+            placeholders = ", ".join(f":{column}" for column in record)
+            connection.execute(f"INSERT INTO episodes ({columns}) VALUES ({placeholders})", record)
             indexed += 1
             usable += int(report.usable)
         connection.commit()
@@ -145,6 +127,9 @@ def query_index(
     source_split: str | None = None,
     success: bool | None = None,
     shoe_pair_id: str | None = None,
+    object_instance_id: str | None = None,
+    session_id: str | None = None,
+    background_id: str | None = None,
     limit: int = 100,
 ) -> list[dict[str, Any]]:
     """Return rows using a small safe filter vocabulary."""
@@ -160,6 +145,9 @@ def query_index(
         ("source_split", source_split),
         ("success", None if success is None else int(success)),
         ("shoe_pair_id", shoe_pair_id),
+        ("object_instance_id", object_instance_id),
+        ("session_id", session_id),
+        ("background_id", background_id),
     ):
         if value is not None:
             clauses.append(f"{column} = ?")

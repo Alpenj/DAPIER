@@ -37,6 +37,66 @@ class CliTest(unittest.TestCase):
                     1,
                 )
 
+    def test_pair_and_skill_exemplar_cli_flow(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            registry = root / "pair_registry.json"
+            episode = root / "episodes" / "episode_000001"
+            exemplars = root / "exemplars" / "skill_001"
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    main(
+                        [
+                            "pair-add",
+                            "--registry",
+                            str(registry),
+                            "--exemplar-id",
+                            "shoe_a",
+                            "--pair-id",
+                            "pair_a",
+                            "--object-instance-id",
+                            "object_a",
+                            "--embedding",
+                            "1,0,0",
+                            "--session-id",
+                            "session_a",
+                            "--background-id",
+                            "background_a",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    main(["pair-match", "--registry", str(registry), "--embedding", "0.99,0.01,0"]),
+                    0,
+                )
+                self.assertEqual(main(["generate", "--root", str(root / "episodes"), "--count", "1"]), 0)
+                self.assertEqual(
+                    main(
+                        [
+                            "skill-register",
+                            "--manifest",
+                            str(episode / "episode_manifest.json"),
+                            "--output",
+                            str(exemplars / "skill_exemplar.json"),
+                            "--exemplar-id",
+                            "skill_001",
+                            "--precondition",
+                            "base_stopped",
+                            "--postcondition",
+                            "shoe_placed",
+                            "--timeout-ms",
+                            "15000",
+                            "--tag",
+                            "grid",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertIn('"decision": "match"', output.getvalue())
+            self.assertIn('"exemplar_id": "skill_001"', output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

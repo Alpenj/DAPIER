@@ -6,7 +6,7 @@ package_name = "shoe_sorting_data"
 
 setup(
     name=package_name,
-    version="0.1.0",
+    version="0.2.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         (
@@ -19,7 +19,7 @@ setup(
     zip_safe=True,
     maintainer="Alpenj",
     maintainer_email="29724960+Alpenj@users.noreply.github.com",
-    description="Hardware-independent DYNA-lite episode contract and quality gates for shoe sorting.",
+    description="DYNA-lite episodes, quality gates, and safe exemplar retrieval for shoe sorting.",
     license="MIT",
     extras_require={"test": ["pytest"]},
     entry_points={

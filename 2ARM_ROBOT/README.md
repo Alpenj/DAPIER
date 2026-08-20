@@ -27,6 +27,9 @@ Phase 0에서 제공하는 기능:
 - 조작 중 TurtleBot 측정/명령 속도 정지 interlock
 - 검수 상태 및 calibration/config version quality gate
 - SQLite 기반 train/validation, usable, success, shoe pair 질의
+- one-shot 신발 임베딩 exemplar의 `match/abstain` 계약
+- accepted episode 기반 typed skill exemplar 등록·호환 검색
+- object/session/span 기반 exemplar 평가 leakage audit
 
 ## Ubuntu ROS 2 교육 PC에서 시작
 
@@ -95,6 +98,11 @@ shoe_episode query \
 - 관절 명령은 ACT 계열 정책과 별도 safety supervisor가 담당한다.
 - 이동과 조작을 분리하고 Nav2 도킹 후 base 정지를 확인해야 조작을 허용한다.
 
+GEN-1.5 조사에서는 짧은 physical prompt의 **형태만** 참고했다. 공개
+checkpoint/API가 없으므로 GEN-1.5 자체를 실행하지 않으며, local 구현은
+인식 exemplar와 검증된 skill metadata retrieval뿐이다. 상세 경계는
+[`docs/GEN15_ADOPTION.md`](docs/GEN15_ADOPTION.md)에 기록했다.
+
 상세 인수인계는 [`docs/PHASE0_HANDOFF.md`](docs/PHASE0_HANDOFF.md), 요구사항
 원장은 [`docs/requirements-ledger.md`](docs/requirements-ledger.md)를 본다.
 
@@ -105,7 +113,7 @@ shoe_episode query \
 1. 합성 ROS 2 topic을 받는 mock episode recorder
 2. Phase 0 episode를 ACT/LeRobot 입력으로 변환하는 adapter
 3. ACT용 train/validation split과 offline evaluator
-4. 신발 pair embedding/API 응답 계약과 mock 서버
+4. 실제 신발 crop embedding/API adapter와 mock 서버
 
 실물 확보 후에는 joint name/order/unit, gripper 차원, Astra Pro timestamp,
 calibration version, base 정지 신호를 확인해 placeholder를 교체한다.

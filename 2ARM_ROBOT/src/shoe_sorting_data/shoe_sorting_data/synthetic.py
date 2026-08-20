@@ -154,6 +154,11 @@ def generate_episode(
         created_at_utc=(datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=seed))
         .isoformat()
         .replace("+00:00", "Z"),
+        object_instance_id=f"synthetic_object_{seed:06d}",
+        background_id=f"synthetic_background_{seed % 3:02d}",
+        fixture_id="synthetic_grid_v1",
+        recording_span_id=f"synthetic_span_{seed:06d}",
+        attempt_id=f"synthetic_attempt_{seed:06d}",
     )
     manifest_path = root / "episode_manifest.json"
     save_manifest(manifest_path, manifest)

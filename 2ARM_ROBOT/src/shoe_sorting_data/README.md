@@ -13,6 +13,11 @@ episode의 관측·행동 순서와 품질 기준부터 고정합니다.
 - 조작 중 TurtleBot base의 명령 속도와 측정 속도 정지 interlock 검사
 - 검수 대기 episode와 미확정 calibration/config를 학습 usable에서 제외
 - SQLite manifest 생성과 train/validation, usable, success, shoe pair 질의
+- one-shot perception exemplar의 유사도/margin 기반 match 또는 abstain
+- accepted episode 기반 typed skill exemplar와 evaluation leakage audit
+
+SQLite manifest는 원본이 아닌 파생 snapshot이다. provenance column이 추가된
+버전으로 갱신한 뒤에는 `shoe_episode index`를 다시 실행해 DB를 재생성한다.
 
 현재 코드는 합성 데이터와 계약만 검증합니다. 실제 로봇 동작, 카메라 영상,
 캘리브레이션, ACT 성공을 검증했다는 의미가 아닙니다.
@@ -49,6 +54,46 @@ cd ~/DAPIER/2ARM_ROBOT
 colcon build --symlink-install --packages-select shoe_sorting_data
 source install/setup.bash
 shoe_episode --help
+```
+
+## Perception·skill exemplar
+
+아래 기능은 GEN-1.5 모델을 실행하는 것이 아니다. 신발 짝 후보와 검증된
+skill metadata만 반환하며 `control_authorized=false`를 유지한다.
+
+```bash
+shoe_episode pair-add \
+  --registry output/pair_registry.json \
+  --exemplar-id shoe_a_left \
+  --pair-id pair_a \
+  --object-instance-id shoe_a_left_object \
+  --embedding 1,0,0 \
+  --session-id session_train_a \
+  --background-id background_train
+
+shoe_episode pair-match \
+  --registry output/pair_registry.json \
+  --embedding 0.99,0.01,0
+
+shoe_episode skill-register \
+  --manifest output/golden_episodes/episode_000001/episode_manifest.json \
+  --output output/exemplars/grid_pick/skill_exemplar.json \
+  --exemplar-id grid_pick_001 \
+  --precondition base_stopped \
+  --precondition camera_fresh \
+  --postcondition shoe_in_target \
+  --timeout-ms 15000 \
+  --tag grid
+
+shoe_episode skill-retrieve \
+  --root output/exemplars \
+  --manifest output/golden_episodes/episode_000002/episode_manifest.json \
+  --skill-id pair_and_place \
+  --tag grid
+
+shoe_episode exemplar-audit \
+  --exemplar-root output/exemplars \
+  --evaluation-root output/golden_episodes/episode_000002
 ```
 
 ## 고의 오류 fixture

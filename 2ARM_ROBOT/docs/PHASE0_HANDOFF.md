@@ -44,6 +44,15 @@ quality gate는 다음을 hard error로 처리한다.
 - 실제 robot data의 미확정 calibration/config version
 - 사람 검수가 `accepted`가 아닌 episode
 
+GEN-1.5 조사에서 즉시 적용 가능한 축소판도 구현했다.
+
+- one-shot perception exemplar: 임베딩 유사도와 margin이 낮으면 `abstain`
+- typed skill exemplar: accepted episode만 등록하고 동일 controller contract만 검색
+- leakage audit: object/session/span 중복은 평가 error로 처리
+
+모든 exemplar 결과의 `control_authorized`는 `false`다. 실제 action은 ACT와
+safety supervisor가 별도로 생성·승인해야 한다.
+
 ## 검증 기준
 
 Ubuntu에서 다음 한 줄을 실행한다.
@@ -92,10 +101,10 @@ bash scripts/verify_ubuntu_ros2.sh
 - skill별 0/0.5/1 progress, latency, retry, reject reason 기록
 - 이후 ACT와 IDM/FDM/EMA ablation이 같은 evaluator를 공유
 
-### 4. 신발 짝 추론 mock
+### 4. 실제 embedding/API adapter
 
-- 입력: shoe crop/image ID와 후보 목록
-- 출력: `pair_id`, left/right, confidence, allowed skill
+- 현재 구현된 registry에 Astra Pro shoe crop의 실제 embedding을 입력
+- 출력: `pair_id`, confidence, margin, abstention reason
 - API 실패·낮은 confidence에서는 관절 명령을 만들지 않고 재관측 요청
 
 ## 안전 경계

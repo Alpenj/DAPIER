@@ -37,6 +37,11 @@ def build_manifest(
     failure_reason: str | None = None,
     synthetic: bool = False,
     created_at_utc: str | None = None,
+    object_instance_id: str = "object_unknown",
+    background_id: str = "background_unknown",
+    fixture_id: str = "fixture_unknown",
+    recording_span_id: str = "span_unknown",
+    attempt_id: str = "attempt_unknown",
 ) -> dict[str, Any]:
     """Build one manifest; dimensions are explicit until hardware introspection."""
     state_streams = {
@@ -89,6 +94,11 @@ def build_manifest(
             "pipeline_version": "shoe_data_phase0_v0.1",
             "source_split": source_split,
             "data_origin": "synthetic" if synthetic else "robot",
+            "object_instance_id": object_instance_id,
+            "background_id": background_id,
+            "fixture_id": fixture_id,
+            "recording_span_id": recording_span_id,
+            "attempt_id": attempt_id,
         },
         "checksums": {"samples_sha256": samples_sha256},
     }
@@ -198,6 +208,9 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
     provenance = _require_mapping(manifest, "provenance")
     for key in ("operator_id", "session_id", "pipeline_version", "source_split", "data_origin"):
         _require_text(provenance, key)
+    for key in ("object_instance_id", "background_id", "fixture_id", "recording_span_id", "attempt_id"):
+        if key in provenance:
+            _require_text(provenance, key)
 
     checksums = _require_mapping(manifest, "checksums")
     digest = _require_text(checksums, "samples_sha256")

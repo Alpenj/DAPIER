@@ -18,6 +18,7 @@ class EpisodeIndexTest(unittest.TestCase):
             rows = query_index(database, usable=True, source_split="validation")
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["episode_id"], "episode_000005")
+            self.assertEqual(rows[0]["object_instance_id"], "synthetic_object_000046")
             rejected = query_index(database, usable=False)
             self.assertEqual(len(rejected), 1)
             self.assertIn("base_interlock_violation", rejected[0]["issue_codes_json"])
