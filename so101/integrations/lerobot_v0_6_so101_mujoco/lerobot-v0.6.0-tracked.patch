@@ -77,7 +77,7 @@ diff --git a/src/lerobot/envs/configs.py b/src/lerobot/envs/configs.py
 index 3624357..8535e37 100644
 --- a/src/lerobot/envs/configs.py
 +++ b/src/lerobot/envs/configs.py
-@@ -234,6 +234,88 @@ class PushtEnv(EnvConfig):
+@@ -234,6 +234,100 @@ class PushtEnv(EnvConfig):
          }
  
  
@@ -100,6 +100,12 @@ index 3624357..8535e37 100644
 +    # Match the reset pose used by collect_ik_expert.py so policy evaluation
 +    # begins inside the demonstrated state distribution.
 +    home_action: tuple[float, ...] = (0.0, -45.0, 17.5, 90.0, 0.0, 100.0)
++    action_smoothing: bool = False
++    action_chunk_steps: int = 25
++    action_blend_steps: int = 3
++    action_max_delta: tuple[float, ...] = (1.75, 0.65, 0.30, 0.35, 0.12, 5.50)
++    gripper_action_deadband: float = 1.0
++    action_trace_path: str | None = None
 +    features: dict[str, PolicyFeature] = field(
 +        default_factory=lambda: {
 +            ACTION: PolicyFeature(type=FeatureType.ACTION, shape=(6,)),
@@ -150,6 +156,12 @@ index 3624357..8535e37 100644
 +            "cube_xy_randomization": self.cube_xy_randomization,
 +            "camera_names": self.camera_names,
 +            "home_action": self.home_action,
++            "action_smoothing": self.action_smoothing,
++            "action_chunk_steps": self.action_chunk_steps,
++            "action_blend_steps": self.action_blend_steps,
++            "action_max_delta": self.action_max_delta,
++            "gripper_action_deadband": self.gripper_action_deadband,
++            "action_trace_path": self.action_trace_path,
 +        }
 +
 +    def create_envs(self, n_envs: int, use_async_envs: bool = False):

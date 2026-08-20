@@ -26,16 +26,25 @@ from lerobot.envs.configs import SO101MujocoEnvConfig
 from lerobot.envs.so101_mujoco import (
     ACTION_HIGH,
     ACTION_LOW,
+    ACTION_TRACE_CONTRACT_ID,
     CUBE_SPAWN_POSITION,
     CUBE_TOP_PLANE_Z_M,
+    DEFAULT_VLA_ACTION_MAX_DELTA,
+    FINGER_PAD_CUBE_CONTACT_FRICTION,
+    FINGER_PAD_CUBE_CONTACT_SOLREF,
     FINGER_PAD_GEOM_NAMES,
     GOAL_TRAY_POSITION,
+    HUMAN_AUTHORITY,
     IK_OBSERVE_ACTION,
     JOINT_NAMES,
     PICK_CLEAR_ACTION,
     PICK_LIFT_FRAMES,
+    POLICY_AUTHORITY,
     POLICY_CAMERA_NAMES,
     TOP_CAMERA_PROFILE_ID,
+    VISION_GRASP_CLOSE_PERCENT,
+    VISION_GRASP_Z_OFFSET_M,
+    VISION_MAX_PAD_PENETRATION_M,
     VISION_PICK_PLACE_FRAMES,
     WRIST_CAMERA_HOUSING_GEOM_NAME,
     WRIST_CAMERA_LENS_GEOM_NAME,
@@ -44,10 +53,13 @@ from lerobot.envs.so101_mujoco import (
     CameraCalibration,
     CartesianJogController,
     HardwareInventory,
+    InterventionEpisodeRecorder,
     JointJogController,
     ResetSeedSequence,
     SO101MujocoEnv,
     VideoDevice,
+    VLAActionFilter,
+    VLAInterventionSession,
     build_ik_expert_dataset_contract,
     build_physical_wrist_gate_receipt,
     build_vision_pick_place_plan,
@@ -68,6 +80,7 @@ from lerobot.envs.so101_mujoco import (
     scripted_pick_lift_action,
     should_save_episode,
     write_ik_expert_dataset_contract,
+    write_parallel_rollout_manifest,
     write_physical_wrist_gate_receipt,
     write_wrist_student_dataset_contract,
 )
@@ -83,7 +96,11 @@ def test_joint_contract_and_round_trip():
         "wrist_roll",
         "gripper",
     )
-    for action in (ACTION_LOW, ACTION_HIGH, np.array([0, -35, 55, 35, 0, 50], dtype=np.float32)):
+    for action in (
+        ACTION_LOW,
+        ACTION_HIGH,
+        np.array([0, -35, 55, 35, 0, 50], dtype=np.float32),
+    ):
         np.testing.assert_allclose(qpos_to_lerobot_state(lerobot_action_to_qpos(action)), action, atol=1e-4)
 
 
@@ -92,6 +109,100 @@ def test_joint_contract_rejects_wrong_shapes():
         lerobot_action_to_qpos(np.zeros(5))
     with pytest.raises(ValueError, match="shape \\(6,\\)"):
         qpos_to_lerobot_state(np.zeros(7))
+
+
+def test_vla_intervention_authority_switch_discards_implicit_policy_control():
+    session = VLAInterventionSession()
+    policy_action = np.array([1, -40, 20, 80, 0, 90], dtype=np.float32)
+    measured_action = np.array([2, -39, 21, 79, 1, 88], dtype=np.float32)
+    human_action = measured_action.copy()
+    human_action[5] = 92
+
+    policy_decision = session.choose_action(policy_action=policy_action)
+    assert policy_decision.source == POLICY_AUTHORITY
+    np.testing.assert_array_equal(policy_decision.action, policy_action)
+
+    assert session.take_over(measured_action) is True
+    assert session.take_over(measured_action) is False
+    human_decision = session.choose_action(policy_action=None, human_action=human_action)
+    assert human_decision.source == HUMAN_AUTHORITY
+    assert human_decision.intervention_segment == 1
+    np.testing.assert_array_equal(human_decision.action, human_action)
+    assert session.intervention_frames == 1
+
+    assert session.resume_policy() is True
+    assert session.resume_policy() is False
+    with pytest.raises(ValueError, match="policy_action is required"):
+        session.choose_action(policy_action=None)
+
+
+def test_intervention_recorder_writes_source_labeled_evidence(tmp_path: Path):
+    recorder = InterventionEpisodeRecorder(tmp_path)
+    episode_dir = recorder.start_episode(episode_index=0, seed=17, task="pick")
+    action = np.array([0, -45, 17.5, 90, 0, 100], dtype=np.float32)
+    recorder.record_frame(
+        step_index=0,
+        source=HUMAN_AUTHORITY,
+        intervention_segment=1,
+        observation_state=action,
+        wrist_rgb=np.zeros((8, 10, 3), dtype=np.uint8),
+        requested_action=action,
+        applied_action=action,
+        last_policy_action=None,
+        reward=0.5,
+        success=False,
+        done=False,
+    )
+    manifest_path = recorder.finish_episode(
+        success=False, termination_reason="manual_next", intervention_segments=1
+    )
+
+    event = json.loads((episode_dir / "events.jsonl").read_text())
+    manifest = json.loads(manifest_path.read_text())
+    assert event["source"] == HUMAN_AUTHORITY
+    assert event["intervention_segment"] == 1
+    assert (episode_dir / event["wrist_image"]).is_file()
+    assert manifest["human_intervention_frames"] == 1
+    assert manifest["training_status"] == "evidence_only_requires_dataset_conversion"
+
+
+def test_vla_action_filter_blends_chunk_boundaries_and_limits_outliers():
+    action_filter = VLAActionFilter(
+        enabled=True,
+        action_chunk_steps=4,
+        action_blend_steps=2,
+        action_max_delta=(1, 1, 1, 1, 1, 2),
+        gripper_action_deadband=0.5,
+    )
+    action_filter.reset(np.zeros(6, dtype=np.float32))
+
+    results = [action_filter.apply(np.array([4, 0, 0, 0, 0, 0.2], dtype=np.float32)) for _ in range(4)]
+    assert results[0].chunk_boundary is True
+    assert results[0].blend_weight == pytest.approx(0.5)
+    assert results[0].applied_action[0] == pytest.approx(1.0)
+    assert results[0].applied_action[5] == pytest.approx(0.0)
+    assert results[0].gripper_deadband_applied is True
+    assert all(np.max(np.abs(result.applied_delta[:5])) <= 1.0 for result in results)
+
+    next_chunk = action_filter.apply(np.array([-4, 0, 0, 0, 0, 0], dtype=np.float32))
+    assert next_chunk.chunk_boundary is True
+    assert next_chunk.applied_delta[0] == pytest.approx(-1.0)
+    assert next_chunk.slew_limited_axes[0]
+
+
+def test_disabled_vla_action_filter_preserves_bounded_actions():
+    action_filter = VLAActionFilter(
+        enabled=False,
+        action_chunk_steps=25,
+        action_blend_steps=3,
+        action_max_delta=np.ones(6),
+        gripper_action_deadband=1.0,
+    )
+    action_filter.reset(np.zeros(6, dtype=np.float32))
+    result = action_filter.apply(np.array([4, 3, 2, 1, 0, 0.2], dtype=np.float32))
+    np.testing.assert_allclose(result.applied_action, [4, 3, 2, 1, 0, 0.2])
+    assert result.action_filtered is False
+    assert not np.any(result.slew_limited_axes)
 
 
 def test_keyboard_jog_controller_is_bounded_and_resettable():
@@ -147,7 +258,8 @@ def test_wrist_camera_profile_preserves_cad_provenance_without_claiming_physical
     assert profile.parent_body == "gripper"
     np.testing.assert_allclose(profile.position_m, [0.0025, -0.072057361, 0.004150235])
     np.testing.assert_allclose(
-        -np.cross(profile.xyaxes[:3], profile.xyaxes[3:]), [0, 0.422618262, -0.906307787]
+        -np.cross(profile.xyaxes[:3], profile.xyaxes[3:]),
+        [0, 0.422618262, -0.906307787],
     )
     assert profile.provenance["source_revision"] == "7629d2ad9853d10fb903093a33ef6114099d97e5"
     assert profile.provenance["source_sha256"] == (
@@ -239,7 +351,114 @@ def test_wrist_vla_route_delegates_to_standard_lerobot_evaluator(tmp_path):
     assert "--env.cube_xy_randomization=0.025" in command
     assert "--env.home_action=[0,-45,17.5,90,0,100]" in command
     assert "--policy.n_action_steps=25" in command
+    assert "--env.action_smoothing=true" in command
+    assert "--env.action_chunk_steps=25" in command
+    assert "--env.action_blend_steps=3" in command
+    assert "--env.action_max_delta=[1.75,0.65,0.30,0.35,0.12,5.50]" in command
+    assert "--env.gripper_action_deadband=1.0" in command
+    assert f"--env.action_trace_path={tmp_path / 'eval' / 'action_trace.jsonl'}" in command
     assert "--policy.path=checkpoints/wrist-smolvla" in command
+    assert "--eval.batch_size=1" in command
+
+
+def test_wrist_vla_parallel_route_uses_batched_policy_and_worker_traces(tmp_path):
+    command = build_wrist_vla_eval_command(
+        python_executable="python",
+        policy_path=Path("checkpoints/wrist-smolvla"),
+        output_dir=tmp_path / "eval",
+        episodes=8,
+        steps=700,
+        height=240,
+        width=320,
+        seed=1600,
+        cube_randomization=0.025,
+        parallel_envs=4,
+    )
+    assert "--eval.batch_size=4" in command
+    assert (
+        f"--env.action_trace_path={tmp_path / 'eval' / 'action_traces' / 'env_{env_index}.jsonl'}" in command
+    )
+    with pytest.raises(ValueError, match="cannot exceed"):
+        build_wrist_vla_eval_command(
+            python_executable="python",
+            policy_path=Path("checkpoints/wrist-smolvla"),
+            output_dir=tmp_path / "bad",
+            episodes=2,
+            steps=10,
+            height=24,
+            width=32,
+            seed=0,
+            cube_randomization=0,
+            parallel_envs=3,
+        )
+
+
+def test_parallel_rollout_manifest_labels_experience_without_claiming_training(
+    tmp_path,
+):
+    policy_path = tmp_path / "policy"
+    policy_path.mkdir()
+    eval_dir = tmp_path / "eval"
+    eval_dir.mkdir()
+    trace_dir = eval_dir / "action_traces"
+    trace_dir.mkdir()
+    (trace_dir / "env_0.jsonl").write_text(
+        json.dumps({"episode_seed": 1700, "episode_index": 0})
+        + "\n"
+        + json.dumps({"episode_seed": 1702, "episode_index": 3})
+        + "\n",
+        encoding="utf-8",
+    )
+    (trace_dir / "env_1.jsonl").write_text(
+        json.dumps({"episode_seed": 1701, "episode_index": 0})
+        + "\n"
+        + json.dumps({"episode_seed": 1703, "episode_index": 2})
+        + "\n",
+        encoding="utf-8",
+    )
+    eval_info_path = eval_dir / "eval_info.json"
+    eval_info_path.write_text(
+        json.dumps(
+            {
+                "per_task": [
+                    {
+                        "task_group": "so101_mujoco",
+                        "task_id": 0,
+                        "metrics": {
+                            "sum_rewards": [10.0, 20.0, 30.0, 40.0],
+                            "max_rewards": [0.1, 0.2, 0.3, 0.4],
+                            "successes": [False, True, True, False],
+                        },
+                    }
+                ],
+                "overall": {"eval_s": 8.0, "eval_ep_s": 2.0},
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = write_parallel_rollout_manifest(
+        eval_info_path=eval_info_path,
+        policy_path=policy_path,
+        episodes=4,
+        parallel_envs=2,
+        seed=1700,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["execution"]["architecture"] == ("one_policy_batched_inference_with_async_mujoco_workers")
+    assert manifest["results"]["successful_episodes"] == 2
+    assert manifest["results"]["success_rate"] == 0.5
+    assert [row["seed"] for row in manifest["results"]["per_episode"]] == [
+        1700,
+        1701,
+        1702,
+        1703,
+    ]
+    assert manifest["results"]["per_episode"][1]["action_trace"].endswith("action_traces/env_1.jsonl")
+    assert manifest["results"]["per_episode"][1]["trace_episode_index"] == 0
+    assert manifest["results"]["per_episode"][2]["action_trace"].endswith("action_traces/env_0.jsonl")
+    assert manifest["results"]["per_episode"][2]["trace_episode_index"] == 3
+    assert manifest["learning_boundary"]["optimizer_updates"] == 0
+    assert manifest["learning_boundary"]["dataset_conversion_required"] is True
 
 
 def test_full_vla_evidence_separates_training_from_success_threshold(tmp_path):
@@ -413,6 +632,60 @@ def test_config_exposes_real_robot_compatible_features():
     assert cfg.camera_names == POLICY_CAMERA_NAMES
     np.testing.assert_allclose(cfg.gym_kwargs["home_action"], PICK_CLEAR_ACTION)
     assert cfg.gym_kwargs["cube_xy_randomization"] == pytest.approx(0.025)
+    assert cfg.gym_kwargs["action_smoothing"] is False
+    np.testing.assert_allclose(cfg.gym_kwargs["action_max_delta"], DEFAULT_VLA_ACTION_MAX_DELTA)
+
+
+@pytest.mark.timeout(30)
+def test_env_writes_rcs_compatible_action_trace(tmp_path):
+    pytest.importorskip("mujoco")
+    trace_path = tmp_path / "action_trace.jsonl"
+    env = SO101MujocoEnv(
+        obs_type="state",
+        max_episode_steps=1,
+        action_smoothing=True,
+        action_chunk_steps=2,
+        action_blend_steps=1,
+        action_max_delta=(1, 1, 1, 1, 1, 2),
+        gripper_action_deadband=0.5,
+        action_trace_path=str(trace_path),
+    )
+    try:
+        env.reset(seed=7)
+        raw_action = env.home_action.copy()
+        raw_action[0] += 10
+        _, _, _, _, info = env.step(raw_action)
+        assert info["action_filtered"] is True
+        assert info["action_slew_limited_axes"][0]
+        env.reset(seed=8)
+        env.step(raw_action)
+    finally:
+        env.close()
+
+    records = [json.loads(line) for line in trace_path.read_text().splitlines()]
+    assert len(records) == 2
+    record = records[0]
+    assert record["contract_id"] == ACTION_TRACE_CONTRACT_ID
+    assert record["schema_version"] == "dapier.so101.vla-action-trace.v1"
+    assert record["episode_seed"] == 7
+    assert record["joint_names"] == list(JOINT_NAMES)
+    assert record["action_smoothing"] is True
+    assert record["chunk_boundary"] is True
+    assert len(record["command_positions_rad"]) == 6
+    assert len(record["simulation_positions_rad"]) == 6
+    assert len(record["cube_position_m"]) == 3
+    assert len(record["gripper_position_m"]) == 3
+    assert len(record["tray_position_m"]) == 3
+    assert isinstance(record["finger_pad_cube_bilateral_contact"], bool)
+    assert record["finger_pad_cube_max_penetration_m"] >= 0.0
+    assert isinstance(record["reward"], float)
+    assert record["is_success"] is False
+    assert record["terminated"] is False
+    assert record["truncated"] is True
+    assert record["episode_done"] is True
+    assert [item["trace_sample_index"] for item in records] == [1, 2]
+    assert records[0]["timestamp_ns"] < records[1]["timestamp_ns"]
+    assert records[0]["episode_timestamp_ns"] == records[1]["episode_timestamp_ns"]
 
 
 @pytest.mark.timeout(30)
@@ -471,7 +744,20 @@ def test_reachable_scene_contains_support_goal_and_finger_pads():
             assert env.model.geom_rgba[geom_id, 3] == 1
             np.testing.assert_allclose(env.model.geom_pos[geom_id], expected_pos)
             np.testing.assert_allclose(env.model.geom_size[geom_id], expected_size)
-        for wall_name in ("tray_wall_left", "tray_wall_right", "tray_wall_near", "tray_wall_far"):
+            pair_id = mujoco.mj_name2id(
+                env.model,
+                mujoco.mjtObj.mjOBJ_PAIR,
+                f"{name}_cube_contact",
+            )
+            assert pair_id >= 0
+            np.testing.assert_allclose(env.model.pair_friction[pair_id], FINGER_PAD_CUBE_CONTACT_FRICTION)
+            np.testing.assert_allclose(env.model.pair_solref[pair_id], FINGER_PAD_CUBE_CONTACT_SOLREF)
+        for wall_name in (
+            "tray_wall_left",
+            "tray_wall_right",
+            "tray_wall_near",
+            "tray_wall_far",
+        ):
             wall_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, wall_name)
             assert env.model.geom_pos[wall_id, 2] == pytest.approx(0.006)
             assert env.model.geom_size[wall_id, 2] == pytest.approx(0.006)
@@ -722,6 +1008,9 @@ def test_top_rgb_estimate_drives_a_bounded_ik_plan_without_cube_state():
         assert plan.actions.shape == (VISION_PICK_PLACE_FRAMES, 6)
         assert np.all(plan.actions >= ACTION_LOW)
         assert np.all(plan.actions <= ACTION_HIGH)
+        assert plan.approach_action[5] == 100
+        assert plan.lift_action[5] == VISION_GRASP_CLOSE_PERCENT
+        assert pytest.approx(-0.015) == VISION_GRASP_Z_OFFSET_M
         shifted = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2] + np.array([0.005, 0.0]))
         assert not np.array_equal(plan.approach_action, shifted.approach_action)
         with pytest.raises(ValueError, match="outside the verified pick workspace"):
@@ -752,11 +1041,20 @@ def test_top_rgb_ik_expert_places_randomized_cube(seed):
         estimate = estimate_blue_cube_world_position(env.render("top"), env.camera_calibration("top"))
         plan = build_vision_pick_place_plan(env.model, estimate.world_xyz[:2], goal_xy=GOAL_TRAY_POSITION[:2])
         info = None
+        max_penetration_m = 0.0
+        bilateral_contact_frames = 0
         for action in plan.actions:
             _, _, _, _, info = env.step(action)
+            max_penetration_m = max(
+                max_penetration_m,
+                float(info["finger_pad_cube_max_penetration_m"]),
+            )
+            bilateral_contact_frames += int(info["finger_pad_cube_bilateral_contact"])
         assert info is not None
         assert info["is_success"] is True
         assert np.all(np.abs(info["cube_position"][:2] - GOAL_TRAY_POSITION[:2]) < 0.05)
+        assert bilateral_contact_frames > 0
+        assert max_penetration_m <= VISION_MAX_PAD_PENETRATION_M
     finally:
         env.close()
 

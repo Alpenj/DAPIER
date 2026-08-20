@@ -26,9 +26,11 @@ Only the adapter in this module deals with MuJoCo radians.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 import gymnasium as gym
 import numpy as np
@@ -70,6 +72,9 @@ _JOINT_HIGH_RAD = np.array(
 ACTION_LOW = np.concatenate((np.rad2deg(_JOINT_LOW_RAD[:5]), np.array([0.0]))).astype(np.float32)
 ACTION_HIGH = np.concatenate((np.rad2deg(_JOINT_HIGH_RAD[:5]), np.array([100.0]))).astype(np.float32)
 DEFAULT_HOME_ACTION = np.array([0.0, -35.0, 55.0, 35.0, 0.0, 100.0], dtype=np.float32)
+# Measured maxima from the verified 60-episode v2 IK teacher dataset. These
+# are simulation rollout stability ceilings, not physical motor safety limits.
+DEFAULT_VLA_ACTION_MAX_DELTA = np.array([1.75, 0.65, 0.30, 0.35, 0.12, 5.50], dtype=np.float32)
 CUBE_SPAWN_POSITION = np.array([0.25453126220736555, -0.002930872758779989, 0.075], dtype=np.float64)
 GOAL_TRAY_POSITION = np.array([0.20, 0.18, 0.031], dtype=np.float64)
 CUBE_HALF_SIZE_M = 0.025
@@ -77,6 +82,8 @@ CUBE_SETTLED_CENTER_Z_M = 0.06881588
 CUBE_TOP_PLANE_Z_M = CUBE_SETTLED_CENTER_Z_M + CUBE_HALF_SIZE_M
 _GOAL_TRAY_CUBE_CENTER_HALF_EXTENT_M = 0.05
 FINGER_PAD_GEOM_NAMES = ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")
+FINGER_PAD_CUBE_CONTACT_FRICTION = (1.6, 1.6, 0.02, 0.001, 0.001)
+FINGER_PAD_CUBE_CONTACT_SOLREF = (-200_000.0, -400.0)
 WRIST_CAMERA_HOUSING_GEOM_NAME = "dapier_wrist_camera_housing"
 WRIST_CAMERA_LENS_GEOM_NAME = "dapier_wrist_camera_lens"
 WRIST_CAMERA_MOUNT_GEOM_NAME = "dapier_wrist_camera_mount"
@@ -102,6 +109,141 @@ _FINGER_PAD_SPECS = (
         "size": [0.008, 0.012, 0.003],
     },
 )
+
+
+def _action_trace_contract_id() -> str:
+    payload = {
+        "joint_names": JOINT_NAMES,
+        "position_unit": "radian",
+        "step_mode": "synchronous",
+        "observation_alignment": "post_action_readback",
+        "action_reference": "absolute_target",
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+ACTION_TRACE_CONTRACT_ID = _action_trace_contract_id()
+
+
+@dataclass(frozen=True)
+class ActionFilterResult:
+    """One raw-to-applied action transformation with auditable deltas."""
+
+    step_index: int
+    chunk_step: int
+    chunk_boundary: bool
+    blend_weight: float
+    raw_action: np.ndarray
+    bounded_action: np.ndarray
+    applied_action: np.ndarray
+    raw_delta: np.ndarray
+    applied_delta: np.ndarray
+    slew_limited_axes: np.ndarray
+    gripper_deadband_applied: bool
+
+    @property
+    def action_filtered(self) -> bool:
+        return not np.allclose(self.bounded_action, self.applied_action, atol=1e-6)
+
+
+class VLAActionFilter:
+    """Blend action-chunk boundaries and reject frame-to-frame outliers."""
+
+    def __init__(
+        self,
+        *,
+        enabled: bool,
+        action_chunk_steps: int,
+        action_blend_steps: int,
+        action_max_delta: tuple[float, ...] | list[float] | np.ndarray,
+        gripper_action_deadband: float,
+    ) -> None:
+        if action_chunk_steps <= 0:
+            raise ValueError("action_chunk_steps must be positive")
+        if not 0 <= action_blend_steps <= action_chunk_steps:
+            raise ValueError("action_blend_steps must be between zero and action_chunk_steps")
+        max_delta = np.asarray(action_max_delta, dtype=np.float32)
+        if max_delta.shape != (6,) or not np.all(np.isfinite(max_delta)) or np.any(max_delta <= 0):
+            raise ValueError("action_max_delta must contain six positive finite values")
+        if not np.isfinite(gripper_action_deadband) or gripper_action_deadband < 0:
+            raise ValueError("gripper_action_deadband must be finite and non-negative")
+
+        self.enabled = enabled
+        self.action_chunk_steps = action_chunk_steps
+        self.action_blend_steps = action_blend_steps
+        self.action_max_delta = max_delta
+        self.gripper_action_deadband = float(gripper_action_deadband)
+        self._step_index = 0
+        self._previous_raw: np.ndarray | None = None
+        self._previous_applied: np.ndarray | None = None
+        self._chunk_anchor: np.ndarray | None = None
+
+    def reset(self, initial_action: np.ndarray) -> None:
+        initial = np.asarray(initial_action, dtype=np.float32)
+        if initial.shape != (6,) or not np.all(np.isfinite(initial)):
+            raise ValueError("initial_action must contain six finite values")
+        initial = np.clip(initial, ACTION_LOW, ACTION_HIGH)
+        self._step_index = 0
+        self._previous_raw = initial.copy()
+        self._previous_applied = initial.copy()
+        self._chunk_anchor = initial.copy()
+
+    def apply(self, raw_action: np.ndarray) -> ActionFilterResult:
+        raw = np.asarray(raw_action, dtype=np.float32)
+        if raw.shape != (6,):
+            raise ValueError(f"Expected action shape (6,), got {raw.shape}")
+        if not np.all(np.isfinite(raw)):
+            raise ValueError("action must contain only finite values")
+        if self._previous_raw is None or self._previous_applied is None:
+            raise RuntimeError("VLAActionFilter.reset() must be called before apply()")
+
+        bounded = np.clip(raw, ACTION_LOW, ACTION_HIGH)
+        chunk_step = self._step_index % self.action_chunk_steps
+        chunk_boundary = chunk_step == 0
+        if chunk_boundary:
+            self._chunk_anchor = self._previous_applied.copy()
+
+        candidate = bounded.copy()
+        blend_weight = 1.0
+        if self.enabled and self.action_blend_steps > 0 and chunk_step < self.action_blend_steps:
+            assert self._chunk_anchor is not None
+            blend_weight = (chunk_step + 1) / self.action_blend_steps
+            candidate = self._chunk_anchor + blend_weight * (candidate - self._chunk_anchor)
+
+        gripper_deadband_applied = False
+        if (
+            self.enabled
+            and abs(float(candidate[5] - self._previous_applied[5])) < self.gripper_action_deadband
+        ):
+            candidate[5] = self._previous_applied[5]
+            gripper_deadband_applied = True
+
+        requested_delta = candidate - self._previous_applied
+        if self.enabled:
+            applied_delta = np.clip(requested_delta, -self.action_max_delta, self.action_max_delta)
+        else:
+            applied_delta = requested_delta
+        applied = np.clip(self._previous_applied + applied_delta, ACTION_LOW, ACTION_HIGH)
+        slew_limited_axes = self.enabled & (np.abs(requested_delta) > self.action_max_delta + 1e-6)
+
+        result = ActionFilterResult(
+            step_index=self._step_index,
+            chunk_step=chunk_step,
+            chunk_boundary=chunk_boundary,
+            blend_weight=blend_weight,
+            raw_action=raw.copy(),
+            bounded_action=bounded.copy(),
+            applied_action=applied.copy(),
+            raw_delta=(bounded - self._previous_raw).copy(),
+            applied_delta=(applied - self._previous_applied).copy(),
+            slew_limited_axes=slew_limited_axes.copy(),
+            gripper_deadband_applied=gripper_deadband_applied,
+        )
+        self._previous_raw = bounded.copy()
+        self._previous_applied = applied.copy()
+        self._step_index += 1
+        return result
 
 
 @dataclass(frozen=True)
@@ -142,7 +284,9 @@ def _profile_quaternion(profile: CameraProfile, mujoco: Any) -> np.ndarray:
     return quaternion
 
 
-def lerobot_action_to_qpos(action: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
+def lerobot_action_to_qpos(
+    action: np.ndarray | list[float] | tuple[float, ...],
+) -> np.ndarray:
     """Convert the LeRobot SO-101 six-value convention to MuJoCo radians."""
     action_array = np.asarray(action, dtype=np.float64)
     if action_array.shape != (6,):
@@ -155,7 +299,9 @@ def lerobot_action_to_qpos(action: np.ndarray | list[float] | tuple[float, ...])
     return qpos
 
 
-def qpos_to_lerobot_state(qpos: np.ndarray | list[float] | tuple[float, ...]) -> np.ndarray:
+def qpos_to_lerobot_state(
+    qpos: np.ndarray | list[float] | tuple[float, ...],
+) -> np.ndarray:
     """Convert the six MuJoCo joint values to LeRobot degrees + gripper percent."""
     qpos_array = np.asarray(qpos, dtype=np.float64)
     if qpos_array.shape != (6,):
@@ -198,6 +344,12 @@ class SO101MujocoEnv(gym.Env):
         cube_xy_randomization: float = 0.025,
         camera_names: tuple[str, ...] | list[str] = POLICY_CAMERA_NAMES,
         home_action: tuple[float, ...] | list[float] | np.ndarray = DEFAULT_HOME_ACTION,
+        action_smoothing: bool = False,
+        action_chunk_steps: int = 25,
+        action_blend_steps: int = 3,
+        action_max_delta: tuple[float, ...] | list[float] | np.ndarray = DEFAULT_VLA_ACTION_MAX_DELTA,
+        gripper_action_deadband: float = 1.0,
+        action_trace_path: str | None = None,
     ):
         super().__init__()
         if task != "PickCube-v0":
@@ -237,6 +389,24 @@ class SO101MujocoEnv(gym.Env):
         self.home_action = np.clip(np.asarray(home_action, dtype=np.float32), ACTION_LOW, ACTION_HIGH)
         if self.home_action.shape != (6,):
             raise ValueError(f"home_action must have shape (6,), got {self.home_action.shape}")
+        if action_trace_path is not None and not action_trace_path:
+            raise ValueError("action_trace_path must be non-empty when provided")
+        self.action_smoothing = action_smoothing
+        self._action_filter = VLAActionFilter(
+            enabled=action_smoothing,
+            action_chunk_steps=action_chunk_steps,
+            action_blend_steps=action_blend_steps,
+            action_max_delta=action_max_delta,
+            gripper_action_deadband=gripper_action_deadband,
+        )
+        self.action_trace_path = (
+            Path(action_trace_path).expanduser().resolve() if action_trace_path is not None else None
+        )
+        self._action_trace_file: TextIO | None = None
+        self._trace_sample_index = 0
+        self._episode_index = -1
+        self._episode_seed: int | None = None
+        self._model_source_revision = "sha256:" + hashlib.sha256(self.model_path.read_bytes()).hexdigest()
 
         self.metadata = {**self.metadata, "render_fps": fps}
         self.action_space = gym.spaces.Box(low=ACTION_LOW, high=ACTION_HIGH, dtype=np.float32)
@@ -267,6 +437,8 @@ class SO101MujocoEnv(gym.Env):
         self._actuator_ids: np.ndarray | None = None
         self._cube_qpos_address: int | None = None
         self._cube_body_id: int | None = None
+        self._cube_geom_id: int | None = None
+        self._finger_pad_geom_ids: frozenset[int] = frozenset()
         self._tray_site_id: int | None = None
         self._gripper_site_id: int | None = None
         self._simulated_substeps = 0
@@ -311,6 +483,16 @@ class SO101MujocoEnv(gym.Env):
                 rgba=[0.07, 0.07, 0.07, 1.0],
                 group=2,
                 density=0,
+            )
+        for pad_name in FINGER_PAD_GEOM_NAMES:
+            model_spec.add_pair(
+                name=f"{pad_name}_cube_contact",
+                geomname1=pad_name,
+                geomname2="cube_geom",
+                condim=4,
+                friction=FINGER_PAD_CUBE_CONTACT_FRICTION,
+                solref=FINGER_PAD_CUBE_CONTACT_SOLREF,
+                solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
             )
 
         wrist_profile = camera_profile("wrist")
@@ -379,6 +561,10 @@ class SO101MujocoEnv(gym.Env):
         cube_joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "cube_joint")
         self._cube_qpos_address = int(self.model.jnt_qposadr[cube_joint_id])
         self._cube_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "cube")
+        self._cube_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "cube_geom")
+        self._finger_pad_geom_ids = frozenset(
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name) for name in FINGER_PAD_GEOM_NAMES
+        )
         self._tray_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "tray_target")
         self._gripper_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "gripperframe")
 
@@ -416,15 +602,36 @@ class SO101MujocoEnv(gym.Env):
         dense_reward = float(1.0 - np.tanh(5.0 * distance)) + float(success)
         return bool(success), dense_reward
 
-    def _get_info(self, action_clipped: bool = False) -> dict[str, Any]:
+    def _finger_pad_cube_contact_metrics(self) -> tuple[bool, float]:
+        assert self.data is not None and self._cube_geom_id is not None
+        touching_pads: set[int] = set()
+        max_penetration_m = 0.0
+        for contact_index in range(self.data.ncon):
+            contact = self.data.contact[contact_index]
+            geom_pair = {int(contact.geom1), int(contact.geom2)}
+            if self._cube_geom_id not in geom_pair:
+                continue
+            touched = geom_pair & self._finger_pad_geom_ids
+            if not touched:
+                continue
+            touching_pads.update(touched)
+            max_penetration_m = max(max_penetration_m, -float(contact.dist))
+        return touching_pads == self._finger_pad_geom_ids, max_penetration_m
+
+    def _get_info(
+        self,
+        action_clipped: bool = False,
+        action_filter_result: ActionFilterResult | None = None,
+    ) -> dict[str, Any]:
         assert self.data is not None and self._cube_body_id is not None and self._tray_site_id is not None
         success, dense_reward = self._task_metrics()
+        bilateral_contact, max_penetration_m = self._finger_pad_cube_contact_metrics()
         gripper_position = (
             self.data.site_xpos[self._gripper_site_id].astype(np.float32).copy()
             if self._gripper_site_id is not None
             else np.full(3, np.nan, dtype=np.float32)
         )
-        return {
+        info = {
             "is_success": success,
             "task": self.task,
             "action_clipped": action_clipped,
@@ -432,7 +639,81 @@ class SO101MujocoEnv(gym.Env):
             "cube_position": self.data.xpos[self._cube_body_id].astype(np.float32).copy(),
             "tray_position": self.data.site_xpos[self._tray_site_id].astype(np.float32).copy(),
             "gripper_position": gripper_position,
+            "finger_pad_cube_bilateral_contact": bilateral_contact,
+            "finger_pad_cube_max_penetration_m": max_penetration_m,
         }
+        if action_filter_result is not None:
+            info.update(
+                {
+                    "action_filtered": action_filter_result.action_filtered,
+                    "action_chunk_boundary": action_filter_result.chunk_boundary,
+                    "action_raw": action_filter_result.raw_action.copy(),
+                    "action_bounded": action_filter_result.bounded_action.copy(),
+                    "action_applied": action_filter_result.applied_action.copy(),
+                    "action_raw_delta": action_filter_result.raw_delta.copy(),
+                    "action_applied_delta": action_filter_result.applied_delta.copy(),
+                    "action_slew_limited_axes": action_filter_result.slew_limited_axes.copy(),
+                    "action_gripper_deadband_applied": (action_filter_result.gripper_deadband_applied),
+                }
+            )
+        return info
+
+    def _write_action_trace(
+        self,
+        result: ActionFilterResult,
+        *,
+        reward: float,
+        success: bool,
+        terminated: bool,
+        truncated: bool,
+    ) -> None:
+        if self.action_trace_path is None:
+            return
+        assert self.data is not None
+        assert self._cube_body_id is not None and self._gripper_site_id is not None and self._tray_site_id is not None
+        if self._action_trace_file is None:
+            self.action_trace_path.parent.mkdir(parents=True, exist_ok=True)
+            self._action_trace_file = self.action_trace_path.open("w", encoding="utf-8", buffering=1)
+        self._trace_sample_index += 1
+        bilateral_contact, max_penetration_m = self._finger_pad_cube_contact_metrics()
+        record = {
+            "schema_version": "dapier.so101.vla-action-trace.v1",
+            "contract_id": ACTION_TRACE_CONTRACT_ID,
+            "source_revision": self._model_source_revision,
+            "joint_names": list(JOINT_NAMES),
+            "episode_index": self._episode_index,
+            "episode_seed": self._episode_seed,
+            "step_index": result.step_index,
+            # RCS JointTrace requires timestamps to increase across the whole
+            # trace. Keep the reset-local MuJoCo clock as separate evidence.
+            "trace_sample_index": self._trace_sample_index,
+            "timestamp_ns": int(round(self._trace_sample_index / self.fps * 1_000_000_000)),
+            "episode_timestamp_ns": int(round(float(self.data.time) * 1_000_000_000)),
+            "chunk_step": result.chunk_step,
+            "chunk_boundary": result.chunk_boundary,
+            "blend_weight": result.blend_weight,
+            "action_smoothing": self.action_smoothing,
+            "raw_action_lerobot": result.raw_action.tolist(),
+            "bounded_action_lerobot": result.bounded_action.tolist(),
+            "applied_action_lerobot": result.applied_action.tolist(),
+            "raw_delta_lerobot": result.raw_delta.tolist(),
+            "applied_delta_lerobot": result.applied_delta.tolist(),
+            "slew_limited_axes": result.slew_limited_axes.tolist(),
+            "gripper_deadband_applied": result.gripper_deadband_applied,
+            "command_positions_rad": lerobot_action_to_qpos(result.applied_action).tolist(),
+            "simulation_positions_rad": self._joint_qpos().astype(np.float64).tolist(),
+            "cube_position_m": self.data.xpos[self._cube_body_id].astype(np.float64).tolist(),
+            "gripper_position_m": self.data.site_xpos[self._gripper_site_id].astype(np.float64).tolist(),
+            "tray_position_m": self.data.site_xpos[self._tray_site_id].astype(np.float64).tolist(),
+            "finger_pad_cube_bilateral_contact": bilateral_contact,
+            "finger_pad_cube_max_penetration_m": max_penetration_m,
+            "reward": reward,
+            "is_success": success,
+            "terminated": terminated,
+            "truncated": truncated,
+            "episode_done": terminated or truncated,
+        }
+        self._action_trace_file.write(json.dumps(record, separators=(",", ":")) + "\n")
 
     def reset(
         self,
@@ -441,6 +722,7 @@ class SO101MujocoEnv(gym.Env):
         options: dict[str, Any] | None = None,
     ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
         super().reset(seed=seed)
+        self._episode_seed = seed
         self._load_model()
         assert self._mujoco is not None and self.model is not None and self.data is not None
         assert self._joint_qpos_addresses is not None and self._actuator_ids is not None
@@ -455,11 +737,17 @@ class SO101MujocoEnv(gym.Env):
         if self.cube_xy_randomization > 0:
             cube_xy += self.np_random.uniform(-self.cube_xy_randomization, self.cube_xy_randomization, size=2)
         cube_adr = self._cube_qpos_address
-        self.data.qpos[cube_adr : cube_adr + 3] = [cube_xy[0], cube_xy[1], CUBE_SPAWN_POSITION[2]]
+        self.data.qpos[cube_adr : cube_adr + 3] = [
+            cube_xy[0],
+            cube_xy[1],
+            CUBE_SPAWN_POSITION[2],
+        ]
         self.data.qpos[cube_adr + 3 : cube_adr + 7] = [1.0, 0.0, 0.0, 0.0]
         self._mujoco.mj_forward(self.model, self.data)
         self._step_count = 0
         self._simulated_substeps = 0
+        self._episode_index += 1
+        self._action_filter.reset(self.home_action)
         return self._get_observation(), self._get_info()
 
     def step(self, action: np.ndarray) -> tuple[dict[str, np.ndarray], float, bool, bool, dict[str, Any]]:
@@ -470,9 +758,9 @@ class SO101MujocoEnv(gym.Env):
         action_array = np.asarray(action, dtype=np.float32)
         if action_array.shape != (6,):
             raise ValueError(f"Expected action shape (6,), got {action_array.shape}")
-        clipped_action = np.clip(action_array, ACTION_LOW, ACTION_HIGH)
-        action_clipped = not np.array_equal(action_array, clipped_action)
-        self.data.ctrl[self._actuator_ids] = lerobot_action_to_qpos(clipped_action)
+        filter_result = self._action_filter.apply(action_array)
+        action_clipped = not np.array_equal(action_array, filter_result.bounded_action)
+        self.data.ctrl[self._actuator_ids] = lerobot_action_to_qpos(filter_result.applied_action)
 
         substeps = self._substeps_for_next_frame()
         for _ in range(substeps):
@@ -484,7 +772,20 @@ class SO101MujocoEnv(gym.Env):
         reward = float(success) if self.reward_type == "sparse" else dense_reward
         terminated = bool(success and self.terminate_on_success)
         truncated = self._step_count >= self.max_episode_steps
-        return self._get_observation(), reward, terminated, truncated, self._get_info(action_clipped)
+        self._write_action_trace(
+            filter_result,
+            reward=reward,
+            success=success,
+            terminated=terminated,
+            truncated=truncated,
+        )
+        return (
+            self._get_observation(),
+            reward,
+            terminated,
+            truncated,
+            self._get_info(action_clipped, filter_result),
+        )
 
     def render(self, camera_name: str = "front") -> np.ndarray:
         if camera_name not in CAMERA_NAMES:
@@ -530,6 +831,9 @@ class SO101MujocoEnv(gym.Env):
         )
 
     def close(self) -> None:
+        if self._action_trace_file is not None:
+            self._action_trace_file.close()
+            self._action_trace_file = None
         if self._renderer is not None:
             self._renderer.close()
             self._renderer = None
@@ -543,8 +847,12 @@ def create_so101_mujoco_envs(
 ) -> dict[str, dict[int, gym.vector.VectorEnv]]:
     """Build the nested environment mapping expected by LeRobot."""
 
-    def _make_one():
-        return SO101MujocoEnv(**gym_kwargs)
+    def _make_one(env_index: int):
+        worker_kwargs = dict(gym_kwargs)
+        action_trace_path = worker_kwargs.get("action_trace_path")
+        if action_trace_path is not None:
+            worker_kwargs["action_trace_path"] = str(action_trace_path).format(env_index=env_index)
+        return SO101MujocoEnv(**worker_kwargs)
 
     extra_kwargs: dict[str, Any] = {}
     if env_cls is gym.vector.AsyncVectorEnv:
@@ -553,10 +861,13 @@ def create_so101_mujoco_envs(
         from gymnasium.vector import AutoresetMode
 
         vector_env = env_cls(
-            [_make_one for _ in range(n_envs)],
+            [lambda env_index=env_index: _make_one(env_index) for env_index in range(n_envs)],
             autoreset_mode=AutoresetMode.SAME_STEP,
             **extra_kwargs,
         )
     except ImportError:
-        vector_env = env_cls([_make_one for _ in range(n_envs)], **extra_kwargs)
+        vector_env = env_cls(
+            [lambda env_index=env_index: _make_one(env_index) for env_index in range(n_envs)],
+            **extra_kwargs,
+        )
     return {"so101_mujoco": {0: vector_env}}

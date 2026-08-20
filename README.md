@@ -1,393 +1,151 @@
-# DAPIER — 직접 조립하고 기록하며 배우는 로봇 프로젝트
+# DAPIER — Physical AI 학습·실험 기록
 
-이 저장소는 제가 로봇을 직접 조립하고, 터미널 로그와 실제 움직임을
-확인하면서 배운 내용을 쌓아가는 작업 공간입니다. 아직 완성품을 소개하는
-저장소가 아니라, 시뮬레이션·실물 제어·데이터 수집을 한 단계씩 연결하는
-과정 자체를 남기고 있습니다.
+이 저장소는 수업과 개인 실습에서 직접 실행한 로봇 코드, 실패 원인과 검증
+기록을 한곳에 모은 작업 공간이다.
 
-현재 저장소에는 예전에 만든 Arduino 4축 로봇암 코드와, 앞으로 확장하려는
-SO-101 기반 카드 딜러 실험이 함께 있습니다. 두 프로젝트를 한 번에
-완성했다고 가정하지 않고, 각 폴더의 테스트와 실제 장비 확인 결과를
-구분해서 기록합니다.
+최종 목표는 SO-101 두 대를 이용한 카드 딜러지만, 현재는 **한 팔
+pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진행하고 있다.
+시뮬레이션에서 성공한 것, 합성 ROS message로 확인한 것, 실제 장비에서 확인한
+것을 같은 결과로 취급하지 않는다.
 
-양팔 카지노 딜러라는 프로젝트 아이디어와, episode를 모아 policy를 만들고
-한 팔에서 양팔로 확장하자는 작업 방향은 제가 정했습니다.
+## 지금 상태
 
-## 이 프로젝트에서 AI를 사용하는 방식
+저장소에 남아 있는 최신 실물 기록은 2026-08-20이다.
 
-AI는 제가 정한 방향을 코드와 문서로 옮길 때 ROS 2 개념을 다시 설명받거나,
-로그를 읽고, 명령어·테스트 코드의 반복 작업을 줄이는 보조 도구로 사용합니다.
-배선, 전원, 모터 ID, 캘리브레이션, 실제 관절 방향과 안전 판정은 제가 직접
-확인합니다. AI가 제안한 명령도 그대로 믿지 않고 한 줄씩 실행한 결과를
-다음 작업의 기준으로 삼습니다.
+| 영역 | 현재 판단 |
+|---|---|
+| SO-101 sim-first | 6축 순서·단위·frame 계약을 검사하는 G0와 조정된 MuJoCo task의 G1 scripted pick-and-lift를 통과했다. |
+| SO-101 policy | 기존 wrist-only v2 checkpoint를 유지한다. corrected contact physics에서 unseen seed `2100..2119` 결과는 `11/20`이며 80% release gate는 닫혀 있다. |
+| SO-101 실물 | leader/follower serial board와 각 motor ID 1~6 응답은 확인했다. 첫 follower calibration은 실패했고 teleoperation은 아직 금지 상태다. |
+| SO-101 ROS 2 | 관절 계약, calibration 변환, 제한 계산과 합성 `JointState` 기반 safe teleop까지만 검증했다. 실제 motor driver는 미구현이다. |
+| 카지노 딜러 | blackjack planner, episode manifest와 one-card 기구학 baseline이 있다. 실제 카드·흡착·양팔 동작은 아직 없다. |
+| 이동로봇 | TurtleBot3 SLAM·Nav2는 Jazzy/gz-sim에서 end-to-end로 확인했다. 커스텀 `ros_dd_ws`는 현재 world와 저장 map이 어긋나 Nav2 재검증이 필요하다. |
+| 이동형 양팔 신발 정리 | JDcobot200 두 팔의 STS3215 12개를 읽기 전용으로 확인했고 TurtleBot3 stationary baseline과 들린 바퀴 속도 응답을 기록했다. 팔 동작·RGB-D stream·실제 신발 집기는 아직 미검증이다. |
+| 4축 로봇암 | RViz/Gazebo 시뮬레이션과 Arduino Uno 서보 제어를 별도 패키지로 보관한다. SO-101 결과와 섞지 않는다. |
 
-따라서 체크되지 않은 항목은 아직 하지 않은 작업이고, 시뮬레이션에서
-통과한 것이 실제 로봇에서도 통과했다는 뜻은 아닙니다.
+## 저장소 구성
 
-## 어떤 패키지를 사용해야 하나
+### SO-101 주 작업
 
-이 저장소는 용도에 따라 ROS 2 패키지를 분리합니다.
+| 경로 | 내용 |
+|---|---|
+| [`so101/`](so101/README.md) | SO-101 코드·integration·실험 기록·hardware tool을 찾는 최신 인덱스 |
+| [`dapier_sim_first/`](dapier_sim_first/README.md) | ROS 2와 실기체 없이 실행하는 G0/G1 Gate와 offline digital-twin evaluator |
+| [`so101/integrations/lerobot_v0_6_so101_mujoco/`](so101/integrations/lerobot_v0_6_so101_mujoco/README.md) | LeRobot v0.6.0용 SO-101 MuJoCo overlay, IK/VLA 실험과 action trace 보존본 |
+| [`so101_ros2/`](so101_ros2/README.md) | DAPIER가 직접 구성한 ROS 2 Jazzy core와 mock safe teleop |
+| [`so101/hardware_tools/`](so101/hardware_tools/README.md) | read-only inventory, 안전 calibration wrapper와 STS3215 감사·복구 도구 |
+| [`casino_dealer/`](casino_dealer/README.md) | CardBench 계약, blackjack planner, episode manifest와 one-card 기구학 baseline |
+| [`docs/SO101_CASINO_DEALER_RUNBOOK_KO.md`](docs/SO101_CASINO_DEALER_RUNBOOK_KO.md) | calibration부터 episode 검수와 policy 평가까지 사람이 따라 하는 실행 순서 |
 
-| 목적 | 패키지 | Arduino·시리얼 포함 |
+### 이동로봇과 기초 제어 실습
+
+| 경로 | 내용 | 현재 범위 |
 |---|---|---|
-| RViz·Gazebo 시뮬레이션만 학습 | `jdcobot100_sim` | 아니요 |
-| 실제 Arduino 서보까지 제어 | `ros_arm` | 예 |
-| 양팔 카지노 딜러 계약·플래너 개발 | `casino_dealer` | 아니요 |
-| SO-101 자체 ROS 2 계약·안전 텔레옵 | `so101_ros2` | 현재 아니요(모의 검증) |
-| SO-101 sim-first 환경·6축 계약 G0와 scripted pick G1 | `dapier_sim_first` | 아니요 |
-| 이동형 양팔 신발 정리 DYNA-lite episode 계약·검수 | `2ARM_ROBOT/src/shoe_sorting_data` | 아니요 |
+| [`turtlebot3_ws/`](turtlebot3_ws/README.md) | TurtleBot3 SLAM·Nav2 | Humble/Gazebo Classic 교재를 Jazzy/gz-sim Harmonic으로 옮겨 지도 저장과 목표 전송을 확인 |
+| [`2ARM_ROBOT/`](2ARM_ROBOT/README.md) | JDcobot200 양팔 + TurtleBot3 Waffle Pi 신발 정리 | 5축+그리퍼 episode 계약, 비식별 실측 evidence, 전력·URDF·sim-to-real 계획과 ROS 2 Jazzy 검증 |
+| [`ros_dd_ws/`](ros_dd_ws/README.md) | 커스텀 differential-drive robot | 7개 package build, gz-sim, TF와 Cartographer 학습 기록. `hexa` scale 원복 뒤 기존 map/Nav2 결과는 재검증 필요 |
+| [`jdcobot100_sim/`](jdcobot100_sim/README.md) | jdcobot100 시뮬레이션 | RViz, Gazebo, `ros2_control` 연결 학습 |
+| [`ros_arm/`](ros_arm/README.md) | Arduino Uno + SG90/MG90 4축 제어 | `JointState`→USB serial, sequence GUI, firmware와 안전 범위 |
+| [`onshape/jdcobot100/`](onshape/jdcobot100/) | CAD·mesh·MJCF 자산 | jdcobot100 visual과 MuJoCo reference model |
 
-시뮬레이션만 실행하려면 [`jdcobot100_sim`](jdcobot100_sim/README.md)을
-사용합니다. 아래 내용은 실물 제어용 `ros_arm` 설명입니다.
+설계 판단과 중단 조건은 [`project-planning/`](project-planning/)에 남긴다.
+원시 dataset이나 실행 영상 대신 사람이 다시 확인할 수 있는 revision, contract,
+metric과 hash를 기록한다.
 
-양팔 카드 딜러의 관측·행동 계약과 블랙잭 딜 순서를 개발하려면
-[`casino_dealer`](casino_dealer/README.md)를 사용합니다. 현재 버전은
-실물 구동 전 단계이며, 외부 의존성 없이 JSON 딜 계획과 단위 테스트를
-실행할 수 있습니다. SO-101 캘리브레이션부터 episode 수집·검수·정책
-평가까지의 사람이 따라 하는 순서는
-[`docs/SO101_CASINO_DEALER_RUNBOOK_KO.md`](docs/SO101_CASINO_DEALER_RUNBOOK_KO.md)에
-정리되어 있습니다.
+## SO-101 결과를 해석하는 기준
 
-LeRobot CLI를 실시간 실행 계층으로 사용하지 않고 SO-101의 관절 계약,
-calibration 변환과 안전 텔레옵을 직접 학습하려면
-[`so101_ros2`](so101_ros2/README.md)를 사용합니다. 현재는 C++ 코어 단위
-테스트와 합성 `JointState` 통합 검증까지만 완료했으며, 실제 모터 통신과
-torque 제어는 교체 장비에서 읽기 전용 검사 후 진행할 예정입니다.
+과거 README에는 기존 contact model에서 얻은 held-out `14/20` 두 세트를 대표
+성능처럼 적어 두었다. 이후 성공 replay에서 finger pad가 cube 안으로 최대 약
+8.3 mm 들어가는 문제가 측정됐으므로 그 숫자를 현재 release 판단에 사용하지
+않는다.
 
-기존 MuJoCo 실험을 ROS 2나 실물에 연결하기 전에 환경, 여섯 관절 순서,
-degree/radian·gripper 변환과 stale frame 거부 규칙을 확인하려면
-[`dapier_sim_first`](dapier_sim_first/README.md)를 사용합니다. 현재는 G0
-모델 smoke와 task 설정을 명시한 G1 scripted pick-and-lift 1 episode를
-통과했습니다. G1 성공은 얇은 finger pad와 높인 지지대를 manifest에 고정한
-시뮬레이션 결과이며, 기본 장면·학습 policy·실물 로봇 성공을 뜻하지 않습니다.
+visible pad/cube contact, bilateral contact 기록과 1 mm penetration gate를 추가한
+뒤 기존 v2 policy를 다시 평가한 결과가 `11/20`이다. corrected IK teacher는 초기
+30 episode와 후속 100 episode 수집 gate를 통과했지만, 새 student와 mixed
+rehearsal checkpoint들은 기준선보다 나빠 선택하지 않았다. 따라서 현재 선택은
+**기존 v2 policy + corrected contact model**이며, simulation release gate도 실물
+준비 gate도 통과하지 않았다.
 
-SO-101 관련 디렉터리의 역할, 외부 LeRobot/ROS 2 checkout과 DAPIER 정본의
-경계는 [`so101` 작업 허브](so101/README.md)에 모아 두었습니다.
+최근 추가한 기능도 같은 기준으로 구분한다.
 
-JDcobot300 양팔과 TurtleBot3를 결합하기 전 episode 계약, 합성 golden data,
-quality gate와 SQLite manifest를 먼저 검증하려면
-[`2ARM_ROBOT`](2ARM_ROBOT/README.md)를 사용합니다. 현재 결과는
-실물 성공이 아니라 하드웨어 독립 데이터 파이프라인 검증입니다.
+- action smoothing은 chunk 경계의 target jump를 줄였지만 같은-seed 성공 수를
+  늘린 결과는 아니다.
+- human intervention은 policy/human 교정 evidence를 남기지만 아직 native
+  LeRobot training dataset은 아니다.
+- parallel rollout은 현재 GPU에서 더 빠르지 않았고, 최종 성능 평가보다 실패
+  trace 수집에 사용한다.
 
-Arduino Uno에 연결된 네 개의 SG90/MG90 서보를 ROS 2 Jazzy의
-`sensor_msgs/msg/JointState`와 USB 시리얼로 제어하는 학습 프로젝트입니다.
+세부 근거와 선택하지 않은 checkpoint는 [`SO-101 작업 허브`](so101/README.md)에서
+실험 흐름별로 확인할 수 있다.
 
-## 전체 데이터 흐름
+## 실물 준비 상태
 
-```text
-ros_arm_sequence_gui
-        │ /joint_states (관절 이름 + rad)
-        ▼
-ros_arm_control
-        │ A,base,shoulder,forearm,upper\n (servo degree)
-        ▼
-Arduino Uno
-        │ PWM
-        ▼
-D3 / D5 / D6 / D9 서보
-```
+이전에는 SO-101 serial 장치를 찾지 못해 hardware gate가 막혀 있었다. 최신 기록에서는
+두 USB serial board가 안정적인 by-id 경로로 보이고, 양쪽 bus의 motor ID 1~6이
+응답하는 것까지 확인했다.
 
-RViz와 실제 로봇은 같은 `/joint_states` 메시지를 사용하므로 슬라이더를
-움직이면 화면의 모델과 실제 팔이 함께 움직입니다.
+다만 첫 follower calibration은 중앙 자세 뒤 range recorder가 즉시 끝나
+`MIN=POS=MAX=2047`로 남았고 저장이 거부됐다. homing offset은 servo에 기록됐기
+때문에 calibration을 다시 끝내기 전에는 teleoperation을 하지 않는다.
 
-## 배선
+현재 다음 순서가 남아 있다.
 
-| 관절 | Arduino 신호 핀 |
-|---|---:|
-| Base | D3 |
-| Shoulder | D5 |
-| Forearm | D6 |
-| Upper arm | D9 |
+1. follower와 leader calibration을 각각 완료하고 read-only `inspect`로 교차 확인
+2. calibration JSON schema, motor ID와 normalized pose 비교
+3. emergency stop과 current limit 준비 후 한 관절씩 저속 방향 확인
+4. wrist camera extrinsic, image rotation과 FOV 측정
+5. 실제 한 장 pick/place demonstration 수집과 사람의 성공·실패 검수
+6. 짧은 replay와 policy rollout을 거친 뒤 두 번째 팔 추가
 
-서보 4개는 Arduino 5V 핀에서 직접 구동하지 않습니다. 별도 5V 전원을
-사용하고 외부 전원의 GND와 Arduino GND를 반드시 공통으로 연결합니다.
+## 빠른 확인
 
-## 좌표 변환
-
-ROS/URDF의 관절 위치 단위는 radian이고 중심은 `0 rad`입니다. 일반적인
-서보 명령 단위는 degree이고 중심은 `90°`입니다.
-
-```text
-servo_degree = 90 + degrees(urdf_radian)
-```
-
-예:
-
-```text
-URDF -0.1745 rad ≈ servo 80°
-URDF  0.0000 rad = servo 90°
-URDF +0.1745 rad ≈ servo 100°
-```
-
-브리지는 JointState 배열 순서를 가정하지 않고 다음 관절 이름으로 값을
-찾습니다.
-
-```text
-dof_base
-dof_shoulder
-dof_elbow
-dof_wrist_pitch
-```
-
-## 안전 제한
-
-조립 직후 충돌을 피하기 위해 세 단계에서 동일하게 제한합니다.
-
-```text
-URDF/GUI: -30° ~ +30°
-ROS bridge: servo 60° ~ 120°
-Arduino: servo 60° ~ 120°
-```
-
-통신이 끊기면 Arduino는 현재 자세를 유지합니다. 서보를 갑자기 0°로
-보내는 것보다 조립된 로봇암에 안전하기 때문입니다.
-
-## Arduino 업로드
-
-Arduino IDE에서 `arduino/ros_control/ros_control.ino`를 열어 Uno와
-`/dev/ttyUSB0`을 선택한 뒤 업로드합니다.
-
-CLI 예:
+저장소 전체를 하나의 Python 환경이나 colcon workspace에서 한 번에 빌드하지
+않는다. 각 실험의 README에 적힌 환경을 사용한다.
 
 ```bash
-arduino --upload \
-  --board arduino:avr:uno \
-  --port /dev/ttyUSB0 \
-  --pref upload.verify=false \
-  arduino/ros_control/ros_control.ino
+git clone https://github.com/Alpenj/DAPIER.git
+cd DAPIER
 ```
 
-시리얼 프로토콜:
-
-```text
-PC → Arduino: A,90,80,100,90
-Arduino → PC: OK,90,80,100,90
-```
-
-## ROS 2 빌드
+장비 없이 바로 실행할 수 있는 대표 경로:
 
 ```bash
-cd ~/my_ros2_ws
-source /opt/ros/jazzy/setup.bash
-colcon build --packages-select ros_arm
-source install/setup.bash
+cd ~/DAPIER/casino_dealer
+python3 -m unittest discover -s test -v
+python3 -m casino_dealer.cli --players 3
+
+cd ~/DAPIER
+python3 -m unittest discover -s dapier_sim_first/test -v
 ```
 
-## 실행
+`dapier_sim_first` 단위 테스트는 장비 없이 실행할 수 있지만, G1 전체 재현에는
+문서에 고정된 MuJoCo model, calibration 파일과 별도 환경이 필요하다.
 
-```bash
-ros2 launch ros_arm model_rviz_launch.py
-```
+ROS 2 실습은 Ubuntu 24.04와 ROS 2 Jazzy 기준이다.
 
-Arduino까지 함께 구동할 때만 다음 launch를 사용합니다.
+- SO-101 mock safe teleop: [`so101_ros2/README.md`](so101_ros2/README.md)
+- TurtleBot3 SLAM·Nav2: [`turtlebot3_ws/README.md`](turtlebot3_ws/README.md)
+- 이동형 양팔 신발 정리: [`2ARM_ROBOT/README.md`](2ARM_ROBOT/README.md)
+- 커스텀 차동구동 로봇: [`ros_dd_ws/README.md`](ros_dd_ws/README.md)
+- 4축 시뮬레이션: [`jdcobot100_sim/README.md`](jdcobot100_sim/README.md)
+- Arduino 4축 실물 제어: [`ros_arm/README.md`](ros_arm/README.md)
 
-```bash
-ros2 launch ros_arm display_launch.py serial_port:=/dev/ttyUSB0
-```
+## SO-101을 처음 읽는 순서
 
-실행되는 노드:
+1. [`so101/README.md`](so101/README.md)에서 현재 선택한 결과와 코드 위치를 확인한다.
+2. [`sim-to-real foundation`](project-planning/2026-08-07-so101-sim-to-real-foundation.md)에서 Gate와 중단 조건을 읽는다.
+3. [`dapier_sim_first/README.md`](dapier_sim_first/README.md)에서 G0/G1 근거를 확인한다.
+4. [`LeRobot integration README`](so101/integrations/lerobot_v0_6_so101_mujoco/README.md)에서 IK/VLA 구현과 재현법을 확인한다.
+5. 실물 작업은 [`카지노 딜러 runbook`](docs/SO101_CASINO_DEALER_RUNBOOK_KO.md)과 [`hardware tools`](so101/hardware_tools/README.md)를 함께 본다.
 
-- `robot_state_publisher`: URDF와 JointState를 TF로 변환
-- `ros_arm_sequence_gui`: 관절 슬라이더, 시퀀스 저장·재생, `/joint_states` 발행
-- `ros_arm_control`: radian을 서보 degree로 바꿔 시리얼 전송
-- `rviz2`: 화면의 로봇 모델 표시
+## 기록 원칙
 
-GUI의 `Randomize` 버튼은 누르지 않고 각 슬라이더를 천천히 움직여
-관절 방향과 실제 안전 범위를 확인합니다.
+- command와 measured state를 구분한다. 마지막 명령을 측정값으로 기록하지 않는다.
+- SIM, MOCK, HW 결과를 분리한다. MuJoCo나 합성 message 통과는 실물 성공이 아니다.
+- seed, revision, contract hash, camera profile, action horizon과 판정 기준을 결과와 함께 남긴다.
+- `.venv`, `build/install/log`, 원시 Dataset v3, 영상, serial ID와 calibration JSON은 Git에서 제외한다.
+- 외부 코드와 자산은 overlay, patch, provenance와 license 경계를 명시한다.
 
-## 서보 떨림 줄이기
-
-브리지는 1°짜리 미세 명령 변화를 무시하는 `deadband_degrees=2`와
-초당 최대 15회만 전송하는 `command_rate_hz=15.0`을 사용합니다.
-이 설정은 GUI 값의 미세 변화와 과도한 시리얼 명령 때문에 목표점 주변을
-왕복하는 현상을 줄입니다.
-
-그래도 가만히 있을 때 계속 떠는 경우는 대부분 전원 또는 기계적
-부하 문제입니다.
-
-- 서보 4개는 5V 외부 전원을 사용하고 충분한 전류 용량을 확보합니다.
-- 외부 전원 GND와 Arduino GND를 반드시 공통 연결합니다.
-- 전원 레일 가까이에 470~1000µF 전해 콘덴서를 병렬 연결할 수 있습니다.
-- 관절 끝에서 버티거나 링크가 비틀린 상태라면 범위를 더 좁힙니다.
-- `Randomize`를 연속으로 누르면 네 관절 목표가 계속 바뀌므로 사용하지 않습니다.
-
-SG90 계열의 내부 가변저항과 기어 유격 때문에 약간의 떨림은 남을 수
-있습니다. 정지 시 PWM을 끄는 `detach()`는 떨림은 멈추지만 팔이 중력으로
-떨어질 수 있어 이 프로젝트의 기본 동작에는 사용하지 않습니다.
-
-## 자세 시퀀스 저장과 재생
-
-launch를 실행하면 전용 시퀀스 GUI가 열립니다. GUI에 보이는 숫자는 실제
-서보 각도인 60~120°이며, 내부에서
-`radians(servo_degree - 90)`으로 변환해 `/joint_states`를 발행합니다.
-
-1. 슬라이더로 한 관절씩 안전한 자세를 만듭니다.
-2. 단계 이름과 이동 시간을 입력합니다.
-3. `현재 자세 추가`를 누릅니다.
-4. 필요한 자세를 순서대로 추가하고 표에서 확인합니다.
-5. `재생`으로 실제 암과 RViz 움직임을 확인합니다.
-6. `JSON 저장`으로 저장하고 다음 실행에서 다시 불러옵니다.
-
-표의 셀은 더블클릭해 수정할 수 있습니다. 행을 더블클릭하면 해당 자세가
-슬라이더와 실제 암에 적용됩니다. 순서 변경, 선택 삭제, 현재 자세로
-덮어쓰기, 반복 재생도 지원합니다.
-
-샘플 파일은 `sequences/fold_and_open.json`입니다.
-
-```json
-{
-  "name": "center",
-  "angles": [90, 90, 90, 90],
-  "duration": 1.0
-}
-```
-
-재생 중에는 시작 자세와 목표 자세 사이를 20ms 간격으로 선형 보간합니다.
-일시정지는 현재 자세를 유지하고, 정지는 재생만 끝내며 서보를 위험한
-0° 위치로 보내지 않습니다.
-
-## 검증 명령
-
-```bash
-ros2 topic echo /joint_states
-ros2 node list
-```
-
-브리지 로그의 정상 예:
-
-```text
-TX A,90,90,90,90
-RX OK,90,90,90,90
-```
-
-## 1초 자동 관절 테스트 노드
-
-GUI 대신 `auto_joint_publisher.py`를 사용하면 1초마다 한 관절씩 안전하게
-매핑을 시험할 수 있습니다.
-
-```text
-전체 90°
-→ Base 100° → Base 80° → Base 90°
-→ Shoulder 100° → Shoulder 80° → Shoulder 90°
-→ Forearm 100° → Forearm 80° → Forearm 90°
-→ Upper 100° → Upper 80° → Upper 90°
-→ 반복
-```
-
-실제 Arduino와 RViz를 자동으로 시험하는 명령:
-
-```bash
-ros2 launch ros_arm auto_demo_launch.py
-```
-
-기본 진폭은 중심에서 ±10°이고 주기는 1초입니다. 필요하면 launch
-argument로 바꿀 수 있습니다.
-
-```bash
-ros2 launch ros_arm auto_demo_launch.py \
-  period_seconds:=2.0 amplitude_degrees:=5.0
-```
-
-실물 모드에서는 노드가 `/joint_states`를 발행하므로 Arduino 브리지까지
-함께 움직입니다. 암 주변을 비우고 전원을 확인한 뒤 실행해야 합니다.
-
-## Gazebo 물리 시뮬레이션
-
-Gazebo launch는 원본 `ros_arm.urdf`에서 혼합 모델을 동적으로 만듭니다.
-`gazebo_description.py`가 실제 CAD STL visual과 관절 원점은 그대로
-보존하고, `1e-09 kg` 수준의 inertial을 안정적인 학습용 값으로
-교체합니다.
-
-첫 번째 단순 형상 모델로 controller 연결을 확인한 뒤 실제 CAD visual로
-교체했습니다. CAD 좌표에 추정 collision box를 적용하면 링크가 서로
-밀어내며 속도가 과도하게 튀었기 때문에, 현재 기본 launch는 실제 외형의
-모션 확인에 집중하도록 collision과 gravity를 비활성화했습니다. 정확한
-충돌 시뮬레이션은 링크별 collision 치수를 별도로 측정한 뒤 추가해야
-합니다.
-
-필요 패키지:
-
-```bash
-sudo apt-get install -y \
-  ros-jazzy-desktop \
-  ros-jazzy-ros-gz \
-  ros-jazzy-gz-ros2-control \
-  ros-jazzy-ros2-control \
-  ros-jazzy-ros2-controllers
-```
-
-Gazebo 자동 시험:
-
-```bash
-ros2 launch ros_arm gazebo_auto_demo_launch.py
-```
-
-화면이 열리면 왼쪽 `Entity Tree`에서 `ros_arm`을 선택하고 `F`를 눌러
-카메라를 로봇에 맞춥니다. 마우스 왼쪽 드래그는 회전, 가운데 드래그는
-이동, 휠은 확대/축소입니다. 상단 재생/일시정지 버튼으로 물리 시계를
-제어합니다. Gazebo 창을 닫으면 관련 ROS 노드도 함께 종료되므로 다시
-보려면 위 launch 명령을 재실행합니다.
-
-이 launch는 다음 순서로 동작합니다.
-
-1. Gazebo Harmonic을 시작합니다.
-2. `robot_description`의 로봇을 `ros_gz_sim create`로 생성합니다.
-3. `gz_ros2_control`이 네 관절의 position interface를 등록합니다.
-4. `joint_state_broadcaster`가 실제 시뮬레이션 각도를 `/joint_states`로
-   발행합니다.
-5. `arm_position_controller`가 네 관절 위치 명령을 받습니다.
-6. 자동 노드가 목표를 1초마다 바꾸고 50Hz로 보간한 명령을 보냅니다.
-
-Gazebo 모드에서는 자동 노드가 `/joint_states`를 직접 발행하지 않습니다.
-그 토픽은 시뮬레이터가 측정한 결과를 전달하는 피드백이기 때문입니다.
-
-```text
-auto_joint_publisher
-        │ /arm_position_controller/commands
-        ▼
-arm_position_controller
-        ▼
-gz_ros2_control → Gazebo physics
-        │
-        └→ joint_state_broadcaster → /joint_states
-```
-
-controller 확인:
-
-```bash
-ros2 control list_controllers
-ros2 topic echo /joint_states
-ros2 topic info /arm_position_controller/commands --verbose
-```
-
-정상 상태:
-
-```text
-joint_state_broadcaster active
-arm_position_controller active
-```
-
-실물 launch와 Gazebo launch를 동시에 실행하면 토픽이 섞일 수 있으므로
-처음 학습할 때는 한 번에 하나만 실행합니다. Gazebo launch에는 Arduino
-브리지가 포함되지 않아 시뮬레이션 동작이 실제 암으로 전달되지 않습니다.
-
-## 주요 파일
-
-```text
-ros_arm/
-├── arduino/ros_control/ros_control.ino
-├── launch/display_launch.py
-├── launch/model_rviz_launch.py
-├── launch/auto_demo_launch.py
-├── launch/gazebo_auto_demo_launch.py
-├── ros_arm/auto_joint_publisher.py
-├── ros_arm/gazebo_description.py
-├── ros_arm/ros_arm_bridge.py
-├── config/gazebo_controllers.yaml
-├── rviz/ros_arm.rviz
-├── meshes -> ../onshape/jdcobot100/reference/assets
-├── urdf/ros_arm.urdf
-├── urdf/ros_arm_gazebo.urdf
-├── package.xml
-└── setup.py
-```
+AI는 반복 코드와 테스트 초안, 명령 정리, 로그 비교에 보조적으로 사용했다.
+README의 상태는 생성된 설명이 아니라 커밋된 코드와 저장된 record, 직접 실행한
+결과를 기준으로 갱신한다.

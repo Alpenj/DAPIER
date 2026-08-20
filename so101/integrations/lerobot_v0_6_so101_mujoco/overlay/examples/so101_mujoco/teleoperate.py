@@ -22,6 +22,7 @@ import argparse
 import contextlib
 import ctypes
 import ctypes.util
+import os
 import shlex
 import subprocess
 import sys
@@ -46,6 +47,7 @@ from lerobot.envs.so101_mujoco import (
     estimate_blue_cube_world_position,
     resolve_control_route,
     write_ik_expert_dataset_contract,
+    write_parallel_rollout_manifest,
 )
 from lerobot.envs.so101_mujoco.teleop import (
     PICK_APPROACH_ACTION,
@@ -647,6 +649,37 @@ def run(args: argparse.Namespace) -> None:
             raise ValueError("--policy-path is required when --input=policy")
         if recording:
             raise ValueError("Use lerobot-eval recording options for policy rollouts")
+        if not args.no_viewer:
+            command = [
+                sys.executable,
+                str(Path(__file__).with_name("intervene_vla.py")),
+                "--policy-path",
+                str(args.policy_path),
+                "--output-dir",
+                str(args.output_dir),
+                "--episodes",
+                str(args.episodes),
+                "--steps",
+                str(args.steps),
+                "--seed",
+                str(args.seed),
+                "--height",
+                str(args.height),
+                "--width",
+                str(args.width),
+                "--cube-randomization",
+                str(args.cube_randomization),
+                "--joint-speed-degrees",
+                str(args.joint_speed_degrees),
+                "--gripper-speed-percent",
+                str(args.gripper_speed_percent),
+                "--cartesian-speed-m",
+                str(args.cartesian_speed_m),
+            ]
+            print(f"control_route=vla-intervention cameras={camera_names}")
+            print(f"delegating_to_interactive_vla={shlex.join(command)}")
+            subprocess.run(command, check=True)
+            return
         command = build_wrist_vla_eval_command(
             python_executable=sys.executable,
             policy_path=args.policy_path,
@@ -657,10 +690,22 @@ def run(args: argparse.Namespace) -> None:
             width=args.width,
             seed=args.seed,
             cube_randomization=args.cube_randomization,
+            parallel_envs=args.parallel_envs,
         )
         print(f"control_route=vla cameras={camera_names}")
         print(f"delegating_to_lerobot_eval={shlex.join(command)}")
-        subprocess.run(command, check=True)
+        subprocess_environment = os.environ.copy()
+        subprocess_environment.setdefault("MUJOCO_GL", "egl")
+        subprocess.run(command, check=True, env=subprocess_environment)
+        if args.parallel_envs > 1:
+            manifest_path = write_parallel_rollout_manifest(
+                eval_info_path=args.output_dir / "eval_info.json",
+                policy_path=args.policy_path,
+                episodes=args.episodes,
+                parallel_envs=args.parallel_envs,
+                seed=args.seed,
+            )
+            print(f"parallel_rollout_manifest={manifest_path}")
         return
     if control_route is not None and control_route.mode == "vla":
         raise ValueError("wrist-only mode requires --input=policy and --policy-path")
@@ -907,6 +952,12 @@ def parse_args() -> argparse.Namespace:
         help="Fail if the requested controller does not match the selected cameras",
     )
     parser.add_argument("--episodes", type=int, default=20)
+    parser.add_argument(
+        "--parallel-envs",
+        type=int,
+        default=1,
+        help="Async MuJoCo workers sharing one batched VLA policy; headless policy mode only",
+    )
     parser.add_argument("--steps", type=int, default=1800)
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--height", type=int, default=240)
@@ -934,8 +985,12 @@ def parse_args() -> argparse.Namespace:
         help="By default, failed and interrupted episodes are discarded",
     )
     args = parser.parse_args()
-    if args.episodes <= 0 or args.steps <= 0 or args.fps <= 0:
-        parser.error("--episodes, --steps, and --fps must be positive")
+    if min(args.episodes, args.steps, args.fps, args.parallel_envs) <= 0:
+        parser.error("--episodes, --steps, --fps, and --parallel-envs must be positive")
+    if args.parallel_envs > args.episodes:
+        parser.error("--parallel-envs cannot exceed --episodes")
+    if args.parallel_envs > 1 and not args.no_viewer:
+        parser.error("--parallel-envs greater than one requires --no-viewer")
     if args.joint_step_degrees <= 0 or args.gripper_step_percent <= 0:
         parser.error("Jog step sizes must be positive")
     if args.joint_speed_degrees <= 0 or args.gripper_speed_percent <= 0:

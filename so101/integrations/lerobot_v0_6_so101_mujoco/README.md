@@ -208,6 +208,83 @@ config와 command builder는 teacher home, action horizon 25와 XY ±25 mm를
 [`2026-08-10-so101-vla-failure-analysis.md`](../../records/2026-08-10-so101-vla-failure-analysis.md)에
 남겼다.
 
+### 2026-08-11 wrist-only VLA action smoothing과 RCS trace
+
+rollout에서 보인 action chunk 경계 떨림을 정책 성공과 별도 제어 문제로 다뤘다.
+VLA route에는 25-action chunk의 첫 3 frame blend, IK teacher action delta에서 정한
+관절별 slew limit, 1% gripper deadband를 적용한다. generic environment 기본값은
+off라서 IK와 수동 제어에는 자동으로 섞이지 않는다.
+
+같은 seed 5개 A/B는 baseline과 smoothing 모두 `4/5`였고, shoulder-pan의
+chunk-boundary 최대 target jump는 `9.405°`에서 `1.750°`, gripper는
+`12.887`에서 `4.282` percentage point로 줄었다. 새 seed 20개는 `16/20
+(80%)`였지만 이전 두 held-out 20-episode 결과가 각각 70%였으므로 checkpoint의
+안정적 80% 일반화 성공으로 올리지는 않는다.
+
+JSONL에는 raw/applied action, filter 결정, radian command와 동기식 MuJoCo
+post-action readback을 같은 contract hash와 전역 단조 timestamp로 기록한다. 이는
+RCS 개념을 따른 비교 evidence이며 smoothing 자체의 원인은 blend/limit/deadband다.
+재현 방법과 실물 gate는
+[`2026-08-11-so101-vla-action-smoothing.md`](../../records/2026-08-11-so101-vla-action-smoothing.md)에
+남겼다.
+
+### 2026-08-11 VLA human intervention과 파지 관통 분석
+
+viewer가 있는 `teleoperate.py --input policy` 경로에 policy/human authority switch를
+추가했다. `Space`에서 measured state를 수동 target으로 고정하고 VLA queue를
+비우며, 키보드 보정 뒤 `Enter`에서 queue가 없는 새 policy chunk로 재개한다.
+각 frame은 policy/human source, wrist PNG, state, requested/applied action과 success를
+JSONL로 남긴다. 이 결과는 아직 LeRobot dataset 변환 전 evidence임을 manifest에
+명시한다. `--no-viewer`는 기존 표준 evaluator 경로를 유지한다.
+
+실제 checkpoint를 사용한 6-step smoke에서 source sequence
+`policy,human,human,policy,policy,policy`, 개입 1구간/2 frame, PNG 6장을 확인했다.
+SO-101 MuJoCo test는 `38/38 PASS`였다.
+
+성공 replay에서 보인 cube 관통도 수치화했다. 50 mm cube에 대해 IK teacher와
+VLA의 약 27% close target은 pad gap이 39.1 mm이고, seed 1600 replay의 최대
+contact penetration은 8.3 mm였다. 35%에서는 gap이 49.3 mm지만 기존 checkpoint를
+그 값으로 제한하면 같은 trajectory가 실패했다. 따라서 renderer만 바꾸지 않고
+IK grasp target 수정, demonstration 재수집, 재학습 대상으로 남겼다. 세부 기록은
+[`2026-08-11-so101-vla-intervention.md`](../../records/2026-08-11-so101-vla-intervention.md)에
+있다.
+
+### 2026-08-11 batched VLA와 병렬 MuJoCo worker
+
+headless VLA route에 `--parallel-envs`를 추가해 하나의 GPU policy가 여러 asynchronous
+MuJoCo worker 관측을 batch inference한다. worker마다 action trace 파일을 분리하고,
+seed별 success와 후속 교정 분류를 `parallel_rollout_manifest.json`에 남긴다. trace에는
+reset seed와 reward/success/termination/truncation/episode-done도 들어간다. manifest는
+seed로 worker 파일과 local episode를 찾아 autoreset 뒤의 불필요한 frame을 구분한다.
+
+RTX 5050 8 GB에서 같은 seed 4개를 비교하니 순차 1-env는 30.726초에 `4/4`, 4-env는
+31.763초에 `3/4`였다. 실패 worker가 horizon까지 batch를 붙잡았고 batch별 확률
+샘플링도 달라져, 이번 결과는 가속이나 성공률 개선이 아니다. trace frame 처리량은
+1,505에서 2,800으로 늘어 병렬 route는 우선 실패 수집용으로 사용한다. 실제 명령과
+경계는 [`2026-08-11-so101-parallel-rollout.md`](../../records/2026-08-11-so101-parallel-rollout.md)에
+기록했다.
+
+### 2026-08-11 corrected IK와 contact-physics 재평가
+
+기존 27% gripper target에서 보인 최대 8.3 mm cube 관통을 renderer 문제가 아닌
+contact-model 결함으로 처리했다. visible pad/cube named pair, 두 tangential 축을 포함한
+friction `[1.6,1.6,0.02,0.001,0.001]`, direct solref `[-200000,-400]`를 적용하고
+bilateral contact와 최대 penetration을 info/action trace에 기록한다. trace에는 cube,
+gripper, tray의 3D 위치도 포함한다.
+
+35% close와 -15 mm grasp offset corrected IK는 seed `2000..2059` sweep `60/60`, 최대
+0.310 mm였고, fail-closed collector로 seed `2000..2029`의 `30/30`, 19,800 frame
+teacher/student 데이터를 만들었다. 하지만 새-from-base 10k와 기존 v2에서 5k
+fine-tune한 두 student는 각각 unseen `0/20`, `0/10`이라 선택하지 않았다.
+
+대조군인 기존 선택 v2 checkpoint는 corrected physics에서 unseen seed `2100..2119`
+`11/20 (55%)`, 최대 penetration `0.663 mm`였다. 따라서 현재 선택은 기존 v2 policy와
+새 contact physics 조합이며 80% release gate는 계속 닫혀 있다. 27% action은 physics가
+막는 position-servo preload로 해석할 수 있지만, 실제 servo 허용 전류나 안전 torque를
+검증한 결과는 아니다. 전체 sweep, rejected seed 2027 데이터, 학습 실패와 선택 근거는
+[`2026-08-11-so101-corrected-ik-retraining.md`](../../records/2026-08-11-so101-corrected-ik-retraining.md)에
+남겼다.
+
 ## 결과를 섞지 않는 규칙
 
 이 overlay로 2026-08-06 만든 `so101_mujoco_joint_sweep`은 5 episode, 450

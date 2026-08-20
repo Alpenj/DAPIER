@@ -19,18 +19,24 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from lerobot.envs.so101_mujoco import (
+    FINGER_PAD_CUBE_CONTACT_FRICTION,
+    FINGER_PAD_CUBE_CONTACT_SOLREF,
     GOAL_TRAY_POSITION,
     IK_OBSERVE_ACTION,
     JOINT_NAMES,
     PICK_CLEAR_ACTION,
     POLICY_CAMERA_NAMES,
     TOP_CAMERA_PROFILE_ID,
+    VISION_GRASP_CLOSE_PERCENT,
+    VISION_GRASP_Z_OFFSET_M,
+    VISION_MAX_PAD_PENETRATION_M,
     VISION_SETTLE_FRAMES,
     WRIST_CAMERA_PROFILE_ID,
     SO101MujocoEnv,
@@ -110,6 +116,7 @@ def run(args: argparse.Namespace) -> None:
     )
     total_frames = 0
     errors_mm: list[float] = []
+    penetrations_mm: list[float] = []
     completed = False
     try:
         for episode_index in range(args.episodes):
@@ -131,22 +138,43 @@ def run(args: argparse.Namespace) -> None:
                 estimate.world_xyz[:2],
                 goal_xy=GOAL_TRAY_POSITION[:2],
             )
+            max_penetration_m = 0.0
+            bilateral_contact_frames = 0
             for frame_index, action in enumerate(plan.actions):
                 is_last = frame_index == len(plan.actions) - 1
                 next_observation, reward, _, _, info = env.step(action)
                 add_frame(dataset, observation, action, reward, info, done=is_last)
                 observation = next_observation
                 episode_frames += 1
+                max_penetration_m = max(
+                    max_penetration_m,
+                    float(info["finger_pad_cube_max_penetration_m"]),
+                )
+                bilateral_contact_frames += int(info["finger_pad_cube_bilateral_contact"])
 
             if not info["is_success"]:
                 dataset.clear_episode_buffer(delete_images=True)
                 raise RuntimeError(f"IK expert failed at episode={episode_index} seed={seed}")
+            if max_penetration_m > VISION_MAX_PAD_PENETRATION_M:
+                dataset.clear_episode_buffer(delete_images=True)
+                raise RuntimeError(
+                    f"IK expert exceeded penetration gate at episode={episode_index} seed={seed}: "
+                    f"{max_penetration_m * 1000:.3f} mm"
+                )
+            if bilateral_contact_frames == 0:
+                dataset.clear_episode_buffer(delete_images=True)
+                raise RuntimeError(
+                    f"IK expert never achieved bilateral contact at episode={episode_index} seed={seed}"
+                )
             dataset.save_episode(parallel_encoding=False)
             total_frames += episode_frames
             errors_mm.append(error_mm)
+            penetrations_mm.append(max_penetration_m * 1000)
             print(
                 f"episode={episode_index + 1}/{args.episodes} seed={seed} "
-                f"frames={episode_frames} rgb_xy_error_mm={error_mm:.3f} success=True"
+                f"frames={episode_frames} rgb_xy_error_mm={error_mm:.3f} "
+                f"max_penetration_mm={max_penetration_m * 1000:.3f} "
+                f"bilateral_contact_frames={bilateral_contact_frames} success=True"
             )
         completed = True
     finally:
@@ -157,10 +185,52 @@ def run(args: argparse.Namespace) -> None:
 
     if completed:
         mark_ik_expert_dataset_verified(args.root, episodes=args.episodes, frames=total_frames)
+        validation_path = args.root / "meta" / "dapier_corrected_ik_validation.json"
+        validation_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "dapier.so101.corrected-ik-validation.v1",
+                    "execution": {
+                        "seed_start": args.seed,
+                        "seed_end": args.seed + args.episodes - 1,
+                        "episodes": args.episodes,
+                        "cube_xy_randomization_m": args.cube_randomization,
+                    },
+                    "teacher": {
+                        "grasp_close_percent": VISION_GRASP_CLOSE_PERCENT,
+                        "grasp_z_offset_m": VISION_GRASP_Z_OFFSET_M,
+                        "max_allowed_pad_penetration_m": VISION_MAX_PAD_PENETRATION_M,
+                        "finger_pad_cube_contact_friction": list(FINGER_PAD_CUBE_CONTACT_FRICTION),
+                        "finger_pad_cube_contact_solref": list(FINGER_PAD_CUBE_CONTACT_SOLREF),
+                    },
+                    "results": {
+                        "successful_episodes": args.episodes,
+                        "recorded_frames": total_frames,
+                        "mean_rgb_xy_error_mm": float(np.mean(errors_mm)),
+                        "max_rgb_xy_error_mm": float(np.max(errors_mm)),
+                        "max_observed_pad_penetration_mm": float(np.max(penetrations_mm)),
+                    },
+                    "claims": {
+                        "simulation_only": True,
+                        "physical_grasp_verified": False,
+                        "ready_for_student_dataset_derivation": True,
+                        "vla_optimizer_updates": 0,
+                    },
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         print(
             f"summary={args.episodes}/{args.episodes} frames={total_frames} "
-            f"mean_error_mm={np.mean(errors_mm):.3f} max_error_mm={np.max(errors_mm):.3f}"
+            f"mean_error_mm={np.mean(errors_mm):.3f} max_error_mm={np.max(errors_mm):.3f} "
+            f"max_penetration_mm={np.max(penetrations_mm):.3f} "
+            f"grasp_close_percent={VISION_GRASP_CLOSE_PERCENT:.1f} "
+            f"grasp_z_offset_mm={VISION_GRASP_Z_OFFSET_M * 1000:.1f}"
         )
+        print(f"corrected_ik_validation={validation_path.resolve()}")
         print(f"dataset_root={args.root.resolve()}")
 
 
