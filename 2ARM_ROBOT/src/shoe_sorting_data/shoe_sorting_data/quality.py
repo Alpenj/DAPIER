@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from shoe_sorting_data.camera_payload import CameraPayloadError, verify_camera_payload
 from shoe_sorting_data.contract import load_manifest
 
 
@@ -140,6 +141,20 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
     state_specs = recording["state_streams"]
     action_specs = recording["action_streams"]
     camera_names = recording["camera_streams"]
+    camera_payload_config = recording.get("camera_payload", {})
+    camera_payload_required = (
+        isinstance(camera_payload_config, Mapping) and camera_payload_config.get("mode") == "required"
+    )
+    synchronized_stream_names = {
+        "left_joint_state",
+        "right_joint_state",
+        "left_joint_action",
+        "right_joint_action",
+        "base_velocity",
+        "base_command",
+        "workspace_rgb",
+        "workspace_depth",
+    }
     limits = manifest["quality_limits"]
 
     if manifest["outcome"]["status"] != "accepted":
@@ -165,6 +180,40 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
                 report.add("sample_gap_exceeded", "sample timestamp gap exceeds 1.5x expected period", index)
         if timestamp is not None:
             previous_timestamp = timestamp
+
+        if camera_payload_required:
+            timing = sample.get("timing")
+            if not isinstance(timing, Mapping):
+                report.add("timing_group_missing", "required payload samples need timing metadata", index)
+            else:
+                if timing.get("anchor_timestamp_ns") != timestamp:
+                    report.add("timing_anchor_mismatch", "timing anchor must equal sample timestamp", index)
+                stream_timestamps = timing.get("stream_timestamps_ns")
+                received_timestamps = timing.get("stream_received_monotonic_ns")
+                if not isinstance(stream_timestamps, Mapping) or set(stream_timestamps) != synchronized_stream_names:
+                    report.add("stream_timing_invalid", "stream header timestamp map is incomplete", index)
+                elif not all(
+                    isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                    for value in stream_timestamps.values()
+                ):
+                    report.add("stream_timing_invalid", "stream header timestamps must be non-negative integers", index)
+                else:
+                    actual_delta = max(stream_timestamps.values()) - min(stream_timestamps.values())
+                    if timing.get("sync_delta_ns") != actual_delta:
+                        report.add("sync_delta_mismatch", "sync_delta_ns does not match stream timestamps", index)
+                    if actual_delta > limits["max_camera_skew_ns"]:
+                        report.add("sync_delta_exceeded", "synchronized stream delta exceeds tolerance", index)
+                if not isinstance(received_timestamps, Mapping) or set(received_timestamps) != synchronized_stream_names:
+                    report.add("stream_receive_timing_invalid", "stream receive timestamp map is incomplete", index)
+                elif not all(
+                    isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                    for value in received_timestamps.values()
+                ):
+                    report.add(
+                        "stream_receive_timing_invalid",
+                        "stream receive timestamps must be non-negative integers",
+                        index,
+                    )
 
         for group_name, specs in (("state", state_specs), ("action", action_specs)):
             group = sample.get(group_name)
@@ -236,6 +285,18 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
                 continue
             if camera.get("valid") is not True:
                 report.add("camera_invalid", f"camera {camera_name} frame is invalid", index)
+            if camera_payload_required:
+                received_monotonic_ns = camera.get("received_monotonic_ns")
+                if (
+                    isinstance(received_monotonic_ns, bool)
+                    or not isinstance(received_monotonic_ns, int)
+                    or received_monotonic_ns < 0
+                ):
+                    report.add(
+                        "camera_receive_timestamp_invalid",
+                        f"camera {camera_name} receive timestamp is invalid",
+                        index,
+                    )
             camera_timestamp = camera.get("timestamp_ns")
             if (
                 timestamp is not None
@@ -265,6 +326,25 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
                 elif previous_frame is not None and frame_id != previous_frame + 1:
                     report.add("camera_frame_gap", f"camera {camera_name} skipped a frame_id", index)
                 previous_camera_frames[camera_name] = frame_id
+            payload_metadata = camera.get("payload")
+            if payload_metadata is None:
+                if camera_payload_required:
+                    report.add(
+                        "camera_payload_missing",
+                        f"camera {camera_name} requires a pixel payload",
+                        index,
+                    )
+            elif not isinstance(payload_metadata, Mapping):
+                report.add(
+                    "camera_payload_metadata_invalid",
+                    f"camera {camera_name} payload must be an object",
+                    index,
+                )
+            else:
+                try:
+                    verify_camera_payload(path.parent, camera_name, payload_metadata)
+                except CameraPayloadError as error:
+                    report.add(error.code, f"camera {camera_name}: {error}", index)
 
     valid_timestamps = [
         sample.get("timestamp_ns")

@@ -8,9 +8,14 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from shoe_sorting_data.camera_payload import CAMERA_PAYLOAD_CONTRACT_VERSION, CAMERA_PAYLOAD_MODES
 
-EPISODE_SCHEMA_VERSION = "dapier.shoe-episode.v0.2"
-SUPPORTED_EPISODE_SCHEMA_VERSIONS = {"dapier.shoe-episode.v0.1", EPISODE_SCHEMA_VERSION}
+EPISODE_SCHEMA_VERSION = "dapier.shoe-episode.v0.3"
+SUPPORTED_EPISODE_SCHEMA_VERSIONS = {
+    "dapier.shoe-episode.v0.1",
+    "dapier.shoe-episode.v0.2",
+    EPISODE_SCHEMA_VERSION,
+}
 OUTCOME_STATUSES = {"recorded", "accepted", "rejected", "aborted"}
 
 
@@ -43,6 +48,7 @@ def build_manifest(
     fixture_id: str = "fixture_unknown",
     recording_span_id: str = "span_unknown",
     attempt_id: str = "attempt_unknown",
+    camera_payload_mode: str | None = None,
 ) -> dict[str, Any]:
     """Build one manifest; dimensions are explicit until hardware introspection."""
     state_streams = {
@@ -53,6 +59,9 @@ def build_manifest(
         "base_velocity": _stream(2, "meter_per_second,radian_per_second"),
     }
     action_streams = deepcopy(state_streams)
+    resolved_camera_payload_mode = camera_payload_mode or ("metadata_only" if synthetic else "required")
+    if resolved_camera_payload_mode not in CAMERA_PAYLOAD_MODES:
+        raise ValueError(f"camera_payload_mode must be one of {sorted(CAMERA_PAYLOAD_MODES)}")
     manifest = {
         "schema_version": EPISODE_SCHEMA_VERSION,
         "episode_id": episode_id,
@@ -76,6 +85,11 @@ def build_manifest(
             "clock": "episode_monotonic_ns",
             "expected_period_ns": 50_000_000,
             "camera_streams": ["workspace_rgb", "workspace_depth"],
+            "camera_payload": {
+                "contract_version": CAMERA_PAYLOAD_CONTRACT_VERSION,
+                "mode": resolved_camera_payload_mode,
+                "storage": "ros2_raw_rows",
+            },
             "state_streams": state_streams,
             "action_streams": action_streams,
         },
@@ -103,6 +117,10 @@ def build_manifest(
             "attempt_id": attempt_id,
         },
         "checksums": {"samples_sha256": samples_sha256},
+        "lifecycle": {
+            "state": "finalized",
+            "integrity_verified": True,
+        },
     }
     validate_manifest(manifest)
     return manifest
@@ -149,6 +167,8 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
         "provenance",
         "checksums",
     }
+    if manifest.get("schema_version") == EPISODE_SCHEMA_VERSION:
+        required.add("lifecycle")
     missing = sorted(required - set(manifest))
     if missing:
         raise ValueError(f"manifest is missing keys: {missing}")
@@ -183,6 +203,14 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
         raise ValueError("recording.camera_streams entries must be strings")
     if set(cameras) != {"workspace_rgb", "workspace_depth"}:
         raise ValueError("recording.camera_streams must contain workspace_rgb and workspace_depth")
+    if manifest["schema_version"] == EPISODE_SCHEMA_VERSION:
+        camera_payload = _require_mapping(recording, "camera_payload")
+        if camera_payload.get("contract_version") != CAMERA_PAYLOAD_CONTRACT_VERSION:
+            raise ValueError("recording.camera_payload.contract_version is unsupported")
+        if camera_payload.get("mode") not in CAMERA_PAYLOAD_MODES:
+            raise ValueError(f"recording.camera_payload.mode must be one of {sorted(CAMERA_PAYLOAD_MODES)}")
+        if camera_payload.get("storage") != "ros2_raw_rows":
+            raise ValueError("recording.camera_payload.storage must be ros2_raw_rows")
     _validate_stream_specs(_require_mapping(recording, "state_streams"), "state_streams")
     _validate_stream_specs(_require_mapping(recording, "action_streams"), "action_streams")
 
@@ -228,6 +256,13 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
     digest = _require_text(checksums, "samples_sha256")
     if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
         raise ValueError("checksums.samples_sha256 must be a 64-character hexadecimal digest")
+
+    if manifest["schema_version"] == EPISODE_SCHEMA_VERSION:
+        lifecycle = _require_mapping(manifest, "lifecycle")
+        if lifecycle.get("state") != "finalized":
+            raise ValueError("lifecycle.state must be finalized")
+        if lifecycle.get("integrity_verified") is not True:
+            raise ValueError("lifecycle.integrity_verified must be true")
 
 
 def load_manifest(path: str | Path) -> dict[str, Any]:

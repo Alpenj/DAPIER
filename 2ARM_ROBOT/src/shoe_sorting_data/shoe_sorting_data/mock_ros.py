@@ -14,6 +14,7 @@ from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import Image, JointState
 
+from shoe_sorting_data.camera_payload import CameraFramePayload
 from shoe_sorting_data.recorder import ApproximateEpisodeRecorder
 
 
@@ -33,7 +34,7 @@ def _timestamp_ns(message: object) -> int:
 
 
 class MockTopicPublisher(Node):
-    """Publish deterministic, metadata-only synthetic robot and camera topics."""
+    """Publish deterministic robot topics with small lossless RGB-D payloads."""
 
     def __init__(self, *, arm_dof: int = 5, gripper_dof: int = 1) -> None:
         super().__init__("shoe_mock_publisher")
@@ -76,10 +77,24 @@ class MockTopicPublisher(Node):
         message.twist.angular.z = 0.0
         return message
 
-    def _image_metadata(self, timestamp_ns: int, frame_name: str) -> Image:
+    def _image_message(self, timestamp_ns: int, frame_name: str) -> Image:
         message = Image()
         _set_stamp(message, timestamp_ns)
         message.header.frame_id = frame_name
+        message.width = 8
+        message.height = 6
+        message.is_bigendian = 0
+        if frame_name == "workspace_rgb":
+            message.encoding = "rgb8"
+            message.step = message.width * 3
+            message.data = bytes(
+                (self.index * 7 + offset) % 256 for offset in range(message.step * message.height)
+            )
+        else:
+            message.encoding = "16UC1"
+            message.step = message.width * 2
+            depth_sample = (500 + self.index).to_bytes(2, byteorder="little", signed=False)
+            message.data = depth_sample * (message.width * message.height)
         return message
 
     def publish_sample(self) -> None:
@@ -91,8 +106,8 @@ class MockTopicPublisher(Node):
             "right_joint_action": self._joint_message(timestamp_ns, side="right", action=True),
             "base_velocity": self._twist_message(timestamp_ns),
             "base_command": self._twist_message(timestamp_ns),
-            "workspace_rgb": self._image_metadata(timestamp_ns - 2_000_000, "workspace_rgb"),
-            "workspace_depth": self._image_metadata(timestamp_ns + 3_000_000, "workspace_depth"),
+            "workspace_rgb": self._image_message(timestamp_ns - 2_000_000, "workspace_rgb"),
+            "workspace_depth": self._image_message(timestamp_ns + 3_000_000, "workspace_depth"),
         }
         for name, message in messages.items():
             self._topic_publishers[name].publish(message)
@@ -118,6 +133,7 @@ class MockEpisodeRecorderNode(Node):
             output,
             arm_dof=arm_dof,
             gripper_dof=gripper_dof,
+            require_camera_payload=True,
         )
         self.camera_frame_ids = {"workspace_rgb": 0, "workspace_depth": 0}
         for name in (
@@ -173,6 +189,15 @@ class MockEpisodeRecorderNode(Node):
             timestamp_ns=_timestamp_ns(message),
             frame_id=frame_id,
             valid=True,
+            received_monotonic_ns=time.monotonic_ns(),
+            camera_payload=CameraFramePayload(
+                width=message.width,
+                height=message.height,
+                encoding=message.encoding,
+                is_bigendian=message.is_bigendian,
+                step=message.step,
+                data=bytes(message.data),
+            ),
         )
 
 

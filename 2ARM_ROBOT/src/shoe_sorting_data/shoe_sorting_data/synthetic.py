@@ -9,6 +9,7 @@ from pathlib import Path
 import random
 from typing import Any
 
+from shoe_sorting_data.camera_payload import CameraFramePayload, write_camera_payload
 from shoe_sorting_data.contract import build_manifest, save_manifest
 
 
@@ -55,6 +56,30 @@ def _make_samples(*, sample_count: int, arm_dof: int, gripper_dof: int, seed: in
         samples.append(
             {
                 "timestamp_ns": timestamp_ns,
+                "timing": {
+                    "anchor_timestamp_ns": timestamp_ns,
+                    "sync_delta_ns": 5_000_000,
+                    "stream_timestamps_ns": {
+                        "left_joint_state": timestamp_ns,
+                        "right_joint_state": timestamp_ns,
+                        "left_joint_action": timestamp_ns,
+                        "right_joint_action": timestamp_ns,
+                        "base_velocity": timestamp_ns,
+                        "base_command": timestamp_ns,
+                        "workspace_rgb": timestamp_ns - 2_000_000,
+                        "workspace_depth": timestamp_ns + 3_000_000,
+                    },
+                    "stream_received_monotonic_ns": {
+                        "left_joint_state": timestamp_ns + 10,
+                        "right_joint_state": timestamp_ns + 20,
+                        "left_joint_action": timestamp_ns + 30,
+                        "right_joint_action": timestamp_ns + 40,
+                        "base_velocity": timestamp_ns + 50,
+                        "base_command": timestamp_ns + 60,
+                        "workspace_rgb": timestamp_ns + 70,
+                        "workspace_depth": timestamp_ns + 80,
+                    },
+                },
                 "state": state,
                 "action": action,
                 "cameras": {
@@ -62,11 +87,13 @@ def _make_samples(*, sample_count: int, arm_dof: int, gripper_dof: int, seed: in
                         "timestamp_ns": timestamp_ns - 2_000_000,
                         "frame_id": index,
                         "valid": True,
+                        "received_monotonic_ns": timestamp_ns + 70,
                     },
                     "workspace_depth": {
                         "timestamp_ns": timestamp_ns + 3_000_000,
                         "frame_id": index,
                         "valid": True,
+                        "received_monotonic_ns": timestamp_ns + 80,
                     },
                 },
             }
@@ -109,6 +136,49 @@ def _write_samples(path: Path, samples: list[dict[str, Any]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _attach_camera_payloads(
+    root: Path,
+    samples: list[dict[str, Any]],
+    *,
+    width: int,
+    height: int,
+) -> None:
+    for index, sample in enumerate(samples):
+        cameras = sample["cameras"]
+        if "workspace_rgb" in cameras:
+            rgb_data = bytes((index * 7 + offset) % 256 for offset in range(width * height * 3))
+            cameras["workspace_rgb"]["payload"] = write_camera_payload(
+                root,
+                "workspace_rgb",
+                index,
+                CameraFramePayload(
+                    width=width,
+                    height=height,
+                    encoding="rgb8",
+                    is_bigendian=0,
+                    step=width * 3,
+                    data=rgb_data,
+                ),
+            )
+        if "workspace_depth" in cameras:
+            depth_value = 500 + index
+            depth_sample = depth_value.to_bytes(2, byteorder="little", signed=False)
+            depth_data = depth_sample * (width * height)
+            cameras["workspace_depth"]["payload"] = write_camera_payload(
+                root,
+                "workspace_depth",
+                index,
+                CameraFramePayload(
+                    width=width,
+                    height=height,
+                    encoding="16UC1",
+                    is_bigendian=0,
+                    step=width * 2,
+                    data=depth_data,
+                ),
+            )
+
+
 def generate_episode(
     episode_dir: str | Path,
     *,
@@ -118,6 +188,9 @@ def generate_episode(
     seed: int = 42,
     fault: str = "none",
     source_split: str = "train",
+    include_camera_payload: bool = False,
+    camera_width: int = 8,
+    camera_height: int = 6,
 ) -> Path:
     """Generate one deterministic episode and return its manifest path."""
     if sample_count < 2:
@@ -126,6 +199,8 @@ def generate_episode(
         raise ValueError("arm_dof and gripper_dof must be positive")
     if fault not in FAULTS:
         raise ValueError(f"fault must be one of {sorted(FAULTS)}")
+    if camera_width <= 0 or camera_height <= 0:
+        raise ValueError("camera_width and camera_height must be positive")
 
     root = Path(episode_dir)
     root.mkdir(parents=True, exist_ok=True)
@@ -136,6 +211,8 @@ def generate_episode(
         seed=seed,
     )
     _inject_fault(samples, fault)
+    if include_camera_payload:
+        _attach_camera_payloads(root, samples, width=camera_width, height=camera_height)
     digest = _write_samples(root / "samples.jsonl", samples)
     manifest_digest = "0" * 64 if fault == "checksum_mismatch" else digest
     manifest = build_manifest(
@@ -159,6 +236,7 @@ def generate_episode(
         fixture_id="synthetic_grid_v1",
         recording_span_id=f"synthetic_span_{seed:06d}",
         attempt_id=f"synthetic_attempt_{seed:06d}",
+        camera_payload_mode="required" if include_camera_payload else "metadata_only",
     )
     manifest_path = root / "episode_manifest.json"
     save_manifest(manifest_path, manifest)
@@ -174,6 +252,9 @@ def generate_dataset(
     gripper_dof: int = 1,
     seed: int = 42,
     fault: str = "none",
+    include_camera_payload: bool = False,
+    camera_width: int = 8,
+    camera_height: int = 6,
 ) -> list[Path]:
     if count <= 0:
         raise ValueError("count must be positive")
@@ -190,6 +271,9 @@ def generate_dataset(
                 seed=seed + index,
                 fault=fault,
                 source_split=split,
+                include_camera_payload=include_camera_payload,
+                camera_width=camera_width,
+                camera_height=camera_height,
             )
         )
     return paths
