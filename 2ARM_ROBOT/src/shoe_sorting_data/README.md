@@ -1,4 +1,4 @@
-# Shoe Sorting Data Phase 0
+﻿# Shoe Sorting Data Phase 0
 
 JDcobot200 양팔, TurtleBot3 Waffle Pi, Orbbec Astra 계열 카메라용
 DYNA-lite 데이터 기반입니다. 이 패키지는 ACT 학습 코드를 넣기 전에
@@ -158,6 +158,34 @@ python -m shoe_sorting_data.cli offline-eval \
 synthetic fixture의 결과는 padding/split/metric 계약 검증일 뿐 model 성능이
 아닙니다. 실제 task success와 supervisor intervention은 Stage 5 real rollout에서
 별도 측정합니다.
+
+## LeRobot-independent DAPIER-native ACT
+
+native runtime은 finalized raw episode, RGB-D payload, action window, train-only
+normalization, CVAE+Transformer ACT 학습, checkpoint와 inference를 직접 소유합니다.
+LeRobot는 import하지 않으며 기존 native v3 경로는 비교·교환용 optional backend입니다.
+
+```bash
+ros2 run shoe_sorting_data shoe_dapier_act status
+ros2 run shoe_sorting_data shoe_dapier_act smoke --output /tmp/dapier_native_act_smoke
+
+ros2 run shoe_sorting_data shoe_dapier_act train \
+  --root output/accepted_episodes \
+  --checkpoint output/checkpoints/native_act_step100.pt \
+  --chunk-size 16 --batch-size 8 --max-steps 100 --device cuda
+
+ros2 run shoe_sorting_data shoe_dapier_act infer \
+  --root output/accepted_episodes \
+  --checkpoint output/checkpoints/native_act_step100.pt \
+  --item 0 --device cuda
+```
+
+RGB-only 대조군은 `train`에 `--rgb-only`를 추가합니다. RGB-D 여부와 depth 변환값은
+checkpoint config에 저장되어 inference에서 재사용됩니다.
+
+inference JSON은 `control_authorized=false`입니다. 실물 publish는 Stage 5 safety
+supervisor의 현장 gate를 통과하기 전까지 별도 작업으로 남습니다. 자세한 구조와
+학습 이유는 `docs/DAPIER_NATIVE_ACT_RUNTIME.md`에 기록했습니다.
 
 ## JDcobot rollout safety dry-run
 

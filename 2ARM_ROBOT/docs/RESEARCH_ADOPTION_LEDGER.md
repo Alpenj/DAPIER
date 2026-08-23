@@ -109,3 +109,18 @@
 | TurtleBot3 ROS2 공식 source | ROBOTIS, 공식 | [원문](https://github.com/ROBOTIS-GIT/turtlebot3) | `cmd_vel`/`odom` 이동 경계 | **즉시 반영**: odom+recent command stationary gate | base motion mutation | 2026-08-21 |
 | XM430-W210-T control table | ROBOTIS, 공식 | [원문](https://emanual.robotis.com/docs/kr/dxl/x/xm430-w210/) | device-side position/velocity/current limit | **참고만**: mobile base motor이며 arm limit 근거 아님 | JDcobot limit 미가정 | 2026-08-21 |
 | PiL-World·SafeMIL·ROS2 QoS analysis | 2025–2026 | [PiL-World](https://arxiv.org/abs/2606.05773), [SafeMIL](https://arxiv.org/abs/2511.08136), [QoS](https://arxiv.org/abs/2509.03381) | chunk closed-loop/safe imitation/QoS 연구 | **reference-only/보류** | 새 model/formal framework 미도입 | 2026-08-21 |
+
+## Stage 6 · LeRobot 완전 독립 DAPIER-native ACT runtime
+
+상세 조사: [`research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md`](research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md)
+구현·검증: [`DAPIER_NATIVE_ACT_RUNTIME.md`](DAPIER_NATIVE_ACT_RUNTIME.md)
+
+| 자료 | 저자/기관·연도 | 원문 | 확인 내용 | DAPIER 결정 | 코드·테스트 증거 | 확인일 |
+|---|---|---|---|---|---|---|
+| ACT 원 논문 | Zhao et al., 2023 | [논문](https://arxiv.org/abs/2304.13705), [RSS 원문](https://roboticsproceedings.org/rss19/p016.pdf) | action chunk, CVAE, L1+KL, temporal ensemble의 원 구조 | **즉시 반영**: chunk/CVAE/masked loss 원리. **실험 후보**: temporal ensemble | `dapier_native_act.py`, independent smoke | 2026-08-24 |
+| ACT 공식 repository | Zhao et al., 2023– | [코드](https://github.com/tonyzhaozh/act), [dataset](https://github.com/tonyzhaozh/act/blob/main/utils.py), [policy](https://github.com/tonyzhaozh/act/blob/main/policy.py) | future action padding, qpos/action normalization, CVAE loss, rollout query 방식 | **즉시 반영**: train-only stats와 episode-tail mask. **보류**: ALOHA `start_ts-1` alignment hack | dataset/mask/checkpoint tests | 2026-08-24 |
+| LeRobot ACT 공식 코드 | Hugging Face, 2026 | [config](https://github.com/huggingface/lerobot/blob/main/src/lerobot/policies/act/configuration_act.py), [model](https://github.com/huggingface/lerobot/blob/main/src/lerobot/policies/act/modeling_act.py) | valid-count masked L1, chunk queue/reset, `n_action_steps` constraint | **비교 정본만**: runtime dependency 제거. **즉시 반영**: valid-only loss·stale reset | AST no-LeRobot import, queue reset test | 2026-08-24 |
+| LeRobot relative-action tests | Hugging Face, 2026 | [tests](https://github.com/huggingface/lerobot/blob/main/tests/policies/test_relative_actions.py) | episode-tail valid mask와 action representation round-trip 검사 관행 | **참고만**: native failure class에 맞는 test만 재작성 | `[FFF,FFT,FTT]` × 2 | 2026-08-24 |
+
+Stage 6은 “LeRobot/ALOHA checkpoint 호환”을 주장하지 않는다. 외부 checkpoint load, delta-action 기본화,
+temporal ensemble, VLA/world model은 동일 split·예산의 측정 가능한 go/no-go 실험 전까지 보류한다.
