@@ -21,6 +21,8 @@
 - [`research/LATEST_ROLLOUT_SAFETY_SUPERVISOR_RESEARCH_20260821.md`](research/LATEST_ROLLOUT_SAFETY_SUPERVISOR_RESEARCH_20260821.md): ROS2·LeRobot·ROBOTIS 정본과 최소 최신 연구의 Stage 5 판정
 - [`DAPIER_NATIVE_ACT_RUNTIME.md`](DAPIER_NATIVE_ACT_RUNTIME.md): raw episode부터 학습·checkpoint·inference까지 LeRobot 없이 구동하는 Stage 6 native ACT runtime
 - [`research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md`](research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md): ACT 원 논문·공식 코드·현행 LeRobot 비교를 adoption gate로 선별한 Stage 6 근거
+- [`NATIVE_ACT_SUPERVISOR_INTEGRATION.md`](NATIVE_ACT_SUPERVISOR_INTEGRATION.md): native checkpoint action[0] proposal을 독립 supervisor와 mock-only adapter에 연결한 Stage 7 기록
+- [`research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md`](research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md): ACT queue/reset과 ROS2 lifecycle·freshness·trajectory 정본을 선별한 Stage 7 근거
 
 팀의 현재 결정은 `ACT baseline + DYNA-lite + 4주차 이후 보조학습
 go/no-go`다. 조사 참고자료의 전체 SLIM/DYNA 구성을 무조건 적용하지 않는다.

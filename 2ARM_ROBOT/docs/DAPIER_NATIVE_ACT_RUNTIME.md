@@ -111,8 +111,9 @@ ros2 run shoe_sorting_data shoe_dapier_act infer \
 - depth scale 기본값 `1000`은 mm→m 변환 knob다. Astra Pro 실측 depth unit, CameraInfo, registration을
   확인한 뒤 고정한다.
 - 첫 실물 rollout은 `n_action_steps=1`, base stationary, E-stop·joint limit·watchdog 승인으로 제한한다.
-- 현재 inference는 proposal 생성까지다. 다음 코드는 이 proposal과 Stage 5 supervisor trace를 연결하되
-  hardware publish는 현장 승인 전까지 계속 차단해야 한다.
+- Stage 7에서 inference proposal과 Stage 5 supervisor trace 연결을 완료했다. 실제 checkpoint SHA,
+  reset generation, source observation identity를 검증하며 hardware publish는 계속 차단한다.
+- 통합 smoke와 다음 현장 gate는 [`NATIVE_ACT_SUPERVISOR_INTEGRATION.md`](NATIVE_ACT_SUPERVISOR_INTEGRATION.md)에서 확인한다.
 
 ## 연구 근거
 

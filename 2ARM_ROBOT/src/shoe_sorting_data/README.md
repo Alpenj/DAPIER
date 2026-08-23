@@ -187,6 +187,20 @@ inference JSON은 `control_authorized=false`입니다. 실물 publish는 Stage 5
 supervisor의 현장 gate를 통과하기 전까지 별도 작업으로 남습니다. 자세한 구조와
 학습 이유는 `docs/DAPIER_NATIVE_ACT_RUNTIME.md`에 기록했습니다.
 
+### Native ACT → supervisor dry-run
+
+다음 명령은 native ACT checkpoint의 첫 action만 proposal로 만들고 실제 checkpoint SHA,
+reset generation, source observation identity를 Stage 5 supervisor에서 검사합니다.
+
+```bash
+ros2 run shoe_sorting_data shoe_dapier_act rollout-smoke \
+  --output /tmp/dapier_native_act_rollout
+```
+
+결과가 PASS여도 generic JointTrajectory-shaped envelope만 만들며
+`control_authorized=false`, `published=false`, `executed_action=null`,
+`hardware_execution=NOT_ATTEMPTED`입니다. 실제 JDcobot transport는 포함하지 않습니다.
+
 ## JDcobot rollout safety dry-run
 
 다음 명령은 motor나 ROS2 command topic을 열지 않습니다. policy proposal을

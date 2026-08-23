@@ -590,6 +590,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     infer_parser.add_argument("--item", type=int, default=0)
     infer_parser.add_argument("--device", default="cpu")
     infer_parser.add_argument("--split", choices=("train", "validation", "test"), default="train")
+    rollout_parser = subparsers.add_parser("rollout-smoke")
+    rollout_parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
     if args.command == "status":
         result = dependency_status()
@@ -607,6 +609,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_depth_m=args.max_depth_m,
             include_depth=not args.rgb_only,
         )
+    elif args.command == "rollout-smoke":
+        from shoe_sorting_data.native_act_rollout import run_native_act_rollout_smoke
+
+        result = run_native_act_rollout_smoke(args.output)
     else:
         result = infer(args.root, args.checkpoint, item=args.item, device=args.device, split=args.split)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

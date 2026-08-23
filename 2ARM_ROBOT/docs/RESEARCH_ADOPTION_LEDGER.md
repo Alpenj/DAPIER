@@ -124,3 +124,18 @@
 
 Stage 6은 “LeRobot/ALOHA checkpoint 호환”을 주장하지 않는다. 외부 checkpoint load, delta-action 기본화,
 temporal ensemble, VLA/world model은 동일 split·예산의 측정 가능한 go/no-go 실험 전까지 보류한다.
+
+## Stage 7 · Native ACT proposal와 독립 supervisor 통합
+
+상세 조사: [`research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md`](research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md)
+구현·검증: [`NATIVE_ACT_SUPERVISOR_INTEGRATION.md`](NATIVE_ACT_SUPERVISOR_INTEGRATION.md)
+
+| 자료 | 저자/기관·연도 | 원문 | 확인 내용 | DAPIER 결정 | 코드·테스트 증거 | 확인일 |
+|---|---|---|---|---|---|---|
+| ACT 원 논문·공식 rollout | Zhao et al., 2023 | [논문](https://roboticsproceedings.org/rss19/p016.pdf), [코드](https://github.com/tonyzhaozh/act/blob/main/imitate_episodes.py) | chunk prediction과 temporal aggregation은 motor safety 권한을 제공하지 않음 | **즉시 반영**: chunk를 proposal 출처로만 취급. **실험 후보**: aggregation | `native_act_rollout.py`, action[0] exact test | 2026-08-24 |
+| LeRobot ACTConfig·model | Hugging Face, 2026 | [config](https://github.com/huggingface/lerobot/blob/main/src/lerobot/policies/act/configuration_act.py), [model](https://github.com/huggingface/lerobot/blob/main/src/lerobot/policies/act/modeling_act.py) | queue/reset과 `n_action_steps` 의미 | **비교 정본만**: LeRobot import 없이 `n_action_steps=1` native baseline | reset/checkpoint/source identity trace | 2026-08-24 |
+| ROS2 lifecycle·QoS/deadline/liveliness | Open Robotics, 공식 | [lifecycle](https://design.ros2.org/articles/node_lifecycle.html), [QoS](https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html), [design](https://design.ros2.org/articles/qos_deadline_liveliness_lifespan.html) | lifecycle/QoS가 application freshness·human approval을 대신하지 않음 | **즉시 반영**: fault latch + monotonic age. **현장 확인**: driver QoS | 기존 `SafetySupervisor`, integration tests | 2026-08-24 |
+| JointTrajectory message | Open Robotics, 공식 | [message](https://docs.ros.org/en/rolling/p/trajectory_msgs/msg/JointTrajectory.html) | names와 time-indexed points 표현이며 limit/approval 검증 기능은 없음 | **참고만**: generic dry-run envelope, vendor type 미가정 | `published=false`, `executed_action=null` | 2026-08-24 |
+
+`n_action_steps>1`, temporal ensemble, vendor command publisher, 실제 joint limit 가정과 VLA/world model은
+같은 task/checkpoint/safety 조건의 측정 또는 현장 정본이 생길 때까지 보류한다.
