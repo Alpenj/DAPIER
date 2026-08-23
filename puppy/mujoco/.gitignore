@@ -1,0 +1,6 @@
+build/
+meshes
+puppy2.urdf
+.venv/
+__pycache__/
+MUJOCO_LOG.TXT

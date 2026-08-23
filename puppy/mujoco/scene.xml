@@ -1,0 +1,33 @@
+<mujoco model="puppy_scene">
+  <!-- 로봇 본체는 puppy.xml, 여기는 바닥·조명·카메라만.
+       교재가 제공한 scene.xml에는 장애물 박스 8개가 있는데, 교재 안내대로
+       초기 테스트에서는 빼 두었다. obstacles.xml로 따로 분리해 두었으니
+       보행을 붙일 때 include하면 된다. -->
+  <include file="puppy.xml"/>
+
+  <statistic center="0 0 0.08" extent="0.5"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.4 0.4 0.4" specular="0.1 0.1 0.1"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="140" elevation="-20" offwidth="960" offheight="720"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0"
+             width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge"
+             rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8"
+             width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true"
+              texrepeat="10 10" reflectance="0.15"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0.3 -0.3 0.8" dir="-0.3 0.3 -0.8" directional="true"/>
+    <!-- 발 friction은 foot 클래스에서 주므로 바닥은 기본값을 쓴다.
+         MuJoCo는 두 geom의 friction을 element-wise max로 합친다. -->
+    <geom name="floor" size="0 0 0.02" pos="0 0 0" type="plane" material="groundplane"/>
+    <camera name="side" pos="0.42 -0.34 0.20" xyaxes="0.63 0.78 0 -0.28 0.22 0.93"/>
+  </worldbody>
+</mujoco>
