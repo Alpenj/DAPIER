@@ -105,4 +105,4 @@ Windows의 TorchCodec는 full-shared FFmpeg DLL이 없어 공식 PyAV fallback �
 - depth를 ACT가 사용했다는 뜻이 아니다.
 - synthetic 64×64 image가 Astra Pro 실데이터 품질을 대표하지 않는다.
 
-다음 Stage 4에서는 padded timestep을 metric에서 제외하고, chunk size·execution step·action error를 같은 split에서 비교하는 offline evaluator를 만든다.
+Stage 4 offline evaluator는 구현·검증을 완료했다. padded timestep 제외, horizon coverage, 양팔 관절·그리퍼별 error, split/cross-episode leakage gate와 실제 smoke 결과는 [`OFFLINE_EVALUATOR_ACTION_CHUNK.md`](OFFLINE_EVALUATOR_ACTION_CHUNK.md)에서 확인한다.
