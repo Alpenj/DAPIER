@@ -5,8 +5,9 @@
 ## 결론
 
 TurtleBot3 Waffle Pi의 공식 URDF와 메시는 재사용할 수 있다. JDcobot200 강사 저장소의 URDF,
-MJCF, STL은 구조 참고에는 유용하지만 저장소에 명시적인 라이선스가 확인되지 않았으므로 DAPIER에
-복사하지 않는다. DAPIER 팔 모델은 실측 치수와 장치별 보정값으로 별도 작성한다.
+MJCF, STL은 저장소에 표준 라이선스가 확인되지 않았지만, 2026-08-24에 강사 사용·개인화 허가를
+받았다고 사용자가 확인했다. 원본과 DAPIER 개인화 코드를 분리하고 출처와 commit을 고지한 상태로
+양팔 MuJoCo 기준 모델에 사용한다. 실측 치수와 장치별 보정값은 원본에 덮어쓰지 않고 별도 작성한다.
 
 ## 확인된 자산
 
@@ -21,9 +22,10 @@ ROBOTIS 공식 `turtlebot3` 저장소의 Jazzy 브랜치에는 다음 자산이 
 
 공식 저장소는 Apache-2.0이다
 ([ROBOTIS TurtleBot3 저장소](https://github.com/ROBOTIS-GIT/turtlebot3/tree/jazzy)). 따라서 라이선스와
-고지를 유지하며 의존하거나 재사용할 수 있다. 다만 현재 Ubuntu 노트북의 ROS 2 Jazzy 설치에는
-`turtlebot3_description` 패키지가 발견되지 않았다. 패키지는 임의로 설치하지 않았으며, 시뮬레이션
-빌드 전에 누락 의존성으로 처리한다.
+고지를 유지하며 의존하거나 재사용할 수 있다. 2026-08-24 확인에서 ROS 2 system install에는
+축약된 Nav2 Waffle 모델만 있었지만, `turtlebot3_ws`의 공식 Jazzy upstream clone에는
+`turtlebot3_description`과 Waffle Pi URDF/mesh가 모두 있었다. 원본 commit과 라이선스를 보존해
+`sim/turtlebot3_waffle_pi`에 필요한 자산을 반입했고, 참조 mesh 누락 0개와 MuJoCo load를 확인했다.
 
 공식 Astra 메시는 카메라 외형 배치의 시작점일 뿐이다. 실제 연결 장치의 라벨은 AADJA1300GX이고
 USB에서 Orbbec Astra 계열로 확인했지만, 동일 외형·광학 중심인지는 확인하지 않았다. 실제 장치
@@ -35,11 +37,13 @@ USB에서 Orbbec Astra 계열로 확인했지만, 동일 외형·광학 중심�
 URDF, MJCF, MuJoCo scene, STL/part 자산과 sim-to-real 예제가 있다. 2026-08-20 GitHub API 확인에서
 저장소 라이선스 endpoint는 404였고 최상위 LICENSE/COPYING 파일도 발견되지 않았다.
 
-따라서 다음 원칙을 적용한다.
+2026-08-24에 사용자가 강사에게 DAPIER 프로젝트에서 자료를 사용·개인화하는 허가를 받았다고
+확인했다. 따라서 다음 원칙을 적용한다.
 
-- 모터 ID 순서와 필요한 기능을 이해하는 참고 자료로만 사용한다.
-- 소스 코드, URDF 수치, MJCF, 메시를 DAPIER로 복사하지 않는다.
-- 저작권자가 라이선스를 명시하거나 사용 허가를 주면 그 범위와 고지를 기록한 뒤 재평가한다.
+- 원본 commit과 출처를 sim/jdcobot200_dual/THIRD_PARTY_NOTICE.md에 기록한다.
+- 원본 URDF, 변환 예제, MJCF, STL은 sim/jdcobot200_dual/upstream/에 분리한다.
+- DAPIER의 좌우 prefix, 장착 변환, action contract는 원본과 분리한 코드로 구현한다.
+- 표준 오픈소스 라이선스가 생긴 것은 아니므로 DAPIER 밖의 일반 재사용 권한으로 확대 해석하지 않는다.
 
 ## 실측으로 확인한 팔 구성
 

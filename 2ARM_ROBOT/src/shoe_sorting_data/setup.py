@@ -26,6 +26,7 @@ setup(
         "console_scripts": [
             "shoe_episode = shoe_sorting_data.cli:main",
             "shoe_arm_probe = shoe_sorting_data.arm_probe:main",
+            "shoe_arm_jog = shoe_sorting_data.arm_jog:main",
             "shoe_base_baseline = shoe_sorting_data.base_baseline_ros:main",
             "shoe_hardware_profile = shoe_sorting_data.hardware_profile:main",
             "shoe_wheel_test = shoe_sorting_data.wheel_test_ros:main",

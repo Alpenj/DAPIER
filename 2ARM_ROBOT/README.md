@@ -14,6 +14,10 @@ STS3215의 읽기 전용 telemetry, TurtleBot3 stationary baseline과 들린 바
 2ARM_ROBOT/
 ├── src/
 │   └── shoe_sorting_data/       # ROS 2 ament_python 패키지
+├── sim/
+│   ├── jdcobot200_dual/         # 원본 200 기반 MuJoCo 양팔 기준 모델
+│   ├── turtlebot3_waffle_pi/    # 공식 Waffle Pi URDF/mesh와 MuJoCo 변환
+│   └── mobile_dual_arm/         # Waffle Pi base_link + 양팔 조합 모델
 ├── docs/                         # 요구사항, 팀 결정, 조사 참고자료
 ├── scripts/
 │   └── verify_ubuntu_ros2.sh     # 설치 없이 환경·테스트·빌드 검증
@@ -37,6 +41,16 @@ Phase 0에서 제공하는 기능:
 URDF/MuJoCo/Gazebo 자산과 sim-to-real 순서는
 [로봇 모델 자산 감사](docs/ROBOT_MODEL_ASSET_AUDIT.md)에 기록했다.
 비식별 실측 원본과 요약은 [hardware evidence](docs/evidence/HARDWARE_EVIDENCE.md)에서 확인할 수 있다.
+
+강사에게 사용·개인화 허가를 확인한 JDcobot200 원본 URDF/MJCF/STL과 DAPIER 양팔 조합기는
+[JDcobot200 양팔 MuJoCo 모델](sim/jdcobot200_dual/README.md)에 분리했다. 현재는 12차원
+action 순서, 좌우 namespace, coarse primitive collision과 headless 정지 시뮬레이션까지
+검증했다. TurtleBot3 상판 장착 좌표와 동역학 수치는 아직 실측 전이다.
+
+ROBOTIS 공식 Waffle Pi 자산과 MuJoCo 변환은
+[Waffle Pi 기준 모델](sim/turtlebot3_waffle_pi/README.md), Waffle Pi base_link에 양팔을
+장착한 모델은 [이동형 양팔 조합 모델](sim/mobile_dual_arm/README.md)에 둔다. 조합 모델은
+base 고정, wheel actuator 없음, 양팔 actuator 12개인 stationary manipulation 기준이다.
 
 ## Ubuntu ROS 2 교육 PC에서 시작
 

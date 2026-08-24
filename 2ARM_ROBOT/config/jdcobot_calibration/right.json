@@ -1,0 +1,44 @@
+{
+  "schema_version": "dapier.jdcobot-calibration.v0.1",
+  "captured_at_local_date": "2026-08-24",
+  "arm_side": "right",
+  "controller_identity_sha256": "dbaaa6edc7dd65e79a3f1b100abf7892478b990628d34f942964412634535803",
+  "motor_order": {
+    "1": "base",
+    "2": "shoulder",
+    "3": "elbow",
+    "4": "wrist_pitch",
+    "5": "wrist_roll",
+    "6": "gripper_motor"
+  },
+  "joint_zero_ticks": {
+    "1": 927,
+    "2": 1944,
+    "3": 2084,
+    "4": 2155,
+    "5": 1698
+  },
+  "joint_signs": {
+    "1": 1,
+    "2": 1,
+    "3": 1,
+    "4": 1,
+    "5": 1
+  },
+  "joint_sign_status": "provisional_existing_teleop_direction",
+  "zero_pose": "base forward; arm vertical; elbow and wrist straight",
+  "gripper": {
+    "motor_id": 6,
+    "open_tick": 1641,
+    "closed_tick": 1465,
+    "model_open_radians": -0.57,
+    "model_closed_radians": 0.57
+  },
+  "capture": {
+    "read_only": true,
+    "eeprom_writes_sent": false,
+    "all_hardware_error_status_zero": true,
+    "all_torque_off": true,
+    "maximum_arm_joint_drift_between_open_and_closed_capture_ticks": 4
+  }
+}
