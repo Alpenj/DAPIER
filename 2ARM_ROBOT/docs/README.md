@@ -23,6 +23,7 @@
 - [`research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md`](research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md): ACT 원 논문·공식 코드·현행 LeRobot 비교를 adoption gate로 선별한 Stage 6 근거
 - [`NATIVE_ACT_SUPERVISOR_INTEGRATION.md`](NATIVE_ACT_SUPERVISOR_INTEGRATION.md): native checkpoint action[0] proposal을 독립 supervisor와 mock-only adapter에 연결한 Stage 7 기록
 - [`research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md`](research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md): ACT queue/reset과 ROS2 lifecycle·freshness·trajectory 정본을 선별한 Stage 7 근거
+- [`WIKIDOCS_20199_URDF_STUDY_MAP.md`](WIKIDOCS_20199_URDF_STUDY_MAP.md): WikiDocs jdCobot200 매뉴얼의 URDF 3.1~3.3을 기존 로컬 URDF/Xacro·검증 순서에 연결한 학습 지도
 
 팀의 현재 결정은 `ACT baseline + DYNA-lite + 4주차 이후 보조학습
 go/no-go`다. 조사 참고자료의 전체 SLIM/DYNA 구성을 무조건 적용하지 않는다.

@@ -1,4 +1,4 @@
-# 2ARM_ROBOT — 이동형 양팔 신발 정리 로봇
+﻿# 2ARM_ROBOT — 이동형 양팔 신발 정리 로봇
 
 JDcobot200 양팔, TurtleBot3 Waffle Pi, Orbbec Astra 계열 RGB-D 카메라를 이용해 무작위로
 놓인 신발 30켤레를 짝지어 정렬하거나 신발장에 넣는 DAPIER 팀 프로젝트다.
@@ -35,16 +35,17 @@ Phase 0에서 제공하는 기능:
 
 실측 기반 전력·계산 보드 결정은 [전력·계산 보드 예산](docs/POWER_AND_COMPUTE_BUDGET.md),
 URDF/MuJoCo/Gazebo 자산과 sim-to-real 순서는
-[로봇 모델 자산 감사](docs/ROBOT_MODEL_ASSET_AUDIT.md)에 기록했다.
+[로봇 모델 자산 감사](docs/ROBOT_MODEL_ASSET_AUDIT.md)에 기록했다. WikiDocs 20199의 URDF 관련
+3.1~3.3 학습 순서와 현재 저장소 자산 연결은
+[URDF 학습 지도](docs/WIKIDOCS_20199_URDF_STUDY_MAP.md)에서 확인한다.
 비식별 실측 원본과 요약은 [hardware evidence](docs/evidence/HARDWARE_EVIDENCE.md)에서 확인할 수 있다.
 
 ## Ubuntu ROS 2 교육 PC에서 시작
 
-현재 게시 브랜치를 직접 받는 명령이다.
+현재 `main`을 받는 명령이다.
 
 ```bash
-git clone --branch feat/2arm-robot-phase0 --single-branch \
-  https://github.com/Alpenj/DAPIER.git
+git clone https://github.com/Alpenj/DAPIER.git
 cd DAPIER/2ARM_ROBOT
 bash scripts/verify_ubuntu_ros2.sh
 set +u
