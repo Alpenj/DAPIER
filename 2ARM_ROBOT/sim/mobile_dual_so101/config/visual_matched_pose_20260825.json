@@ -1,0 +1,52 @@
+{
+  "schema_version": "dapier.so101-dual-mujoco-pose.v0.1",
+  "status": "exact_pose_editor_output",
+  "source": "/tmp/dual-so101-matched-visual-pose-20260825.json",
+  "holder_pitch_rad": 1.5707963267948966,
+  "left_holder_twist_rad": -1.5707963267948966,
+  "right_holder_twist_rad": 1.5707963267948966,
+  "arm_mount_height_m": 0.30,
+  "arm_mount_separation_m": 0.20,
+  "lidar_installed": false,
+  "original_rgb_camera_installed": false,
+  "front_depth_camera": {
+    "identity_status": "AADJA1300GX observed as Orbbec Astra family; exact enclosure unmeasured",
+    "assumed_center_m": [0.120, 0.0, 0.20],
+    "assumed_size_m": [0.040, 0.165, 0.048],
+    "assumed_mass_kg": 0.310,
+    "down_tilt_deg": 10.0
+  },
+  "action_order": [
+    "left_shoulder_pan",
+    "left_shoulder_lift",
+    "left_elbow_flex",
+    "left_wrist_flex",
+    "left_wrist_roll",
+    "left_gripper",
+    "right_shoulder_pan",
+    "right_shoulder_lift",
+    "right_elbow_flex",
+    "right_wrist_flex",
+    "right_wrist_roll",
+    "right_gripper"
+  ],
+  "radians": [
+    0.004603066159105924,
+    -1.571825,
+    1.5547999999999997,
+    0.01658000000000004,
+    1.640225,
+    -0.1745,
+    0.004603066159105924,
+    -1.571825,
+    1.5547999999999997,
+    0.01658000000000004,
+    1.640225,
+    -0.1745
+  ],
+  "published": false,
+  "control_authorized": false,
+  "hardware_dispatch_authorized": false,
+  "executed_action": false,
+  "hardware_execution": false
+}
