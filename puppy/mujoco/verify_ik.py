@@ -109,7 +109,7 @@ def main() -> None:
 
     print("\n4) solve_stance가 네 발을 수평으로 놓는가")
     print(f"   {'목표 높이':>10}{'발 z 최대 편차':>16}{'몸통 높이(실측)':>18}")
-    for height in (0.070, 0.090, 0.100, round(hi, 4)):
+    for height in (0.070, 0.090, 0.100, hi):  # hi를 반올림하면 도달 한계를 넘어선다
         angles = leg_ik.solve_stance(legs, height)
         feet = mujoco_feet(angles)
         zs = [feet[leg][1] for leg in LEGS]
