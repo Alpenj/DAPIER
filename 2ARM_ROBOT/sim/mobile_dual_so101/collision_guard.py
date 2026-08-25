@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+"""Fail-closed simulator guard for dual SO-101 target motions.
+
+This module has no serial, ROS publisher, or hardware-dispatch path. A real
+controller may consume the assessment only after measured collision geometry,
+joint calibration, state freshness, braking distance, and E-stop behavior are
+validated separately.
+"""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import asdict, dataclass
+import json
+import math
+from pathlib import Path
+import sys
+from typing import Sequence
+
+import mujoco
+import numpy as np
+
+
+PROJECT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROJECT_DIR))
+
+from mobile_dual_so101 import (  # noqa: E402
+    ACTION_NAMES,
+    HUMANOID_HOME_ACTION,
+    apply_control_as_pose,
+    build_model,
+)
+
+
+DEFAULT_CLEARANCE_M = 0.030
+DEFAULT_MAX_JOINT_STEP_RAD = math.radians(2.0)
+
+
+@dataclass(frozen=True)
+class CollisionAssessment:
+    safe: bool
+    reason: str
+    minimum_clearance_m: float
+    required_clearance_m: float
+    path_fraction: float
+    checked_samples: int
+    first_body: str
+    second_body: str
+    first_geom_id: int
+    second_geom_id: int
+    published: bool = False
+    control_authorized: bool = False
+    hardware_dispatch_authorized: bool = False
+    executed_action: bool = False
+    hardware_execution: bool = False
+
+    def as_report(self) -> dict[str, object]:
+        return asdict(self)
+
+
+def _body_name_for_geom(model: mujoco.MjModel, geom_id: int) -> str:
+    body_id = int(model.geom_bodyid[geom_id])
+    return (
+        mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body_id)
+        or f"body_{body_id}"
+    )
+
+
+def _collision_geoms_for_arm(
+    model: mujoco.MjModel, side: str
+) -> tuple[int, ...]:
+    prefix = f"{side}_"
+    return tuple(
+        geom_id
+        for geom_id in range(model.ngeom)
+        if int(model.geom_contype[geom_id]) != 0
+        and _body_name_for_geom(model, geom_id).startswith(prefix)
+    )
+
+
+def bimanual_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
+    """Return every left collision geom against every right collision geom."""
+
+    left = _collision_geoms_for_arm(model, "left")
+    right = _collision_geoms_for_arm(model, "right")
+    if not left or not right:
+        raise RuntimeError("both arms need collision geometry")
+    return tuple((left_id, right_id) for left_id in left for right_id in right)
+
+
+def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
+    """Return arm-arm and arm-front-camera collision pairs."""
+
+    left = _collision_geoms_for_arm(model, "left")
+    right = _collision_geoms_for_arm(model, "right")
+    pairs = list(bimanual_geom_pairs(model))
+
+    camera_id = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_GEOM, "depth_camera_collision"
+    )
+    if camera_id < 0:
+        raise RuntimeError("front depth camera collision geometry is missing")
+    pairs.extend((arm_id, camera_id) for arm_id in (*left, *right))
+    return tuple(pairs)
+
+
+def minimum_protected_clearance(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pairs: Sequence[tuple[int, int]] | None = None,
+) -> tuple[float, int, int]:
+    """Measure the closest protected geom pair at the current pose."""
+
+    resolved_pairs = protected_geom_pairs(model) if pairs is None else pairs
+    if not resolved_pairs:
+        raise ValueError("at least one protected geom pair is required")
+    from_to = np.zeros(6, dtype=float)
+    best_distance = math.inf
+    best_pair = (-1, -1)
+    for first, second in resolved_pairs:
+        narrowphase_distance = float(
+            mujoco.mj_geomDistance(
+                model,
+                data,
+                int(first),
+                int(second),
+                2.0,
+                from_to,
+            )
+        )
+        # MuJoCo's mesh GJK can conservatively return exactly zero at isolated
+        # far-separated poses. A bounding-sphere lower bound is rigorous:
+        # when the spheres do not overlap, the enclosed meshes cannot touch.
+        center_distance = float(
+            np.linalg.norm(data.geom_xpos[int(first)] - data.geom_xpos[int(second)])
+        )
+        sphere_lower_bound = center_distance - float(
+            model.geom_rbound[int(first)] + model.geom_rbound[int(second)]
+        )
+        distance = max(narrowphase_distance, sphere_lower_bound)
+        if distance < best_distance:
+            best_distance = distance
+            best_pair = (int(first), int(second))
+    return best_distance, best_pair[0], best_pair[1]
+
+
+def check_bimanual_path(
+    model: mujoco.MjModel,
+    current_action: Sequence[float],
+    target_action: Sequence[float],
+    *,
+    required_clearance_m: float = DEFAULT_CLEARANCE_M,
+    max_joint_step_rad: float = DEFAULT_MAX_JOINT_STEP_RAD,
+) -> CollisionAssessment:
+    """Reject a target if its interpolated path violates protected clearance."""
+
+    if len(current_action) != len(ACTION_NAMES):
+        raise ValueError(f"expected {len(ACTION_NAMES)} current targets")
+    if len(target_action) != len(ACTION_NAMES):
+        raise ValueError(f"expected {len(ACTION_NAMES)} target targets")
+    if not math.isfinite(required_clearance_m) or required_clearance_m <= 0:
+        raise ValueError("required_clearance_m must be finite and positive")
+    if not math.isfinite(max_joint_step_rad) or max_joint_step_rad <= 0:
+        raise ValueError("max_joint_step_rad must be finite and positive")
+
+    current = np.asarray(current_action, dtype=float)
+    target = np.asarray(target_action, dtype=float)
+    if not np.all(np.isfinite(current)) or not np.all(np.isfinite(target)):
+        raise ValueError("all action values must be finite")
+    max_delta = float(np.max(np.abs(target - current)))
+    intervals = max(1, math.ceil(max_delta / max_joint_step_rad))
+    pairs = protected_geom_pairs(model)
+    data = mujoco.MjData(model)
+    best = (math.inf, -1, -1, 0.0)
+
+    for sample_index in range(intervals + 1):
+        fraction = sample_index / intervals
+        action = current + fraction * (target - current)
+        apply_control_as_pose(model, data, action)
+        distance, first, second = minimum_protected_clearance(
+            model, data, pairs
+        )
+        if distance < best[0]:
+            best = (distance, first, second, fraction)
+        if distance < required_clearance_m:
+            return CollisionAssessment(
+                safe=False,
+                reason="protected clearance violated; target rejected",
+                minimum_clearance_m=distance,
+                required_clearance_m=required_clearance_m,
+                path_fraction=fraction,
+                checked_samples=sample_index + 1,
+                first_body=_body_name_for_geom(model, first),
+                second_body=_body_name_for_geom(model, second),
+                first_geom_id=first,
+                second_geom_id=second,
+            )
+
+    distance, first, second, fraction = best
+    return CollisionAssessment(
+        safe=True,
+        reason="interpolated simulator path satisfies protected clearance",
+        minimum_clearance_m=distance,
+        required_clearance_m=required_clearance_m,
+        path_fraction=fraction,
+        checked_samples=intervals + 1,
+        first_body=_body_name_for_geom(model, first),
+        second_body=_body_name_for_geom(model, second),
+        first_geom_id=first,
+        second_geom_id=second,
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Check a simulator-only dual-SO-101 target path."
+    )
+    parser.add_argument("--arm-mount-height-m", type=float, default=0.30)
+    parser.add_argument(
+        "--target-action-rad",
+        type=float,
+        nargs=len(ACTION_NAMES),
+        default=HUMANOID_HOME_ACTION,
+    )
+    parser.add_argument("--clearance-m", type=float, default=DEFAULT_CLEARANCE_M)
+    parser.add_argument(
+        "--max-joint-step-deg",
+        type=float,
+        default=math.degrees(DEFAULT_MAX_JOINT_STEP_RAD),
+    )
+    args = parser.parse_args(argv)
+    model, _ = build_model(arm_mount_height_m=args.arm_mount_height_m)
+    assessment = check_bimanual_path(
+        model,
+        HUMANOID_HOME_ACTION,
+        args.target_action_rad,
+        required_clearance_m=args.clearance_m,
+        max_joint_step_rad=math.radians(args.max_joint_step_deg),
+    )
+    print(json.dumps(assessment.as_report(), indent=2))
+    return 0 if assessment.safe else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

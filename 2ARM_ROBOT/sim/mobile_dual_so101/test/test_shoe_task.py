@@ -1,0 +1,139 @@
+from __future__ import annotations
+
+import math
+import sys
+import unittest
+from pathlib import Path
+
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_DIR))
+
+try:
+    import mujoco
+except ModuleNotFoundError as error:
+    raise unittest.SkipTest("MuJoCo is not installed in this Python environment") from error
+
+from shoe_task import (
+    ACTION_NAMES,
+    OBSERVATION_NAMES,
+    SHOE_BODY_NAME,
+    SHOE_FREE_JOINT_NAME,
+    ShoeTaskConfig,
+    ShoeTaskEnv,
+    ground_truth_observation,
+    task_metrics,
+    validate_shoe_task,
+)
+from mobile_dual_so101 import HUMANOID_HOME_ACTION, apply_control_as_pose
+
+
+class ShoeTaskTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.env = ShoeTaskEnv()
+        self.observation, self.reset_info = self.env.reset(seed=7)
+
+    def test_model_contains_one_free_shoe(self) -> None:
+        self.assertEqual(self.env.model.nq, 21)
+        self.assertEqual(self.env.model.nv, 20)
+        self.assertEqual(self.env.model.nu, 12)
+        self.assertEqual(self.env.model.njnt, 15)
+        self.assertGreaterEqual(
+            mujoco.mj_name2id(
+                self.env.model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME
+            ),
+            0,
+        )
+        joint_id = mujoco.mj_name2id(
+            self.env.model, mujoco.mjtObj.mjOBJ_JOINT, SHOE_FREE_JOINT_NAME
+        )
+        self.assertEqual(
+            self.env.model.jnt_type[joint_id], mujoco.mjtJoint.mjJNT_FREE
+        )
+
+    def test_ground_truth_observation_contract(self) -> None:
+        self.assertTrue(self.observation["ground_truth"])
+        self.assertEqual(self.observation["frame"], "map_sim_world")
+        self.assertEqual(tuple(self.observation["vector_names"]), OBSERVATION_NAMES)
+        self.assertEqual(len(self.observation["vector"]), 21)
+        self.assertTrue(all(math.isfinite(value) for value in self.observation["vector"]))
+        self.assertEqual(
+            self.observation,
+            ground_truth_observation(self.env.model, self.env.data),
+        )
+        self.assertFalse(self.reset_info["hardware_execution"])
+        self.assertIn("left_shoulder_pan_rad", OBSERVATION_NAMES)
+        self.assertNotIn("left_base_rad", OBSERVATION_NAMES)
+
+    def test_default_shoe_is_inside_arm_reach_envelope(self) -> None:
+        shoe_id = mujoco.mj_name2id(
+            self.env.model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME
+        )
+        for side in ("left", "right"):
+            shoulder_id = mujoco.mj_name2id(
+                self.env.model,
+                mujoco.mjtObj.mjOBJ_BODY,
+                f"{side}_shoulder",
+            )
+            distance = math.dist(
+                self.env.data.xpos[shoe_id],
+                self.env.data.xpos[shoulder_id],
+            )
+            self.assertLess(distance, 0.40)
+
+    def test_hold_action_is_simulation_only(self) -> None:
+        hold = tuple(float(value) for value in self.env.data.ctrl)
+        _, reward, terminated, truncated, info = self.env.step(hold)
+        self.assertTrue(math.isfinite(reward))
+        self.assertFalse(terminated)
+        self.assertFalse(truncated)
+        self.assertFalse(info["hardware_execution"])
+
+    def test_action_is_clipped_to_model_range(self) -> None:
+        _, _, _, _, info = self.env.step([100.0] * len(ACTION_NAMES))
+        for actuator_id, value in enumerate(info["action_clipped"]):
+            self.assertEqual(
+                value,
+                self.env.model.actuator_ctrlrange[actuator_id, 1],
+            )
+
+    def test_invalid_action_dimension_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "expected 12 actions"):
+            self.env.step([0.0] * 11)
+
+    def test_success_requires_lift_near_a_gripper(self) -> None:
+        apply_control_as_pose(
+            self.env.model,
+            self.env.data,
+            HUMANOID_HOME_ACTION,
+        )
+        joint_id = mujoco.mj_name2id(
+            self.env.model, mujoco.mjtObj.mjOBJ_JOINT, SHOE_FREE_JOINT_NAME
+        )
+        qpos_address = int(self.env.model.jnt_qposadr[joint_id])
+        gripper_id = mujoco.mj_name2id(
+            self.env.model, mujoco.mjtObj.mjOBJ_SITE, "left_gripperframe"
+        )
+        target = [float(value) for value in self.env.data.site_xpos[gripper_id]]
+        target[2] = max(target[2], self.env.config.success_height_m + 0.01)
+        self.env.data.qpos[qpos_address : qpos_address + 3] = target
+        self.env.data.qvel[:] = 0.0
+        mujoco.mj_forward(self.env.model, self.env.data)
+        metrics = task_metrics(self.env.model, self.env.data)
+        self.assertTrue(metrics["lifted"])
+        self.assertTrue(metrics["near_gripper"])
+        self.assertTrue(metrics["success"])
+
+    def test_invalid_configuration_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "frame_skip"):
+            ShoeTaskEnv(ShoeTaskConfig(frame_skip=0))
+
+    def test_headless_smoke(self) -> None:
+        report = validate_shoe_task(smoke_steps=50)
+        self.assertTrue(report["finite_observation"])
+        self.assertTrue(report["ground_truth"])
+        self.assertFalse(report["hardware_execution"])
+
+
+if __name__ == "__main__":
+    unittest.main()
