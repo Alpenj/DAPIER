@@ -30,6 +30,7 @@ ARM_CONTROL_NAMES = (
 ACTION_NAMES = tuple(
     f"{side}_{name}" for side in ("left", "right") for name in ARM_CONTROL_NAMES
 )
+GRIPPER_CONTROL_RANGE_RAD = (-0.57, 0.57)
 
 _PROVISIONAL_COLLISIONS = (
     (
@@ -171,6 +172,25 @@ def attach_dual_arms(
         spec.attach(arm_spec, prefix=f"{side}_", frame=frame)
 
 
+def _apply_gripper_limits(model: mujoco.MjModel) -> None:
+    """Constrain the source model's over-wide gripper range in DAPIER only."""
+
+    for side in ("left", "right"):
+        actuator_id = mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"{side}_gripper_motor"
+        )
+        model.actuator_ctrllimited[actuator_id] = 1
+        model.actuator_ctrlrange[actuator_id, :] = GRIPPER_CONTROL_RANGE_RAD
+        for finger in ("left", "right"):
+            joint_id = mujoco.mj_name2id(
+                model,
+                mujoco.mjtObj.mjOBJ_JOINT,
+                f"{side}_gripper_{finger}",
+            )
+            model.jnt_limited[joint_id] = 1
+            model.jnt_range[joint_id, :] = GRIPPER_CONTROL_RANGE_RAD
+
+
 def build_model(
     mount_separation_m: float = 0.36,
     mount_height_m: float = 0.0,
@@ -195,7 +215,9 @@ def build_model(
         primitive_collisions=primitive_collisions,
     )
 
-    return spec.compile()
+    model = spec.compile()
+    _apply_gripper_limits(model)
+    return model
 
 
 def model_names(
