@@ -14,7 +14,7 @@
 
 원본은 그대로 두고 DAPIER 조합 단계에서 팔당 coarse primitive collision 6개를 덧붙인다.
 
-viewer와 smoke reset은 actuator target을 현재 qpos0로 맞춰 열린 그리퍼를 정지 유지한다.
+viewer와 smoke reset은 actuator target을 현재 qpos0로 맞춰 원본 초기 그리퍼 자세를 정지 유지한다.
 
 12차원 action 순서는 다음과 같다.
 

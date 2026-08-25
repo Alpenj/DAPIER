@@ -200,19 +200,19 @@ class MujocoHardwareTeleopTest(unittest.TestCase):
             "gripper": {
                 "open_tick": 1641,
                 "closed_tick": 1465,
-                "model_open_radians": -0.57,
-                "model_closed_radians": 0.57,
+                "model_open_radians": 0.57,
+                "model_closed_radians": -0.57,
             },
         }
         limits = {motor_id: (0, 4095) for motor_id in range(1, 7)}
 
         opened, _ = calibrated_ctrl_to_ticks(
-            [0.0, 0.0, 0.0, 0.0, 0.0, -0.57],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.57],
             calibration,
             limits,
         )
         closed, _ = calibrated_ctrl_to_ticks(
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.57],
+            [0.0, 0.0, 0.0, 0.0, 0.0, -0.57],
             calibration,
             limits,
         )

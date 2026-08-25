@@ -15,6 +15,7 @@ except ModuleNotFoundError as error:  # pragma: no cover - environment-dependent
 
 from dual_model import (
     ACTION_NAMES,
+    GRIPPER_CONTROL_RANGE_RAD,
     UPSTREAM_MODEL,
     actuator_targets_from_qpos,
     build_model,
@@ -45,7 +46,49 @@ class DualModelTest(unittest.TestCase):
         )
         self.assertEqual(actual, ACTION_NAMES)
 
-    def test_initial_targets_hold_open_grippers(self) -> None:
+    def test_gripper_control_and_joint_ranges_block_overtravel(self) -> None:
+        expected = tuple(GRIPPER_CONTROL_RANGE_RAD)
+        for side in ("left", "right"):
+            actuator_id = mujoco.mj_name2id(
+                self.model,
+                mujoco.mjtObj.mjOBJ_ACTUATOR,
+                f"{side}_gripper_motor",
+            )
+            self.assertTrue(self.model.actuator_ctrllimited[actuator_id])
+            self.assertEqual(
+                tuple(float(value) for value in self.model.actuator_ctrlrange[actuator_id]),
+                expected,
+            )
+            for finger in ("left", "right"):
+                joint_id = mujoco.mj_name2id(
+                    self.model,
+                    mujoco.mjtObj.mjOBJ_JOINT,
+                    f"{side}_gripper_{finger}",
+                )
+                self.assertTrue(self.model.jnt_limited[joint_id])
+                self.assertEqual(
+                    tuple(float(value) for value in self.model.jnt_range[joint_id]),
+                    expected,
+                )
+
+        data = mujoco.MjData(self.model)
+        data.ctrl[:] = actuator_targets_from_qpos(self.model, data.qpos)
+        data.ctrl[5] = -1.5
+        data.ctrl[11] = -1.5
+        for _ in range(1000):
+            mujoco.mj_step(self.model, data)
+        for side in ("left", "right"):
+            for finger in ("left", "right"):
+                joint_id = mujoco.mj_name2id(
+                    self.model,
+                    mujoco.mjtObj.mjOBJ_JOINT,
+                    f"{side}_gripper_{finger}",
+                )
+                qpos = float(data.qpos[self.model.jnt_qposadr[joint_id]])
+                self.assertGreaterEqual(qpos, expected[0])
+                self.assertLessEqual(qpos, expected[1])
+
+    def test_initial_targets_hold_source_gripper_pose(self) -> None:
         targets = actuator_targets_from_qpos(self.model, self.model.qpos0)
         self.assertAlmostEqual(targets[5], -0.57)
         self.assertAlmostEqual(targets[11], -0.57)
