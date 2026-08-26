@@ -2,19 +2,19 @@
 set -euo pipefail
 
 usage() {
-  cat <<'EOF'
+  cat <<'USAGE'
 GitHub branch handoff between ChatGPT Pro/Codex and local Codex.
 
 Usage:
   scripts/cowork start <task-slug> [base-ref]
   scripts/cowork sync <task-slug>
   scripts/cowork status <task-slug>
-  scripts/cowork verify <task-slug>
+  scripts/cowork verify <task-slug> [--allow-local-ahead]
   scripts/cowork prompt <task-slug>
 
 The remote branch is pro/<task-slug>. Its isolated worktree is created under
 .local-workspaces/pro/<task-slug> in the primary checkout.
-EOF
+USAGE
 }
 
 die() {
@@ -22,110 +22,588 @@ die() {
   exit 1
 }
 
-command -v git >/dev/null 2>&1 || die "git is required"
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" ||
-  die "run this command inside a Git repository"
-primary_worktree="$(git -C "$repo_root" worktree list --porcelain | awk '$1 == "worktree" { print $2; exit }')"
-command_name="${1:-}"
-task_slug="${2:-}"
+canonical_dir() {
+  (
+    cd -P -- "$1" 2>/dev/null || return 1
+    pwd -P
+  )
+}
 
-case "$command_name" in
-  start|sync|status|verify|prompt) ;;
-  -h|--help|help|"") usage; exit 0 ;;
-  *) usage >&2; die "unknown command: $command_name" ;;
-esac
+common_dir_for() {
+  local checkout="$1"
+  local common_dir
+  common_dir="$(git -C "$checkout" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ||
+    return 1
+  canonical_dir "$common_dir"
+}
 
-[[ -n "$task_slug" ]] || die "a task slug is required"
-[[ "$task_slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]] ||
-  die "task slug must contain only lowercase letters, numbers, dot, underscore, or dash"
+primary_worktree_path() {
+  local field
 
-branch="pro/$task_slug"
-worktree="$primary_worktree/.local-workspaces/pro/$task_slug"
+  while IFS= read -r -d '' field; do
+    if [[ "$field" == worktree\ * ]]; then
+      printf '%s\n' "${field#worktree }"
+      return 0
+    fi
+  done < <(git -C "$repo_root" worktree list --porcelain -z)
 
-remote_url() {
-  if command -v gh >/dev/null 2>&1; then
-    gh repo view --json url --jq .url 2>/dev/null || true
+  return 1
+}
+
+is_registered_worktree_path() {
+  local target="$1"
+  local target_canonical
+  local field
+  local record_path=""
+  local record_canonical
+
+  target_canonical="$(canonical_dir "$target")" || return 1
+
+  while IFS= read -r -d '' field; do
+    if [[ -z "$field" ]]; then
+      if [[ -n "$record_path" ]] && record_canonical="$(canonical_dir "$record_path" 2>/dev/null)" &&
+        [[ "$record_canonical" == "$target_canonical" ]]; then
+        return 0
+      fi
+      record_path=""
+    elif [[ "$field" == worktree\ * ]]; then
+      record_path="${field#worktree }"
+    fi
+  done < <(git -C "$repo_root" worktree list --porcelain -z)
+
+  return 1
+}
+
+worktree_for_branch() {
+  local expected_ref="refs/heads/$1"
+  local field
+  local record_path=""
+  local record_branch=""
+
+  while IFS= read -r -d '' field; do
+    if [[ -z "$field" ]]; then
+      if [[ "$record_branch" == "$expected_ref" ]]; then
+        printf '%s\n' "$record_path"
+        return 0
+      fi
+      record_path=""
+      record_branch=""
+    elif [[ "$field" == worktree\ * ]]; then
+      record_path="${field#worktree }"
+    elif [[ "$field" == branch\ * ]]; then
+      record_branch="${field#branch }"
+    fi
+  done < <(git -C "$repo_root" worktree list --porcelain -z)
+
+  return 1
+}
+
+assert_task_worktree() {
+  local worktree_common_dir
+  local current_branch
+  local upstream
+
+  [[ -d "$worktree" ]] ||
+    die "worktree not found: $worktree (run: scripts/cowork start $task_slug)"
+
+  is_registered_worktree_path "$worktree" ||
+    die "path is not a registered Git worktree: $worktree"
+
+  worktree_common_dir="$(common_dir_for "$worktree")" ||
+    die "cannot resolve Git common directory for worktree: $worktree"
+  [[ "$worktree_common_dir" == "$repo_common_dir" ]] ||
+    die "worktree belongs to a different Git common directory: $worktree"
+
+  current_branch="$(git -C "$worktree" symbolic-ref --quiet --short HEAD 2>/dev/null)" ||
+    die "worktree is in detached HEAD state: $worktree"
+  [[ "$current_branch" == "$branch" ]] ||
+    die "worktree is on '$current_branch'; expected '$branch'"
+
+  upstream="$(git -C "$worktree" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)" ||
+    die "branch '$branch' has no upstream; expected 'origin/$branch'"
+  [[ "$upstream" == "origin/$branch" ]] ||
+    die "branch '$branch' upstream is '$upstream'; expected 'origin/$branch'"
+}
+
+remote_branch_sha() {
+  local remote_branch="$1"
+  local output
+  local status
+
+  if output="$(git -C "$repo_root" ls-remote --exit-code --heads origin "refs/heads/$remote_branch" 2>&1)"; then
+    printf '%s\n' "${output%%$'\t'*}"
+    return 0
   else
-    git -C "$repo_root" remote get-url origin 2>/dev/null || true
+    status=$?
+  fi
+
+  if [[ "$status" -eq 2 ]]; then
+    return 1
+  fi
+
+  die "git ls-remote failed for origin/$remote_branch: $output"
+}
+
+tracking_branch_sha() {
+  git -C "$repo_root" rev-parse --verify "refs/remotes/origin/$1^{commit}" 2>/dev/null
+}
+
+refresh_remote_refs() {
+  git -C "$repo_root" fetch --prune --no-tags origin \
+    '+refs/heads/*:refs/remotes/origin/*' ||
+    die "failed to fetch --prune from origin"
+}
+
+load_remote_snapshot() {
+  local task_tracking_sha
+  local main_tracking_sha
+
+  refresh_remote_refs
+
+  task_remote_sha="$(remote_branch_sha "$branch")" ||
+    die "remote branch does not exist: origin/$branch"
+  main_remote_sha="$(remote_branch_sha main)" ||
+    die "remote branch does not exist: origin/main"
+
+  task_tracking_sha="$(tracking_branch_sha "$branch")" ||
+    die "tracking ref is missing after fetch: origin/$branch"
+  main_tracking_sha="$(tracking_branch_sha main)" ||
+    die "tracking ref is missing after fetch: origin/main"
+
+  [[ "$task_tracking_sha" == "$task_remote_sha" ]] ||
+    die "origin/$branch is stale after fetch (tracking $task_tracking_sha, remote $task_remote_sha)"
+  [[ "$main_tracking_sha" == "$main_remote_sha" ]] ||
+    die "origin/main is stale after fetch (tracking $main_tracking_sha, remote $main_remote_sha)"
+}
+
+calculate_relation() {
+  local local_sha="$1"
+  local remote_sha="$2"
+  local counts
+
+  counts="$(git -C "$repo_root" rev-list --left-right --count "$remote_sha...$local_sha")" ||
+    die "cannot compare local and remote task branches"
+  IFS=$'\t ' read -r behind_count ahead_count <<<"$counts"
+
+  if [[ "$ahead_count" -eq 0 && "$behind_count" -eq 0 ]]; then
+    relation="synchronized"
+  elif [[ "$ahead_count" -gt 0 && "$behind_count" -eq 0 ]]; then
+    relation="local-ahead"
+  elif [[ "$ahead_count" -eq 0 && "$behind_count" -gt 0 ]]; then
+    relation="local-behind"
+  else
+    relation="divergent"
   fi
 }
 
-require_worktree() {
-  [[ -d "$worktree" ]] ||
-    die "worktree not found: $worktree (run: scripts/cowork start $task_slug)"
+print_snapshot() {
+  local local_sha="$1"
+  local base_sha
+
+  base_sha="$(git -C "$repo_root" merge-base "$main_remote_sha" "$local_sha" 2>/dev/null || true)"
+  [[ -n "$base_sha" ]] || base_sha="unavailable"
+
+  printf 'Base SHA:       %s\n' "$base_sha"
+  printf 'Local HEAD SHA: %s\n' "$local_sha"
+  printf 'Remote HEAD SHA: %s\n' "$task_remote_sha"
+  printf 'origin/main SHA: %s\n' "$main_remote_sha"
+  printf 'Ahead:          %s\n' "$ahead_count"
+  printf 'Behind:         %s\n' "$behind_count"
+  printf 'State:          %s\n' "$relation"
+  printf 'Snapshot SHA:   %s\n' "$local_sha"
 }
 
-case "$command_name" in
-  start)
-    base_ref="${3:-origin/main}"
-    git -C "$repo_root" fetch origin
+remote_url() {
+  local url=""
+
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    url="$(gh repo view --json url --jq .url 2>/dev/null || true)"
+  fi
+
+  if [[ -z "$url" ]]; then
+    url="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
+  fi
+
+  printf '%s\n' "$url"
+}
+
+branch_upstream() {
+  git -C "$repo_root" for-each-ref --format='%(upstream:short)' "refs/heads/$1"
+}
+
+remove_created_worktree() {
+  if is_registered_worktree_path "$worktree"; then
+    git -C "$repo_root" worktree remove "$worktree" >/dev/null 2>&1 ||
+      git -C "$repo_root" worktree remove --force "$worktree" >/dev/null 2>&1 || true
+  elif [[ -d "$worktree" ]]; then
+    rm -rf -- "$worktree"
+  fi
+}
+
+remove_created_branch() {
+  if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch"; then
+    git -C "$repo_root" branch -D "$branch" >/dev/null 2>&1 || true
+  fi
+}
+
+cleanup_empty_workspace_dirs() {
+  rmdir -- "$primary_worktree/.local-workspaces/pro" 2>/dev/null || true
+  rmdir -- "$primary_worktree/.local-workspaces" 2>/dev/null || true
+}
+
+start_task() {
+  local base_ref="$1"
+  local remote_exists=false
+  local local_exists=false
+  local local_sha=""
+  local existing_branch_worktree=""
+  local upstream=""
+  local created_branch=false
+  local created_worktree=false
+  local start_state=""
+
+  [[ ! -e "$worktree" ]] || die "worktree path already exists: $worktree"
+
+  if existing_branch_worktree="$(worktree_for_branch "$branch")"; then
+    die "branch '$branch' is already checked out at: $existing_branch_worktree"
+  fi
+
+  refresh_remote_refs
+
+  main_remote_sha="$(remote_branch_sha main)" ||
+    die "remote branch does not exist: origin/main"
+  local main_tracking_sha
+  main_tracking_sha="$(tracking_branch_sha main)" ||
+    die "tracking ref is missing after fetch: origin/main"
+  [[ "$main_tracking_sha" == "$main_remote_sha" ]] ||
+    die "origin/main is stale after fetch (tracking $main_tracking_sha, remote $main_remote_sha)"
+
+  if task_remote_sha="$(remote_branch_sha "$branch")"; then
+    remote_exists=true
+    local task_tracking_sha
+    task_tracking_sha="$(tracking_branch_sha "$branch")" ||
+      die "tracking ref is missing after fetch: origin/$branch"
+    [[ "$task_tracking_sha" == "$task_remote_sha" ]] ||
+      die "origin/$branch is stale after fetch (tracking $task_tracking_sha, remote $task_remote_sha)"
+  fi
+
+  if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch"; then
+    local_exists=true
+    local_sha="$(git -C "$repo_root" rev-parse "refs/heads/$branch")"
+  fi
+
+  mkdir -p -- "$(dirname "$worktree")"
+
+  if [[ "$local_exists" == false && "$remote_exists" == false ]]; then
     git -C "$repo_root" rev-parse --verify "$base_ref^{commit}" >/dev/null 2>&1 ||
       die "base ref does not exist: $base_ref"
-    [[ ! -e "$worktree" ]] || die "worktree path already exists: $worktree"
-    mkdir -p "$(dirname "$worktree")"
 
-    if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch"; then
-      git -C "$repo_root" worktree add "$worktree" "$branch"
-    elif git -C "$repo_root" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-      git -C "$repo_root" worktree add --track -b "$branch" "$worktree" "origin/$branch"
-    else
-      git -C "$repo_root" worktree add -b "$branch" "$worktree" "$base_ref"
-      git -C "$worktree" push --set-upstream origin "$branch"
+    if ! git -C "$repo_root" worktree add -b "$branch" "$worktree" "$base_ref"; then
+      remove_created_branch
+      cleanup_empty_workspace_dirs
+      die "failed to create worktree for new branch '$branch'"
+    fi
+    created_branch=true
+    created_worktree=true
+
+    if ! git -C "$worktree" push --set-upstream origin "HEAD:refs/heads/$branch"; then
+      remove_created_worktree
+      remove_created_branch
+      cleanup_empty_workspace_dirs
+      die "initial push failed; rolled back the worktree and local branch created by this start"
+    fi
+    start_state="new-branch-pushed"
+
+  elif [[ "$local_exists" == false && "$remote_exists" == true ]]; then
+    if ! git -C "$repo_root" worktree add --track -b "$branch" "$worktree" "origin/$branch"; then
+      remove_created_branch
+      cleanup_empty_workspace_dirs
+      die "failed to resume remote branch '$branch'"
+    fi
+    created_branch=true
+    created_worktree=true
+    start_state="remote-branch-resumed"
+
+  elif [[ "$local_exists" == true && "$remote_exists" == false ]]; then
+    upstream="$(branch_upstream "$branch")"
+    [[ -z "$upstream" || "$upstream" == "origin/$branch" ]] ||
+      die "branch '$branch' upstream is '$upstream'; expected 'origin/$branch' or no upstream"
+
+    if ! git -C "$repo_root" worktree add "$worktree" "$branch"; then
+      cleanup_empty_workspace_dirs
+      die "failed to create worktree for local-only branch '$branch'"
+    fi
+    created_worktree=true
+
+    if ! git -C "$worktree" push --set-upstream origin "HEAD:refs/heads/$branch"; then
+      remove_created_worktree
+      cleanup_empty_workspace_dirs
+      die "push failed for local-only branch; removed only the worktree created by this start"
+    fi
+    start_state="local-only-branch-pushed"
+
+  else
+    upstream="$(branch_upstream "$branch")"
+    [[ -z "$upstream" || "$upstream" == "origin/$branch" ]] ||
+      die "branch '$branch' upstream is '$upstream'; expected 'origin/$branch' or no upstream"
+
+    calculate_relation "$local_sha" "$task_remote_sha"
+    [[ "$relation" != "divergent" ]] ||
+      die "local and remote task branches have diverged; no merge, rebase, or push was attempted"
+
+    if [[ -z "$upstream" ]]; then
+      git -C "$repo_root" branch --set-upstream-to="origin/$branch" "$branch" >/dev/null ||
+        die "failed to set the expected upstream for '$branch'"
     fi
 
-    printf 'Ready for ChatGPT Pro/Codex handoff.\n'
-    printf 'Repository: %s\n' "$(remote_url)"
-    printf 'Branch:     %s\n' "$branch"
-    printf 'Worktree:   %s\n' "$worktree"
-    printf '\nNext: scripts/cowork prompt %s\n' "$task_slug"
-    ;;
+    if ! git -C "$repo_root" worktree add "$worktree" "$branch"; then
+      cleanup_empty_workspace_dirs
+      die "failed to create worktree for existing branch '$branch'"
+    fi
+    created_worktree=true
 
-  sync)
-    require_worktree
-    [[ -z "$(git -C "$worktree" status --porcelain)" ]] ||
-      die "worktree has local changes; commit or stash them before syncing"
-    git -C "$worktree" fetch origin "$branch"
-    git -C "$worktree" merge --ff-only "origin/$branch"
-    git -C "$worktree" status --short --branch
-    ;;
+    if [[ "$relation" == "local-behind" ]]; then
+      if ! git -C "$worktree" merge --ff-only "origin/$branch"; then
+        remove_created_worktree
+        cleanup_empty_workspace_dirs
+        die "local branch could not be fast-forwarded; no merge or rebase was attempted"
+      fi
+      start_state="local-branch-fast-forwarded"
+    elif [[ "$relation" == "local-ahead" ]]; then
+      start_state="local-branch-ahead"
+    else
+      start_state="local-and-remote-synchronized"
+    fi
+  fi
 
-  status)
-    require_worktree
-    git -C "$worktree" fetch origin "$branch"
-    git -C "$worktree" status --short --branch
-    git -C "$worktree" log --oneline --decorate --max-count=8
-    printf '\nChanges from origin/main:\n'
-    git -C "$worktree" diff --stat origin/main...HEAD
-    ;;
+  # Keep shellcheck aware that rollback state is intentionally tracked above.
+  [[ "$created_branch" == true || "$created_worktree" == true ]] ||
+    die "internal error: start created neither a branch nor a worktree"
 
-  verify)
-    require_worktree
-    (
-      cd "$worktree"
-      python3 -m unittest discover -s dapier_sim_first/test -v
-    )
-    (
-      cd "$worktree/casino_dealer"
-      python3 -m unittest discover -s test -v
-    )
-    ;;
+  assert_task_worktree
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
 
-  prompt)
-    require_worktree
-    cat <<EOF
-Use repository $(remote_url) on the existing branch \`$branch\`.
+  printf 'Ready for ChatGPT Pro/Codex handoff.\n'
+  printf 'Start state: %s\n' "$start_state"
+  printf 'Repository:  %s\n' "$(remote_url)"
+  printf 'Branch:      %s\n' "$branch"
+  printf 'Worktree:    %s\n' "$worktree"
+  print_snapshot "$local_sha"
+  printf '\nNext: scripts/cowork prompt %s\n' "$task_slug"
+}
+
+sync_task() {
+  local local_sha
+
+  assert_task_worktree
+  [[ -z "$(git -C "$worktree" status --porcelain=v1 --untracked-files=all)" ]] ||
+    die "worktree has local changes; commit or stash them before syncing"
+
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+
+  case "$relation" in
+    synchronized)
+      ;;
+    local-behind)
+      git -C "$worktree" merge --ff-only "origin/$branch" ||
+        die "fast-forward sync failed; no merge or rebase was attempted"
+      ;;
+    local-ahead)
+      printf 'Local branch is ahead of origin/%s; sync did not push it.\n' "$branch"
+      ;;
+    divergent)
+      die "local and remote task branches have diverged; no merge, rebase, or push was attempted"
+      ;;
+  esac
+
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+  print_snapshot "$local_sha"
+}
+
+status_task() {
+  local local_sha
+
+  assert_task_worktree
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+  print_snapshot "$local_sha"
+
+  printf '\nGit status:\n'
+  git -C "$worktree" status --short --branch
+  printf '\nRecent commits:\n'
+  git -C "$worktree" log --oneline --decorate --max-count=8
+  printf '\nChanges from origin/main:\n'
+  git -C "$worktree" diff --stat "$main_remote_sha...$local_sha"
+}
+
+verify_task() {
+  local allow_local_ahead="$1"
+  local local_sha
+  local verified_remote_sha
+  local current_sha
+
+  assert_task_worktree
+  [[ -z "$(git -C "$worktree" status --porcelain=v1 --untracked-files=all)" ]] ||
+    die "verification requires a clean worktree"
+
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+  print_snapshot "$local_sha"
+
+  if [[ "$allow_local_ahead" == true ]]; then
+    [[ "$relation" == "local-ahead" ]] ||
+      die "--allow-local-ahead permits only a purely local-ahead state"
+  else
+    [[ "$ahead_count" -eq 0 && "$behind_count" -eq 0 ]] ||
+      die "verification requires HEAD == origin/$branch (use --allow-local-ahead only for a purely ahead local branch)"
+  fi
+
+  (
+    cd -- "$worktree"
+    ./scripts/verify-hardware-free
+  )
+
+  current_sha="$(git -C "$worktree" rev-parse HEAD)"
+  [[ "$current_sha" == "$local_sha" ]] ||
+    die "HEAD changed during verification (started $local_sha, ended $current_sha)"
+  [[ -z "$(git -C "$worktree" status --porcelain=v1 --untracked-files=all)" ]] ||
+    die "worktree became dirty during verification"
+
+  verified_remote_sha="$(remote_branch_sha "$branch")" ||
+    die "remote branch disappeared during verification: origin/$branch"
+  [[ "$verified_remote_sha" == "$task_remote_sha" ]] ||
+    die "remote head changed during verification (expected $task_remote_sha, found $verified_remote_sha)"
+
+  printf 'Verified SHA:   %s\n' "$local_sha"
+  printf 'Remote expected: %s\n' "$task_remote_sha"
+}
+
+prompt_task() {
+  local local_sha
+  local base_sha
+  local repository_url
+
+  assert_task_worktree
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+  [[ "$ahead_count" -eq 0 && "$behind_count" -eq 0 ]] ||
+    die "prompt requires local HEAD to match origin/$branch exactly"
+
+  base_sha="$(git -C "$repo_root" merge-base "$main_remote_sha" "$local_sha" 2>/dev/null || true)"
+  [[ -n "$base_sha" ]] || base_sha="unavailable"
+  repository_url="$(remote_url)"
+
+  cat <<PROMPT
+Use repository $repository_url on the existing branch \`$branch\`.
 Do not create or switch to another branch. Read and follow AGENTS.md first.
+
+Starting SHA:            $local_sha
+Expected remote SHA:     $task_remote_sha
+Current origin/main SHA: $main_remote_sha
+Base SHA:                $base_sha
 
 Task:
 [Describe the bug, desired UX flow, or acceptance criteria here.]
 
 Requirements:
+- Before editing, confirm HEAD and origin/$branch both equal the expected remote SHA above.
 - Inspect the current implementation before editing.
 - Keep the change narrowly scoped and preserve unrelated work.
 - Do not operate physical hardware or commit secrets, device IDs, calibration,
   raw datasets, or recordings.
-- Run the most relevant tests. Clearly report anything you could not verify.
-- Commit and push the finished change to \`$branch\`.
-EOF
+- Run the most relevant tests and report the exact verified commit SHA.
+- Commit and push the finished change to \`$branch\` without force.
+- If the remote head changes, histories diverge, or push is rejected as non-fast-forward,
+  stop immediately. Do not merge, rebase, reset, force-push, or attempt to resolve it.
+PROMPT
+}
+
+command_name="${1:-}"
+case "$command_name" in
+  -h|--help|help|"")
+    usage
+    exit 0
+    ;;
+  start|sync|status|verify|prompt)
+    ;;
+  *)
+    usage >&2
+    die "unknown command: $command_name"
+    ;;
+esac
+
+command -v git >/dev/null 2>&1 || die "git is required"
+
+case "$command_name" in
+  start)
+    [[ "$#" -ge 2 && "$#" -le 3 ]] || die "usage: scripts/cowork start <task-slug> [base-ref]"
+    ;;
+  verify)
+    [[ "$#" -ge 2 && "$#" -le 3 ]] || die "usage: scripts/cowork verify <task-slug> [--allow-local-ahead]"
+    [[ "$#" -eq 2 || "${3:-}" == "--allow-local-ahead" ]] ||
+      die "unknown verify option: ${3:-}"
+    ;;
+  *)
+    [[ "$#" -eq 2 ]] || die "usage: scripts/cowork $command_name <task-slug>"
+    ;;
+esac
+
+task_slug="${2:-}"
+[[ -n "$task_slug" ]] || die "a task slug is required"
+[[ "$task_slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]] ||
+  die "task slug must contain only lowercase letters, numbers, dot, underscore, or dash"
+
+branch="pro/$task_slug"
+git check-ref-format --branch "$branch" >/dev/null 2>&1 ||
+  die "invalid Git branch name derived from task slug: $branch"
+
+repo_root_raw="$(git rev-parse --show-toplevel 2>/dev/null)" ||
+  die "run this command inside a Git repository"
+repo_root="$(canonical_dir "$repo_root_raw")" ||
+  die "cannot resolve repository root"
+repo_common_dir="$(common_dir_for "$repo_root")" ||
+  die "cannot resolve repository Git common directory"
+primary_worktree_raw="$(primary_worktree_path)" ||
+  die "cannot identify the primary Git worktree"
+primary_worktree="$(canonical_dir "$primary_worktree_raw")" ||
+  die "cannot resolve primary Git worktree"
+worktree="$primary_worktree/.local-workspaces/pro/$task_slug"
+
+git -C "$repo_root" remote get-url origin >/dev/null 2>&1 ||
+  die "origin remote is required"
+
+task_remote_sha=""
+main_remote_sha=""
+ahead_count=0
+behind_count=0
+relation=""
+
+case "$command_name" in
+  start)
+    start_task "${3:-origin/main}"
+    ;;
+  sync)
+    sync_task
+    ;;
+  status)
+    status_task
+    ;;
+  verify)
+    if [[ "${3:-}" == "--allow-local-ahead" ]]; then
+      verify_task true
+    else
+      verify_task false
+    fi
+    ;;
+  prompt)
+    prompt_task
     ;;
 esac
