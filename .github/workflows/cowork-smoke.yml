@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install smoke-test dependency
+        run: python3 -m pip install "numpy>=2,<3"
       - name: Run sim-first unit tests
         run: python3 -m unittest discover -s dapier_sim_first/test -v
       - name: Run casino dealer unit tests
