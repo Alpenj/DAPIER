@@ -24,7 +24,8 @@ Handoff를 사용할 때는 이 흐름을 함께 사용하지 않는다.
 ## 모드 A: Codex cloud와 `scripts/cowork`
 
 Codex cloud에서 원격 브랜치를 작업하고 로컬 command-line Codex에서 검증할 때만
-이 모드를 사용한다.
+이 모드를 사용한다. 이 모드에만 root `AGENTS.md`의 `pro/<task>` branch 고정
+규칙이 적용된다.
 
 ### 매 작업 흐름
 
@@ -93,19 +94,44 @@ pro/shoe-task-ux 브랜치의 원격 커밋을 검토해 줘.
 
 1. ChatGPT 데스크톱에서 프로젝트를 열고 새 chat의 **Worktree**를 선택한다.
 2. 시작 branch를 고르면 Codex가 관리 worktree를 만든다. 기본 시작 상태는
-   detached HEAD다.
+   detached HEAD이며 root `AGENTS.md`가 이를 정상 상태로 허용한다.
 3. worktree 안에서 계속 작업하려면 **Create branch here**로 별도 branch를 만든다.
 4. 기존 local checkout으로 옮길 때는 같은 branch를 두 worktree에 checkout하지
    말고 **Hand off**를 사용한다. Handoff가 필요한 Git 작업을 처리한다.
 
 Git은 같은 branch를 두 worktree에 동시에 checkout하지 못한다. 따라서 custom
 `.local-workspaces/pro/<task>`와 Codex-managed Worktree 중 하나만 선택한다.
+Desktop 모드에서는 managed Worktree를 기존 `pro/<task>` branch에 직접
+checkout하려고 하지 않는다. detached HEAD에서 앱의 Create branch 또는 Handoff
+흐름을 사용하며, 생성되는 branch 이름은 `pro/<task>`일 필요가 없다.
+
+## `AGENTS.md` 로딩 범위와 안전 불변조건
+
+Codex는 실행을 시작할 때 한 번, project root에서 세션의 current working
+directory까지 `AGENTS.md` instruction chain을 구성한다. 저장소 root에서 시작한
+세션은 편집 대상이 하위 경로라는 이유만으로 그 아래의 nested `AGENTS.md`를
+나중에 자동으로 추가하지 않는다.
+
+따라서 실물 안전에 필수적인 다음 조건은 모두 root `AGENTS.md`에 둔다.
+
+- exact confirmation string과 현장 human gate
+- device role/profile 및 motor identity/state 불일치 시 중단
+- bounded command, timeout/watchdog, fail-safe stop
+- SIM/MOCK namespace 또는 격리 ROS domain
+- firmware upload, hardware snapshot, serial open의 실물 접근 취급
+- CI self-hosted runner와 attached-hardware discovery 금지
+
+네 하위 `AGENTS.md`는 이 root 불변조건을 완화하지 않고 경로별 추가 실행 맥락과
+`Code Review Rules`를 제공한다. 경로별 세부 지침까지 coding session에 로드해야
+하면 새 세션을 해당 하위 디렉터리에서 시작한다. 단순히 세션 중 `cd`만 하는 것은
+이미 구성된 instruction chain을 다시 로드한다는 보장이 없다.
 
 ## 운영 원칙
 
 - 한 branch에는 writer 한 명만 둔다.
-- 병렬 시도는 `pro/shoe-task-ux-cloud-01`, `pro/shoe-task-ux-local-01`처럼
-  writer별 branch로 분리한다.
+- Mode A의 병렬 시도는 `pro/shoe-task-ux-cloud-01`,
+  `pro/shoe-task-ux-local-01`처럼 writer별 branch로 분리한다. Mode B는 detached
+  HEAD에서 시작해 Create branch 또는 Handoff가 만든 별도 branch를 사용한다.
 - main이나 진행 중인 사람의 브랜치에 Codex가 직접 커밋하게 하지 않는다.
 - 원격 결과는 테스트 전까지 제안으로 취급한다.
 - token, `.env`, serial ID, 개인 calibration, 원시 dataset은 GitHub에 올리지 않는다.

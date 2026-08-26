@@ -19,7 +19,12 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
 
 ## GitHub 및 Codex 에이전트 규칙
 
-- 요청받은 `pro/<task>` 브랜치에서만 작업하고 같은 브랜치에 커밋하고 push한다.
+- Codex cloud와 `scripts/cowork`를 사용하는 Mode A에서는 요청받은
+  `pro/<task>` 브랜치에서만 작업하고 같은 브랜치에 커밋하고 normal push한다.
+- ChatGPT 데스크톱 Codex-managed Worktree를 사용하는 Mode B에서는 detached
+  HEAD가 정상 시작 상태다. 앱의 **Create branch here** 또는 **Hand off**가 branch
+  전환을 담당하며, 이 모드에 `pro/<task>` checkout을 강제하거나
+  `scripts/cowork start`를 함께 사용하지 않는다.
 - 다른 작업자의 변경을 reset, checkout, revert, force-push로 없애지 않는다.
 - 한 브랜치에는 writer 한 명만 둔다. 병렬 시도는 writer별 브랜치로 분리하고,
   non-fast-forward가 발생하면 merge나 rebase로 해결하지 말고 중단해 보고한다.
@@ -33,6 +38,10 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
 
 ## 모든 에이전트의 실물 하드웨어 안전 경계
 
+이 절의 조건은 세션의 시작 디렉터리와 무관하게 항상 적용한다. 하위 경로의
+`AGENTS.md`는 Codex가 해당 경로에서 시작한 세션과 경로별 code review에 추가
+맥락을 제공하지만, 실물 안전에 필수적인 조건을 하위 파일에만 두지 않는다.
+
 - 로컬·원격·데스크톱·자동화 환경의 모든 에이전트는 사람의 명시적 승인 없이
   실물 장치를 열거나 움직이거나 설정을 바꾸지 않는다.
 - 기본 허용 범위는 source/문서 읽기, 정적 분석, lint, unit test, mock과 실물
@@ -42,10 +51,22 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
   실물 ROS graph로의 `/cmd_vel`·trajectory·JointState publish와 `sudo`를 이용한
   장치 권한 변경이다. endpoint가 SIM인지 HW인지 불명확하면 HW로 취급한다.
 - 실물 명령은 사람이 현장에 있고 E-stop을 준비한 상태에서 장치 profile과 정확한
-  명령을 지정하고, 실행 직전에 같은 대화에서 승인했을 때만 interactive TTY에서
-  실행할 수 있다. `DAPIER_ALLOW_HARDWARE=1` 같은 환경변수 하나만으로는 승인하지
-  않는다.
+  명령, 안전 조건과 exact confirmation string을 지정하고, 실행 직전에 같은
+  대화에서 승인했을 때만 interactive TTY에서 실행할 수 있다.
+  `DAPIER_ALLOW_HARDWARE=1` 같은 환경변수 하나만으로는 승인하지 않는다.
+- 승인 후에도 예상 role과 device profile을 먼저 대조한다. motor ID, model,
+  voltage, temperature, load, torque state 또는 연결 endpoint가 예상과 다르면
+  명령을 보내지 말고 중단해 보고한다.
+- 움직임 명령은 명시적인 joint/velocity/effort 범위, 짧은 timeout 또는 watchdog,
+  통신 상실 시 fail-safe stop을 갖춰야 한다. 무제한 명령이나 안전 정지 경로가
+  검증되지 않은 명령은 승인 후에도 실행하지 않는다.
+- 자동 ROS 테스트는 명시적인 SIM/MOCK namespace 또는 격리된 ROS domain에서만
+  실행한다. graph나 domain이 불명확하면 HW로 취급한다.
+- firmware upload와 read-only hardware snapshot도 장치에 접속하면 실물 접근이다.
+  승인과 device profile 확인 없이 실행하지 않는다.
 - CI, cloud, background task와 비대화형 실행에서는 실물 명령을 항상 거부한다.
+- CI에 self-hosted runner를 추가하거나 attached hardware를 자동 탐색하게 하지
+  않는다.
 - 장치를 읽기만 하는 inventory도 serial port를 열면 실물 접근이다. 승인 전에는
   parser와 fixture만 검증한다.
 
