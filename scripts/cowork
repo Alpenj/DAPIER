@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+GitHub branch handoff between ChatGPT Pro/Codex and local Codex.
+
+Usage:
+  scripts/cowork start <task-slug> [base-ref]
+  scripts/cowork sync <task-slug>
+  scripts/cowork status <task-slug>
+  scripts/cowork verify <task-slug>
+  scripts/cowork prompt <task-slug>
+
+The remote branch is pro/<task-slug>. Its isolated worktree is created under
+.local-workspaces/pro/<task-slug> in the primary checkout.
+EOF
+}
+
+die() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+command -v git >/dev/null 2>&1 || die "git is required"
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" ||
+  die "run this command inside a Git repository"
+primary_worktree="$(git -C "$repo_root" worktree list --porcelain | awk '$1 == "worktree" { print $2; exit }')"
+command_name="${1:-}"
+task_slug="${2:-}"
+
+case "$command_name" in
+  start|sync|status|verify|prompt) ;;
+  -h|--help|help|"") usage; exit 0 ;;
+  *) usage >&2; die "unknown command: $command_name" ;;
+esac
+
+[[ -n "$task_slug" ]] || die "a task slug is required"
+[[ "$task_slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]] ||
+  die "task slug must contain only lowercase letters, numbers, dot, underscore, or dash"
+
+branch="pro/$task_slug"
+worktree="$primary_worktree/.local-workspaces/pro/$task_slug"
+
+remote_url() {
+  if command -v gh >/dev/null 2>&1; then
+    gh repo view --json url --jq .url 2>/dev/null || true
+  else
+    git -C "$repo_root" remote get-url origin 2>/dev/null || true
+  fi
+}
+
+require_worktree() {
+  [[ -d "$worktree" ]] ||
+    die "worktree not found: $worktree (run: scripts/cowork start $task_slug)"
+}
+
+case "$command_name" in
+  start)
+    base_ref="${3:-origin/main}"
+    git -C "$repo_root" fetch origin
+    git -C "$repo_root" rev-parse --verify "$base_ref^{commit}" >/dev/null 2>&1 ||
+      die "base ref does not exist: $base_ref"
+    [[ ! -e "$worktree" ]] || die "worktree path already exists: $worktree"
+    mkdir -p "$(dirname "$worktree")"
+
+    if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch"; then
+      git -C "$repo_root" worktree add "$worktree" "$branch"
+    elif git -C "$repo_root" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+      git -C "$repo_root" worktree add --track -b "$branch" "$worktree" "origin/$branch"
+    else
+      git -C "$repo_root" worktree add -b "$branch" "$worktree" "$base_ref"
+      git -C "$worktree" push --set-upstream origin "$branch"
+    fi
+
+    printf 'Ready for ChatGPT Pro/Codex handoff.\n'
+    printf 'Repository: %s\n' "$(remote_url)"
+    printf 'Branch:     %s\n' "$branch"
+    printf 'Worktree:   %s\n' "$worktree"
+    printf '\nNext: scripts/cowork prompt %s\n' "$task_slug"
+    ;;
+
+  sync)
+    require_worktree
+    [[ -z "$(git -C "$worktree" status --porcelain)" ]] ||
+      die "worktree has local changes; commit or stash them before syncing"
+    git -C "$worktree" fetch origin "$branch"
+    git -C "$worktree" merge --ff-only "origin/$branch"
+    git -C "$worktree" status --short --branch
+    ;;
+
+  status)
+    require_worktree
+    git -C "$worktree" fetch origin "$branch"
+    git -C "$worktree" status --short --branch
+    git -C "$worktree" log --oneline --decorate --max-count=8
+    printf '\nChanges from origin/main:\n'
+    git -C "$worktree" diff --stat origin/main...HEAD
+    ;;
+
+  verify)
+    require_worktree
+    (
+      cd "$worktree"
+      python3 -m unittest discover -s dapier_sim_first/test -v
+    )
+    (
+      cd "$worktree/casino_dealer"
+      python3 -m unittest discover -s test -v
+    )
+    ;;
+
+  prompt)
+    require_worktree
+    cat <<EOF
+Use repository $(remote_url) on the existing branch \`$branch\`.
+Do not create or switch to another branch. Read and follow AGENTS.md first.
+
+Task:
+[Describe the bug, desired UX flow, or acceptance criteria here.]
+
+Requirements:
+- Inspect the current implementation before editing.
+- Keep the change narrowly scoped and preserve unrelated work.
+- Do not operate physical hardware or commit secrets, device IDs, calibration,
+  raw datasets, or recordings.
+- Run the most relevant tests. Clearly report anything you could not verify.
+- Commit and push the finished change to \`$branch\`.
+EOF
+    ;;
+esac

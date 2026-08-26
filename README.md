@@ -78,6 +78,13 @@ rehearsal checkpoint들은 기준선보다 나빠 선택하지 않았다. 따라
 세부 근거와 선택하지 않은 checkpoint는 [`SO-101 작업 허브`](so101/README.md)에서
 실험 흐름별로 확인할 수 있다.
 
+## GitHub AI 협업
+
+ChatGPT Pro/Codex와 로컬 Codex 사이에서 작업 브랜치를 안전하게 주고받는 방법은
+[`ChatGPT Pro + 로컬 Codex GitHub 협업`](docs/CHATGPT_PRO_CODEX_COWORK_KO.md)에
+정리했다. `scripts/cowork`가 작업별 `pro/<task>` 브랜치와 격리 worktree를 만들고,
+GitHub Actions가 장비 없이 실행 가능한 smoke test를 확인한다.
+
 ## 실물 준비 상태
 
 이전에는 SO-101 serial 장치를 찾지 못해 hardware gate가 막혀 있었다. 최신 기록에서는

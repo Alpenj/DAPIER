@@ -6,6 +6,7 @@ casino_dealer/build/
 casino_dealer/*.egg-info/
 **/robot.pkl
 **/*.part
+.local-workspaces/
 onshape/jdcobot100/assets/
 onshape/jdcobot100/jdcobot100.urdf
 exam_ws/build/
