@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+for required_command in bash shellcheck bats python3; do
+  command -v "$required_command" >/dev/null 2>&1 ||
+    fail "$required_command is required for hardware-free verification"
+done
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" ||
+  fail "run this command inside the DAPIER repository"
+cd "$repo_root" || fail "cannot enter repository root: $repo_root"
+
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONHASHSEED=0
+export PYTHONNOUSERSITE=1
+
+printf '==> Bash syntax\n'
+bash -n scripts/cowork scripts/verify-hardware-free
+
+printf '==> ShellCheck\n'
+shellcheck scripts/cowork scripts/verify-hardware-free
+
+printf '==> Cowork integration tests\n'
+bats test/cowork.bats
+
+printf '==> dapier_sim_first unit tests\n'
+python3 -m unittest discover -s dapier_sim_first/test -v
+
+printf '==> casino_dealer unit tests\n'
+(
+  cd casino_dealer
+  python3 -m unittest discover -s test -v
+)
