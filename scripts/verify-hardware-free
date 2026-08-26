@@ -11,9 +11,11 @@ for required_command in bash shellcheck bats python3; do
     fail "$required_command is required for hardware-free verification"
 done
 
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" ||
-  fail "run this command inside the DAPIER repository"
-cd "$repo_root" || fail "cannot enter repository root: $repo_root"
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)" ||
+  fail "cannot resolve verification script directory"
+repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" ||
+  fail "verification script is not inside the DAPIER repository"
+cd -- "$repo_root" || fail "cannot enter repository root: $repo_root"
 
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONHASHSEED=0
@@ -26,7 +28,7 @@ printf '==> ShellCheck\n'
 shellcheck scripts/cowork scripts/verify-hardware-free
 
 printf '==> Cowork integration tests\n'
-bats test/cowork.bats
+bats test/cowork.bats test/cowork-verify-path.bats
 
 printf '==> dapier_sim_first unit tests\n'
 python3 -m unittest discover -s dapier_sim_first/test -v

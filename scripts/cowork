@@ -465,7 +465,10 @@ verify_task() {
       die "verification requires HEAD == origin/$branch (use --allow-local-ahead only for a purely ahead local branch)"
   fi
 
-  "$worktree/scripts/verify-hardware-free"
+  (
+    cd -- "$worktree"
+    ./scripts/verify-hardware-free
+  )
 
   current_sha="$(git -C "$worktree" rev-parse HEAD)"
   [[ "$current_sha" == "$local_sha" ]] ||
