@@ -80,10 +80,14 @@ rehearsal checkpoint들은 기준선보다 나빠 선택하지 않았다. 따라
 
 ## GitHub AI 협업
 
-ChatGPT Pro/Codex와 로컬 Codex 사이에서 작업 브랜치를 안전하게 주고받는 방법은
-[`ChatGPT Pro + 로컬 Codex GitHub 협업`](docs/CHATGPT_PRO_CODEX_COWORK_KO.md)에
-정리했다. `scripts/cowork`가 작업별 `pro/<task>` 브랜치와 격리 worktree를 만들고,
-GitHub Actions가 장비 없이 실행 가능한 smoke test를 확인한다.
+Codex cloud와 로컬 Codex 사이에서 작업 브랜치를 주고받는 방법은
+[`Codex cloud + 로컬 Codex GitHub 협업`](docs/CHATGPT_PRO_CODEX_COWORK_KO.md)에
+정리했다. `scripts/cowork`는 작업별 `pro/<task>` 브랜치와 로컬 worktree를
+분리하고 branch/worktree/upstream/remote SHA가 맞지 않으면 중단하는 보조 도구다.
+GitHub Actions는 cowork shell 통합 테스트와 두 hardware-free Python 영역만
+검사한다. branch 보호, required check와 최종 merge 판단은 GitHub ruleset과 사람의
+검토가 담당한다. ChatGPT 데스크톱의 Codex-managed Worktree/Handoff를 사용할 때는
+custom `scripts/cowork start` 흐름을 중첩하지 않는다.
 
 ## 실물 준비 상태
 

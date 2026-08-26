@@ -17,15 +17,44 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
 작업 전 기존 폴더 구조와 변경사항을 확인하고, 실제 검증 후 작은 단위로
 커밋한다. `record_id`는 `DAPIER-YYYY-MM-DD-short-topic` 형식을 사용한다.
 
-## GitHub 원격 에이전트 규칙
+## GitHub 및 Codex 에이전트 규칙
 
 - 요청받은 `pro/<task>` 브랜치에서만 작업하고 같은 브랜치에 커밋하고 push한다.
 - 다른 작업자의 변경을 reset, checkout, revert, force-push로 없애지 않는다.
+- 한 브랜치에는 writer 한 명만 둔다. 병렬 시도는 writer별 브랜치로 분리하고,
+  non-fast-forward가 발생하면 merge나 rebase로 해결하지 말고 중단해 보고한다.
 - SIM, MOCK, HW 근거를 명확히 구분한다. 시뮬레이션 통과를 실물 성공으로 쓰지
   않는다.
-- 로봇, 모터, serial 장치 등 실물 하드웨어를 원격 환경에서 구동하지 않는다.
 - `.env`, API key, token, serial ID, 개인 calibration 파일, 원시 dataset과 녹음은
   커밋하지 않는다.
 - 관련된 가장 작은 테스트를 실행하고, 실행하지 못한 검증과 이유를 최종 요약에
   남긴다.
 - 변경 목적, 검증 명령, 결과를 커밋 메시지 또는 PR 본문에 남긴다.
+
+## 모든 에이전트의 실물 하드웨어 안전 경계
+
+- 로컬·원격·데스크톱·자동화 환경의 모든 에이전트는 사람의 명시적 승인 없이
+  실물 장치를 열거나 움직이거나 설정을 바꾸지 않는다.
+- 기본 허용 범위는 source/문서 읽기, 정적 분석, lint, unit test, mock과 실물
+  장치에 연결되지 않는 simulation이다.
+- 기본 금지 범위는 `/dev/tty*`, `/dev/serial/by-id/*` open, serial packet 전송,
+  torque enable/disable, EEPROM/register write, motor jog, actuator command,
+  실물 ROS graph로의 `/cmd_vel`·trajectory·JointState publish와 `sudo`를 이용한
+  장치 권한 변경이다. endpoint가 SIM인지 HW인지 불명확하면 HW로 취급한다.
+- 실물 명령은 사람이 현장에 있고 E-stop을 준비한 상태에서 장치 profile과 정확한
+  명령을 지정하고, 실행 직전에 같은 대화에서 승인했을 때만 interactive TTY에서
+  실행할 수 있다. `DAPIER_ALLOW_HARDWARE=1` 같은 환경변수 하나만으로는 승인하지
+  않는다.
+- CI, cloud, background task와 비대화형 실행에서는 실물 명령을 항상 거부한다.
+- 장치를 읽기만 하는 inventory도 serial port를 열면 실물 접근이다. 승인 전에는
+  parser와 fixture만 검증한다.
+
+## Code Review Rules
+
+### Hardware writes
+
+- Flag any serial write, torque change, EEPROM/register mutation, motor jog,
+  `/cmd_vel`, trajectory, JointState, or actuator command path that can reach
+  physical hardware without an explicit human gate and a safe default.
+- Read-only parsing and simulation must stay separate from device-opening or
+  write-capable tools. Tests must use mocks and must not auto-discover real devices.
