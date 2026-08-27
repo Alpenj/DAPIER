@@ -52,6 +52,64 @@ remote_ref_sha() {
   git --git-dir="$REMOTE" rev-parse "refs/heads/$1"
 }
 
+manifest_path() {
+  common="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"
+  printf '%s/cowork/manifests/%s.json\n' "$common" "$1"
+}
+
+manifest_field() {
+  python3 - "$(manifest_path "$1")" "$2" <<'PYTHON'
+import json
+import sys
+from pathlib import Path
+print(json.loads(Path(sys.argv[1]).read_text())[sys.argv[2]])
+PYTHON
+}
+
+merge_task_into_remote_main() {
+  local task="$1"
+  local actor="$ROOT/merge-actor-${task//\//-}"
+
+  git clone -q "$REMOTE" "$actor"
+  configure_identity "$actor"
+  git -C "$actor" fetch -q origin "pro/$task"
+  git -C "$actor" merge -q --no-ff --no-edit "origin/pro/$task"
+  git -C "$actor" push -q origin main
+}
+
+make_fake_gh() {
+  local fake_bin="$1"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/gh" <<'GH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == auth && "${2:-}" == status ]]; then
+  exit 0
+fi
+if [[ "${1:-}" == pr && "${2:-}" == list ]]; then
+  exit 0
+fi
+if [[ "${1:-}" == pr && "${2:-}" == create ]]; then
+  shift 2
+  body_file=""
+  while [[ "$#" -gt 0 ]]; do
+    if [[ "$1" == --body-file ]]; then
+      body_file="$2"
+      shift 2
+    else
+      shift
+    fi
+  done
+  [[ -n "$body_file" ]]
+  cp "$body_file" "$GH_BODY_CAPTURE"
+  printf 'https://github.example/test/repo/pull/1\n'
+  exit 0
+fi
+exit 1
+GH
+  chmod +x "$fake_bin/gh"
+}
+
 create_remote_branch() {
   local task="$1"
   local marker="${2:-remote}"
@@ -405,6 +463,7 @@ VERIFY
   git -C "$wt" add scripts/verify-hardware-free
   git -C "$wt" commit -qm "test: simulate remote race"
   git -C "$wt" push -q origin pro/verify-race
+  cowork sync verify-race >/dev/null
 
   run cowork verify verify-race
   [ "$status" -ne 0 ]
@@ -431,4 +490,168 @@ VERIFY
   run cowork start bad..slug
   [ "$status" -ne 0 ]
   assert_output_contains "invalid Git branch name"
+}
+
+
+@test "start writes a private handoff manifest with the exact remote SHA" {
+  run cowork start manifest-created
+  [ "$status" -eq 0 ]
+  manifest="$(manifest_path manifest-created)"
+  [ -f "$manifest" ]
+  [ "$(stat -c '%a' "$manifest")" = "600" ]
+  [ "$(manifest_field manifest-created task)" = "manifest-created" ]
+  [ "$(manifest_field manifest-created branch)" = "pro/manifest-created" ]
+  [ "$(manifest_field manifest-created expected_remote_sha)" = "$(remote_ref_sha pro/manifest-created)" ]
+  [ "$(manifest_field manifest-created hardware_allowed)" = "False" ]
+}
+
+@test "verify records the exact verified SHA in the manifest" {
+  cowork start manifest-verified >/dev/null
+  expected="$(remote_ref_sha pro/manifest-verified)"
+
+  run cowork verify manifest-verified
+  [ "$status" -eq 0 ]
+  [ "$(manifest_field manifest-verified verified_sha)" = "$expected" ]
+}
+
+@test "prompt rejects a remote SHA that differs from its handoff manifest" {
+  cowork start manifest-lease >/dev/null
+  manifest="$(manifest_path manifest-lease)"
+  python3 - "$manifest" <<'PYTHON'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data["expected_remote_sha"] = "0000000000000000000000000000000000000000"
+path.write_text(json.dumps(data) + "\n")
+PYTHON
+
+  run cowork prompt manifest-lease
+  [ "$status" -ne 0 ]
+  assert_output_contains "remote head differs from manifest"
+}
+
+@test "doctor reports active task branches without failing on a non-GitHub fixture" {
+  cowork start doctor-active >/dev/null
+
+  run cowork doctor
+  [ "$status" -eq 0 ]
+  assert_output_contains "Cowork doctor"
+  assert_output_contains "pro/doctor-active"
+  assert_output_contains "Doctor summary: 0 failure(s)"
+}
+
+@test "pr refuses a synchronized but unverified remote head" {
+  cowork start pr-unverified >/dev/null
+  wt="$(worktree_path pr-unverified)"
+  commit_in_worktree "$wt" pr-unverified.txt pr-unverified
+  git -C "$wt" push -q origin pro/pr-unverified
+  cowork sync pr-unverified >/dev/null
+
+  run cowork pr pr-unverified
+  [ "$status" -ne 0 ]
+  assert_output_contains "requires cowork verify"
+}
+
+@test "pr creates a metadata body only for the verified remote head" {
+  cowork start pr-created >/dev/null
+  wt="$(worktree_path pr-created)"
+  commit_in_worktree "$wt" pr-created.txt pr-created
+  git -C "$wt" push -q origin pro/pr-created
+  cowork sync pr-created >/dev/null
+  cowork verify pr-created >/dev/null
+  fake_bin="$ROOT/fake-gh-bin"
+  body_capture="$ROOT/pr-body.md"
+  make_fake_gh "$fake_bin"
+  export GH_BODY_CAPTURE="$body_capture"
+  expected="$(remote_ref_sha pro/pr-created)"
+
+  run cowork_with_path "$fake_bin" pr pr-created --draft
+  [ "$status" -eq 0 ]
+  assert_output_contains "https://github.example/test/repo/pull/1"
+  grep -Fqx -- "- Remote head SHA: $expected" "$body_capture"
+  grep -Fqx -- "- Local verified SHA: $expected" "$body_capture"
+  grep -Fqx -- "- 접근 여부: 없음" "$body_capture"
+  grep -Fqx "pr-created.txt" "$body_capture"
+}
+
+@test "finish refuses an unmerged task without removing local state" {
+  cowork start finish-unmerged >/dev/null
+  wt="$(worktree_path finish-unmerged)"
+  commit_in_worktree "$wt" finish-unmerged.txt finish-unmerged
+  git -C "$wt" push -q origin pro/finish-unmerged
+  cowork sync finish-unmerged >/dev/null
+  cowork verify finish-unmerged >/dev/null
+  manifest="$(manifest_path finish-unmerged)"
+
+  run cowork finish finish-unmerged
+  [ "$status" -ne 0 ]
+  assert_output_contains "not contained in origin/main"
+  [ -d "$wt" ]
+  [ -f "$manifest" ]
+  git -C "$REPO" show-ref --verify --quiet refs/heads/pro/finish-unmerged
+}
+
+@test "finish removes verified merged local state and preserves the remote branch by default" {
+  cowork start finish-merged >/dev/null
+  wt="$(worktree_path finish-merged)"
+  commit_in_worktree "$wt" finish-merged.txt finish-merged
+  git -C "$wt" push -q origin pro/finish-merged
+  cowork sync finish-merged >/dev/null
+  cowork verify finish-merged >/dev/null
+  merge_task_into_remote_main finish-merged
+  manifest="$(manifest_path finish-merged)"
+
+  run cowork finish finish-merged
+  [ "$status" -eq 0 ]
+  assert_output_contains "Remote branch: preserved"
+  [ ! -e "$wt" ]
+  [ ! -e "$manifest" ]
+  ! git -C "$REPO" show-ref --verify --quiet refs/heads/pro/finish-merged
+  git --git-dir="$REMOTE" show-ref --verify --quiet refs/heads/pro/finish-merged
+}
+
+@test "finish delete-remote removes the remote only after merge and verification" {
+  cowork start finish-delete >/dev/null
+  wt="$(worktree_path finish-delete)"
+  commit_in_worktree "$wt" finish-delete.txt finish-delete
+  git -C "$wt" push -q origin pro/finish-delete
+  cowork sync finish-delete >/dev/null
+  cowork verify finish-delete >/dev/null
+  merge_task_into_remote_main finish-delete
+
+  run cowork finish finish-delete --delete-remote
+  [ "$status" -eq 0 ]
+  assert_output_contains "Remote branch: deleted"
+  ! git --git-dir="$REMOTE" show-ref --verify --quiet refs/heads/pro/finish-delete
+}
+
+@test "failed remote deletion leaves the worktree branch and manifest untouched" {
+  cowork start finish-delete-fails >/dev/null
+  wt="$(worktree_path finish-delete-fails)"
+  commit_in_worktree "$wt" finish-delete-fails.txt finish-delete-fails
+  git -C "$wt" push -q origin pro/finish-delete-fails
+  cowork sync finish-delete-fails >/dev/null
+  cowork verify finish-delete-fails >/dev/null
+  merge_task_into_remote_main finish-delete-fails
+  manifest="$(manifest_path finish-delete-fails)"
+  cat >"$REMOTE/hooks/pre-receive" <<'HOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+while read -r old new ref; do
+  if [[ "$ref" == refs/heads/pro/finish-delete-fails && "$new" == 0000000000000000000000000000000000000000 ]]; then
+    exit 1
+  fi
+done
+exit 0
+HOOK
+  chmod +x "$REMOTE/hooks/pre-receive"
+
+  run cowork finish finish-delete-fails --delete-remote
+  [ "$status" -ne 0 ]
+  assert_output_contains "no local cleanup was performed"
+  [ -d "$wt" ]
+  [ -f "$manifest" ]
+  git -C "$REPO" show-ref --verify --quiet refs/heads/pro/finish-delete-fails
 }

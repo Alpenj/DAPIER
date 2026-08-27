@@ -84,10 +84,13 @@ Codex cloud와 로컬 Codex 사이에서 작업 브랜치를 주고받는 방법
 [`Codex cloud + 로컬 Codex GitHub 협업`](docs/CHATGPT_PRO_CODEX_COWORK_KO.md)에
 정리했다. `scripts/cowork`는 작업별 `pro/<task>` 브랜치와 로컬 worktree를
 분리하고 branch/worktree/upstream/remote SHA가 맞지 않으면 중단하는 보조 도구다.
-GitHub Actions는 cowork shell 통합 테스트와 두 hardware-free Python 영역만
-검사한다. branch 보호, required check와 최종 merge 판단은 GitHub ruleset과 사람의
-검토가 담당한다. ChatGPT 데스크톱의 Codex-managed Worktree/Handoff를 사용할 때는
-custom `scripts/cowork start` 흐름을 중첩하지 않는다.
+`doctor`는 환경과 ruleset을 점검하고, Git 밖의 private handoff manifest가
+base/remote/verified SHA를 연결한다. `pr`은 검증한 원격 SHA로 안전 항목을 채운
+PR을 만들며, `finish`는 병합·동기화·검증을 확인한 뒤 로컬 worktree와 branch를
+정리한다. GitHub Actions는 cowork shell 통합 테스트와 두 hardware-free Python
+영역만 검사한다. branch 보호, required check와 최종 merge 판단은 GitHub ruleset과
+사람의 검토가 담당한다. ChatGPT 데스크톱의 Codex-managed Worktree/Handoff를
+사용할 때는 custom `scripts/cowork start` 흐름을 중첩하지 않는다.
 
 ## 실물 준비 상태
 

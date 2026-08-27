@@ -6,11 +6,14 @@ usage() {
 GitHub branch handoff between ChatGPT Pro/Codex and local Codex.
 
 Usage:
+  scripts/cowork doctor
   scripts/cowork start <task-slug> [base-ref]
   scripts/cowork sync <task-slug>
   scripts/cowork status <task-slug>
   scripts/cowork verify <task-slug> [--allow-local-ahead]
   scripts/cowork prompt <task-slug>
+  scripts/cowork pr <task-slug> [--draft]
+  scripts/cowork finish <task-slug> [--delete-remote]
 
 The remote branch is pro/<task-slug>. Its isolated worktree is created under
 .local-workspaces/pro/<task-slug> in the primary checkout.
@@ -231,6 +234,158 @@ branch_upstream() {
   git -C "$repo_root" for-each-ref --format='%(upstream:short)' "refs/heads/$1"
 }
 
+utc_timestamp() {
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+github_repo_slug() {
+  local url
+  local slug
+
+  url="$(git -C "$repo_root" remote get-url origin 2>/dev/null)" || return 1
+  case "$url" in
+    https://github.com/*) slug="${url#https://github.com/}" ;;
+    http://github.com/*) slug="${url#http://github.com/}" ;;
+    git@github.com:*) slug="${url#git@github.com:}" ;;
+    ssh://git@github.com/*) slug="${url#ssh://git@github.com/}" ;;
+    *) return 1 ;;
+  esac
+
+  slug="${slug%.git}"
+  slug="${slug%/}"
+  [[ "$slug" == */* && "$slug" != */*/* ]] || return 1
+  printf '%s\n' "$slug"
+}
+
+manifest_value() {
+  local key="$1"
+
+  command -v python3 >/dev/null 2>&1 || die "python3 is required for cowork manifests"
+  python3 - "$manifest_path" "$key" <<'PYTHON' ||
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+key = sys.argv[2]
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"cannot read manifest {path}: {exc}")
+value = data.get(key, "")
+if isinstance(value, bool):
+    print("true" if value else "false")
+elif isinstance(value, list):
+    print(", ".join(str(item) for item in value))
+elif value is not None:
+    print(value)
+PYTHON
+    die "invalid handoff manifest: $manifest_path"
+}
+
+assert_manifest_identity() {
+  [[ -f "$manifest_path" ]] || die "handoff manifest not found: $manifest_path"
+  [[ "$(manifest_value schema_version)" == "1" ]] ||
+    die "unsupported handoff manifest schema: $manifest_path"
+  [[ "$(manifest_value task)" == "$task_slug" ]] ||
+    die "handoff manifest task does not match '$task_slug'"
+  [[ "$(manifest_value branch)" == "$branch" ]] ||
+    die "handoff manifest branch does not match '$branch'"
+  [[ "$(manifest_value hardware_allowed)" == "false" ]] ||
+    die "cowork manifests must keep hardware_allowed=false"
+}
+
+write_manifest() {
+  local local_sha="$1"
+  local expected_remote_sha="$2"
+  local verified_sha="$3"
+  local base_sha
+  local writer
+  local repository_url
+  local timestamp
+
+  command -v python3 >/dev/null 2>&1 || die "python3 is required for cowork manifests"
+  base_sha="$(git -C "$repo_root" merge-base "$main_remote_sha" "$local_sha" 2>/dev/null || true)"
+  [[ -n "$base_sha" ]] || base_sha="unavailable"
+  writer="${COWORK_WRITER:-$(git -C "$repo_root" config user.name 2>/dev/null || true)}"
+  [[ -n "$writer" ]] || writer="unassigned"
+  repository_url="$(git -C "$repo_root" remote get-url origin)"
+  timestamp="$(utc_timestamp)"
+
+  mkdir -p -- "$(dirname "$manifest_path")"
+  python3 - "$manifest_path" "$task_slug" "$branch" "$repository_url" "$base_sha" \
+    "$expected_remote_sha" "$local_sha" "$verified_sha" "$writer" "$worktree" "$timestamp" <<'PYTHON' ||
+import json
+import os
+import sys
+from pathlib import Path
+
+(path_raw, task, branch, repository, base_sha, expected_remote_sha,
+ local_sha, verified_sha, writer, worktree, timestamp) = sys.argv[1:]
+path = Path(path_raw)
+if path.exists():
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"cannot update manifest {path}: {exc}")
+    if data.get("schema_version") != 1:
+        raise SystemExit(f"unsupported manifest schema in {path}")
+else:
+    data = {
+        "schema_version": 1,
+        "created_at": timestamp,
+        "allowed_paths": [],
+        "required_tests": ["scripts/verify-hardware-free"],
+    }
+data.update({
+    "task": task,
+    "branch": branch,
+    "repository": repository,
+    "base_sha": base_sha,
+    "expected_remote_sha": expected_remote_sha,
+    "local_head_sha": local_sha,
+    "verified_sha": verified_sha,
+    "verified_at": timestamp if verified_sha else "",
+    "writer": writer,
+    "worktree": worktree,
+    "hardware_allowed": False,
+    "updated_at": timestamp,
+})
+temporary = path.with_name(path.name + ".tmp")
+with temporary.open("w", encoding="utf-8") as handle:
+    json.dump(data, handle, ensure_ascii=False, indent=2, sort_keys=True)
+    handle.write("\n")
+os.chmod(temporary, 0o600)
+os.replace(temporary, path)
+PYTHON
+    die "failed to write handoff manifest: $manifest_path"
+  assert_manifest_identity
+}
+
+ensure_manifest() {
+  local local_sha="$1"
+  if [[ ! -f "$manifest_path" ]]; then
+    write_manifest "$local_sha" "$task_remote_sha" ""
+  fi
+  assert_manifest_identity
+}
+
+assert_manifest_expected_remote() {
+  local expected_sha
+  expected_sha="$(manifest_value expected_remote_sha)"
+  [[ "$expected_sha" == "$task_remote_sha" ]] ||
+    die "remote head differs from manifest (expected $expected_sha, found $task_remote_sha); run sync to acknowledge it"
+}
+
+print_manifest_snapshot() {
+  printf '\nHandoff manifest:\n'
+  printf 'Path:            %s\n' "$manifest_path"
+  printf 'Writer:          %s\n' "$(manifest_value writer)"
+  printf 'Expected remote: %s\n' "$(manifest_value expected_remote_sha)"
+  printf 'Verified SHA:    %s\n' "$(manifest_value verified_sha)"
+  printf 'Hardware:        disabled\n'
+}
+
 remove_created_worktree() {
   if is_registered_worktree_path "$worktree"; then
     git -C "$repo_root" worktree remove "$worktree" >/dev/null 2>&1 ||
@@ -249,6 +404,98 @@ remove_created_branch() {
 cleanup_empty_workspace_dirs() {
   rmdir -- "$primary_worktree/.local-workspaces/pro" 2>/dev/null || true
   rmdir -- "$primary_worktree/.local-workspaces" 2>/dev/null || true
+}
+
+doctor_pass() {
+  printf 'PASS: %s\n' "$*"
+}
+
+doctor_warn() {
+  printf 'WARN: %s\n' "$*"
+  doctor_warning_count=$((doctor_warning_count + 1))
+}
+
+doctor_fail() {
+  printf 'FAIL: %s\n' "$*"
+  doctor_failure_count=$((doctor_failure_count + 1))
+}
+
+doctor_task() {
+  local origin_url repo_slug="" numpy_version="" expected_numpy=""
+  local ruleset_names="" active_tasks=""
+  doctor_warning_count=0
+  doctor_failure_count=0
+
+  printf 'Cowork doctor\n'
+  doctor_pass "Git repository: $repo_root"
+  origin_url="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
+  if [[ -n "$origin_url" ]]; then
+    doctor_pass "origin: $origin_url"
+  else
+    doctor_fail "origin remote is missing"
+  fi
+  if git -C "$repo_root" worktree list --porcelain >/dev/null 2>&1; then
+    doctor_pass "Git worktree support"
+  else
+    doctor_fail "Git worktree support is unavailable"
+  fi
+  if [[ -n "$(git -C "$primary_worktree" status --porcelain=v1 --untracked-files=all)" ]]; then
+    doctor_warn "primary worktree is dirty; cowork task worktrees remain isolated"
+  else
+    doctor_pass "primary worktree is clean"
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    doctor_pass "python3: $(command -v python3)"
+    expected_numpy="$(sed -n 's/^numpy==\([0-9.]*\).*/\1/p' \
+      "$repo_root/requirements-cowork.txt" 2>/dev/null | sed -n '1p' || true)"
+    if numpy_version="$(python3 -c 'import numpy; print(numpy.__version__)' 2>/dev/null)"; then
+      if [[ -n "$expected_numpy" && "$numpy_version" == "$expected_numpy" ]]; then
+        doctor_pass "NumPy pinned version: $numpy_version"
+      elif [[ -n "$expected_numpy" ]]; then
+        doctor_warn "NumPy is $numpy_version; hardware-free CI pins $expected_numpy"
+      else
+        doctor_warn "NumPy is $numpy_version; requirements-cowork.txt pin was not found"
+      fi
+    else
+      doctor_warn "NumPy is unavailable; install requirements-cowork.txt before local verification"
+    fi
+  else
+    doctor_fail "python3 is required"
+  fi
+  if command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+      doctor_pass "GitHub CLI authentication"
+    else
+      doctor_warn "GitHub CLI is installed but not authenticated"
+    fi
+  else
+    doctor_warn "GitHub CLI is not installed; prompt can fall back to origin but pr cannot run"
+  fi
+  if repo_slug="$(github_repo_slug 2>/dev/null)"; then
+    doctor_pass "GitHub repository: $repo_slug"
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      ruleset_names="$(gh api "repos/$repo_slug/rulesets" \
+        --jq '[.[] | select(.enforcement == "active") | .name] | sort | join(",")' 2>/dev/null || true)"
+      if [[ "$ruleset_names" == *"protect-main"* && "$ruleset_names" == *"protect-pro-branches"* ]]; then
+        doctor_pass "required repository rulesets are active"
+      else
+        doctor_warn "expected active rulesets were not both found"
+      fi
+    else
+      doctor_warn "rulesets were not checked because gh authentication is unavailable"
+    fi
+  else
+    doctor_warn "origin is not a canonical GitHub URL; rulesets were not checked"
+  fi
+  active_tasks="$(git -C "$repo_root" for-each-ref --format='%(refname:short)' 'refs/heads/pro/*')"
+  if [[ -n "$active_tasks" ]]; then
+    printf 'Active local task branches:\n%s\n' "$active_tasks"
+  else
+    printf 'Active local task branches: none\n'
+  fi
+  printf 'Doctor summary: %s failure(s), %s warning(s)\n' \
+    "$doctor_failure_count" "$doctor_warning_count"
+  [[ "$doctor_failure_count" -eq 0 ]]
 }
 
 start_task() {
@@ -391,6 +638,8 @@ start_task() {
   printf 'Branch:      %s\n' "$branch"
   printf 'Worktree:    %s\n' "$worktree"
   print_snapshot "$local_sha"
+  write_manifest "$local_sha" "$task_remote_sha" ""
+  printf 'Manifest:    %s\n' "$manifest_path"
   printf '\nNext: scripts/cowork prompt %s\n' "$task_slug"
 }
 
@@ -422,6 +671,7 @@ sync_task() {
 
   local_sha="$(git -C "$worktree" rev-parse HEAD)"
   calculate_relation "$local_sha" "$task_remote_sha"
+  write_manifest "$local_sha" "$task_remote_sha" ""
   print_snapshot "$local_sha"
 }
 
@@ -432,7 +682,9 @@ status_task() {
   load_remote_snapshot
   local_sha="$(git -C "$worktree" rev-parse HEAD)"
   calculate_relation "$local_sha" "$task_remote_sha"
+  ensure_manifest "$local_sha"
   print_snapshot "$local_sha"
+  print_manifest_snapshot
 
   printf '\nGit status:\n'
   git -C "$worktree" status --short --branch
@@ -455,6 +707,8 @@ verify_task() {
   load_remote_snapshot
   local_sha="$(git -C "$worktree" rev-parse HEAD)"
   calculate_relation "$local_sha" "$task_remote_sha"
+  ensure_manifest "$local_sha"
+  assert_manifest_expected_remote
   print_snapshot "$local_sha"
 
   if [[ "$allow_local_ahead" == true ]]; then
@@ -481,6 +735,7 @@ verify_task() {
   [[ "$verified_remote_sha" == "$task_remote_sha" ]] ||
     die "remote head changed during verification (expected $task_remote_sha, found $verified_remote_sha)"
 
+  write_manifest "$local_sha" "$task_remote_sha" "$local_sha"
   printf 'Verified SHA:   %s\n' "$local_sha"
   printf 'Remote expected: %s\n' "$task_remote_sha"
 }
@@ -489,17 +744,26 @@ prompt_task() {
   local local_sha
   local base_sha
   local repository_url
+  local manifest_writer_value
+  local allowed_paths_value
+  local required_tests_value
 
   assert_task_worktree
   load_remote_snapshot
   local_sha="$(git -C "$worktree" rev-parse HEAD)"
   calculate_relation "$local_sha" "$task_remote_sha"
+  ensure_manifest "$local_sha"
+  assert_manifest_expected_remote
   [[ "$ahead_count" -eq 0 && "$behind_count" -eq 0 ]] ||
     die "prompt requires local HEAD to match origin/$branch exactly"
 
   base_sha="$(git -C "$repo_root" merge-base "$main_remote_sha" "$local_sha" 2>/dev/null || true)"
   [[ -n "$base_sha" ]] || base_sha="unavailable"
   repository_url="$(remote_url)"
+  manifest_writer_value="$(manifest_value writer)"
+  allowed_paths_value="$(manifest_value allowed_paths)"
+  required_tests_value="$(manifest_value required_tests)"
+  [[ -n "$allowed_paths_value" ]] || allowed_paths_value="not restricted in manifest"
 
   cat <<PROMPT
 Use repository $repository_url on the existing branch \`$branch\`.
@@ -509,6 +773,10 @@ Starting SHA:            $local_sha
 Expected remote SHA:     $task_remote_sha
 Current origin/main SHA: $main_remote_sha
 Base SHA:                $base_sha
+Writer:                  $manifest_writer_value
+Allowed paths:           $allowed_paths_value
+Required tests:          $required_tests_value
+Hardware allowed:        false
 
 Task:
 [Describe the bug, desired UX flow, or acceptance criteria here.]
@@ -526,13 +794,167 @@ Requirements:
 PROMPT
 }
 
+pr_task() {
+  local draft="$1"
+  local local_sha verified_sha current_remote_sha repo_identifier title body_file
+  local changed_files existing_pr
+  local writer base_sha
+  local -a create_args
+
+  assert_task_worktree
+  [[ -z "$(git -C "$worktree" status --porcelain=v1 --untracked-files=all)" ]] ||
+    die "PR creation requires a clean worktree"
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+  [[ "$relation" == "synchronized" ]] || die "PR creation requires HEAD == origin/$branch"
+  ensure_manifest "$local_sha"
+  assert_manifest_expected_remote
+  verified_sha="$(manifest_value verified_sha)"
+  [[ "$verified_sha" == "$local_sha" ]] ||
+    die "PR creation requires cowork verify at the current remote HEAD"
+
+  command -v gh >/dev/null 2>&1 || die "gh is required for PR creation"
+  gh auth status >/dev/null 2>&1 || die "gh authentication is required for PR creation"
+  repo_identifier="$(github_repo_slug 2>/dev/null || remote_url)"
+  existing_pr="$(gh pr list --repo "$repo_identifier" --head "$branch" --state open \
+    --json url --jq '.[0].url // empty' 2>/dev/null || true)"
+  if [[ -n "$existing_pr" ]]; then
+    printf 'Open PR already exists: %s\n' "$existing_pr"
+    return 0
+  fi
+
+  changed_files="$(git -C "$worktree" diff --name-only "$main_remote_sha...$local_sha")"
+  [[ -n "$changed_files" ]] || die "task branch has no changes from origin/main"
+  title="$(git -C "$worktree" log --reverse --format=%s "$main_remote_sha..$local_sha" | sed -n '1p')"
+  [[ -n "$title" ]] || die "cannot derive PR title from task commits"
+  writer="$(manifest_value writer)"
+  base_sha="$(manifest_value base_sha)"
+  body_file="$(mktemp)" || die "cannot create temporary PR body"
+  trap 'rm -f -- "$body_file"' EXIT
+
+  cat >"$body_file" <<BODY
+## 변경 목적
+
+$title
+
+## 변경 범위
+
+\`\`\`
+$changed_files
+\`\`\`
+
+## 협업 추적
+
+- 작업 모드: Codex cloud + cowork
+- Branch writer: $writer
+- Base SHA: $base_sha
+- Remote head SHA: $task_remote_sha
+- Local verified SHA: $verified_sha
+- Manifest: local Git metadata (not committed)
+
+## 검증
+
+- \`scripts/cowork verify $task_slug\` — PASS at \`$verified_sha\`
+- SIM/MOCK/software-only verification. HW success is not claimed.
+
+- [x] 관련 단위 테스트를 실행했다.
+- [x] SIM, MOCK, HW 결과를 구분했다.
+- [x] 비밀값, 장치 ID, 개인 calibration, 원시 dataset을 포함하지 않았다.
+- [x] 검증한 SHA와 PR의 remote head SHA가 같다.
+- [x] 무승인 실물 하드웨어 명령을 실행하지 않았다.
+
+### 실물 하드웨어 접근
+
+- 접근 여부: 없음
+- 사람이 승인한 정확한 명령과 안전 조건: 없음
+- 실제 결과: 미실행
+
+## 위험 및 되돌리기
+
+- 사람이 변경 범위와 required checks를 검토한 뒤 merge한다.
+- 되돌리기는 merge 후 후속 revert PR로 수행한다.
+BODY
+
+  create_args=(pr create --repo "$repo_identifier" --base main --head "$branch" \
+    --title "$title" --body-file "$body_file")
+  if [[ "$draft" == true ]]; then
+    create_args+=(--draft)
+  fi
+  current_remote_sha="$(remote_branch_sha "$branch")" ||
+    die "remote branch disappeared before PR creation: origin/$branch"
+  [[ "$current_remote_sha" == "$task_remote_sha" ]] ||
+    die "remote head changed before PR creation (expected $task_remote_sha, found $current_remote_sha)"
+  gh "${create_args[@]}"
+  rm -f -- "$body_file"
+  trap - EXIT
+}
+
+finish_task() {
+  local delete_remote="$1"
+  local local_sha verified_sha current_remote_sha repo_slug="" merged_pr=""
+
+  assert_task_worktree
+  [[ -z "$(git -C "$worktree" status --porcelain=v1 --untracked-files=all)" ]] ||
+    die "finish requires a clean worktree"
+  load_remote_snapshot
+  local_sha="$(git -C "$worktree" rev-parse HEAD)"
+  calculate_relation "$local_sha" "$task_remote_sha"
+  [[ "$relation" == "synchronized" ]] ||
+    die "finish requires no unpushed commits and HEAD == origin/$branch"
+  ensure_manifest "$local_sha"
+  assert_manifest_expected_remote
+  verified_sha="$(manifest_value verified_sha)"
+  [[ "$verified_sha" == "$local_sha" ]] ||
+    die "finish requires the current remote HEAD to have passed cowork verify"
+  git -C "$repo_root" merge-base --is-ancestor "$task_remote_sha" "$main_remote_sha" ||
+    die "task branch is not contained in origin/main; merge the PR before finish"
+
+  if repo_slug="$(github_repo_slug 2>/dev/null)"; then
+    command -v gh >/dev/null 2>&1 || die "gh is required to confirm the merged PR"
+    gh auth status >/dev/null 2>&1 || die "gh authentication is required to confirm the merged PR"
+    merged_pr="$(gh pr list --repo "$repo_slug" --head "$branch" --base main --state merged \
+      --json url,headRefOid --jq ".[] | select(.headRefOid == \"$task_remote_sha\") | .url" \
+      2>/dev/null | sed -n '1p')"
+    [[ -n "$merged_pr" ]] || die "no merged PR matches origin/$branch at $task_remote_sha"
+  else
+    printf 'PR state check skipped for non-GitHub origin; origin/main ancestry is authoritative.\n'
+  fi
+
+  current_remote_sha="$(remote_branch_sha "$branch")" ||
+    die "remote branch disappeared before finish: origin/$branch"
+  [[ "$current_remote_sha" == "$task_remote_sha" ]] ||
+    die "remote head changed before finish (expected $task_remote_sha, found $current_remote_sha)"
+
+  if [[ "$delete_remote" == true ]]; then
+    git -C "$worktree" push origin --delete "$branch" ||
+      die "remote branch deletion failed; no local cleanup was performed"
+  fi
+  git -C "$repo_root" worktree remove "$worktree" || die "failed to remove task worktree"
+  git -C "$repo_root" update-ref -d "refs/heads/$branch" "$local_sha" ||
+    die "failed to delete the exact local task branch ref"
+  git -C "$repo_root" config --remove-section "branch.$branch" >/dev/null 2>&1 || true
+  rm -f -- "$manifest_path"
+  rmdir -- "$(dirname "$manifest_path")" 2>/dev/null || true
+  cleanup_empty_workspace_dirs
+
+  printf 'Finished task: %s\n' "$task_slug"
+  printf 'Merged remote SHA: %s\n' "$task_remote_sha"
+  [[ -z "$merged_pr" ]] || printf 'Merged PR: %s\n' "$merged_pr"
+  if [[ "$delete_remote" == true ]]; then
+    printf 'Remote branch: deleted\n'
+  else
+    printf 'Remote branch: preserved (repository rules may block deletion)\n'
+  fi
+}
+
 command_name="${1:-}"
 case "$command_name" in
   -h|--help|help|"")
     usage
     exit 0
     ;;
-  start|sync|status|verify|prompt)
+  doctor|start|sync|status|verify|prompt|pr|finish)
     ;;
   *)
     usage >&2
@@ -543,6 +965,9 @@ esac
 command -v git >/dev/null 2>&1 || die "git is required"
 
 case "$command_name" in
+  doctor)
+    [[ "$#" -eq 1 ]] || die "usage: scripts/cowork doctor"
+    ;;
   start)
     [[ "$#" -ge 2 && "$#" -le 3 ]] || die "usage: scripts/cowork start <task-slug> [base-ref]"
     ;;
@@ -551,34 +976,46 @@ case "$command_name" in
     [[ "$#" -eq 2 || "${3:-}" == "--allow-local-ahead" ]] ||
       die "unknown verify option: ${3:-}"
     ;;
+  pr)
+    [[ "$#" -ge 2 && "$#" -le 3 ]] || die "usage: scripts/cowork pr <task-slug> [--draft]"
+    [[ "$#" -eq 2 || "${3:-}" == "--draft" ]] || die "unknown pr option: ${3:-}"
+    ;;
+  finish)
+    [[ "$#" -ge 2 && "$#" -le 3 ]] ||
+      die "usage: scripts/cowork finish <task-slug> [--delete-remote]"
+    [[ "$#" -eq 2 || "${3:-}" == "--delete-remote" ]] ||
+      die "unknown finish option: ${3:-}"
+    ;;
   *)
     [[ "$#" -eq 2 ]] || die "usage: scripts/cowork $command_name <task-slug>"
     ;;
 esac
 
-task_slug="${2:-}"
-[[ -n "$task_slug" ]] || die "a task slug is required"
-[[ "$task_slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]] ||
-  die "task slug must contain only lowercase letters, numbers, dot, underscore, or dash"
-
-branch="pro/$task_slug"
-git check-ref-format --branch "$branch" >/dev/null 2>&1 ||
-  die "invalid Git branch name derived from task slug: $branch"
-
 repo_root_raw="$(git rev-parse --show-toplevel 2>/dev/null)" ||
   die "run this command inside a Git repository"
-repo_root="$(canonical_dir "$repo_root_raw")" ||
-  die "cannot resolve repository root"
+repo_root="$(canonical_dir "$repo_root_raw")" || die "cannot resolve repository root"
 repo_common_dir="$(common_dir_for "$repo_root")" ||
   die "cannot resolve repository Git common directory"
 primary_worktree_raw="$(primary_worktree_path)" ||
   die "cannot identify the primary Git worktree"
 primary_worktree="$(canonical_dir "$primary_worktree_raw")" ||
   die "cannot resolve primary Git worktree"
-worktree="$primary_worktree/.local-workspaces/pro/$task_slug"
+git -C "$repo_root" remote get-url origin >/dev/null 2>&1 || die "origin remote is required"
 
-git -C "$repo_root" remote get-url origin >/dev/null 2>&1 ||
-  die "origin remote is required"
+if [[ "$command_name" == doctor ]]; then
+  doctor_task
+  exit $?
+fi
+
+task_slug="${2:-}"
+[[ -n "$task_slug" ]] || die "a task slug is required"
+[[ "$task_slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]] ||
+  die "task slug must contain only lowercase letters, numbers, dot, underscore, or dash"
+branch="pro/$task_slug"
+git check-ref-format --branch "$branch" >/dev/null 2>&1 ||
+  die "invalid Git branch name derived from task slug: $branch"
+worktree="$primary_worktree/.local-workspaces/pro/$task_slug"
+manifest_path="$repo_common_dir/cowork/manifests/$task_slug.json"
 
 task_remote_sha=""
 main_remote_sha=""
@@ -605,5 +1042,19 @@ case "$command_name" in
     ;;
   prompt)
     prompt_task
+    ;;
+  pr)
+    if [[ "${3:-}" == "--draft" ]]; then
+      pr_task true
+    else
+      pr_task false
+    fi
+    ;;
+  finish)
+    if [[ "${3:-}" == "--delete-remote" ]]; then
+      finish_task true
+    else
+      finish_task false
+    fi
     ;;
 esac

@@ -120,6 +120,7 @@ VERIFY
   chmod +x "$wt/scripts/verify-hardware-free"
   printf 'task fixture\n' >"$wt/task-only.txt"
   commit_and_push_task "$wt" "test: install failing task verifier"
+  cowork sync verify-cwd >/dev/null
 
   export VERIFY_TRACE="$trace"
   export EXPECTED_TASK_ROOT="$expected_root"
