@@ -9,21 +9,24 @@ ROBOTIS 공식 Jazzy turtlebot3_description의 Waffle Pi URDF와 필요한 mesh�
 - base_footprint와 base_link를 보존한다.
 - 좌우 wheel joint 2개를 보존한다.
 - Waffle Pi base, 좌우 tire, LDS visual mesh를 포함한다.
-- base collision, wheel collision, caster collision을 포함한다.
+- base collision, wheel collision, caster collision을 접촉용으로 포함하되 화면에서는 숨긴다.
 - camera_link와 RGB optical frame을 보존한다.
 - 바퀴 actuator는 추가하지 않는다.
 - base는 world에 고정한 stationary manipulation 기준이다.
 
-MuJoCo 변환본은 원본 xacro를 확장한 뒤 두 가지만 변경했다.
+MuJoCo 변환본은 원본 xacro를 확장한 뒤 세 가지만 변경했다.
 
 1. package URI를 이 폴더에서 재현 가능한 상대 mesh 경로로 변경했다.
 2. fusestatic=false를 지정해 base_link와 sensor frame을 보존했다.
+3. discardvisual=false로 공식 STL visual 4개를 보존하고, loader에서 collision proxy의 접촉 bit는 유지한 채 alpha=0, group=3으로 숨긴다.
 
 ## 검증
 
     cd ~/DAPIER/2ARM_ROBOT/sim/turtlebot3_waffle_pi
     ~/DAPIER/so101_imitation_learning/.venv/bin/python waffle_pi_model.py --smoke-steps 1000
     ~/DAPIER/so101_imitation_learning/.venv/bin/python -m unittest discover -s test -v
+
+smoke report에서 nmesh=4, official_visual_meshes=4, hidden_collision_geoms=7을 확인한다.
 
 화면 확인:
 
