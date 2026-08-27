@@ -201,6 +201,22 @@ ros2 run shoe_sorting_data shoe_dapier_act rollout-smoke \
 `control_authorized=false`, `published=false`, `executed_action=null`,
 `hardware_execution=NOT_ATTEMPTED`입니다. 실제 JDcobot transport는 포함하지 않습니다.
 
+### Temporal Ensembling jitter 준비
+
+ROBOTIS OMY의 GR00T N1.7 비교를 참고해 겹치는 action chunk를 oldest-first 지수
+가중 평균하는 hardware-free 모듈과 command delta/velocity/acceleration/jerk 지표를
+추가했습니다. 이 단계는 synthetic A/B만 실행하며 ROS 2, serial, motor를 열지
+않습니다.
+
+    ros2 run shoe_sorting_data shoe_jitter_prep \
+      --output /tmp/dapier_jitter_smoke.json --fps 30
+
+stale observation, NaN/Inf, shape 변경, 설정한 chunk disagreement 초과는 chunk를
+거부합니다. 결과는 항상 control_authorized=false이고, 실물 전 recorded replay와
+MuJoCo A/B 및 독립 safety supervisor 검증이 남습니다. 영상 분석과 단계별 gate는
+[JITTER_TEMPORAL_ENSEMBLING_PREP_KO.md](../../docs/JITTER_TEMPORAL_ENSEMBLING_PREP_KO.md)에
+기록했습니다.
+
 ## JDcobot rollout safety dry-run
 
 다음 명령은 motor나 ROS2 command topic을 열지 않습니다. policy proposal을

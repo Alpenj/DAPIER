@@ -20,6 +20,7 @@
 - [`JDCOBOT_ROLLOUT_SAFETY_SUPERVISOR.md`](JDCOBOT_ROLLOUT_SAFETY_SUPERVISOR.md): policy-independent lifecycle/fault latch와 ROS2-shaped dry-run adapter
 - [`research/LATEST_ROLLOUT_SAFETY_SUPERVISOR_RESEARCH_20260821.md`](research/LATEST_ROLLOUT_SAFETY_SUPERVISOR_RESEARCH_20260821.md): ROS2·LeRobot·ROBOTIS 정본과 최소 최신 연구의 Stage 5 판정
 - [`DAPIER_NATIVE_ACT_RUNTIME.md`](DAPIER_NATIVE_ACT_RUNTIME.md): raw episode부터 학습·checkpoint·inference까지 LeRobot 없이 구동하는 Stage 6 native ACT runtime
+- [`JITTER_TEMPORAL_ENSEMBLING_PREP_KO.md`](JITTER_TEMPORAL_ENSEMBLING_PREP_KO.md): ROBOTIS OMY 영상 근거, hardware-free Temporal Ensembling, 정량 jitter 지표와 실물 전 A/B gate
 - [`research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md`](research/LATEST_DAPIER_NATIVE_ACT_RESEARCH_20260824.md): ACT 원 논문·공식 코드·현행 LeRobot 비교를 adoption gate로 선별한 Stage 6 근거
 - [`NATIVE_ACT_SUPERVISOR_INTEGRATION.md`](NATIVE_ACT_SUPERVISOR_INTEGRATION.md): native checkpoint action[0] proposal을 독립 supervisor와 mock-only adapter에 연결한 Stage 7 기록
 - [`research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md`](research/LATEST_NATIVE_ACT_SUPERVISOR_INTEGRATION_RESEARCH_20260824.md): ACT queue/reset과 ROS2 lifecycle·freshness·trajectory 정본을 선별한 Stage 7 근거
