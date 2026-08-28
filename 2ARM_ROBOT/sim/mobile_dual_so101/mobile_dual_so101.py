@@ -45,6 +45,8 @@ RECORDED_UPSTREAM_MODEL_SHA256 = (
 MODEL_RANGE_ROUNDING_TOLERANCE_RAD = 1e-5
 DEFAULT_ARM_MOUNT_X_M = 0.02
 DEFAULT_ARM_MOUNT_SEPARATION_M = 0.20
+DEFAULT_MOUNT_LAYOUT = "printed-torso"
+MOUNT_LAYOUTS = (DEFAULT_MOUNT_LAYOUT, "tower")
 HUMANOID_HOLDER_PITCH_RAD = math.pi / 2.0
 HUMANOID_LEFT_HOLDER_TWIST_RAD = -math.pi / 2.0
 HUMANOID_RIGHT_HOLDER_TWIST_RAD = math.pi / 2.0
@@ -56,6 +58,12 @@ DEPTH_CAMERA_DOWN_TILT_RAD = math.radians(10.0)
 DEPTH_CAMERA_HORIZONTAL_FOV_DEG = 58.4
 DEPTH_CAMERA_VERTICAL_FOV_DEG = 45.5
 PRINTED_MOUNT_ESTIMATED_MASS_KG = 0.90
+TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M = 0.38
+TOWER_RECOMMENDED_ARM_MOUNT_X_M = -0.060
+TOWER_CAMERA_CENTER_X_M = 0.025
+TOWER_CAMERA_HEIGHT_ABOVE_ARM_M = 0.070
+TOWER_CAMERA_DOWN_TILT_RAD = math.radians(35.0)
+TOWER_MOUNT_ESTIMATED_MASS_KG = 1.20
 
 # Screenshot-matched simulator pose recorded on 2026-08-25. The holder pitch,
 # not a shoulder-pan offset, turns both arms into the human-like vertical
@@ -166,7 +174,12 @@ def _validate_source_contract(arm_spec: mujoco.MjSpec, source: Path) -> None:
         )
 
 
-def _add_depth_camera(base_link: mujoco.MjsBody) -> None:
+def _add_depth_camera(
+    base_link: mujoco.MjsBody,
+    *,
+    center_m: Sequence[float] = DEPTH_CAMERA_CENTER_M,
+    down_tilt_rad: float = DEPTH_CAMERA_DOWN_TILT_RAD,
+) -> None:
     """Add a conservative Astra-series front RGB-D mass and optical camera.
 
     AADJA1300GX was observed as an Orbbec Astra-family USB device, but its
@@ -175,10 +188,20 @@ def _add_depth_camera(base_link: mujoco.MjsBody) -> None:
     as a deliberately conservative placeholder.
     """
 
-    tilt = DEPTH_CAMERA_DOWN_TILT_RAD
+    if len(center_m) != 3 or not all(
+        math.isfinite(float(value)) for value in center_m
+    ):
+        raise ValueError("depth camera center must contain three finite values")
+    if (
+        not math.isfinite(down_tilt_rad)
+        or not 0.0 <= down_tilt_rad < math.pi / 2.0
+    ):
+        raise ValueError("depth camera down tilt must be in [0, pi/2)")
+
+    tilt = down_tilt_rad
     camera_body = base_link.add_body(
         name="depth_camera_body",
-        pos=list(DEPTH_CAMERA_CENTER_M),
+        pos=list(center_m),
         quat=[math.cos(tilt / 2.0), 0.0, math.sin(tilt / 2.0), 0.0],
     )
     depth, width, height = DEPTH_CAMERA_SIZE_M
@@ -341,11 +364,173 @@ def _add_printed_mount_structure(
         raise RuntimeError("printed mount mass budget is inconsistent")
 
 
+def _tower_camera_center(arm_mount_height_m: float) -> tuple[float, float, float]:
+    return (
+        TOWER_CAMERA_CENTER_X_M,
+        0.0,
+        arm_mount_height_m + TOWER_CAMERA_HEIGHT_ABOVE_ARM_M,
+    )
+
+
+def _add_tower_mount_structure(
+    base_link: mujoco.MjsBody,
+    *,
+    arm_mount_height_m: float,
+    arm_mount_x_m: float,
+    arm_mount_separation_m: float,
+    camera_center_m: Sequence[float],
+) -> None:
+    """Add two slender towers tied by a camera crossbar and common deck.
+
+    This is a MuJoCo design envelope, not a manufacturing drawing. The visible
+    members carry provisional mass while transparent collision proxies cover
+    the deck-to-arm section and upper crossbar. The SO-101 interface remains a
+    vertical flange, matching the rotated source arm base.
+    """
+
+    deck_thickness = 0.008
+    deck_top = WAFFLE_TOP_LOCAL_Z_M + deck_thickness
+    camera_x, camera_y, camera_z = (float(value) for value in camera_center_m)
+    tower_top = camera_z + DEPTH_CAMERA_SIZE_M[2] / 2.0 + 0.016
+    tower_height = tower_top - deck_top
+    tower_half_y = 0.012
+    camera_side_clearance = (
+        arm_mount_separation_m
+        - 2.0 * tower_half_y
+        - DEPTH_CAMERA_SIZE_M[1]
+    ) / 2.0
+    if arm_mount_height_m < 0.28 or tower_height <= 0.20:
+        raise ValueError("tower layout requires arm_mount_height_m >= 0.28")
+    if camera_side_clearance < 0.004:
+        raise ValueError(
+            "tower spacing leaves less than 4 mm per side around the depth camera"
+        )
+    if not math.isclose(camera_y, 0.0, abs_tol=1e-12):
+        raise ValueError("tower depth camera must remain centered between towers")
+
+    mount_body = base_link.add_body(name="tower_mount_structure")
+    visual = {
+        "type": mujoco.mjtGeom.mjGEOM_BOX,
+        "contype": 0,
+        "conaffinity": 0,
+        "group": 1,
+    }
+    hidden_collision = {
+        "type": mujoco.mjtGeom.mjGEOM_BOX,
+        "mass": 0.0,
+        "contype": 1,
+        "conaffinity": 1,
+        "group": 3,
+        "rgba": [0.3, 0.8, 1.0, 0.0],
+    }
+
+    mount_body.add_geom(
+        name="tower_common_deck_visual",
+        pos=[-0.030, 0.0, WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0],
+        size=[0.110, 0.135, deck_thickness / 2.0],
+        mass=0.20,
+        rgba=[0.12, 0.15, 0.18, 1.0],
+        **visual,
+    )
+    mount_body.add_geom(
+        name="tower_common_deck_collision",
+        pos=[-0.030, 0.0, WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0],
+        size=[0.110, 0.135, deck_thickness / 2.0],
+        **hidden_collision,
+    )
+
+    for side, y_sign in (("left", 1.0), ("right", -1.0)):
+        tower_y = y_sign * arm_mount_separation_m / 2.0
+        mount_body.add_geom(
+            name=f"tower_{side}_mast_visual",
+            pos=[arm_mount_x_m, tower_y, deck_top + tower_height / 2.0],
+            size=[0.022, tower_half_y, tower_height / 2.0],
+            mass=0.25,
+            rgba=[0.72, 0.82, 0.85, 1.0],
+            **visual,
+        )
+        # The top 55 mm intentionally remains outside this proxy: it is the
+        # bolted arm-interface region where the source base overlaps the mast.
+        collision_top = arm_mount_height_m - 0.055
+        collision_height = collision_top - deck_top
+        mount_body.add_geom(
+            name=f"tower_{side}_mast_collision",
+            pos=[arm_mount_x_m, tower_y, deck_top + collision_height / 2.0],
+            size=[0.022, tower_half_y, collision_height / 2.0],
+            **hidden_collision,
+        )
+        mount_body.add_geom(
+            name=f"tower_{side}_arm_interface_visual",
+            pos=[
+                arm_mount_x_m,
+                y_sign * (arm_mount_separation_m / 2.0 - 0.006),
+                arm_mount_height_m,
+            ],
+            size=[0.055, 0.006, 0.055],
+            mass=0.10,
+            rgba=[0.15, 0.35, 0.65, 1.0],
+            **visual,
+        )
+        for position in ("front", "rear"):
+            x_sign = 1.0 if position == "front" else -1.0
+            mount_body.add_geom(
+                name=f"tower_{side}_{position}_deck_gusset_visual",
+                pos=[
+                    arm_mount_x_m + x_sign * 0.045,
+                    tower_y,
+                    deck_top + 0.035,
+                ],
+                size=[0.010, 0.035, 0.035],
+                mass=0.04,
+                rgba=[0.25, 0.30, 0.36, 1.0],
+                **visual,
+            )
+
+    crossbar_z = camera_z + DEPTH_CAMERA_SIZE_M[2] / 2.0 + 0.010
+    mount_body.add_geom(
+        name="tower_camera_crossbar_visual",
+        pos=[arm_mount_x_m, 0.0, crossbar_z],
+        size=[0.025, arm_mount_separation_m / 2.0 + 0.015, 0.012],
+        mass=0.12,
+        rgba=[0.25, 0.30, 0.36, 1.0],
+        **visual,
+    )
+    mount_body.add_geom(
+        name="tower_camera_crossbar_collision",
+        pos=[arm_mount_x_m, 0.0, crossbar_z],
+        size=[0.025, arm_mount_separation_m / 2.0 + 0.015, 0.012],
+        **hidden_collision,
+    )
+
+    support_start_x = arm_mount_x_m + 0.025
+    support_end_x = camera_x - DEPTH_CAMERA_SIZE_M[0] / 2.0
+    support_half_x = (support_end_x - support_start_x) / 2.0
+    if support_half_x <= 0:
+        raise ValueError("tower camera needs positive front standoff length")
+    support_center_x = support_start_x + support_half_x
+    for side, y_position in (("left", 0.060), ("right", -0.060)):
+        mount_body.add_geom(
+            name=f"tower_camera_standoff_{side}_visual",
+            pos=[support_center_x, y_position, camera_z],
+            size=[support_half_x, 0.010, 0.010],
+            mass=0.01,
+            rgba=[0.15, 0.35, 0.65, 1.0],
+            **visual,
+        )
+
+    assigned_mass = (
+        0.20 + 2 * 0.25 + 2 * 0.10 + 4 * 0.04 + 0.12 + 2 * 0.01
+    )
+    if not math.isclose(assigned_mass, TOWER_MOUNT_ESTIMATED_MASS_KG):
+        raise RuntimeError("tower mount mass budget is inconsistent")
+
+
 def build_spec(
     *,
     arm_mount_height_m: float,
-    arm_mount_x_m: float = DEFAULT_ARM_MOUNT_X_M,
+    arm_mount_x_m: float | None = None,
     arm_mount_separation_m: float = DEFAULT_ARM_MOUNT_SEPARATION_M,
+    mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     include_lidar: bool = False,
     model_path: Path | str | None = None,
 ) -> tuple[mujoco.MjSpec, Path]:
@@ -355,6 +540,16 @@ def build_spec(
     visualization height places the short SO-101 outside floor-shoe reach.
     """
 
+    if mount_layout not in MOUNT_LAYOUTS:
+        raise ValueError(
+            f"mount_layout must be one of {MOUNT_LAYOUTS}, got {mount_layout!r}"
+        )
+    if arm_mount_x_m is None:
+        arm_mount_x_m = (
+            TOWER_RECOMMENDED_ARM_MOUNT_X_M
+            if mount_layout == "tower"
+            else DEFAULT_ARM_MOUNT_X_M
+        )
     values = (arm_mount_height_m, arm_mount_x_m, arm_mount_separation_m)
     if not all(math.isfinite(float(value)) for value in values):
         raise ValueError("arm mount dimensions must be finite")
@@ -373,13 +568,28 @@ def build_spec(
     if not include_lidar:
         spec.delete(spec.body("tb3_base_scan"))
     base_link = spec.body("tb3_base_link")
-    _add_printed_mount_structure(
-        base_link,
-        arm_mount_height_m=arm_mount_height_m,
-        arm_mount_x_m=arm_mount_x_m,
-        arm_mount_separation_m=arm_mount_separation_m,
-    )
-    _add_depth_camera(base_link)
+    if mount_layout == "tower":
+        camera_center_m = _tower_camera_center(arm_mount_height_m)
+        _add_tower_mount_structure(
+            base_link,
+            arm_mount_height_m=arm_mount_height_m,
+            arm_mount_x_m=arm_mount_x_m,
+            arm_mount_separation_m=arm_mount_separation_m,
+            camera_center_m=camera_center_m,
+        )
+        _add_depth_camera(
+            base_link,
+            center_m=camera_center_m,
+            down_tilt_rad=TOWER_CAMERA_DOWN_TILT_RAD,
+        )
+    else:
+        _add_printed_mount_structure(
+            base_link,
+            arm_mount_height_m=arm_mount_height_m,
+            arm_mount_x_m=arm_mount_x_m,
+            arm_mount_separation_m=arm_mount_separation_m,
+        )
+        _add_depth_camera(base_link)
     half_separation = arm_mount_separation_m / 2.0
     mounts = (
         (
@@ -410,8 +620,9 @@ def build_spec(
 def build_model(
     *,
     arm_mount_height_m: float,
-    arm_mount_x_m: float = DEFAULT_ARM_MOUNT_X_M,
+    arm_mount_x_m: float | None = None,
     arm_mount_separation_m: float = DEFAULT_ARM_MOUNT_SEPARATION_M,
+    mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     include_lidar: bool = False,
     model_path: Path | str | None = None,
 ) -> tuple[mujoco.MjModel, Path]:
@@ -419,6 +630,7 @@ def build_model(
         arm_mount_height_m=arm_mount_height_m,
         arm_mount_x_m=arm_mount_x_m,
         arm_mount_separation_m=arm_mount_separation_m,
+        mount_layout=mount_layout,
         include_lidar=include_lidar,
         model_path=model_path,
     )
@@ -542,6 +754,15 @@ def validate_model(
     )
     if not finite_state:
         raise RuntimeError("dual-SO-101 simulation produced a non-finite state")
+    tower_layout = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_BODY, "tower_mount_structure"
+    ) >= 0
+    mount_layout = "tower" if tower_layout else DEFAULT_MOUNT_LAYOUT
+    mount_mass = (
+        TOWER_MOUNT_ESTIMATED_MASS_KG
+        if tower_layout
+        else PRINTED_MOUNT_ESTIMATED_MASS_KG
+    )
     return {
         **model_provenance(source),
         "nq": model.nq,
@@ -564,7 +785,11 @@ def validate_model(
         "front_depth_camera_present": mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_CAMERA, "front_depth_camera"
         ) >= 0,
-        "printed_mount_estimated_mass_kg": PRINTED_MOUNT_ESTIMATED_MASS_KG,
+        "mount_layout": mount_layout,
+        "mount_estimated_mass_kg": mount_mass,
+        "printed_mount_estimated_mass_kg": (
+            None if tower_layout else PRINTED_MOUNT_ESTIMATED_MASS_KG
+        ),
         "depth_camera_assumed_mass_kg": DEPTH_CAMERA_MASS_KG,
         "wheel_actuators_present": False,
         "published": False,
@@ -622,11 +847,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Validate stationary Waffle Pi plus dual-SO-101 simulation."
     )
     parser.add_argument("--arm-mount-height-m", type=float, required=True)
-    parser.add_argument("--arm-mount-x-m", type=float, default=DEFAULT_ARM_MOUNT_X_M)
+    parser.add_argument(
+        "--arm-mount-x-m",
+        type=float,
+        help=(
+            "mount X; defaults to -0.060 m for tower and +0.020 m for "
+            "printed-torso"
+        ),
+    )
     parser.add_argument(
         "--arm-mount-separation-m",
         type=float,
         default=DEFAULT_ARM_MOUNT_SEPARATION_M,
+    )
+    parser.add_argument(
+        "--mount-layout",
+        choices=MOUNT_LAYOUTS,
+        default=DEFAULT_MOUNT_LAYOUT,
+        help="printed torso (existing default) or dual tower concept",
     )
     parser.add_argument("--model", type=Path)
     parser.add_argument(
@@ -660,6 +898,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         arm_mount_height_m=args.arm_mount_height_m,
         arm_mount_x_m=args.arm_mount_x_m,
         arm_mount_separation_m=args.arm_mount_separation_m,
+        mount_layout=args.mount_layout,
         include_lidar=args.include_lidar,
         model_path=args.model,
     )

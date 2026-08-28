@@ -16,6 +16,36 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
 않았으므로 현재 카메라 형상은 확정 CAD가 아니다. 광학 중심은 base 기준
 `(0.120, 0, 0.200) m`, 아래쪽 10도로 배치했다.
 
+## 선택형 dual-tower layout
+
+기존 `printed-torso`를 기본값으로 보존하고, 사용자가 제시한 두 개의 독립 세로
+스탠드 형상은 `--mount-layout tower`로 선택한다. 현재 provisional 기준은 다음과
+같다.
+
+- arm mount: X=-0.060 m, Z=0.380 m, 좌우 간격 0.200 m
+- 공통 deck: Waffle 상판 local Z=0.094 m에 직접 접촉
+- depth camera: 두 tower 정중앙 `(0.025, 0, 0.450) m`
+- camera down tilt: 35도
+- 중심 광선의 바닥 교차점: 로봇 전방 약 0.68 m
+- tower/crossbar/deck 가정 질량: 1.20 kg
+
+    ~/DAPIER/so101_imitation_learning/.venv/bin/python \
+      mobile_dual_so101.py --mount-layout tower \
+      --arm-mount-height-m 0.38 --smoke-steps 1000
+
+`--arm-mount-x-m`을 생략하면 tower에는 -0.060 m, 기존 printed torso에는 +0.020 m가
+각각 적용된다. 카메라 외함은 두 tower 사이에 좌우 각 5.5 mm의 nominal 여유를 두며,
+실제 enclosure와 bracket 공차를 측정하기 전에는 이 값을 제작 치수로 확정하지 않는다.
+
+2026-08-28에 official Waffle mesh와 provisional 질량으로 4,096 endpoint corner 및
+무작위 1,500자세를 계산했다. home 자세 COM의 휠-캐스터 지지다각형 여유는 약
++32 mm였지만, 전체 관절 범위에는 무부하에서도 약 -13 mm의 전도 자세가 남았다.
+따라서 이 결과는 tower 안전 인증이 아니다. 주행 중에는 낮은 transport pose를 쓰고,
+작업 pose 허용영역과 base 정지 interlock은 별도로 제한해야 한다.
+
+제작용 CAD/STL/G-code에 필요한 실측값과 출력 순서는
+[`TOWER_FABRICATION.md`](TOWER_FABRICATION.md)에 분리했다.
+
 ## 외부 모델 자산
 
 약 16 MB인 SO-101 원본 XML/STL은 이 폴더에 중복 복사하지 않는다. 기본값은 기존

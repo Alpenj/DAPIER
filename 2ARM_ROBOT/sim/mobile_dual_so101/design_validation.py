@@ -24,13 +24,16 @@ from collision_guard import (  # noqa: E402
     protected_geom_pairs,
 )
 from mobile_dual_so101 import (  # noqa: E402
-    DEPTH_CAMERA_CENTER_M,
     DEPTH_CAMERA_DOWN_TILT_RAD,
     DEPTH_CAMERA_HORIZONTAL_FOV_DEG,
     DEPTH_CAMERA_MASS_KG,
     DEPTH_CAMERA_VERTICAL_FOV_DEG,
+    DEFAULT_MOUNT_LAYOUT,
     HUMANOID_HOME_ACTION,
+    MOUNT_LAYOUTS,
     PRINTED_MOUNT_ESTIMATED_MASS_KG,
+    TOWER_CAMERA_DOWN_TILT_RAD,
+    TOWER_MOUNT_ESTIMATED_MASS_KG,
     apply_control_as_pose,
     build_model,
 )
@@ -140,12 +143,16 @@ def _sample_actions(
 def validate_design(
     *,
     arm_mount_height_m: float = 0.30,
+    mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     random_samples: int = 10000,
     collision_samples: int = 2000,
 ) -> dict[str, object]:
     if random_samples < 0 or collision_samples < 0:
         raise ValueError("sample counts must be non-negative")
-    model, _ = build_model(arm_mount_height_m=arm_mount_height_m)
+    model, _ = build_model(
+        arm_mount_height_m=arm_mount_height_m,
+        mount_layout=mount_layout,
+    )
     data = mujoco.MjData(model)
     lower = model.actuator_ctrlrange[:, 0].copy()
     upper = model.actuator_ctrlrange[:, 1].copy()
@@ -164,10 +171,8 @@ def validate_design(
         for side in ("left", "right")
     }
     mount_positions = {
-        side: np.array(
-            [0.02, 0.10 if side == "left" else -0.10, arm_mount_height_m]
-        )
-        for side in ("left", "right")
+        "left": model.body_pos[left_root].copy(),
+        "right": model.body_pos[right_root].copy(),
     }
 
     scenarios = {
@@ -267,6 +272,9 @@ def validate_design(
     camera_id = mujoco.mj_name2id(
         model, mujoco.mjtObj.mjOBJ_CAMERA, "front_depth_camera"
     )
+    camera_body_id = mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_BODY, "depth_camera_body"
+    )
     apply_control_as_pose(model, data, HUMANOID_HOME_ACTION)
     home_mass, home_com = _weighted_com(data.xipos[body_ids], body_masses)
     del home_mass
@@ -291,10 +299,15 @@ def validate_design(
             "source_counts": source_counts,
             "collision_samples_both_random": collision_samples,
             "seed": RANDOM_SEED,
+            "mount_layout": mount_layout,
         },
         "assumptions": {
             "original_support_polygon_xy_m": ORIGINAL_SUPPORT_POLYGON_XY_M.tolist(),
-            "printed_mount_mass_kg": PRINTED_MOUNT_ESTIMATED_MASS_KG,
+            "mount_mass_kg": (
+                TOWER_MOUNT_ESTIMATED_MASS_KG
+                if mount_layout == "tower"
+                else PRINTED_MOUNT_ESTIMATED_MASS_KG
+            ),
             "depth_camera_mass_kg": DEPTH_CAMERA_MASS_KG,
             "dynamic_factor": DYNAMIC_FACTOR,
             "unmodeled": [
@@ -311,9 +324,11 @@ def validate_design(
             "original_waffle_margin_m": original_home_margin,
         },
         "depth_camera": {
-            "center_m": list(DEPTH_CAMERA_CENTER_M),
+            "center_m": model.body_pos[camera_body_id].tolist(),
             "configured_down_tilt_deg": math.degrees(
-                DEPTH_CAMERA_DOWN_TILT_RAD
+                TOWER_CAMERA_DOWN_TILT_RAD
+                if mount_layout == "tower"
+                else DEPTH_CAMERA_DOWN_TILT_RAD
             ),
             "measured_model_down_tilt_deg": camera_pitch_deg,
             "horizontal_fov_deg": DEPTH_CAMERA_HORIZONTAL_FOV_DEG,
@@ -346,6 +361,11 @@ def validate_design(
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm-mount-height-m", type=float, default=0.30)
+    parser.add_argument(
+        "--mount-layout",
+        choices=MOUNT_LAYOUTS,
+        default=DEFAULT_MOUNT_LAYOUT,
+    )
     parser.add_argument("--random-samples", type=int, default=10000)
     parser.add_argument("--collision-samples", type=int, default=2000)
     args = parser.parse_args(argv)
@@ -353,6 +373,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         json.dumps(
             validate_design(
                 arm_mount_height_m=args.arm_mount_height_m,
+                mount_layout=args.mount_layout,
                 random_samples=args.random_samples,
                 collision_samples=args.collision_samples,
             ),
