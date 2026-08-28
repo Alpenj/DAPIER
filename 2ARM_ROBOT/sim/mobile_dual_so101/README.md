@@ -46,6 +46,38 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
 제작용 CAD/STL/G-code에 필요한 실측값과 출력 순서는
 [`TOWER_FABRICATION.md`](TOWER_FABRICATION.md)에 분리했다.
 
+## physics-executed dual-arm IK
+
+[`physics_ik.py`](physics_ik.py)는 pose editor와 실행 경로를 분리한다. DLS IK는 별도
+planning `MjData`에서만 qpos를 갱신한다. 실행은 시작 자세 초기화 1회 후 7차
+(septic) trajectory의 actuator target만 `data.ctrl`에 넣고 `mj_step`으로 질량, 관성,
+중력, damping, actuator force와 접촉을 계산한다. trajectory는 시작/끝의 속도,
+가속도와 jerk가 모두 0이며 설정한 target limit에 맞춰 duration을 늘린다.
+
+실행 보고서는 target과 actual의 velocity/acceleration/jerk를 따로 기록하고, actual
+limit, torque saturation, 지지다각형, 금지 접촉과 finite state를 모두 통과해야만
+`simulation_motion_accepted=true`로 둔다. 이 값도 실물 실행 승인은 아니다.
+
+2026-08-28 provisional actuator 모델에서 양 gripper를 전방/상향 10 mm 움직인 결과는
+다음과 같았다.
+
+- IK residual: left 0.307 mm, right 0.482 mm
+- runtime qpos write: 0회, physics step: 1,203
+- final joint tracking error: 0.000101 rad
+- actuator force limit 사용률: 최대 9.63%, 금지 접촉 0회
+- 최소 지지다각형 여유: 31.6 mm
+- target 최대값: 0.300 rad/s, 0.514 rad/s², 1.79 rad/s³
+- pre-settle 후 actual 최대값: 0.300 rad/s, 0.536 rad/s², 52.5 rad/s³
+
+따라서 현재 결과는 **jerk limit FAIL**이며 accepted가 아니다. 느린 target만으로
+감추지 않고, 실제 motor/gear friction, backlash, servo update/latency와 controller
+response를 식별한 뒤 actuator 모델과 limit를 다시 맞춰야 한다. 2 ms simulation
+qacc 차분으로 계산한 raw jerk도 실물 센서 bandwidth와 함께 재정의해야 한다.
+
+    DAPIER_SO101_MJCF=/absolute/path/to/so101_new_calib.xml \
+      ~/DAPIER/so101_imitation_learning/.venv/bin/python -m unittest \
+      discover -s test -p 'test_physics_ik.py' -v
+
 ## 외부 모델 자산
 
 약 16 MB인 SO-101 원본 XML/STL은 이 폴더에 중복 복사하지 않는다. 기본값은 기존
