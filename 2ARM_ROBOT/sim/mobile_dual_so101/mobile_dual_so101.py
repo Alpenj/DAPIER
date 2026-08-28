@@ -26,6 +26,16 @@ SIM_DIR = PROJECT_DIR.parent
 sys.path.insert(0, str(SIM_DIR / "turtlebot3_waffle_pi"))
 
 from waffle_pi_model import build_spec as build_waffle_pi_spec
+from waffle_reference import (
+    TOWER_CENTER_X_M,
+    TOWER_CENTER_Y_ABS_M,
+    TOWER_DECK_CENTER_X_M,
+    TOWER_DECK_HALF_SIZE_X_M,
+    TOWER_DECK_HALF_SIZE_Y_M,
+    WAFFLE_BASE_COLLISION_PROXY_TOP_Z_M,
+    WAFFLE_TOP_MOUNT_PLANE_Z_M,
+    WAFFLE_TOP_REFERENCE_ORIGIN_M,
+)
 
 
 ARM_CONTROL_NAMES = (
@@ -44,13 +54,13 @@ RECORDED_UPSTREAM_MODEL_SHA256 = (
 )
 MODEL_RANGE_ROUNDING_TOLERANCE_RAD = 1e-5
 DEFAULT_ARM_MOUNT_X_M = 0.02
-DEFAULT_ARM_MOUNT_SEPARATION_M = 0.20
+DEFAULT_ARM_MOUNT_SEPARATION_M = 2.0 * TOWER_CENTER_Y_ABS_M
 DEFAULT_MOUNT_LAYOUT = "printed-torso"
 MOUNT_LAYOUTS = (DEFAULT_MOUNT_LAYOUT, "tower")
 HUMANOID_HOLDER_PITCH_RAD = math.pi / 2.0
 HUMANOID_LEFT_HOLDER_TWIST_RAD = -math.pi / 2.0
 HUMANOID_RIGHT_HOLDER_TWIST_RAD = math.pi / 2.0
-WAFFLE_TOP_LOCAL_Z_M = 0.094
+WAFFLE_TOP_LOCAL_Z_M = WAFFLE_TOP_MOUNT_PLANE_Z_M
 DEPTH_CAMERA_SIZE_M = (0.040, 0.165, 0.048)  # depth, width, height
 DEPTH_CAMERA_MASS_KG = 0.310
 DEPTH_CAMERA_CENTER_M = (0.120, 0.0, 0.200)
@@ -59,7 +69,7 @@ DEPTH_CAMERA_HORIZONTAL_FOV_DEG = 58.4
 DEPTH_CAMERA_VERTICAL_FOV_DEG = 45.5
 PRINTED_MOUNT_ESTIMATED_MASS_KG = 0.90
 TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M = 0.38
-TOWER_RECOMMENDED_ARM_MOUNT_X_M = -0.060
+TOWER_RECOMMENDED_ARM_MOUNT_X_M = TOWER_CENTER_X_M
 TOWER_CAMERA_CENTER_X_M = 0.025
 TOWER_CAMERA_HEIGHT_ABOVE_ARM_M = 0.070
 TOWER_CAMERA_DOWN_TILT_RAD = math.radians(35.0)
@@ -372,6 +382,32 @@ def _tower_camera_center(arm_mount_height_m: float) -> tuple[float, float, float
     )
 
 
+def _add_waffle_top_reference_axes(base_link: mujoco.MjsBody) -> None:
+    """Show a translated copy of the official base_link axes at the top datum."""
+
+    origin = WAFFLE_TOP_REFERENCE_ORIGIN_M
+    base_link.add_site(
+        name="waffle_top_reference_origin",
+        type=mujoco.mjtGeom.mjGEOM_SPHERE,
+        pos=list(origin),
+        size=[0.004, 0.004, 0.004],
+        rgba=[1.0, 0.55, 0.0, 1.0],
+    )
+    for name, offset, color in (
+        ("x_forward", (0.060, 0.0, 0.0), (0.95, 0.15, 0.15, 1.0)),
+        ("y_left", (0.0, 0.060, 0.0), (0.15, 0.85, 0.20, 1.0)),
+        ("z_up", (0.0, 0.0, 0.060), (0.15, 0.35, 1.0, 1.0)),
+    ):
+        endpoint = [origin[index] + offset[index] for index in range(3)]
+        base_link.add_site(
+            name=f"waffle_top_axis_{name}",
+            type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+            fromto=[*origin, *endpoint],
+            size=[0.0015, 0.0015, 0.0015],
+            rgba=list(color),
+        )
+
+
 def _add_tower_mount_structure(
     base_link: mujoco.MjsBody,
     *,
@@ -409,6 +445,7 @@ def _add_tower_mount_structure(
         raise ValueError("tower depth camera must remain centered between towers")
 
     mount_body = base_link.add_body(name="tower_mount_structure")
+    _add_waffle_top_reference_axes(base_link)
     visual = {
         "type": mujoco.mjtGeom.mjGEOM_BOX,
         "contype": 0,
@@ -426,16 +463,32 @@ def _add_tower_mount_structure(
 
     mount_body.add_geom(
         name="tower_common_deck_visual",
-        pos=[-0.030, 0.0, WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0],
-        size=[0.110, 0.135, deck_thickness / 2.0],
+        pos=[
+            TOWER_DECK_CENTER_X_M,
+            0.0,
+            WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0,
+        ],
+        size=[
+            TOWER_DECK_HALF_SIZE_X_M,
+            TOWER_DECK_HALF_SIZE_Y_M,
+            deck_thickness / 2.0,
+        ],
         mass=0.20,
         rgba=[0.12, 0.15, 0.18, 1.0],
         **visual,
     )
     mount_body.add_geom(
         name="tower_common_deck_collision",
-        pos=[-0.030, 0.0, WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0],
-        size=[0.110, 0.135, deck_thickness / 2.0],
+        pos=[
+            TOWER_DECK_CENTER_X_M,
+            0.0,
+            WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0,
+        ],
+        size=[
+            TOWER_DECK_HALF_SIZE_X_M,
+            TOWER_DECK_HALF_SIZE_Y_M,
+            deck_thickness / 2.0,
+        ],
         **hidden_collision,
     )
 
@@ -791,6 +844,8 @@ def validate_model(
             None if tower_layout else PRINTED_MOUNT_ESTIMATED_MASS_KG
         ),
         "depth_camera_assumed_mass_kg": DEPTH_CAMERA_MASS_KG,
+        "waffle_top_mount_plane_z_m": WAFFLE_TOP_LOCAL_Z_M,
+        "waffle_collision_proxy_top_z_m": WAFFLE_BASE_COLLISION_PROXY_TOP_Z_M,
         "wheel_actuators_present": False,
         "published": False,
         "control_authorized": False,

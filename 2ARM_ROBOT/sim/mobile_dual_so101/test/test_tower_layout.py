@@ -30,6 +30,12 @@ from mobile_dual_so101 import (
     model_names,
     validate_model,
 )
+from waffle_reference import (
+    TOWER_DECK_CENTER_X_M,
+    TOWER_DECK_HALF_SIZE_X_M,
+    TOWER_DECK_HALF_SIZE_Y_M,
+    WAFFLE_TOP_REFERENCE_ORIGIN_M,
+)
 
 
 class TowerLayoutTest(unittest.TestCase):
@@ -68,10 +74,39 @@ class TowerLayoutTest(unittest.TestCase):
             -float(self.model.geom_pos[right, 1]),
         )
         deck = self.geom_id("tower_common_deck_visual")
+        self.assertAlmostEqual(
+            float(self.model.geom_pos[deck, 0]), TOWER_DECK_CENTER_X_M
+        )
+        self.assertAlmostEqual(
+            float(self.model.geom_size[deck, 0]), TOWER_DECK_HALF_SIZE_X_M
+        )
+        self.assertAlmostEqual(
+            float(self.model.geom_size[deck, 1]), TOWER_DECK_HALF_SIZE_Y_M
+        )
         deck_bottom = float(
             self.model.geom_pos[deck, 2] - self.model.geom_size[deck, 2]
         )
         self.assertAlmostEqual(deck_bottom, WAFFLE_TOP_LOCAL_Z_M)
+
+        origin_site = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_SITE,
+            "waffle_top_reference_origin",
+        )
+        self.assertGreaterEqual(origin_site, 0)
+        for actual, expected in zip(
+            self.model.site_pos[origin_site], WAFFLE_TOP_REFERENCE_ORIGIN_M
+        ):
+            self.assertAlmostEqual(float(actual), expected)
+        for axis in ("x_forward", "y_left", "z_up"):
+            self.assertGreaterEqual(
+                mujoco.mj_name2id(
+                    self.model,
+                    mujoco.mjtObj.mjOBJ_SITE,
+                    f"waffle_top_axis_{axis}",
+                ),
+                0,
+            )
 
     def test_hidden_collision_proxies_are_present_without_visual_clutter(self) -> None:
         for name in (

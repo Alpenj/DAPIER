@@ -2,8 +2,23 @@
 
 현재 상태는 MuJoCo concept envelope다. 직접 실행해 본 simulation에서는 두 tower,
 중앙 crossbar와 depth camera 배치가 컴파일되고 1,000 step 동안 finite state를
-유지했다. 아직 Waffle 체결홀, SO-101 flange와 카메라 bracket을 실측하지 않았으므로
-제작 가능한 CAD나 실물 안전이 확인됐다고 쓰지 않는다.
+유지했다. Waffle plate 도면/STEP과 조립 STL에서 장착면과 6개 체결 중심 후보는
+확보했다. 아직 실물 하부 nut 접근, SO-101 flange와 카메라 bracket을 실측하지
+않았으므로 제작 가능한 CAD나 실물 안전이 확인됐다고 쓰지 않는다.
+
+## 확보된 입력
+
+- Waffle `base_link`: +X 전방, +Y 좌측, +Z 위
+- 실제 top plate plane: Z=91.5 mm
+- 단순 URDF collision proxy top: Z=94 mm
+- Waffle plate 단품: 128 x 64 x 9 mm
+- deck 체결 중심 6개와 좌표 변환: `WAFFLE_COORDINATE_REFERENCE.md`
+- 프린터: Creality K1 Max, build volume 300 x 300 x 300 mm
+- filament: Creality Hyper PLA Black, 1.75 mm, 1 kg
+- K1 Max 출고 사양 nozzle: 0.4 mm, 0.6/0.8 mm 호환
+
+마지막 항목은 출고 사양일 뿐 현재 장착 nozzle 확인을 대신하지 않는다. 최종 G-code는
+실제 nozzle과 slicer/version을 확인한 뒤에만 만든다.
 
 ## 최종 제공할 파일
 
@@ -23,7 +38,7 @@ nozzle, filament, bed와 start/end sequence에 종속되므로 범용 파일로 
 
 단위는 mm로 기록하고 사진 한 장만으로 추정하지 않는다.
 
-1. Waffle 상판에서 사용 가능한 M3 hole 중심 좌표, thread 깊이와 하부 접근 공간
+1. 선택한 Waffle M3 중심 6개의 하부 nut 접근 공간과 기존 support 간섭
 2. 상판 외곽, wheel/caster, Raspberry Pi/OpenCR, connector와 cable keep-out envelope
 3. 각 SO-101 vertical flange의 4-hole pitch, hole 지름, flange 두께와 bolt 접근 방향
 4. 두 팔의 실측 질량, base 기준 COM, 최대 작업 payload

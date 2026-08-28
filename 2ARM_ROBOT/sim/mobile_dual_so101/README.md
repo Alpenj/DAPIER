@@ -19,11 +19,14 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
 ## 선택형 dual-tower layout
 
 기존 `printed-torso`를 기본값으로 보존하고, 사용자가 제시한 두 개의 독립 세로
-스탠드 형상은 `--mount-layout tower`로 선택한다. 현재 provisional 기준은 다음과
-같다.
+스탠드 형상은 `--mount-layout tower`로 선택한다. Waffle 좌표 기준과 공식 hole
+추출 과정은 [`WAFFLE_COORDINATE_REFERENCE.md`](WAFFLE_COORDINATE_REFERENCE.md)에
+기록했다. 현재 기준은 다음과 같다.
 
-- arm mount: X=-0.060 m, Z=0.380 m, 좌우 간격 0.200 m
-- 공통 deck: Waffle 상판 local Z=0.094 m에 직접 접촉
+- 축: `base_link` 기준 +X 전방, +Y 좌측, +Z 위
+- arm mount: X=-0.064 m, Z=0.380 m, 좌우 Y=+/-0.100 m
+- 공통 deck: 공식 Waffle 물리 상판 Z=0.0915 m에 직접 접촉
+- deck: 중심 X=-0.064 m, 외형 0.192 x 0.256 x 0.008 m
 - depth camera: 두 tower 정중앙 `(0.025, 0, 0.450) m`
 - camera down tilt: 35도
 - 중심 광선의 바닥 교차점: 로봇 전방 약 0.68 m
@@ -33,7 +36,7 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
       mobile_dual_so101.py --mount-layout tower \
       --arm-mount-height-m 0.38 --smoke-steps 1000
 
-`--arm-mount-x-m`을 생략하면 tower에는 -0.060 m, 기존 printed torso에는 +0.020 m가
+`--arm-mount-x-m`을 생략하면 tower에는 -0.064 m, 기존 printed torso에는 +0.020 m가
 각각 적용된다. 카메라 외함은 두 tower 사이에 좌우 각 5.5 mm의 nominal 여유를 두며,
 실제 enclosure와 bracket 공차를 측정하기 전에는 이 값을 제작 치수로 확정하지 않는다.
 
@@ -45,6 +48,10 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
 
 제작용 CAD/STL/G-code에 필요한 실측값과 출력 순서는
 [`TOWER_FABRICATION.md`](TOWER_FABRICATION.md)에 분리했다.
+
+신발 한 짝부터 한 켤레 양팔 정리, 이동·다품종·실패복구까지 전 과정을 순서대로
+경험하는 회의안은
+[`PROJECT_DIRECTION_ABC_KO.md`](PROJECT_DIRECTION_ABC_KO.md)에 정리했다.
 
 ## physics-executed dual-arm IK
 
