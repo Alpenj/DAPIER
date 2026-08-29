@@ -36,7 +36,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install pinned MuJoCo dependencies
-        run: python3 -m pip install --only-binary=:all: --require-hashes -r requirements-mujoco.txt
+        run: "python3 -m pip install --only-binary=:all: --require-hashes -r requirements-mujoco.txt"
 
       - name: Fetch and verify pinned SO-101 assets
         run: |
