@@ -35,6 +35,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install headless EGL runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libegl1 libgl1-mesa-dri
+
       - name: Install pinned MuJoCo dependencies
         run: "python3 -m pip install --only-binary=:all: --require-hashes -r requirements-mujoco.txt"
 
