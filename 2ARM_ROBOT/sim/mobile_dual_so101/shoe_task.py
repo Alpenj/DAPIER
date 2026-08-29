@@ -19,6 +19,9 @@ import mujoco
 from mobile_dual_so101 import (
     ACTION_NAMES,
     ARM_CONTROL_NAMES,
+    MOUNT_LAYOUTS,
+    TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M,
+    TOWER_RECOMMENDED_ARM_MOUNT_SEPARATION_M,
     actuator_targets_from_qpos,
     build_spec as build_mobile_spec,
 )
@@ -30,11 +33,13 @@ SHOE_FREE_JOINT_NAME = "shoe_free"
 SHOE_GEOM_NAMES = ("shoe_sole", "shoe_upper")
 DEFAULT_SHOE_POSITION_M = (0.26, 0.0, 0.015)
 DEFAULT_SHOE_YAW_RAD = 0.0
-DEFAULT_ARM_MOUNT_HEIGHT_M = 0.30
-DEFAULT_ARM_MOUNT_SEPARATION_M = 0.18
+DEFAULT_ARM_MOUNT_HEIGHT_M = TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M
+DEFAULT_ARM_MOUNT_SEPARATION_M = TOWER_RECOMMENDED_ARM_MOUNT_SEPARATION_M
+DEFAULT_MOUNT_LAYOUT = "tower"
 DEFAULT_FRAME_SKIP = 10
 SUCCESS_HEIGHT_M = 0.09
 SUCCESS_GRIPPER_DISTANCE_M = 0.14
+SO101_REACH_ENVELOPE_M = 0.40
 ARM_JOINT_NAMES = ARM_CONTROL_NAMES[:-1]
 OBSERVATION_NAMES = (
     "shoe_x_map_m",
@@ -59,6 +64,7 @@ class ShoeTaskConfig:
     shoe_yaw_rad: float = DEFAULT_SHOE_YAW_RAD
     arm_mount_height_m: float = DEFAULT_ARM_MOUNT_HEIGHT_M
     arm_mount_separation_m: float = DEFAULT_ARM_MOUNT_SEPARATION_M
+    mount_layout: str = DEFAULT_MOUNT_LAYOUT
     frame_skip: int = DEFAULT_FRAME_SKIP
     success_height_m: float = SUCCESS_HEIGHT_M
     success_gripper_distance_m: float = SUCCESS_GRIPPER_DISTANCE_M
@@ -74,6 +80,10 @@ class ShoeTaskConfig:
             raise ValueError("arm_mount_height_m must be positive")
         if self.arm_mount_separation_m <= 0:
             raise ValueError("arm_mount_separation_m must be positive")
+        if self.mount_layout not in MOUNT_LAYOUTS:
+            raise ValueError(
+                f"mount_layout must be one of {MOUNT_LAYOUTS}, got {self.mount_layout!r}"
+            )
         if self.frame_skip <= 0:
             raise ValueError("frame_skip must be positive")
         if self.success_height_m <= 0:
@@ -135,6 +145,7 @@ def build_shoe_task_model(config: ShoeTaskConfig | None = None) -> mujoco.MjMode
     spec, _ = build_mobile_spec(
         arm_mount_height_m=resolved.arm_mount_height_m,
         arm_mount_separation_m=resolved.arm_mount_separation_m,
+        mount_layout=resolved.mount_layout,
     )
     _add_primitive_shoe(
         spec,
@@ -301,6 +312,32 @@ def task_metrics(
     }
 
 
+def task_reachability(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    *,
+    reach_envelope_m: float = SO101_REACH_ENVELOPE_M,
+) -> dict[str, object]:
+    if reach_envelope_m <= 0 or not math.isfinite(reach_envelope_m):
+        raise ValueError("reach_envelope_m must be finite and positive")
+    shoe_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME)
+    distances = {}
+    for side in ("left", "right"):
+        shoulder_id = _object_id(
+            model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_shoulder"
+        )
+        distances[side] = math.dist(
+            data.xpos[shoe_id], data.xpos[shoulder_id]
+        )
+    nearest = min(distances.values())
+    return {
+        "shoulder_distance_m": distances,
+        "nearest_shoulder_distance_m": nearest,
+        "reach_envelope_m": reach_envelope_m,
+        "inside_distance_envelope": nearest < reach_envelope_m,
+    }
+
+
 class ShoeTaskEnv:
     """Small Gym-style API without adding a Gym dependency."""
 
@@ -374,6 +411,7 @@ def validate_shoe_task(smoke_steps: int = 200) -> dict[str, object]:
     finite = all(math.isfinite(float(value)) for value in observation["vector"])
     if not finite:
         raise RuntimeError("shoe task produced a non-finite observation")
+    reachability = task_reachability(env.model, env.data)
     return {
         "schema_version": SCHEMA_VERSION,
         "nq": env.model.nq,
@@ -381,9 +419,15 @@ def validate_shoe_task(smoke_steps: int = 200) -> dict[str, object]:
         "nu": env.model.nu,
         "njnt": env.model.njnt,
         "shoe_body_present": True,
+        "mount_layout": env.config.mount_layout,
         "observation_dimension": len(observation["vector"]),
         "ground_truth": observation["ground_truth"],
         "finite_observation": finite,
+        "state_imitation_contract_ready": finite,
+        "default_floor_shoe_reachable": reachability[
+            "inside_distance_envelope"
+        ],
+        "reachability": reachability,
         "terminated": terminated,
         "smoke_steps": smoke_steps,
         "hardware_execution": reset_info["hardware_execution"],

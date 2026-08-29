@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DAPIER 신발 정리 양팔로봇 — 전체 프로젝트 회의안</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18212f;
+      --muted: #5c6878;
+      --paper: #f4f6f8;
+      --card: #ffffff;
+      --line: #dfe5eb;
+      --navy: #153e75;
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --green: #15803d;
+      --amber: #b45309;
+      --red: #b91c1c;
+      --violet: #6d28d9;
+      --shadow: 0 14px 36px rgba(24, 33, 47, 0.09);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+      line-height: 1.65;
+      word-break: keep-all;
+    }
+    a { color: var(--blue); }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    .hero {
+      color: white;
+      background:
+        radial-gradient(circle at 85% 12%, rgba(34, 211, 238, .26), transparent 28rem),
+        linear-gradient(135deg, #102a4e 0%, #173f75 52%, #155e75 100%);
+      padding: 58px 0 44px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 11px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 999px;
+      background: rgba(255,255,255,.09);
+      font-size: 13px;
+      letter-spacing: .04em;
+    }
+    h1 { margin: 18px 0 12px; font-size: clamp(34px, 6vw, 64px); line-height: 1.12; letter-spacing: -.035em; }
+    .hero p { max-width: 850px; margin: 0; color: #dbeafe; font-size: 18px; }
+    .hero strong { color: white; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 12px;
+      margin-top: 34px;
+    }
+    .stat {
+      padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 14px;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+    }
+    .stat b { display: block; font-size: 24px; }
+    .stat span { color: #dbeafe; font-size: 13px; }
+    .sticky {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(12px);
+    }
+    .sticky .shell { display: flex; gap: 8px; padding: 10px 0; }
+    .sticky a {
+      flex: 0 0 auto;
+      padding: 7px 11px;
+      border-radius: 9px;
+      color: #334155;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .sticky a:hover { background: #eaf1ff; color: var(--blue); }
+    main { padding: 34px 0 64px; }
+    section { scroll-margin-top: 70px; margin: 0 0 28px; }
+    .panel {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    h2 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.025em; }
+    h3 { margin: 0 0 8px; font-size: 20px; }
+    h4 { margin: 18px 0 6px; font-size: 16px; }
+    .lead { margin: 0 0 22px; color: var(--muted); }
+    .decision {
+      margin: 18px 0 0;
+      padding: 18px 20px;
+      border-left: 5px solid var(--blue);
+      border-radius: 10px;
+      background: #eff6ff;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0,1fr));
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .flow div {
+      position: relative;
+      padding: 14px 8px;
+      border-radius: 12px;
+      background: #eef2f7;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .flow div:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -10px;
+      top: 13px;
+      z-index: 1;
+      color: #64748b;
+    }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .phase {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: white;
+    }
+    .phase header { padding: 20px; color: white; }
+    .phase-a header { background: linear-gradient(135deg,#1d4ed8,#2563eb); }
+    .phase-b header { background: linear-gradient(135deg,#0f766e,#0891b2); }
+    .phase-c header { background: linear-gradient(135deg,#6d28d9,#9333ea); }
+    .phase .body { padding: 20px; }
+    .phase .tag {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .phase ul, .compact { margin: 8px 0 0; padding-left: 20px; }
+    .phase li, .compact li { margin: 5px 0; }
+    .gate {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 14px;
+    }
+    .timeline { display: grid; gap: 10px; counter-reset: step; }
+    .step {
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: white;
+      background: var(--navy);
+      font-weight: 900;
+    }
+    .step b { display: block; }
+    .step small { color: var(--muted); }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .required { color: #166534; background: #dcfce7; }
+    .optional { color: #92400e; background: #fef3c7; }
+    .research { color: #5b21b6; background: #ede9fe; }
+    .blocked { color: #991b1b; background: #fee2e2; }
+    .two-col { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
+    .callout {
+      padding: 20px;
+      border-radius: 15px;
+      background: #172554;
+      color: #dbeafe;
+    }
+    .callout h3 { color: white; }
+    .callout strong { color: #fff; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14px; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: #334155; background: #f8fafc; font-size: 13px; }
+    tr:last-child td { border-bottom: 0; }
+    .status-ok { color: var(--green); font-weight: 800; }
+    .status-warn { color: var(--amber); font-weight: 800; }
+    .status-stop { color: var(--red); font-weight: 800; }
+    .coords {
+      display: grid;
+      grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .coord { padding: 13px; border-radius: 12px; background: #f1f5f9; }
+    .coord b { display: block; color: var(--navy); }
+    .checklist { columns: 2; column-gap: 36px; padding-left: 22px; }
+    .checklist li { break-inside: avoid; margin: 7px 0; }
+    .sources { color: var(--muted); font-size: 13px; }
+    .sources a { overflow-wrap: anywhere; }
+    footer { padding: 24px 0 42px; color: #64748b; font-size: 13px; text-align: center; }
+    @media (max-width: 900px) {
+      .stats, .grid-3, .two-col, .coords { grid-template-columns: 1fr 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .flow div:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -13px; }
+      .step { grid-template-columns: 42px 1fr; }
+      .step .badge { grid-column: 2; justify-self: start; }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px,1180px); }
+      .hero { padding-top: 38px; }
+      .stats, .grid-3, .two-col, .coords { grid-template-columns: 1fr; }
+      .panel { padding: 20px; }
+      .checklist { columns: 1; }
+    }
+    @media print {
+      body { background: white; font-size: 10pt; }
+      .sticky { display: none; }
+      .hero { padding: 24px 0; background: #173f75 !important; print-color-adjust: exact; }
+      .panel, .phase { box-shadow: none; break-inside: avoid; }
+      main { padding-top: 18px; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="shell">
+      <span class="eyebrow">DAPIER · 팀 회의용 통합 문서 · 2026-08-28</span>
+      <h1>DAPIER 양팔로봇<br>프로젝트 후보 A·B·C</h1>
+      <p>
+        공통 이동형 양팔 플랫폼으로 <strong>신발 정리, 수건·의류 접기, 생활물품
+        테이블 세팅</strong> 세 가지 프로젝트를 비교한다. 사용자가 기획, 기구,
+        3D 출력, simulation, perception, 데이터, 학습, IK, 제어, ROS, 실물 검증과
+        문서화 전 과정에 직접 참여하는 것이 프로젝트 성공조건이다.
+      </p>
+      <div class="stats">
+        <div class="stat"><b>3개 후보</b><span>신발·수건·생활물품</span></div>
+        <div class="stat"><b>ACT</b><span>필수 학습 기준선</span></div>
+        <div class="stat"><b>LLM 감독기</b><span>구조화된 상위 작업 제어</span></div>
+        <div class="stat"><b>49 / 49</b><span>관련 simulation 회귀 테스트</span></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sticky">
+    <div class="shell">
+      <a href="#north-star">제품 목표</a>
+      <a href="#project-options">프로젝트 후보</a>
+      <a href="#roadmap">신발 개발 Phase</a>
+      <a href="#learning">ACT·VLA</a>
+      <a href="#supervisor">LLM 제어</a>
+      <a href="#engineering">기술 상태</a>
+      <a href="#fabrication">제작</a>
+      <a href="#meeting">회의 결정</a>
+      <a href="#next">다음 단계</a>
+    </div>
+  </nav>
+
+  <main class="shell">
+    <section id="north-star" class="panel">
+      <h2>1. 공통 플랫폼 목표</h2>
+      <p class="lead">회의의 중심 질문은 하나의 물체가 아니라 이동·인지·양팔 조작·학습 자산의 재사용성이다.</p>
+      <div class="decision">
+        RGB-D로 주변 대상을 이해하고, TurtleBot3로 접근하며, SO-101 양팔로 안전하게
+        조작한 뒤 결과를 재관측하고 실패를 복구하는 플랫폼을 어떤 과제로 검증할 것인가?
+      </div>
+      <div class="flow" aria-label="제품 동작 흐름">
+        <div>RGB-D 관측</div>
+        <div>대상·자세·목적 추정</div>
+        <div>grasp 후보·충돌 검사</div>
+        <div>한 팔 pick·접근</div>
+        <div>양팔 협업·regrasp</div>
+        <div>목표 위치 배치</div>
+        <div>재관측·복구</div>
+      </div>
+      <h4>공통 운영 원칙</h4>
+      <ul class="checklist">
+        <li>초기 manipulation 중 mobile base 고정</li>
+        <li>base 이동과 arm 조작 동시 실행 금지</li>
+        <li>SIM/MOCK, bench HW, integrated HW 결과 분리</li>
+        <li>성공률보다 safety gate 우선</li>
+        <li>실패는 숨기지 않고 taxonomy로 분류</li>
+        <li>각 단계마다 결과·코드·BOM·영상·PR 보존</li>
+      </ul>
+    </section>
+
+
+    <section id="project-options">
+      <div class="panel">
+        <h2>2. 회의용 프로젝트 후보 A·B·C</h2>
+        <p class="lead">
+          세 후보는 같은 하드웨어·ROS·MuJoCo·ACT·안전 기반을 공유하지만, 인지와
+          양팔 조작의 성격이 다르다. 회의에서는 주력 하나와 축소형 예비안 하나를 정한다.
+        </p>
+        <div class="grid-3">
+          <article class="phase phase-a">
+            <header>
+              <span class="tag">PLAN A · 현재 주력</span>
+              <h3>신발 한 켤레 탐색·정리</h3>
+              <div>pair matching + mobile manipulation</div>
+            </header>
+            <div class="body">
+              <ul>
+                <li>현관·정리 공간을 탐색해 신발 탐지</li>
+                <li>특징을 비교해 동일한 신발의 짝 판단</li>
+                <li>짝이 있는 위치로 이동 후 base 고정</li>
+                <li>양팔로 좌우 신발 파지·자세 정렬</li>
+                <li>신발장 또는 지정 영역에 한 쌍 배치</li>
+                <li>재관측 후 retry·regrasp·safe stop</li>
+              </ul>
+              <div class="gate"><b>장점</b> 현재 Waffle·중앙 지지대·shoe task·pairing 구상과 가장 잘 연결된다.<br><b>핵심 위험</b> 신발의 변형, 다양한 재질·바닥 마찰과 grasp 불확실성.</div>
+            </div>
+          </article>
+
+          <article class="phase phase-b">
+            <header>
+              <span class="tag">PLAN B · 양팔성 강조</span>
+              <h3>수건·의류 펼치기/접기</h3>
+              <div>deformable object bimanual manipulation</div>
+            </header>
+            <div class="body">
+              <ul>
+                <li>바구니 또는 작업대에서 수건 한 장 선택</li>
+                <li>모서리·주름·겹침 상태를 RGB-D로 추정</li>
+                <li>양팔로 두 점을 잡아 펼치고 장력 유지</li>
+                <li>정해진 순서로 반 접기·재파지</li>
+                <li>크기/종류별 바구니에 분류</li>
+                <li>초기 MVP는 base 고정·수건 한 종류</li>
+              </ul>
+              <div class="gate"><b>장점</b> 양팔이 필요한 이유와 ACT imitation learning 가치가 가장 명확하다.<br><b>핵심 위험</b> deformable perception·접촉 모델·데이터 수집 난도가 가장 높다.</div>
+            </div>
+          </article>
+
+          <article class="phase phase-c">
+            <header>
+              <span class="tag">PLAN C · 이동성 강조</span>
+              <h3>생활물품 테이블 세팅·회수</h3>
+              <div>navigation + rigid-object arrangement</div>
+            </header>
+            <div class="body">
+              <ul>
+                <li>가벼운 플라스틱 컵·접시·수저 탐지</li>
+                <li>보관 위치와 테이블 사이를 이동</li>
+                <li>한 팔 pick, 양팔 tray/긴 물체 협업</li>
+                <li>좌표 template에 맞춰 정해진 순서로 배치</li>
+                <li>사용 후 물품 회수·분류·누락 확인</li>
+                <li>뜨거운 음식·액체·유리·칼은 범위 제외</li>
+              </ul>
+              <div class="gate"><b>장점</b> TurtleBot 이동과 배치 정확도를 관객이 쉽게 이해한다.<br><b>핵심 위험</b> 지지대 안정성, payload, 이동 후 localization·camera 정합.</div>
+            </div>
+          </article>
+        </div>
+
+        <table>
+          <thead><tr><th>비교 기준</th><th>Plan A 신발</th><th>Plan B 수건·의류</th><th>Plan C 테이블 세팅</th></tr></thead>
+          <tbody>
+            <tr><td>양팔 필요성</td><td>짝 동시 정렬·regrasp</td><td><b>매우 높음</b> — 두 점 grasp·장력</td><td>중간 — tray·긴 물체에서 높음</td></tr>
+            <tr><td>이동 플랫폼 활용</td><td><b>높음</b></td><td>낮음→바구니 운반 시 중간</td><td><b>매우 높음</b></td></tr>
+            <tr><td>인지 난도</td><td>중상 — 짝·좌우·변형</td><td><b>높음</b> — 주름·가림·상태</td><td>중간 — rigid object·template</td></tr>
+            <tr><td>ACT 데이터 난도</td><td>중상</td><td><b>높음</b></td><td>중간</td></tr>
+            <tr><td>현재 자산 재사용</td><td><b>가장 높음</b></td><td>arm/camera/ACT 중심 재사용</td><td>base/navigation/arm 중심 재사용</td></tr>
+            <tr><td>추천 위치</td><td><span class="badge required">주력안</span></td><td><span class="badge optional">양팔 연구 대안</span></td><td><span class="badge research">통합 데모 대안</span></td></tr>
+          </tbody>
+        </table>
+        <div class="decision">
+          현재 추천은 Plan A를 주력으로 유지하되, “양팔 학습 자체”를 강조하려면 Plan B,
+          “TurtleBot 이동 통합”을 강조하려면 Plan C를 축소형 예비안으로 병행하는 것이다.
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="panel">
+        <h2>3. Plan A 개발 Phase 1→2→3</h2>
+        <p class="lead">
+          아래는 프로젝트 후보 A/B/C가 아니라, 신발 정리 주력안을 선택한 뒤의 개발 진행
+          단계다. 각 Phase에서 기획부터 demo와 회고까지 한 바퀴를 완주한다.
+        </p>
+        <div class="grid-3">
+          <article class="phase phase-a">
+            <header>
+              <span class="tag">PHASE 1 · THIN SLICE</span>
+              <h3>신발 한 짝 end-to-end</h3>
+              <div>알려진 위치 → 가까운 목표 zone</div>
+            </header>
+            <div class="body">
+              <ul>
+                <li>공식 좌표 transform과 MuJoCo free shoe</li>
+                <li>MOCK/기본 pose perception contract</li>
+                <li>한 팔 DLS IK + 7차 trajectory</li>
+                <li>JD-edu ACT 첫 학습과 offline replay</li>
+                <li>simulation-only 20-trial 평가</li>
+              </ul>
+              <div class="gate"><b>완료 gate</b><br>20회 중 16회 성공 또는 모든 실패 원인 분류, ACT checkpoint 재현, fit coupon 검증.</div>
+            </div>
+          </article>
+          <article class="phase phase-b">
+            <header>
+              <span class="tag">PHASE 2 · PAIR MVP</span>
+              <h3>양팔 한 켤레 정리</h3>
+              <div>RGB-D 인식 → 좌우 slot 정렬</div>
+            </header>
+            <div class="body">
+              <ul>
+                <li>pair matching·좌우/자세 추정</li>
+                <li>양팔 reachability·handoff·regrasp</li>
+                <li>ACT Receding Horizon 비교</li>
+                <li>ACT Temporal Ensembling 비교</li>
+                <li>jitter·latency·복구 scenario 평가</li>
+              </ul>
+              <div class="gate"><b>완료 gate</b><br>한 켤레 성공률, 정렬 오차, cycle time, action age, actual jerk와 intervention 결과 고정.</div>
+            </div>
+          </article>
+          <article class="phase phase-c">
+            <header>
+              <span class="tag">PHASE 3 · MOBILE</span>
+              <h3>이동·다품종·실패복구</h3>
+              <div>여러 켤레·가림·장소 확장</div>
+            </header>
+            <div class="body">
+              <ul>
+                <li>탐색·matching·목표 위치 navigation</li>
+                <li>tracking·occlusion·scene memory</li>
+                <li>long-horizon recovery policy</li>
+                <li>active data와 unseen shoe 평가</li>
+                <li>SmolVLA는 gate 후 선택 비교</li>
+              </ul>
+              <div class="gate"><b>완료 gate</b><br>scenario matrix에서 success, recovery, intervention과 safety가 반복 가능하게 남아야 한다.</div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+        <section id="learning" class="panel">
+      <h2>4. 공통 학습 전략 — ACT first, VLA optional</h2>
+      <p class="lead">
+        강사 판단을 프로젝트 gate로 반영한다. SO-101에서 VLA의 비용은 학습시간뿐 아니라
+        데이터 변환, action 정규화, checkpoint, inference 주기와 원인분리까지 포함한다.
+      </p>
+      <div class="two-col">
+        <div>
+          <div class="timeline">
+            <div class="step">
+              <div><b>JD-edu ACT 학습 재현</b><small>dataset revision·config·checkpoint SHA·loss curve</small></div>
+              <span class="badge required">필수</span>
+            </div>
+            <div class="step">
+              <div><b>보수적 closed-loop ACT</b><small>n_action_steps=1, ensemble off, supervisor trace</small></div>
+              <span class="badge required">필수</span>
+            </div>
+            <div class="step">
+              <div><b>Receding Horizon 비교</b><small>동일 checkpoint에서 horizon·query 설정만 변경</small></div>
+              <span class="badge required">필수</span>
+            </div>
+            <div class="step">
+              <div><b>Temporal Ensembling 비교</b><small>jitter·성공률·action age·개입을 함께 측정</small></div>
+              <span class="badge required">필수</span>
+            </div>
+            <div class="step">
+              <div><b>SmolVLA fine-tuning</b><small>ACT 결과 고정 후 단일 task timebox 비교</small></div>
+              <span class="badge optional">선택 심화</span>
+            </div>
+            <div class="step">
+              <div><b>π0.5·GR00T·Gemini Robotics</b><small>구조·데이터·latency·공개성 조사표</small></div>
+              <span class="badge research">연구 조사</span>
+            </div>
+          </div>
+        </div>
+        <aside class="callout">
+          <h3>VLA 진입 gate</h3>
+          <ol class="compact">
+            <li>ACT train·checkpoint·rollout 재현 완료</li>
+            <li>두 rollout 전략 비교표 완료</li>
+            <li>observation/action/normalization 고정</li>
+            <li>복수 task·언어 지시가 연구 질문을 만듦</li>
+            <li>GPU·저장공간·기간 상한과 중단조건 승인</li>
+            <li>VLA 실패가 A/B demo 일정에 영향 없음</li>
+          </ol>
+          <p><strong>금지:</strong> from-scratch VLA pretraining, ACT 완료 전 전체 데이터 재수집, VLA를 실물 첫 rollout 경로로 사용.</p>
+        </aside>
+      </div>
+      <table>
+        <thead><tr><th>비교 축</th><th>반드시 남길 값</th><th>판단 기준</th></tr></thead>
+        <tbody>
+          <tr><td>학습 비용</td><td>wall-clock, peak VRAM, checkpoint 크기</td><td>재현 가능한 config와 revision</td></tr>
+          <tr><td>실시간성</td><td>inference p50/p95, query rate, action age</td><td>제어 주기와 watchdog 내 동작</td></tr>
+          <tr><td>부드러움</td><td>measured velocity·acceleration·jerk</td><td>offline loss가 아닌 실제 motion</td></tr>
+          <tr><td>task 성능</td><td>성공률, cycle time, retry, intervention</td><td>같은 seed·scenario·safety profile</td></tr>
+          <tr><td>안전</td><td>proposal/executed 차이와 reject reason</td><td>policy 종류와 무관한 supervisor gate</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="supervisor" class="panel">
+      <h2>5. LLM 기반 전체 작업 감독기</h2>
+      <p class="lead">
+        LLM은 모터를 직접 제어하지 않는다. 자연어 목표와 관측 결과를 해석해 허용된
+        고수준 skill을 선택하고, 결정론적 state machine·navigation·ACT/IK 실행기와
+        독립 safety supervisor를 조율한다.
+      </p>
+      <div class="flow" aria-label="LLM supervisor control flow">
+        <div>사용자 목표</div><div>RGB-D·로봇 상태</div><div>LLM 계획·skill 선택</div>
+        <div>schema·precondition 검사</div><div>Navigation / ACT / IK</div>
+        <div>Safety gate</div><div>재관측·재계획</div>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>LLM이 할 수 있는 것</h3>
+          <ul class="checklist">
+            <li>탐색, 접근, 집기, 전달, 정렬, 놓기, 복구, 중단 skill 선택</li>
+            <li>신발·수건·생활물품 task 순서와 좌우 팔 역할 계획</li>
+            <li>실패 원인을 관측과 execution trace로 분류하고 제한 횟수 재계획</li>
+            <li>사람에게 선택·승인·추가 관측이 필요한 시점 설명</li>
+          </ul>
+        </div>
+        <div>
+          <h3>LLM이 절대 할 수 없는 것</h3>
+          <ul class="checklist">
+            <li>joint target, torque, velocity 또는 raw ROS actuator command 생성</li>
+            <li>충돌·jerk·watchdog·base-arm interlock 우회</li>
+            <li>실물 승인 문자열 생성·대리 승인 또는 자동 hardware enable</li>
+            <li>schema 밖 명령 실행, 무한 retry, 관측이 오래된 상태에서 진행</li>
+          </ul>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>계층</th><th>입력/출력</th><th>실패 시 동작</th></tr></thead>
+        <tbody>
+          <tr><td>LLM supervisor</td><td>goal + typed world state → skill proposal JSON</td><td>parse/schema 실패 즉시 정지·재질문</td></tr>
+          <tr><td>Task executor</td><td>허용 skill → 결정론적 precondition/state transition</td><td>실패 코드와 새 관측을 반환</td></tr>
+          <tr><td>Motion policy</td><td>ACT/IK/navigation의 bounded target</td><td>timeout·tracking·jitter gate에서 중단</td></tr>
+          <tr><td>Safety supervisor</td><td>collision, freshness, limits, E-stop, HW 승인</td><td>항상 최종 거부권, LLM 우회 불가</td></tr>
+        </tbody>
+      </table>
+      <p class="gate">
+        <b>LLM 진입 gate:</b> 먼저 Phase 1의 deterministic state machine과 ACT/IK skill이
+        같은 입력·출력 schema로 통과해야 한다. 이후 replay 가능한 simulation에서만 LLM을
+        붙여 skill 성공률, 계획 latency, invalid proposal, recovery 횟수와 사람 개입을 기록한다.
+      </p>
+    </section>
+
+    <section id="engineering" class="panel">
+      <h2>6. 현재 기술 상태와 불확실성</h2>
+      <div class="coords">
+        <div class="coord"><b>Waffle 축</b>+X 전방 · +Y 좌측 · +Z 위</div>
+        <div class="coord"><b>upper socket 축</b>X=-64 mm · Y=±127 mm · Z=394.051 mm</div>
+        <div class="coord"><b>SO-101 frame</b>X=-64 mm · Y=±93.4 mm · Z=387.686 mm</div>
+        <div class="coord"><b>camera mast</b>X=-64 mm · Z=550 mm · 27°</div>
+      </div>
+      <table>
+        <thead><tr><th>트랙</th><th>현재 상태</th><th>다음 gate</th></tr></thead>
+        <tbody>
+          <tr><td>Waffle 형상</td><td class="status-ok">공식 URDF/STL/STEP, top Z=91.5 mm, 6-hole 후보 반영</td><td>실물 하부 nut·support 간섭 확인</td></tr>
+          <tr><td>support/camera</td><td class="status-warn">원본 상·하부 STL, 전용 mast camera Z=550 mm·27°</td><td>실제 hole·optical datum·mast 출력 검증</td></tr>
+          <tr><td>SO-101 interface</td><td class="status-warn">upper socket은 base_so101_v2만 대체, 나머지 base 조립품 삽입</td><td>조립 순서·bolt 방향·fit coupon</td></tr>
+          <tr><td>physics/IK</td><td class="status-ok">MuJoCo dynamics를 통한 dual-arm IK 실행</td><td>실측 backlash·servo update·latency 반영</td></tr>
+          <tr><td>jitter</td><td class="status-stop">raw actual jerk gate는 현재 FAIL</td><td>ACT baseline→horizon→ensemble 동일조건 비교</td></tr>
+          <tr><td>shoe task</td><td class="status-warn">free shoe·기본 observation/test 존재</td><td>A단계 state machine과 20-trial harness</td></tr>
+          <tr><td>parallel sim</td><td class="status-ok">4 worker·4,000 transition에서 910.5/s, 1 worker 대비 약 1.58×</td><td>persistent worker·RGB-D episode writer</td></tr>
+          <tr><td>floor reach</td><td class="status-stop">기본 신발-shoulder 0.497 m, 0.40 m envelope 밖</td><td>팔 높이 또는 작업면 재설계</td></tr>
+          <tr><td>safety</td><td class="status-ok">simulation-only, hardware command 없음</td><td>dummy load→proof test→승인된 제한 HW</td></tr>
+        </tbody>
+      </table>
+      <div class="decision">
+        MuJoCo에는 중력·질량·관성·관절범위·damping·마찰·접촉·actuator force가 적용된다.
+        하지만 SO-101 backlash, 실제 servo 주기, 구조물 질량/COM과 신발 마찰은 아직 실측값이
+        아니므로 현실의 정확한 복제나 안전 인증으로 해석하지 않는다.
+      </div>
+    </section>
+
+    <section id="fabrication" class="panel">
+      <h2>7. 기구·3D 출력 전략</h2>
+      <p class="lead">K1 Max에서 바로 출력할 수 있는 최종 파일은 실측과 slicer 조건이 닫힌 revision에만 제공한다.</p>
+      <div class="grid-3">
+        <div>
+          <h3>확인됨</h3>
+          <ul class="compact">
+            <li>Creality K1 Max</li>
+            <li>build volume 300×300×300 mm</li>
+            <li>Hyper PLA Black</li>
+            <li>filament 1.75 mm · 1 kg</li>
+            <li>하부 STL 160×180×170 mm</li>
+            <li>원본 상부 STL 110.963×254×156 mm</li>
+            <li>upper socket 원본 STL 110.963×254×156 mm</li>
+            <li>Z=160~170 mm, 10 mm 조립 중첩</li>
+          </ul>
+        </div>
+        <div>
+          <h3>아직 필요</h3>
+          <ul class="compact">
+            <li>현재 장착 nozzle 지름</li>
+            <li>slicer와 정확한 version</li>
+            <li>SO-101 나머지 hole pattern·두께</li>
+            <li>camera 실제 모델·직접 고정면</li>
+            <li>팔·중앙 지지대·camera 질량/COM</li>
+          </ul>
+        </div>
+        <div>
+          <h3>최종 산출물</h3>
+          <ul class="compact">
+            <li>파라메트릭 CAD source</li>
+            <li>STEP · STL · 3MF</li>
+            <li>fit coupon</li>
+            <li>BOM·볼트·insert 규격</li>
+            <li>K1 Max 전용 revision G-code</li>
+          </ul>
+        </div>
+      </div>
+      <p class="gate">
+        지지대 본체를 바로 장시간 출력하지 않는다. Waffle adapter coupon → 큰 shoulder
+        hole coupon → camera cradle coupon → dummy-load support → 최종 분할 지지대 순서로
+        진행한다. assembly 높이 316 mm는 K1 Max Z=300 mm를 넘지만 하부 170 mm와 상부
+        156 mm로 분할되어 각각 출력 범위 안에 들어간다.
+      </p>
+    </section>
+
+    <section id="meeting" class="panel">
+      <h2>8. 전체 팀 회의에서 결정할 것</h2>
+      <div class="two-col">
+        <div>
+          <h3>제품·평가</h3>
+          <ol class="compact">
+            <li>주력 프로젝트 A/B/C 선택과 축소형 예비안 결정</li>
+            <li>신발안 선택 시 신발 종류, 시작 자세, 목표 zone과 20회 조건</li>
+            <li>B의 최종 한 켤레 형상과 양팔이 필요한 이유</li>
+            <li>성공률, 정렬 오차, cycle time, 개입·복구 지표</li>
+            <li>C에 이동과 여러 켤레를 넣는 진입 gate</li>
+          </ol>
+          <h3>학습·데이터</h3>
+          <ol class="compact">
+            <li>JD-edu ACT 재현 dataset와 checkpoint 기준</li>
+            <li>Receding Horizon·Temporal Ensembling 통제 변수</li>
+            <li>카메라·annotation·train/validation/test split</li>
+            <li>SmolVLA 최대 GPU 시간·기간·중단 조건</li>
+          </ol>
+        </div>
+        <div>
+          <h3>기구·안전·일정</h3>
+          <ol class="compact">
+            <li>camera와 SO-101 실측 담당·기한</li>
+            <li>upper socket Z=394.051 mm·간격 254 mm와 camera mast 허용 범위</li>
+            <li>PLA prototype 보강 시점과 proof load</li>
+            <li>각 단계 HW 승인자·E-stop·중단 기준</li>
+            <li>산출물 owner, reviewer, demo 날짜</li>
+          </ol>
+          <div class="gate">
+            <b>회의 종료 조건</b><br>
+            “좋아 보인다”가 아니라 담당자, 입력값, 측정법, 완료 gate와 다음 review 날짜가
+            각 항목에 배정되어야 한다.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="next" class="panel">
+      <h2>9. 즉시 진행 순서</h2>
+      <table>
+        <thead><tr><th>순번</th><th>개발 작업</th><th>완료 증거</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>A단계 one-shoe state machine과 20-trial evaluator</td><td>seed별 success/failure JSON과 영상</td></tr>
+          <tr><td>2</td><td>JD-edu ACT 학습 경로 재현</td><td>dataset revision·config·checkpoint SHA</td></tr>
+          <tr><td>3</td><td>Receding Horizon / Temporal Ensembling harness</td><td>동일조건 latency·jitter·성공률 표</td></tr>
+          <tr><td>4</td><td>LLM supervisor schema와 simulation task executor</td><td>typed skill trace·invalid proposal·recovery test</td></tr>
+          <tr><td>5</td><td>SO-101 STEP에서 flange interface 추출</td><td>치수 도면과 fit coupon STL</td></tr>
+          <tr><td>6</td><td>정확한 depth camera 확인과 optical frame 갱신</td><td>모델·datasheet·체결 좌표</td></tr>
+          <tr><td>7</td><td>K1 Max 제작 revision</td><td>STEP/STL/3MF, slicer profile, G-code</td></tr>
+        </tbody>
+      </table>
+      <p class="decision">
+        다음 실제 개발 포커스는 A단계 one-shoe end-to-end와 ACT 기준선이다.
+        VLA 조사는 병행할 수 있지만 ACT·기구·안전 완료 gate를 지연시키지 않는다.
+      </p>
+    </section>
+
+    <section class="panel sources">
+      <h2>참고·근거</h2>
+      <ul>
+        <li>SmolVLA 논문: <a href="https://arxiv.org/abs/2506.01844">arXiv:2506.01844</a></li>
+        <li>ROBOTIS TurtleBot3 공식 저장소: <a href="https://github.com/ROBOTIS-GIT/turtlebot3">github.com/ROBOTIS-GIT/turtlebot3</a></li>
+        <li>ROBOTIS Waffle plate: <a href="https://www.robotis.us/tb3-waffle-plate-ipl-01-8ea/">TB3_WAFFLE_PLATE-IPL-01</a></li>
+        <li>Creality K1 Max: <a href="https://store.creality.com/products/k1-max-3d-printer">공식 제품 페이지</a></li>
+        <li>로컬 근거: Waffle coordinate reference, central support fabrication, physics IK report, ACT runtime와 rollout safety 문서</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="shell">
+    DAPIER · pro/physics-ik-01 · simulation/MOCK 자료 · 실물 하드웨어 성공 또는 안전 인증을 의미하지 않음
+  </footer>
+</body>
+</html>

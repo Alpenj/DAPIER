@@ -8,6 +8,8 @@
 - package: turtlebot3_description 2.3.7
 - 라이선스: Apache License 2.0
 - DAPIER 반입일: 2026-08-24
+- 공식 jazzy 재검증: 2026-08-27, path latest commit 2d7e80ace1636c2a2260cd6080ee6dea49115188
+- 재검증 결과: base, tire 2개, LDS, Waffle Pi URDF의 Git blob SHA가 공식 jazzy와 모두 일치
 
 Apache License 2.0 전문은 upstream/LICENSE에 보존한다.
 
@@ -23,5 +25,6 @@ Apache License 2.0 전문은 upstream/LICENSE에 보존한다.
 ## DAPIER 변경 파일
 
 turtlebot3_waffle_pi_mujoco.urdf는 원본 Waffle Pi xacro/URDF에서 생성한 파생 파일이다.
-MuJoCo가 base_link를 보존하도록 compiler 설정을 추가했고, package URI를 이 폴더 기준 상대
-경로로 변경했다. 로봇 치수, 질량, 관성, joint와 frame 값은 변경하지 않았다.
+MuJoCo가 base_link와 공식 visual mesh를 보존하도록 compiler 설정을 추가했고, package URI를 이
+폴더 기준 상대 경로로 변경했다. loader는 collision proxy를 투명한 group 3으로 분리하지만 접촉 bit는
+유지한다. 로봇 치수, 질량, 관성, joint와 frame 값은 변경하지 않았다.

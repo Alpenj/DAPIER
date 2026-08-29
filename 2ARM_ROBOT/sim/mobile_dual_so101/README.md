@@ -16,6 +16,98 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
 않았으므로 현재 카메라 형상은 확정 CAD가 아니다. 광학 중심은 base 기준
 `(0.120, 0, 0.200) m`, 아래쪽 10도로 배치했다.
 
+## 선택형 중앙 STEP 지지대 layout
+
+기존 `printed-torso`를 기본값으로 보존하고, 조원이 분할한 `assem_base.step` 기반 중앙
+지지대는 호환성을 위해 기존 CLI 이름인 `--mount-layout tower`로 선택한다. MuJoCo
+visual은 조원이 제공한 하부·상부 STL을 수정 없이 사용한다. upper 좌우 소켓은 stock
+SO-101의 큰 베이스 출력물 `base_so101_v2`만 대신한다. `base_motor_holder`, Waveshare
+plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 큰 홀 축에 끼운다.
+따라서 upper와 `base_so101_v2`만 중복 렌더링하지 않는다. 단순 box는 보이지 않는 collision proxy에만
+사용한다. Waffle
+좌표 기준과 추출 과정은
+[`WAFFLE_COORDINATE_REFERENCE.md`](WAFFLE_COORDINATE_REFERENCE.md)에 기록했다.
+현재 기준은 다음과 같다.
+
+- 축: `base_link` 기준 +X 전방, +Y 좌측, +Z 위
+- STEP 바닥면: 공식 Waffle 물리 상판 Z=0.0915 m에 직접 접촉
+- 하부 STL: `160 x 180 x 170 mm`, assembly Z=`0~170 mm`
+- 원본 상부 STL: `110.963 x 254 x 156 mm`, assembly Z=`160~316 mm`
+- 상부 STL: `110.963 x 254 x 156 mm`, assembly Z=`160~316 mm`
+- 상·하부 결합 중첩: `10 mm`
+- upper socket 큰 홀 중심 datum: base_link local `(-64, +/-127, 394.050896) mm`
+- 사진의 SO-101 teardrop hole: `base_so101_v2.stl`의 반지름 8.5 mm 홀 중심축
+- SO-101 arm frame: `(-64, +/-93.4, 387.686186) mm`; mesh/XML/holder 회전을
+  역산해 teardrop hole 중심을 holder 최상단에 맞춤
+- depth camera body center: 전용 mast 위 `(-64, 0, 550) mm`
+- camera down tilt: 27도
+- 중심 광선의 바닥 교차점: 로봇 전방 약 1.035 m
+- 수직 FOV의 바닥 교차 범위: 약 0.421~7.362 m
+- 중앙 지지대 가정 질량: 1.50 kg; camera 가정 질량은 별도 0.31 kg
+
+    ~/DAPIER/so101_imitation_learning/.venv/bin/python \
+      mobile_dual_so101.py --mount-layout tower \
+      --arm-mount-height-m 0.387686186 --smoke-steps 1000
+
+`--arm-mount-x-m`을 생략하면 tower에는 -0.064 m, 기존 printed torso에는 +0.020 m가
+각각 적용된다. 팔 frame 간격은 186.8 mm이고 upper socket의 큰 홀 간격은 254 mm다.
+tower layout에서는 stock SO-101의 `base_so101_v2`만 제외한다. base motor holder,
+Waveshare mounting plate, base servo, `shoulder_pan`과 이후 관절 체인은 그대로 유지한다.
+MuJoCo 뷰어의 Reset도 기록된 home action으로 돌아가도록 qpos와 position target을 함께 복원한다.
+카메라는 팔 위치를 바꾸지 않고
+중앙의 24 x 30 mm 전용 mast와 50 x 60 x 6 mm 경사 interface plate 위 Z=550 mm로
+올린다. 실제 카메라 모델이 확인되기 전까지 중앙 체결 위치는 측정 필요 datum이며,
+최종 볼트 규격·hole pattern·optical origin과 STEP 실제 재료/질량은 확정값이 아니다.
+
+현재 home 자세의 camera-arm 최소 간격은 약 136 mm다. 하지만 전체 joint range의
+무작위 10,000자세에서는 18개가 30 mm clearance를 위반했으므로 unrestricted motion은
+허용하지 않는다. camera, mast와 plate는 collision guard의 keep-out 대상으로 유지한다.
+
+2026-08-28에 official Waffle mesh와 provisional 질량으로 4,096 endpoint corner 및
+무작위 1,500자세를 계산했다. home 자세 COM의 휠-캐스터 지지다각형 여유는 약
++32 mm였지만, 전체 관절 범위에는 무부하에서도 약 -13 mm의 전도 자세가 남았다.
+따라서 이 결과는 지지대 안전 인증이 아니다. 주행 중에는 낮은 transport pose를 쓰고,
+작업 pose 허용영역과 base 정지 interlock은 별도로 제한해야 한다.
+
+제작용 CAD/STL/G-code에 필요한 실측값과 출력 순서는
+[`TOWER_FABRICATION.md`](TOWER_FABRICATION.md)에 분리했다.
+
+신발 한 짝부터 한 켤레 양팔 정리, 이동·다품종·실패복구까지 전 과정을 순서대로
+경험하는 회의안은
+[`PROJECT_DIRECTION_ABC_KO.md`](PROJECT_DIRECTION_ABC_KO.md)에 정리했다.
+
+## physics-executed dual-arm IK
+
+[`physics_ik.py`](physics_ik.py)는 pose editor와 실행 경로를 분리한다. DLS IK는 별도
+planning `MjData`에서만 qpos를 갱신한다. 실행은 시작 자세 초기화 1회 후 7차
+(septic) trajectory의 actuator target만 `data.ctrl`에 넣고 `mj_step`으로 질량, 관성,
+중력, damping, actuator force와 접촉을 계산한다. trajectory는 시작/끝의 속도,
+가속도와 jerk가 모두 0이며 설정한 target limit에 맞춰 duration을 늘린다.
+
+실행 보고서는 target과 actual의 velocity/acceleration/jerk를 따로 기록하고, actual
+limit, torque saturation, 지지다각형, 금지 접촉과 finite state를 모두 통과해야만
+`simulation_motion_accepted=true`로 둔다. 이 값도 실물 실행 승인은 아니다.
+
+2026-08-28 provisional actuator 모델에서 양 gripper를 전방/상향 10 mm 움직인 결과는
+다음과 같았다.
+
+- IK residual: left 0.307 mm, right 0.482 mm
+- runtime qpos write: 0회, physics step: 1,203
+- final joint tracking error: 0.000101 rad
+- actuator force limit 사용률: 최대 9.63%, 금지 접촉 0회
+- 최소 지지다각형 여유: 31.6 mm
+- target 최대값: 0.300 rad/s, 0.514 rad/s², 1.79 rad/s³
+- pre-settle 후 actual 최대값: 0.300 rad/s, 0.536 rad/s², 52.5 rad/s³
+
+따라서 현재 결과는 **jerk limit FAIL**이며 accepted가 아니다. 느린 target만으로
+감추지 않고, 실제 motor/gear friction, backlash, servo update/latency와 controller
+response를 식별한 뒤 actuator 모델과 limit를 다시 맞춰야 한다. 2 ms simulation
+qacc 차분으로 계산한 raw jerk도 실물 센서 bandwidth와 함께 재정의해야 한다.
+
+    DAPIER_SO101_MJCF=/absolute/path/to/so101_new_calib.xml \
+      ~/DAPIER/so101_imitation_learning/.venv/bin/python -m unittest \
+      discover -s test -p 'test_physics_ik.py' -v
+
 ## 외부 모델 자산
 
 약 16 MB인 SO-101 원본 XML/STL은 이 폴더에 중복 복사하지 않는다. 기본값은 기존
@@ -74,22 +166,25 @@ MuJoCo `Control` 슬라이더로 양팔 자세를 직접 잡으려면:
 하나씩 식별한 뒤 `/dev/serial/by-id/...` 고유 경로를 각각 기록해야 한다. 같은
 SO-101 모델이어도 두 팔의 encoder zero/range calibration은 독립적으로 유지한다.
 
-현재 단계에서 확정하지 않은 항목은 실측 mount xyz, 좌우 USB ID 매핑, 각 팔의
-calibration, 실물 torque/velocity, 신발 파지 trajectory와 sim-to-real이다.
+현재 단계에서 확정하지 않은 항목은 실제 카메라 mount/optical datum, STEP 재료별
+질량·관성, 좌우 USB ID 매핑, 각 팔의 calibration, 실물 torque/velocity, 신발 파지
+trajectory와 sim-to-real이다.
 
 TurtleBot3 위에 실제로 고정하는 구조 초안과 실측 체크리스트는
 [`MOUNTING_CONCEPT.md`](MOUNTING_CONCEPT.md)에 기록했다. 완성된 SO-101 전체를
-90도로 돌리면 원래의 바닥 체결면도 수직이 된다. 따라서 수평 선반 위에 얹는 형상은
-사용하지 않고, 원본 base를 닫힌 중앙 torsion box의 좌우 수직판에 직접 through-bolt로
-체결한다. 8 mm 분할 deck의 하단은 Waffle 상판 local Z=0.094 m에 바로 닿으며 중간
-공중 간격을 두지 않는다. 외곽 outrigger/caster를 추가하는 안은 주행성과 제작성이
-나빠 채택하지 않았다. 실제 Waffle M3 및 SO-101 base 구멍 좌표는 아직 실측하지
-않았으므로 현재 형상은 제작 도면이 아니다.
+90도로 돌리면 원래의 바닥 체결면도 수직이 된다. 조원 STEP의 큰 원형 홀 중심과
+사진의 `base_so101_v2` teardrop hole 중심을 결합 datum으로 사용하고, 중앙 지지대의 바닥면을 Waffle 상판
+local Z=91.5 mm에 둔다. 하부 STL 바닥의 네 홀 `(X,Y)=(+/-77,+/-87) mm`는 공식 Waffle
+M3 후보와 일치하지 않으므로 별도 adapter plate/coupon이 필요하다. 외곽
+outrigger/caster를 추가하는 안은 주행성과 제작성이 나빠 채택하지 않았다. 현재
+형상은 아직 제작 도면이 아니다.
 
 ## 양팔 충돌 가드와 구조 검증
 
-목표 자세만 검사하지 않고 현재 자세에서 목표까지 기본 2도 간격으로 보간해 좌우 팔과
-전면 카메라 사이의 최소 거리를 검사한다. 30 mm 미만이면 fail-closed로
+목표 자세만 검사하지 않고 현재 자세에서 목표까지 기본 2도 간격으로 보간해 좌우 팔,
+전면 bare camera, 그리퍼-TurtleBot 본체와 중앙 STEP base/column의 최소
+거리를 검사한다. shoulder와 중앙 기둥의 결합부만 의도된 interface로 제외한다.
+30 mm 미만이면 fail-closed로
 거부하며 이 명령에는 하드웨어 전송 경로가 없다.
 
     ~/DAPIER/so101_imitation_learning/.venv/bin/python collision_guard.py
@@ -103,15 +198,46 @@ TurtleBot3 위에 실제로 고정하는 구조 초안과 실측 체크리스트
 연속 관절공간의 모든 실수를 완전 열거한 결과가 아니며, 실물 질량·관성·브레이크 거리와
 출력물 강성이 측정되기 전에는 제조 안전 인증이나 실물 제어 승인으로 사용하지 않는다.
 
+## LLM 상위 작업 감독기
+
+[`llm_task_supervisor.py`](llm_task_supervisor.py)는 특정 LLM API에 연결하기 전의
+provider-neutral 제어 경계다. LLM 출력은 탐색·접근·집기·handoff·양팔 정렬·놓기·복구·
+중단의 typed JSON skill만 허용한다. 관측 sequence/age, base 정지, safety gate,
+재시도 예산과 simulation-only 상태를 확인하며 raw joint/torque/velocity·serial·hardware
+인자는 거부한다.
+
+이 모듈은 proposal을 검증할 뿐 action을 실행하거나 hardware를 승인하지 않는다. 실제
+구조는 LLM supervisor → deterministic task executor → ACT/IK/navigation → 독립 safety
+gate 순서이며, safety gate가 항상 최종 거부권을 가진다.
+
+    python -m unittest discover -s test -p 'test_llm_task_supervisor.py' -v
+
 ## 상태 기반 신발 task
 
 SO-101 관절명과 gripper frame을 사용하는 별도 21차원 ground-truth observation
-환경이다. 0.30 m 높이와 0.18 m 간격은 중앙 신발이 팔 길이 0.40 m 이내에 들어가는지
-검사하기 위한 값일 뿐 실측 브래킷 수치가 아니다.
+환경이다. 기본값은 현재 clearance upper를 쓰는 `tower` 모델이며 12차원 양팔
+action을 받는다.
 
     ~/DAPIER/so101_imitation_learning/.venv/bin/python shoe_task.py \
       --smoke-steps 200
 
-현재는 primitive 신발, stationary base, state observation까지만 구현했다. 파지 성공
-trajectory, RGB/depth perception, domain randomization과 실물 실행은 아직 검증하지
-않았다.
+현재 기본 floor shoe `(0.26, 0, 0.015) m`는 가장 가까운 shoulder에서 약 0.497 m로,
+0.40 m 거리 envelope 밖이다. 따라서 상태 기반 imitation 데이터 계약은 실행 가능하지만
+이 위치의 바닥 신발 집기는 현재 기구 배치로 학습 가능한 task라고 판정하지 않는다.
+지지대/팔 높이를 낮추거나, 충돌 없는 가까운 작업면을 별도 설계해야 한다.
+
+## 병렬 MuJoCo rollout
+
+[`parallel_shoe_rollout.py`](parallel_shoe_rollout.py)는 각 worker가 독립 `MjModel`과
+`MjData`를 갖는 spawn process 병렬 환경이다. 2026-08-28 로컬 benchmark에서 동일한
+4,000 transition을 1 worker는 577.3 transition/s, 4 workers는 910.5 transition/s로
+처리해 약 1.58배 처리량을 확인했다. 짧은 400-transition 시험은 process/model 시작
+비용 때문에 4 workers가 오히려 느렸으므로 긴 rollout batch에만 병렬화를 사용한다.
+
+    ~/DAPIER/so101_imitation_learning/.venv/bin/python \
+      parallel_shoe_rollout.py --workers 4 --episodes 8 --steps 500
+
+이 결과가 보장하는 것은 상태 기반 simulation rollout 병렬화다. image ACT 학습까지
+닫으려면 RGB/depth capture, episode writer, 12차원 action normalization, train/validation
+split과 checkpoint adapter가 추가로 필요하다. primitive 신발, stationary base,
+domain randomization과 실물 실행도 아직 검증하지 않았다.

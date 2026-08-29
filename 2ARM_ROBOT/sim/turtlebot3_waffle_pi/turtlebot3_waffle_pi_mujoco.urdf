@@ -1,10 +1,10 @@
 <?xml version="1.0" ?>
 <!-- Generated from ROBOTIS turtlebot3_waffle_pi.urdf, then modified by DAPIER. -->
-<!-- Changes: portable mesh paths and MuJoCo static-link preservation. -->
+<!-- Changes: portable mesh paths, static-link preservation, and visual-mesh retention. -->
 <!-- Original and derivative are distributed under Apache License 2.0; see upstream/LICENSE. -->
 <robot name="turtlebot3_waffle_pi">
   <mujoco>
-    <compiler fusestatic="false" strippath="false"/>
+    <compiler fusestatic="false" strippath="false" discardvisual="false"/>
   </mujoco>
   <!-- <xacro:include filename="$(find turtlebot3_description)/urdf/common_properties.urdf"/> -->
   <!-- Init colour -->

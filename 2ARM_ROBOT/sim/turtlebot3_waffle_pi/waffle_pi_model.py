@@ -15,6 +15,13 @@ import mujoco
 PROJECT_DIR = Path(__file__).resolve().parent
 BASE_URDF = PROJECT_DIR / "turtlebot3_waffle_pi_mujoco.urdf"
 WHEEL_JOINT_NAMES = ("tb3_wheel_left_joint", "tb3_wheel_right_joint")
+OFFICIAL_VISUAL_MESH_NAMES = {
+    "waffle_pi_base",
+    "left_tire",
+    "right_tire",
+    "lds",
+}
+EXPECTED_COLLISION_GEOMS = 7
 
 _SCENE_XML = """
 <mujoco model="dapier_turtlebot3_waffle_pi">
@@ -32,6 +39,41 @@ _SCENE_XML = """
 """
 
 
+def _configure_imported_geometry(base_spec: mujoco.MjSpec) -> None:
+    """Keep official meshes visible and collision proxies contact-only."""
+
+    visual_meshes = []
+    collision_geoms = []
+    for geom in base_spec.geoms:
+        body_name = geom.parent.name
+        if (
+            geom.type == mujoco.mjtGeom.mjGEOM_MESH
+            and geom.contype == 0
+            and geom.conaffinity == 0
+        ):
+            geom.name = f"{body_name}_visual"
+            visual_meshes.append(geom)
+            continue
+        if geom.contype or geom.conaffinity:
+            geom.name = f"{body_name}_collision"
+            geom.group = 3
+            geom.rgba[3] = 0.0
+            collision_geoms.append(geom)
+            continue
+        raise RuntimeError(
+            f"unclassified Waffle Pi geometry on {body_name}: {geom.type}"
+        )
+
+    mesh_names = {geom.meshname for geom in visual_meshes}
+    if mesh_names != OFFICIAL_VISUAL_MESH_NAMES:
+        raise RuntimeError(f"official Waffle Pi visual meshes are incomplete: {mesh_names}")
+    if len(collision_geoms) != EXPECTED_COLLISION_GEOMS:
+        raise RuntimeError(
+            "unexpected Waffle Pi collision geometry count: "
+            f"{len(collision_geoms)}"
+        )
+
+
 def build_spec() -> mujoco.MjSpec:
     """Return an MJCF parent spec containing the official Waffle Pi URDF."""
 
@@ -40,6 +82,7 @@ def build_spec() -> mujoco.MjSpec:
     spec = mujoco.MjSpec.from_string(_SCENE_XML)
     base_mount = spec.worldbody.add_frame(name="tb3_mount")
     base_spec = mujoco.MjSpec.from_file(str(BASE_URDF))
+    _configure_imported_geometry(base_spec)
     spec.attach(base_spec, prefix="tb3_", frame=base_mount)
     return spec
 
@@ -73,6 +116,29 @@ def validate_model(model: mujoco.MjModel, smoke_steps: int = 1000) -> dict[str, 
     if "tb3_base_link" not in bodies:
         raise RuntimeError("MuJoCo conversion lost tb3_base_link")
 
+    visual_mesh_geoms = [
+        index
+        for index in range(model.ngeom)
+        if model.geom_type[index] == mujoco.mjtGeom.mjGEOM_MESH
+        and model.geom_contype[index] == 0
+        and model.geom_conaffinity[index] == 0
+        and model.geom_rgba[index, 3] == 1.0
+    ]
+    hidden_collision_geoms = [
+        index
+        for index in range(model.ngeom)
+        if (mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, index) or "").startswith("tb3_")
+        and model.geom_contype[index] != 0
+        and model.geom_conaffinity[index] != 0
+        and model.geom_rgba[index, 3] == 0.0
+        and model.geom_group[index] == 3
+    ]
+    expected_meshes = len(OFFICIAL_VISUAL_MESH_NAMES)
+    if len(visual_mesh_geoms) != expected_meshes or model.nmesh != expected_meshes:
+        raise RuntimeError("official Waffle Pi visual meshes did not survive MuJoCo compilation")
+    if len(hidden_collision_geoms) != EXPECTED_COLLISION_GEOMS:
+        raise RuntimeError("Waffle Pi collision proxies are not hidden contact geometry")
+
     data = mujoco.MjData(model)
     mujoco.mj_forward(model, data)
     for _ in range(smoke_steps):
@@ -90,6 +156,9 @@ def validate_model(model: mujoco.MjModel, smoke_steps: int = 1000) -> dict[str, 
         "nbody": model.nbody,
         "njnt": model.njnt,
         "ngeom": model.ngeom,
+        "nmesh": model.nmesh,
+        "official_visual_meshes": len(visual_mesh_geoms),
+        "hidden_collision_geoms": len(hidden_collision_geoms),
         "wheel_joints": joints,
         "finite_state": finite_state,
         "smoke_steps": smoke_steps,
