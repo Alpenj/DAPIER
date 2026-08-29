@@ -1,0 +1,65 @@
+name: MuJoCo simulation tests
+
+on:
+  pull_request:
+    paths:
+      - "2ARM_ROBOT/sim/mobile_dual_so101/**"
+      - "2ARM_ROBOT/sim/turtlebot3_waffle_pi/**"
+      - "scripts/setup-mujoco-sim"
+      - "scripts/verify-mujoco-headless"
+      - "requirements-mujoco.in"
+      - "requirements-mujoco.txt"
+      - ".github/workflows/mujoco-sim.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mujoco-sim-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mujoco-headless-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DAPIER_SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install headless EGL runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libegl1 libgl1-mesa-dri
+
+      - name: Install pinned MuJoCo dependencies
+        run: "python3 -m pip install --only-binary=:all: --require-hashes -r requirements-mujoco.txt"
+
+      - name: Fetch and verify pinned SO-101 assets
+        run: |
+          asset_path="$(scripts/setup-mujoco-sim --dest "$RUNNER_TEMP/so101-assets")"
+          echo "DAPIER_SO101_MJCF=$asset_path" >> "$GITHUB_ENV"
+
+      - name: Run headless tests and canonical renders
+        env:
+          MUJOCO_GL: egl
+          PYOPENGL_PLATFORM: egl
+        run: scripts/verify-mujoco-headless --artifact-dir "$RUNNER_TEMP/mujoco-artifacts"
+
+      - name: Upload MuJoCo review artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-dual-so101-mujoco-${{ env.DAPIER_SOURCE_HEAD_SHA }}
+          path: ${{ runner.temp }}/mujoco-artifacts
+          if-no-files-found: error
+          retention-days: 14

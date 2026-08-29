@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly EXPECTED_SO101_MJCF_SHA256="d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
+
+fail() {
+  echo "verify-mujoco-headless: $*" >&2
+  exit 1
+}
+
+usage() {
+  echo "Usage: scripts/verify-mujoco-headless --artifact-dir DIRECTORY" >&2
+}
+
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)" ||
+  fail "cannot resolve script directory"
+repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" ||
+  fail "script is not inside the DAPIER repository"
+
+artifact_dir=""
+while (($#)); do
+  case "$1" in
+    --artifact-dir)
+      (($# >= 2)) || fail "--artifact-dir requires a directory"
+      artifact_dir="$2"
+      shift 2
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+[[ -n "$artifact_dir" ]] || fail "--artifact-dir is required"
+[[ -n "${DAPIER_SO101_MJCF:-}" ]] || fail "DAPIER_SO101_MJCF is required"
+[[ -f "$DAPIER_SO101_MJCF" ]] || fail "SO-101 MJCF is missing: $DAPIER_SO101_MJCF"
+
+actual_sha256="$(sha256sum -- "$DAPIER_SO101_MJCF" | awk '{print $1}')"
+[[ "$actual_sha256" == "$EXPECTED_SO101_MJCF_SHA256" ]] ||
+  fail "SO-101 MJCF hash mismatch: $actual_sha256"
+
+python_bin="${PYTHON:-python3}"
+export MUJOCO_GL="${MUJOCO_GL:-egl}"
+export PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-egl}"
+export PYTHONDONTWRITEBYTECODE=1
+
+cd -- "$repo_root"
+"$python_bin" - <<'PY'
+import mujoco
+import numpy
+from PIL import Image
+
+print(f"mujoco={mujoco.__version__}")
+print(f"numpy={numpy.__version__}")
+print(f"pillow={Image.__version__}")
+PY
+
+"$python_bin" -m unittest discover \
+  -s 2ARM_ROBOT/sim/mobile_dual_so101/test -v
+
+"$python_bin" 2ARM_ROBOT/sim/mobile_dual_so101/render_ci_artifacts.py \
+  --model "$DAPIER_SO101_MJCF" \
+  --output-dir "$artifact_dir"
+
+find "$artifact_dir" -maxdepth 1 -type f -printf '%f\n' | sort

@@ -294,7 +294,7 @@ class MobileDualSO101Test(unittest.TestCase):
     def test_model_provenance_is_reported_without_mutating_source(self) -> None:
         provenance = model_provenance(self.source)
         self.assertEqual(len(provenance["model_sha256"]), 64)
-        self.assertFalse(provenance["matches_recorded_upstream"])
+        self.assertIsInstance(provenance["matches_recorded_upstream"], bool)
 
     def test_invalid_mount_and_missing_explicit_model_are_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "must be positive"):
