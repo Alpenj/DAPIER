@@ -17,6 +17,8 @@ SO101_CHANNEL_NAMES = (
     "gripper",
 )
 
+SO101_ARM_ROLES = ("left", "right")
+
 SO101_ACTION_UNITS = (
     "degree",
     "degree",
@@ -194,4 +196,105 @@ def so101_new_calibration_spec(calibration_id: str) -> EmbodimentSpec:
         calibration_id=calibration_id,
         sim_lower=SO101_NEW_CALIBRATION_SIM_LOWER,
         sim_upper=SO101_NEW_CALIBRATION_SIM_UPPER,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class BimanualEmbodimentSpec:
+    """Two independently calibrated SO-101 arms in deterministic left/right order."""
+
+    left: EmbodimentSpec
+    right: EmbodimentSpec
+
+    def __post_init__(self) -> None:
+        if self.left.channel_names != self.right.channel_names:
+            raise ValueError("left and right arms must use the same channel contract")
+
+    @property
+    def embodiment_id(self) -> str:
+        return "so101-bimanual-two-arm"
+
+    @property
+    def embodiment_revision(self) -> str:
+        return "so101-bimanual-new-calibration-v1"
+
+    @property
+    def channel_names(self) -> tuple[str, ...]:
+        return tuple(
+            f"{role}_{name}"
+            for role, spec in zip(SO101_ARM_ROLES, (self.left, self.right), strict=True)
+            for name in spec.channel_names
+        )
+
+    @property
+    def action_units(self) -> tuple[str, ...]:
+        return self.left.action_units + self.right.action_units
+
+    @property
+    def sim_units(self) -> tuple[str, ...]:
+        return self.left.sim_units + self.right.sim_units
+
+    @property
+    def calibration_ids(self) -> tuple[str, str]:
+        return self.left.calibration_id, self.right.calibration_id
+
+    @property
+    def calibration_id(self) -> str:
+        encoded = json.dumps(self.calibration_ids, separators=(",", ":")).encode()
+        return f"sha256:{sha256(encoded).hexdigest()}"
+
+    @property
+    def action_lower(self) -> tuple[float, ...]:
+        return self.left.action_lower + self.right.action_lower
+
+    @property
+    def action_upper(self) -> tuple[float, ...]:
+        return self.left.action_upper + self.right.action_upper
+
+    @property
+    def sim_lower(self) -> tuple[float, ...]:
+        return self.left.sim_lower + self.right.sim_lower
+
+    @property
+    def sim_upper(self) -> tuple[float, ...]:
+        return self.left.sim_upper + self.right.sim_upper
+
+    def units_for_source(self, source: str) -> tuple[str, ...]:
+        return self.sim_units if source in READBACK_SOURCES else self.action_units
+
+    def action_to_sim(self, values: Iterable[float]) -> tuple[float, ...]:
+        action = _finite_tuple(values, width=len(self.channel_names))
+        split = len(self.left.channel_names)
+        return self.left.action_to_sim(action[:split]) + self.right.action_to_sim(
+            action[split:]
+        )
+
+    def sim_to_action(self, values: Iterable[float]) -> tuple[float, ...]:
+        sim = _finite_tuple(values, width=len(self.channel_names))
+        split = len(self.left.channel_names)
+        return self.left.sim_to_action(sim[:split]) + self.right.sim_to_action(
+            sim[split:]
+        )
+
+    def bounds_digest(self) -> str:
+        payload = {
+            "arm_order": SO101_ARM_ROLES,
+            "calibration_ids": self.calibration_ids,
+            "channel_names": self.channel_names,
+            "left_bounds": self.left.bounds_digest(),
+            "right_bounds": self.right.bounds_digest(),
+        }
+        encoded = json.dumps(
+            payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        ).encode()
+        return f"sha256:{sha256(encoded).hexdigest()}"
+
+
+def so101_bimanual_new_calibration_spec(
+    left_calibration_id: str,
+    right_calibration_id: str,
+) -> BimanualEmbodimentSpec:
+    return BimanualEmbodimentSpec(
+        left=so101_new_calibration_spec(left_calibration_id),
+        right=so101_new_calibration_spec(right_calibration_id),
     )

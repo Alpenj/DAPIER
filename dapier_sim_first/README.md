@@ -58,7 +58,7 @@ symlink다. 별도 lab worktree 안의 `so101_ros2`도 현재 정식 소스와 �
 이번에 추가한 공개 경계는 다음뿐이다.
 
 - `protocols.py`: `connect`, `disconnect`, `get_action` 구조와 exact frame schema
-- `embodiment.py`: SO-101 여섯 채널과 body degree/radian, gripper 선형 변환
+- `embodiment.py`: SO-101 단일 팔 6채널과 양팔 left→right 12채널, 팔별 calibration identity, body degree/radian, gripper 선형 변환
 - `environment.py`: 개인정보와 hardware probe를 제외한 읽기 전용 환경 수집
 - `gate.py`: 새 run manifest 생성, G0 검증, 재사용 불가능한 receipt 기록
 
