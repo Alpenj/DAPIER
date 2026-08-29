@@ -127,6 +127,31 @@ LeRobot 작업공간의 다음 모델을 사용한다.
 함께 출력한다. 현재 로컬 source XML은 shoulder 범위 등 실험 수정 이력이 있어 기록된
 원본 해시와 일치하지 않으며, 이 코드는 해당 파일을 자동 수정하지 않는다.
 
+### MuJoCo가 없는 PC와 CI에서 검증
+
+집 PC에서는 MuJoCo GUI 없이 코드만 작성해도 된다. Pull Request가 열리면 별도
+`MuJoCo simulation tests` workflow가 Apache-2.0 SO-101 원본 자산을 기록된 commit으로
+다운로드하고 14개 파일의 SHA-256을 확인한다. 이어서 전체 simulation-only test와
+1,000-step smoke test를 실행하고 tower 조립 상태의 정면·좌우 사선·상단·depth-camera
+PNG 및 provenance JSON을 Actions artifact로 남긴다. serial, ROS publisher, motor 및
+실물 장치에는 접근하지 않는다.
+
+로컬에서 같은 검증을 재현하려면 Python 3.12 환경에서 다음을 실행한다.
+
+    cd ~/DAPIER
+    python3 -m pip install --only-binary=:all: --require-hashes \
+      -r requirements-mujoco.txt
+    export DAPIER_SO101_MJCF="$(scripts/setup-mujoco-sim \
+      --dest /tmp/dapier-so101-assets)"
+    scripts/verify-mujoco-headless \
+      --artifact-dir /tmp/dapier-mujoco-artifacts
+
+artifact 경로는 기존 PNG/JSON이 없는 새 디렉터리를 사용한다. 스크립트는 결과를
+덮어쓰지 않으며, 공식 XML 해시가 다르면 테스트 전에 중단한다. GUI 자세 확인과 수동
+조작은 MuJoCo가 설치된 개발 PC에서 기존 `--viewer`/`--pose-editor`로 수행한다.
+CI 성공은 Linux headless simulation 결과일 뿐 실물 안전·제작 적합성·sim-to-real
+성공을 의미하지 않는다.
+
 ## 사람형 어깨 배치
 
 두 SO-101 holder를 Waffle Pi 좌우에서 모두 pitch +90도로 세운다. 그 상태에서
