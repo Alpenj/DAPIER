@@ -106,7 +106,11 @@ def render_artifacts(output_dir: Path, model_path: Path | None) -> Path:
 
     report = {
         "schema_version": "dapier.mobile-dual-so101.ci-artifacts.v1",
-        "source_commit": os.environ.get("GITHUB_SHA"),
+        "source_head_commit": (
+            os.environ.get("DAPIER_SOURCE_HEAD_SHA")
+            or os.environ.get("GITHUB_SHA")
+        ),
+        "tested_commit": os.environ.get("GITHUB_SHA"),
         "mount_layout": "tower",
         "arm_mount_height_m": TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M,
         "home_action_radians": list(HUMANOID_HOME_ACTION),
