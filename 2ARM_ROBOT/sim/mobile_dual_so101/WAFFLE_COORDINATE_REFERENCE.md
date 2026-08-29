@@ -77,9 +77,9 @@ p_base_link[m] = 0.001 * p_mesh[mm] + (-0.064, 0, 0)
 | depth camera body center | `(-64, 0, 550)` | 전용 mast, 27도 하향 |
 
 원본 STEP과 두 STL은 수정 없이 사용한다. upper 좌우 소켓이 stock SO-101의
-`base_motor_holder_so101_v1`, `base_so101_v2`,
-`waveshare_mounting_plate_so101_v2`를 대체한다. base servo와 shoulder 이후 joint chain은
-유지하며, 원본 socket 큰 홀 축과 SO-101 base frame 변환을 맞춘다. 팔 frame 좌표를
+`base_so101_v2`만 대체한다. `base_motor_holder_so101_v1`,
+`waveshare_mounting_plate_so101_v2`, base servo와 shoulder 이후 joint chain은 유지하며,
+원본 socket 큰 홀 축과 SO-101 base frame 변환을 맞춘다. 팔 frame 좌표를
 외부 장착홀 간격으로 해석하면 안 된다. STEP bottom hole 네 개는
 공식 Waffle 체결 후보와 직접 일치하지 않으므로 adapter plate와 fit coupon이
 필요하다. 카메라 model/체결홀/optical origin과 지지대 재료·질량은 실측 뒤 CAD와

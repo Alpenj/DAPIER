@@ -22,6 +22,7 @@ from mobile_dual_so101 import (
     HUMANOID_HOME_ACTION,
     PRINTED_MOUNT_ESTIMATED_MASS_KG,
     WAFFLE_TOP_LOCAL_Z_M,
+    _restore_home_pose_after_reset,
     apply_control_as_pose,
     build_model,
     model_provenance,
@@ -234,6 +235,26 @@ class MobileDualSO101Test(unittest.TestCase):
             "hardware_execution",
         ):
             self.assertFalse(report[field])
+
+    def test_mujoco_reset_restores_recorded_home_pose_and_control(self) -> None:
+        expected = tuple(float(value) for value in HUMANOID_HOME_ACTION)
+        data = mujoco.MjData(self.model)
+        data.qpos[:] = 0.0
+        data.ctrl[:] = 0.5
+        mujoco.mj_resetData(self.model, data)
+        self.assertTrue(
+            _restore_home_pose_after_reset(
+                self.model, data, HUMANOID_HOME_ACTION
+            )
+        )
+        self.assertEqual(tuple(float(value) for value in data.ctrl), expected)
+        self.assertEqual(
+            tuple(
+                float(data.qpos[int(self.model.jnt_qposadr[int(joint_id)])])
+                for joint_id in self.model.actuator_trnid[:, 0]
+            ),
+            expected,
+        )
 
     def test_rounded_slider_endpoint_is_clamped_without_exit(self) -> None:
         data = mujoco.MjData(self.model)

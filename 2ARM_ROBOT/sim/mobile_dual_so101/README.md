@@ -20,10 +20,10 @@ Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외�
 
 기존 `printed-torso`를 기본값으로 보존하고, 조원이 분할한 `assem_base.step` 기반 중앙
 지지대는 호환성을 위해 기존 CLI 이름인 `--mount-layout tower`로 선택한다. MuJoCo
-visual은 조원이 제공한 하부·상부 STL을 수정 없이 사용한다. upper 좌우 소켓이 stock
-SO-101의 `base_motor_holder`, `base_so101`, Waveshare plate 출력물을 대신하며, base
-servo와 shoulder 이후 관절 체인을 원본 큰 홀 축에 끼워 조립한다. 따라서 upper와 stock
-base 출력물을 중복 렌더링하지 않는다. 단순 box는 보이지 않는 collision proxy에만
+visual은 조원이 제공한 하부·상부 STL을 수정 없이 사용한다. upper 좌우 소켓은 stock
+SO-101의 큰 베이스 출력물 `base_so101_v2`만 대신한다. `base_motor_holder`, Waveshare
+plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 큰 홀 축에 끼운다.
+따라서 upper와 `base_so101_v2`만 중복 렌더링하지 않는다. 단순 box는 보이지 않는 collision proxy에만
 사용한다. Waffle
 좌표 기준과 추출 과정은
 [`WAFFLE_COORDINATE_REFERENCE.md`](WAFFLE_COORDINATE_REFERENCE.md)에 기록했다.
@@ -51,8 +51,10 @@ base 출력물을 중복 렌더링하지 않는다. 단순 box는 보이지 않�
 
 `--arm-mount-x-m`을 생략하면 tower에는 -0.064 m, 기존 printed torso에는 +0.020 m가
 각각 적용된다. 팔 frame 간격은 186.8 mm이고 upper socket의 큰 홀 간격은 254 mm다.
-tower layout에서는 stock SO-101의 세 정적 base 출력물만 제외하며 base servo,
-`shoulder_pan`과 이후 관절 체인은 그대로 유지한다. 카메라는 팔 위치를 바꾸지 않고
+tower layout에서는 stock SO-101의 `base_so101_v2`만 제외한다. base motor holder,
+Waveshare mounting plate, base servo, `shoulder_pan`과 이후 관절 체인은 그대로 유지한다.
+MuJoCo 뷰어의 Reset도 기록된 home action으로 돌아가도록 qpos와 position target을 함께 복원한다.
+카메라는 팔 위치를 바꾸지 않고
 중앙의 24 x 30 mm 전용 mast와 50 x 60 x 6 mm 경사 interface plate 위 Z=550 mm로
 올린다. 실제 카메라 모델이 확인되기 전까지 중앙 체결 위치는 측정 필요 datum이며,
 최종 볼트 규격·hole pattern·optical origin과 STEP 실제 재료/질량은 확정값이 아니다.

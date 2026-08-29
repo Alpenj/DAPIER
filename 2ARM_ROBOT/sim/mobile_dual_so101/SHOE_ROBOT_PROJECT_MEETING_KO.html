@@ -587,7 +587,7 @@
         <tbody>
           <tr><td>Waffle 형상</td><td class="status-ok">공식 URDF/STL/STEP, top Z=91.5 mm, 6-hole 후보 반영</td><td>실물 하부 nut·support 간섭 확인</td></tr>
           <tr><td>support/camera</td><td class="status-warn">원본 상·하부 STL, 전용 mast camera Z=550 mm·27°</td><td>실제 hole·optical datum·mast 출력 검증</td></tr>
-          <tr><td>SO-101 interface</td><td class="status-warn">upper socket에 base servo·shoulder chain 삽입, stock base 출력물 제외</td><td>조립 순서·bolt 방향·fit coupon</td></tr>
+          <tr><td>SO-101 interface</td><td class="status-warn">upper socket은 base_so101_v2만 대체, 나머지 base 조립품 삽입</td><td>조립 순서·bolt 방향·fit coupon</td></tr>
           <tr><td>physics/IK</td><td class="status-ok">MuJoCo dynamics를 통한 dual-arm IK 실행</td><td>실측 backlash·servo update·latency 반영</td></tr>
           <tr><td>jitter</td><td class="status-stop">raw actual jerk gate는 현재 FAIL</td><td>ACT baseline→horizon→ensemble 동일조건 비교</td></tr>
           <tr><td>shoe task</td><td class="status-warn">free shoe·기본 observation/test 존재</td><td>A단계 state machine과 20-trial harness</td></tr>

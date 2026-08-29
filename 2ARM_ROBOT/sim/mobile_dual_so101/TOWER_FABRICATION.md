@@ -1,17 +1,17 @@
 # 분할 `assem_base` 지지대 제작 입력과 출력 패키지
 
 현재 MuJoCo visual은 조원이 제공한 하부·상부 STL을 수정 없이 사용한다. upper 좌우
-socket이 stock SO-101의 세 정적 base 출력물을 대체하고, base servo와 shoulder 이후
-관절 체인을 socket 축에 끼워 체결하는 구조다.
+socket이 stock SO-101의 `base_so101_v2`만 대체하고, base motor holder, Waveshare
+mounting plate, base servo와 shoulder 이후 관절 체인을 socket 축에 끼워 체결하는 구조다.
 하부는 Z=0~170 mm, 상부는 Z=160~316 mm에 놓여 10 mm가 중첩된다. 단순 box는
 보이지 않는 collision proxy에만 남겼다. 직접 실행한 simulation에서 결합 접촉면,
 bare depth camera와 1,000-step finite state를 확인했다. 다만 실제 체결 강도, 출력
 공차, 카메라 고정, 재료와 질량은 아직 실측하지 않았으므로 실물 안전이 확인됐다고
 쓰지 않는다.
 
-upper는 `base_motor_holder_so101_v1`, `base_so101_v2`, Waveshare plate를 대체한다.
-검은 base servo와 `shoulder_pan` 이후 체인은 유지한다. 따라서 출력 베이스는 upper
-한 벌뿐이고 같은 위치에 stock base 출력물을 또 조립하지 않는다.
+upper는 `base_so101_v2` 역할만 대체한다. `base_motor_holder_so101_v1`,
+`waveshare_mounting_plate_so101_v2`, 검은 base servo와 `shoulder_pan` 이후 체인은
+유지한다. 따라서 같은 위치에 stock `base_so101_v2`만 다시 조립하지 않는다.
 
 ## 확보된 입력
 

@@ -104,9 +104,7 @@ TOWER_CAMERA_INTERFACE_PLATE_SIZE_M = (0.050, 0.060, 0.006)
 TOWER_MOUNT_ESTIMATED_MASS_KG = 1.50
 TOWER_REPLACED_SO101_BASE_MESHES = frozenset(
     {
-        "base_motor_holder_so101_v1",
         "base_so101_v2",
-        "waveshare_mounting_plate_so101_v2",
     }
 )
 ASSEMBLED_SUPPORT_UNDER_STL = PROJECT_DIR / "assets" / "assem_base_under.stl"
@@ -477,8 +475,9 @@ def _add_tower_mount_structure(
     """Place the exact split-print support visuals plus simple collisions.
 
     Both visuals are the supplied split-print parts. The upper's side sockets
-    replace the stock SO-101 printed base pieces and receive each base servo
-    plus shoulder chain on the original large-hole axis. A narrow mast and
+    replace only the stock SO-101 base print and receive the otherwise complete
+    base assembly on the original large-hole axis. The base motor holder and
+    Waveshare mounting plate remain part of each arm. A narrow mast and
     tilted interface plate raise the camera above the fixed arm sockets; they
     are not a bulky enclosure around the camera.
     """
@@ -659,7 +658,7 @@ def _add_tower_mount_structure(
 
 
 def _replace_stock_base_with_tower_socket(arm_spec: mujoco.MjSpec) -> None:
-    """Use the custom upper socket instead of duplicate stock base prints."""
+    """Replace only base_so101_v2; retain the rest of the base assembly."""
 
     base = arm_spec.body("base")
     deleted = set()
@@ -871,6 +870,24 @@ def apply_control_as_pose(
     mujoco.mj_forward(model, data)
 
 
+def _restore_home_pose_after_reset(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    action: Sequence[float],
+) -> bool:
+    """Restore the recorded pose after the passive viewer clears state on Reset."""
+
+    at_reset_qpos = all(
+        abs(float(actual) - float(expected)) <= 1e-12
+        for actual, expected in zip(data.qpos, model.qpos0)
+    )
+    controls_cleared = all(abs(float(value)) <= 1e-12 for value in data.ctrl)
+    if not at_reset_qpos or not controls_cleared:
+        return False
+    apply_control_as_pose(model, data, action)
+    return True
+
+
 def pose_report(data: mujoco.MjData, source: Path) -> dict[str, object]:
     return {
         "schema_version": "dapier.so101-dual-mujoco-pose.v0.1",
@@ -982,6 +999,7 @@ def _run_viewer(
     apply_control_as_pose(model, data, initial_action)
     with mujoco.viewer.launch_passive(model, data) as viewer:
         while viewer.is_running():
+            _restore_home_pose_after_reset(model, data, initial_action)
             mujoco.mj_step(model, data)
             viewer.sync()
 

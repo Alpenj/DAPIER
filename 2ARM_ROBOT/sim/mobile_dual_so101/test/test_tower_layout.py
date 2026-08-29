@@ -294,6 +294,12 @@ class TowerLayoutTest(unittest.TestCase):
             }
             base_mesh_names = set(base_mesh_geoms)
             self.assertIn(f"{side}_sts3215_03a_v1", base_mesh_names)
+            self.assertIn(
+                f"{side}_base_motor_holder_so101_v1", base_mesh_names
+            )
+            self.assertIn(
+                f"{side}_waveshare_mounting_plate_so101_v2", base_mesh_names
+            )
             for replaced in TOWER_REPLACED_SO101_BASE_MESHES:
                 self.assertNotIn(f"{side}_{replaced}", base_mesh_names)
 

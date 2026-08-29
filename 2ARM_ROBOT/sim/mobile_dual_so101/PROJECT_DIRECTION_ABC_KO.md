@@ -166,7 +166,7 @@ recovery와 safety 결과가 반복 가능하게 남는 것이다.
 | --- | --- | --- |
 | Waffle 좌표·형상 | 공식 URDF/STL/STEP 좌표와 6-hole 후보 반영, 전체 49개 테스트 통과 | 실물 하부 nut 접근 확인 |
 | support/camera | 상·하부 원본 STL과 10 mm overlap, 전용 mast camera Z=550 mm·27° | 실제 hole/optical datum 및 mast 출력 검증 |
-| SO-101 interface | upper socket이 stock base 출력물을 대체하고 servo·shoulder chain 삽입 | 조립 순서·bolt 방향 및 fit coupon |
+| SO-101 interface | upper socket은 `base_so101_v2`만 대체하고 나머지 base 조립품 삽입 | 조립 순서·bolt 방향 및 fit coupon |
 | physics/IK | physics-executed IK 구현, raw actual jerk gate는 FAIL | backlash/update latency 식별값 반영 |
 | jitter | temporal ensemble 포함 후보 정리 중 | baseline/filter/ensemble 평가표와 test harness |
 | shoe task | free shoe와 기본 task/test 존재 | A의 한 짝 state machine·20-trial metric |
