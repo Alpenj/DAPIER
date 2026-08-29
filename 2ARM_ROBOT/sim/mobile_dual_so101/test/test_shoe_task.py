@@ -23,6 +23,7 @@ from shoe_task import (
     ShoeTaskEnv,
     ground_truth_observation,
     task_metrics,
+    task_reachability,
     validate_shoe_task,
 )
 from mobile_dual_so101 import HUMANOID_HOME_ACTION, apply_control_as_pose
@@ -50,6 +51,15 @@ class ShoeTaskTest(unittest.TestCase):
         self.assertEqual(
             self.env.model.jnt_type[joint_id], mujoco.mjtJoint.mjJNT_FREE
         )
+        self.assertEqual(self.env.config.mount_layout, "tower")
+        self.assertGreaterEqual(
+            mujoco.mj_name2id(
+                self.env.model,
+                mujoco.mjtObj.mjOBJ_GEOM,
+                "assembled_support_upper_visual",
+            ),
+            0,
+        )
 
     def test_ground_truth_observation_contract(self) -> None:
         self.assertTrue(self.observation["ground_truth"])
@@ -65,21 +75,14 @@ class ShoeTaskTest(unittest.TestCase):
         self.assertIn("left_shoulder_pan_rad", OBSERVATION_NAMES)
         self.assertNotIn("left_base_rad", OBSERVATION_NAMES)
 
-    def test_default_shoe_is_inside_arm_reach_envelope(self) -> None:
-        shoe_id = mujoco.mj_name2id(
-            self.env.model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME
+    def test_default_floor_shoe_is_reported_outside_tower_reach(self) -> None:
+        report = task_reachability(self.env.model, self.env.data)
+        self.assertFalse(report["inside_distance_envelope"])
+        self.assertGreater(report["nearest_shoulder_distance_m"], 0.48)
+        self.assertLess(report["nearest_shoulder_distance_m"], 0.50)
+        self.assertAlmostEqual(
+            report["nearest_shoulder_distance_m"], 0.497476699, places=6
         )
-        for side in ("left", "right"):
-            shoulder_id = mujoco.mj_name2id(
-                self.env.model,
-                mujoco.mjtObj.mjOBJ_BODY,
-                f"{side}_shoulder",
-            )
-            distance = math.dist(
-                self.env.data.xpos[shoe_id],
-                self.env.data.xpos[shoulder_id],
-            )
-            self.assertLess(distance, 0.40)
 
     def test_hold_action_is_simulation_only(self) -> None:
         hold = tuple(float(value) for value in self.env.data.ctrl)
@@ -127,11 +130,16 @@ class ShoeTaskTest(unittest.TestCase):
     def test_invalid_configuration_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "frame_skip"):
             ShoeTaskEnv(ShoeTaskConfig(frame_skip=0))
+        with self.assertRaisesRegex(ValueError, "mount_layout"):
+            ShoeTaskEnv(ShoeTaskConfig(mount_layout="unknown"))
 
     def test_headless_smoke(self) -> None:
         report = validate_shoe_task(smoke_steps=50)
         self.assertTrue(report["finite_observation"])
         self.assertTrue(report["ground_truth"])
+        self.assertTrue(report["state_imitation_contract_ready"])
+        self.assertFalse(report["default_floor_shoe_reachable"])
+        self.assertEqual(report["mount_layout"], "tower")
         self.assertFalse(report["hardware_execution"])
 
 

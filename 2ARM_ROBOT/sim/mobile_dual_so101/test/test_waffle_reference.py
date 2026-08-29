@@ -82,7 +82,7 @@ class WaffleReferenceTest(unittest.TestCase):
 
     def test_tower_and_camera_reference_remain_centered_on_base(self) -> None:
         self.assertEqual(TOWER_CENTER_X_M, TOWER_DECK_CENTER_X_M)
-        self.assertEqual(TOWER_CENTER_Y_ABS_M, 0.100)
+        self.assertEqual(TOWER_CENTER_Y_ABS_M, 0.0934)
         self.assertLess(
             WAFFLE_TOP_MOUNT_PLANE_Z_M,
             WAFFLE_BASE_COLLISION_PROXY_TOP_Z_M,

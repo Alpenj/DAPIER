@@ -27,11 +27,18 @@ sys.path.insert(0, str(SIM_DIR / "turtlebot3_waffle_pi"))
 
 from waffle_pi_model import build_spec as build_waffle_pi_spec
 from waffle_reference import (
+    ASSEMBLED_SUPPORT_UNDER_STL_SHA256,
+    ASSEMBLED_SUPPORT_UPPER_STL_SHA256,
+    ASSEMBLED_SUPPORT_UPPER_Z_OFFSET_M,
     TOWER_CENTER_X_M,
     TOWER_CENTER_Y_ABS_M,
-    TOWER_DECK_CENTER_X_M,
-    TOWER_DECK_HALF_SIZE_X_M,
-    TOWER_DECK_HALF_SIZE_Y_M,
+    SEMI_SUPPORT_BASE_SIZE_M,
+    SEMI_SUPPORT_BIG_HOLE_CENTERS_LOCAL_M,
+    SEMI_SUPPORT_BIG_HOLE_RADIUS_M,
+    SEMI_SUPPORT_BOTTOM_HOLES_LOCAL_M,
+    SEMI_SUPPORT_COLUMN_SIZE_M,
+    SEMI_SUPPORT_COLUMN_TOP_LOCAL_Z_M,
+    SEMI_SUPPORT_LOCAL_MAX_Z_M,
     WAFFLE_BASE_COLLISION_PROXY_TOP_Z_M,
     WAFFLE_TOP_MOUNT_PLANE_Z_M,
     WAFFLE_TOP_REFERENCE_ORIGIN_M,
@@ -54,7 +61,8 @@ RECORDED_UPSTREAM_MODEL_SHA256 = (
 )
 MODEL_RANGE_ROUNDING_TOLERANCE_RAD = 1e-5
 DEFAULT_ARM_MOUNT_X_M = 0.02
-DEFAULT_ARM_MOUNT_SEPARATION_M = 2.0 * TOWER_CENTER_Y_ABS_M
+DEFAULT_ARM_MOUNT_SEPARATION_M = 0.20
+TOWER_RECOMMENDED_ARM_MOUNT_SEPARATION_M = 2.0 * TOWER_CENTER_Y_ABS_M
 DEFAULT_MOUNT_LAYOUT = "printed-torso"
 MOUNT_LAYOUTS = (DEFAULT_MOUNT_LAYOUT, "tower")
 HUMANOID_HOLDER_PITCH_RAD = math.pi / 2.0
@@ -68,12 +76,44 @@ DEPTH_CAMERA_DOWN_TILT_RAD = math.radians(10.0)
 DEPTH_CAMERA_HORIZONTAL_FOV_DEG = 58.4
 DEPTH_CAMERA_VERTICAL_FOV_DEG = 45.5
 PRINTED_MOUNT_ESTIMATED_MASS_KG = 0.90
-TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M = 0.38
+SO101_BASE_LARGE_HOLE_MESH_SHA256 = (
+    "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d"
+)
+# base_so101_v2.stl has a radius-8.5 mm circular boundary centered at
+# (X=0, Z=0) through its Y=0..72 mm depth. The midpoint below is transformed
+# through the XML geom pose into the SO-101 base/body frame.
+SO101_BASE_LARGE_HOLE_CENTER_STL_M = (0.0, 0.036, 0.0)
+SO101_BASE_LARGE_HOLE_CENTER_ARM_FRAME_M = (
+    -0.00636471,
+    -8.97657e-09,
+    0.0336,
+)
+TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M = (
+    WAFFLE_TOP_LOCAL_Z_M + SEMI_SUPPORT_BIG_HOLE_CENTERS_LOCAL_M[0][2]
+    + SO101_BASE_LARGE_HOLE_CENTER_ARM_FRAME_M[0]
+)
 TOWER_RECOMMENDED_ARM_MOUNT_X_M = TOWER_CENTER_X_M
-TOWER_CAMERA_CENTER_X_M = 0.025
-TOWER_CAMERA_HEIGHT_ABOVE_ARM_M = 0.070
-TOWER_CAMERA_DOWN_TILT_RAD = math.radians(35.0)
-TOWER_MOUNT_ESTIMATED_MASS_KG = 1.20
+TOWER_CAMERA_DOWN_TILT_RAD = math.radians(27.0)
+TOWER_CAMERA_CENTER_X_M = TOWER_CENTER_X_M
+TOWER_CAMERA_CENTER_Z_M = 0.550
+TOWER_CAMERA_HEIGHT_ABOVE_ARM_M = (
+    TOWER_CAMERA_CENTER_Z_M - TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M
+)
+TOWER_CAMERA_MAST_SIZE_M = (0.024, 0.030)
+TOWER_CAMERA_INTERFACE_PLATE_SIZE_M = (0.050, 0.060, 0.006)
+TOWER_MOUNT_ESTIMATED_MASS_KG = 1.50
+TOWER_REPLACED_SO101_BASE_MESHES = frozenset(
+    {
+        "base_motor_holder_so101_v1",
+        "base_so101_v2",
+        "waveshare_mounting_plate_so101_v2",
+    }
+)
+ASSEMBLED_SUPPORT_UNDER_STL = PROJECT_DIR / "assets" / "assem_base_under.stl"
+ASSEMBLED_SUPPORT_UPPER_SOURCE_STL = (
+    PROJECT_DIR / "assets" / "assem_base_upper.stl"
+)
+ASSEMBLED_SUPPORT_UPPER_STL = ASSEMBLED_SUPPORT_UPPER_SOURCE_STL
 
 # Screenshot-matched simulator pose recorded on 2026-08-25. The holder pitch,
 # not a shoulder-pan offset, turns both arms into the human-like vertical
@@ -139,6 +179,17 @@ def model_provenance(source: Path) -> dict[str, object]:
         "recorded_upstream_sha256": RECORDED_UPSTREAM_MODEL_SHA256,
         "matches_recorded_upstream": digest == RECORDED_UPSTREAM_MODEL_SHA256,
     }
+
+
+def _verify_asset_sha256(path: Path, expected_sha256: str) -> Path:
+    if not path.is_file():
+        raise FileNotFoundError(f"required simulation asset is missing: {path}")
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != expected_sha256:
+        raise RuntimeError(
+            f"simulation asset hash mismatch for {path.name}: {actual}"
+        )
+    return path.resolve()
 
 
 def _quaternion_multiply(
@@ -375,10 +426,16 @@ def _add_printed_mount_structure(
 
 
 def _tower_camera_center(arm_mount_height_m: float) -> tuple[float, float, float]:
+    if not math.isclose(
+        arm_mount_height_m,
+        TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M,
+        abs_tol=1e-9,
+    ):
+        raise ValueError("tower camera requires the fixed SO-101 socket height")
     return (
         TOWER_CAMERA_CENTER_X_M,
         0.0,
-        arm_mount_height_m + TOWER_CAMERA_HEIGHT_ABOVE_ARM_M,
+        TOWER_CAMERA_CENTER_Z_M,
     )
 
 
@@ -411,47 +468,42 @@ def _add_waffle_top_reference_axes(base_link: mujoco.MjsBody) -> None:
 def _add_tower_mount_structure(
     base_link: mujoco.MjsBody,
     *,
+    support_mesh_names: tuple[str, str],
     arm_mount_height_m: float,
     arm_mount_x_m: float,
     arm_mount_separation_m: float,
     camera_center_m: Sequence[float],
 ) -> None:
-    """Add two slender towers tied by a camera crossbar and common deck.
+    """Place the exact split-print support visuals plus simple collisions.
 
-    This is a MuJoCo design envelope, not a manufacturing drawing. The visible
-    members carry provisional mass while transparent collision proxies cover
-    the deck-to-arm section and upper crossbar. The SO-101 interface remains a
-    vertical flange, matching the rotated source arm base.
+    Both visuals are the supplied split-print parts. The upper's side sockets
+    replace the stock SO-101 printed base pieces and receive each base servo
+    plus shoulder chain on the original large-hole axis. A narrow mast and
+    tilted interface plate raise the camera above the fixed arm sockets; they
+    are not a bulky enclosure around the camera.
     """
 
-    deck_thickness = 0.008
-    deck_top = WAFFLE_TOP_LOCAL_Z_M + deck_thickness
-    camera_x, camera_y, camera_z = (float(value) for value in camera_center_m)
-    tower_top = camera_z + DEPTH_CAMERA_SIZE_M[2] / 2.0 + 0.016
-    tower_height = tower_top - deck_top
-    tower_half_y = 0.012
-    camera_side_clearance = (
-        arm_mount_separation_m
-        - 2.0 * tower_half_y
-        - DEPTH_CAMERA_SIZE_M[1]
-    ) / 2.0
-    if arm_mount_height_m < 0.28 or tower_height <= 0.20:
-        raise ValueError("tower layout requires arm_mount_height_m >= 0.28")
-    if camera_side_clearance < 0.004:
-        raise ValueError(
-            "tower spacing leaves less than 4 mm per side around the depth camera"
-        )
+    _, camera_y, _ = (float(value) for value in camera_center_m)
+    required = (
+        (arm_mount_height_m, TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M, "height"),
+        (arm_mount_x_m, TOWER_RECOMMENDED_ARM_MOUNT_X_M, "X"),
+        (
+            arm_mount_separation_m,
+            TOWER_RECOMMENDED_ARM_MOUNT_SEPARATION_M,
+            "separation",
+        ),
+    )
+    for actual, expected, label in required:
+        if not math.isclose(actual, expected, abs_tol=1e-9):
+            raise ValueError(
+                f"semi_so101 STEP layout requires arm mount {label} "
+                f"{expected:.6f} m"
+            )
     if not math.isclose(camera_y, 0.0, abs_tol=1e-12):
-        raise ValueError("tower depth camera must remain centered between towers")
+        raise ValueError("tower depth camera must remain centered")
 
     mount_body = base_link.add_body(name="tower_mount_structure")
     _add_waffle_top_reference_axes(base_link)
-    visual = {
-        "type": mujoco.mjtGeom.mjGEOM_BOX,
-        "contype": 0,
-        "conaffinity": 0,
-        "group": 1,
-    }
     hidden_collision = {
         "type": mujoco.mjtGeom.mjGEOM_BOX,
         "mass": 0.0,
@@ -461,128 +513,170 @@ def _add_tower_mount_structure(
         "rgba": [0.3, 0.8, 1.0, 0.0],
     }
 
+    support_x = TOWER_CENTER_X_M
+    base_depth, base_width, base_height = SEMI_SUPPORT_BASE_SIZE_M
+    base_bottom = WAFFLE_TOP_LOCAL_Z_M
+    base_top = base_bottom + base_height
+    under_mesh_name, upper_mesh_name = support_mesh_names
     mount_body.add_geom(
-        name="tower_common_deck_visual",
-        pos=[
-            TOWER_DECK_CENTER_X_M,
-            0.0,
-            WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0,
-        ],
-        size=[
-            TOWER_DECK_HALF_SIZE_X_M,
-            TOWER_DECK_HALF_SIZE_Y_M,
-            deck_thickness / 2.0,
-        ],
-        mass=0.20,
-        rgba=[0.12, 0.15, 0.18, 1.0],
-        **visual,
+        name="assembled_support_under_visual",
+        type=mujoco.mjtGeom.mjGEOM_MESH,
+        meshname=under_mesh_name,
+        pos=[support_x, 0.0, base_bottom],
+        mass=0.865,
+        rgba=[0.72, 0.70, 0.64, 1.0],
+        contype=0,
+        conaffinity=0,
+        group=1,
     )
     mount_body.add_geom(
-        name="tower_common_deck_collision",
+        name="assembled_support_upper_visual",
+        type=mujoco.mjtGeom.mjGEOM_MESH,
+        meshname=upper_mesh_name,
         pos=[
-            TOWER_DECK_CENTER_X_M,
+            support_x,
             0.0,
-            WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0,
+            base_bottom + ASSEMBLED_SUPPORT_UPPER_Z_OFFSET_M,
         ],
-        size=[
-            TOWER_DECK_HALF_SIZE_X_M,
-            TOWER_DECK_HALF_SIZE_Y_M,
-            deck_thickness / 2.0,
-        ],
+        mass=0.635,
+        rgba=[0.62, 0.64, 0.62, 1.0],
+        contype=0,
+        conaffinity=0,
+        group=1,
+    )
+    mount_body.add_geom(
+        name="semi_support_base_collision",
+        pos=[support_x, 0.0, base_bottom + base_height / 2.0],
+        size=[base_depth / 2.0, base_width / 2.0, base_height / 2.0],
+        **hidden_collision,
+    )
+    for index, (local_x, local_y, _) in enumerate(
+        SEMI_SUPPORT_BOTTOM_HOLES_LOCAL_M, start=1
+    ):
+        base_link.add_site(
+            name=f"semi_support_bottom_hole_{index}",
+            type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+            pos=[support_x + local_x, local_y, base_top + 0.0005],
+            size=[0.003, 0.001, 0.001],
+            rgba=[0.90, 0.20, 0.15, 0.9],
+        )
+
+    column_depth, column_width, column_height = SEMI_SUPPORT_COLUMN_SIZE_M
+    column_center_z = base_top + column_height / 2.0
+    column_top = base_bottom + SEMI_SUPPORT_COLUMN_TOP_LOCAL_Z_M
+    mount_body.add_geom(
+        name="semi_support_column_collision",
+        pos=[support_x, 0.0, column_center_z],
+        size=[column_depth / 2.0, column_width / 2.0, column_height / 2.0],
         **hidden_collision,
     )
 
-    for side, y_sign in (("left", 1.0), ("right", -1.0)):
-        tower_y = y_sign * arm_mount_separation_m / 2.0
-        mount_body.add_geom(
-            name=f"tower_{side}_mast_visual",
-            pos=[arm_mount_x_m, tower_y, deck_top + tower_height / 2.0],
-            size=[0.022, tower_half_y, tower_height / 2.0],
-            mass=0.25,
-            rgba=[0.72, 0.82, 0.85, 1.0],
-            **visual,
-        )
-        # The top 55 mm intentionally remains outside this proxy: it is the
-        # bolted arm-interface region where the source base overlaps the mast.
-        collision_top = arm_mount_height_m - 0.055
-        collision_height = collision_top - deck_top
-        mount_body.add_geom(
-            name=f"tower_{side}_mast_collision",
-            pos=[arm_mount_x_m, tower_y, deck_top + collision_height / 2.0],
-            size=[0.022, tower_half_y, collision_height / 2.0],
-            **hidden_collision,
-        )
-        mount_body.add_geom(
-            name=f"tower_{side}_arm_interface_visual",
-            pos=[
-                arm_mount_x_m,
-                y_sign * (arm_mount_separation_m / 2.0 - 0.006),
-                arm_mount_height_m,
-            ],
-            size=[0.055, 0.006, 0.055],
-            mass=0.10,
-            rgba=[0.15, 0.35, 0.65, 1.0],
-            **visual,
-        )
-        for position in ("front", "rear"):
-            x_sign = 1.0 if position == "front" else -1.0
-            mount_body.add_geom(
-                name=f"tower_{side}_{position}_deck_gusset_visual",
-                pos=[
-                    arm_mount_x_m + x_sign * 0.045,
-                    tower_y,
-                    deck_top + 0.035,
-                ],
-                size=[0.010, 0.035, 0.035],
-                mass=0.04,
-                rgba=[0.25, 0.30, 0.36, 1.0],
-                **visual,
-            )
-
-    crossbar_z = camera_z + DEPTH_CAMERA_SIZE_M[2] / 2.0 + 0.010
+    camera_x, _, camera_z = (float(value) for value in camera_center_m)
+    camera_tilt_quat = [
+        math.cos(TOWER_CAMERA_DOWN_TILT_RAD / 2.0),
+        0.0,
+        math.sin(TOWER_CAMERA_DOWN_TILT_RAD / 2.0),
+        0.0,
+    ]
+    plate_depth, plate_width, plate_thickness = (
+        TOWER_CAMERA_INTERFACE_PLATE_SIZE_M
+    )
+    local_down_x = -math.sin(TOWER_CAMERA_DOWN_TILT_RAD)
+    local_down_z = -math.cos(TOWER_CAMERA_DOWN_TILT_RAD)
+    camera_half_height = DEPTH_CAMERA_SIZE_M[2] / 2.0
+    plate_offset = camera_half_height + plate_thickness / 2.0
+    plate_center = [
+        camera_x + local_down_x * plate_offset,
+        0.0,
+        camera_z + local_down_z * plate_offset,
+    ]
+    plate_vertical_half_extent = (
+        plate_depth / 2.0 * math.sin(TOWER_CAMERA_DOWN_TILT_RAD)
+        + plate_thickness / 2.0 * math.cos(TOWER_CAMERA_DOWN_TILT_RAD)
+    )
+    mast_top = plate_center[2] - plate_vertical_half_extent
+    mast_depth, mast_width = TOWER_CAMERA_MAST_SIZE_M
+    mast_height = mast_top - column_top
+    if mast_height <= 0:
+        raise RuntimeError("camera mast must rise above the support column")
+    visible_interface = {
+        "type": mujoco.mjtGeom.mjGEOM_BOX,
+        "mass": 0.0,
+        "contype": 0,
+        "conaffinity": 0,
+        "group": 1,
+        "rgba": [0.23, 0.25, 0.27, 1.0],
+    }
     mount_body.add_geom(
-        name="tower_camera_crossbar_visual",
-        pos=[arm_mount_x_m, 0.0, crossbar_z],
-        size=[0.025, arm_mount_separation_m / 2.0 + 0.015, 0.012],
-        mass=0.12,
-        rgba=[0.25, 0.30, 0.36, 1.0],
-        **visual,
+        name="tower_camera_mast_visual",
+        pos=[support_x, 0.0, column_top + mast_height / 2.0],
+        size=[mast_depth / 2.0, mast_width / 2.0, mast_height / 2.0],
+        **visible_interface,
     )
     mount_body.add_geom(
-        name="tower_camera_crossbar_collision",
-        pos=[arm_mount_x_m, 0.0, crossbar_z],
-        size=[0.025, arm_mount_separation_m / 2.0 + 0.015, 0.012],
+        name="tower_camera_mast_collision",
+        pos=[support_x, 0.0, column_top + mast_height / 2.0],
+        size=[mast_depth / 2.0, mast_width / 2.0, mast_height / 2.0],
         **hidden_collision,
     )
+    mount_body.add_geom(
+        name="tower_camera_interface_plate_visual",
+        pos=plate_center,
+        quat=camera_tilt_quat,
+        size=[plate_depth / 2.0, plate_width / 2.0, plate_thickness / 2.0],
+        **visible_interface,
+    )
+    mount_body.add_geom(
+        name="tower_camera_interface_plate_collision",
+        pos=plate_center,
+        quat=camera_tilt_quat,
+        size=[plate_depth / 2.0, plate_width / 2.0, plate_thickness / 2.0],
+        **hidden_collision,
+    )
+    base_link.add_site(
+        name="camera_mount_center_measurement_required",
+        type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+        pos=plate_center,
+        quat=camera_tilt_quat,
+        size=[0.003175, plate_thickness / 2.0, plate_thickness / 2.0],
+        rgba=[0.95, 0.35, 0.10, 0.85],
+    )
 
-    support_start_x = arm_mount_x_m + 0.025
-    support_end_x = camera_x - DEPTH_CAMERA_SIZE_M[0] / 2.0
-    support_half_x = (support_end_x - support_start_x) / 2.0
-    if support_half_x <= 0:
-        raise ValueError("tower camera needs positive front standoff length")
-    support_center_x = support_start_x + support_half_x
-    for side, y_position in (("left", 0.060), ("right", -0.060)):
-        mount_body.add_geom(
-            name=f"tower_camera_standoff_{side}_visual",
-            pos=[support_center_x, y_position, camera_z],
-            size=[support_half_x, 0.010, 0.010],
-            mass=0.01,
-            rgba=[0.15, 0.35, 0.65, 1.0],
-            **visual,
+    for side, (local_x, local_y, local_z) in zip(
+        ("left", "right"), SEMI_SUPPORT_BIG_HOLE_CENTERS_LOCAL_M
+    ):
+        base_link.add_site(
+            name=f"semi_support_{side}_shoulder_hole_center",
+            type=mujoco.mjtGeom.mjGEOM_SPHERE,
+            pos=[support_x + local_x, local_y, base_bottom + local_z],
+            size=[SEMI_SUPPORT_BIG_HOLE_RADIUS_M] * 3,
+            rgba=[0.10, 0.80, 1.0, 0.35],
         )
 
-    assigned_mass = (
-        0.20 + 2 * 0.25 + 2 * 0.10 + 4 * 0.04 + 0.12 + 2 * 0.01
-    )
+    assigned_mass = 0.865 + 0.635
     if not math.isclose(assigned_mass, TOWER_MOUNT_ESTIMATED_MASS_KG):
-        raise RuntimeError("tower mount mass budget is inconsistent")
+        raise RuntimeError("semi_so101 support mass budget is inconsistent")
+
+
+def _replace_stock_base_with_tower_socket(arm_spec: mujoco.MjSpec) -> None:
+    """Use the custom upper socket instead of duplicate stock base prints."""
+
+    base = arm_spec.body("base")
+    deleted = set()
+    for geom in list(base.geoms):
+        if geom.meshname in TOWER_REPLACED_SO101_BASE_MESHES:
+            deleted.add(geom.meshname)
+            arm_spec.delete(geom)
+    if deleted != TOWER_REPLACED_SO101_BASE_MESHES:
+        missing = sorted(TOWER_REPLACED_SO101_BASE_MESHES - deleted)
+        raise RuntimeError(f"SO-101 tower socket replacement mismatch: {missing}")
 
 
 def build_spec(
     *,
     arm_mount_height_m: float,
     arm_mount_x_m: float | None = None,
-    arm_mount_separation_m: float = DEFAULT_ARM_MOUNT_SEPARATION_M,
+    arm_mount_separation_m: float | None = None,
     mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     include_lidar: bool = False,
     model_path: Path | str | None = None,
@@ -603,6 +697,12 @@ def build_spec(
             if mount_layout == "tower"
             else DEFAULT_ARM_MOUNT_X_M
         )
+    if arm_mount_separation_m is None:
+        arm_mount_separation_m = (
+            TOWER_RECOMMENDED_ARM_MOUNT_SEPARATION_M
+            if mount_layout == "tower"
+            else DEFAULT_ARM_MOUNT_SEPARATION_M
+        )
     values = (arm_mount_height_m, arm_mount_x_m, arm_mount_separation_m)
     if not all(math.isfinite(float(value)) for value in values):
         raise ValueError("arm mount dimensions must be finite")
@@ -622,9 +722,28 @@ def build_spec(
         spec.delete(spec.body("tb3_base_scan"))
     base_link = spec.body("tb3_base_link")
     if mount_layout == "tower":
+        under_path = _verify_asset_sha256(
+            ASSEMBLED_SUPPORT_UNDER_STL,
+            ASSEMBLED_SUPPORT_UNDER_STL_SHA256,
+        )
+        upper_path = _verify_asset_sha256(
+            ASSEMBLED_SUPPORT_UPPER_STL,
+            ASSEMBLED_SUPPORT_UPPER_STL_SHA256,
+        )
+        under_mesh = spec.add_mesh(
+            name="assembled_support_under_mesh",
+            file=str(under_path),
+            scale=[0.001, 0.001, 0.001],
+        )
+        upper_mesh = spec.add_mesh(
+            name="assembled_support_upper_mesh",
+            file=str(upper_path),
+            scale=[0.001, 0.001, 0.001],
+        )
         camera_center_m = _tower_camera_center(arm_mount_height_m)
         _add_tower_mount_structure(
             base_link,
+            support_mesh_names=(under_mesh.name, upper_mesh.name),
             arm_mount_height_m=arm_mount_height_m,
             arm_mount_x_m=arm_mount_x_m,
             arm_mount_separation_m=arm_mount_separation_m,
@@ -662,11 +781,10 @@ def build_spec(
             pos=position,
             quat=_holder_quaternion(HUMANOID_HOLDER_PITCH_RAD, twist_rad),
         )
-        spec.attach(
-            mujoco.MjSpec.from_file(str(source)),
-            prefix=f"{side}_",
-            frame=frame,
-        )
+        arm_spec = mujoco.MjSpec.from_file(str(source))
+        if mount_layout == "tower":
+            _replace_stock_base_with_tower_socket(arm_spec)
+        spec.attach(arm_spec, prefix=f"{side}_", frame=frame)
     return spec, source
 
 
@@ -674,7 +792,7 @@ def build_model(
     *,
     arm_mount_height_m: float,
     arm_mount_x_m: float | None = None,
-    arm_mount_separation_m: float = DEFAULT_ARM_MOUNT_SEPARATION_M,
+    arm_mount_separation_m: float | None = None,
     mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     include_lidar: bool = False,
     model_path: Path | str | None = None,
@@ -913,7 +1031,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--arm-mount-separation-m",
         type=float,
-        default=DEFAULT_ARM_MOUNT_SEPARATION_M,
+        default=None,
     )
     parser.add_argument(
         "--mount-layout",

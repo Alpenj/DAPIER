@@ -63,14 +63,49 @@ TOWER_DECK_ANCHOR_POINTS_M = (
     (-0.024, 0.064, WAFFLE_TOP_MOUNT_PLANE_Z_M),
 )
 
-# The deck contains the selected anchor pattern with edge allowance and stays
-# within the official top-layer envelope.  Towers remain at +/-100 mm so a
-# provisional 165 mm Astra envelope fits between 24 mm-wide masts.
+# The source upper is the custom SO-101 socket. It replaces the three static
+# printed base parts from each stock arm while retaining the base servo and the
+# complete shoulder-and-downstream kinematic chain. The source upper's large
+# socket axes remain at Y +/-127 mm, which places arm frames at +/-93.4 mm.
 TOWER_DECK_CENTER_X_M = -0.064
 TOWER_DECK_HALF_SIZE_X_M = 0.096
 TOWER_DECK_HALF_SIZE_Y_M = 0.128
 TOWER_CENTER_X_M = -0.064
-TOWER_CENTER_Y_ABS_M = 0.100
+TOWER_CENTER_Y_ABS_M = 0.0934
+
+# Teammate split-print CAD revision: assem_base.step plus two STL parts.
+# Autodesk STEP/STL coordinates are millimetres. The upper STL has a local
+# Z=0..156 mm range and is translated +160 mm in the assembly, giving a 10 mm
+# overlap with the lower Z=0..170 mm part.
+ASSEMBLED_SUPPORT_STEP_SHA256 = (
+    "f9f77f71a77f962aac3c7a3898bf5df7232b12982be3f16e3e2fc20d39c1bb3b"
+)
+ASSEMBLED_SUPPORT_UNDER_STL_SHA256 = (
+    "f91c58b14bd9932757787d9fea1f72104bae537d38b003d2a430576fecc70076"
+)
+ASSEMBLED_SUPPORT_UPPER_SOURCE_STL_SHA256 = (
+    "ed6218f3ba83459fc7c436416ef708130e2622a27df6772d4d62bf6a9d822bf7"
+)
+ASSEMBLED_SUPPORT_UPPER_STL_SHA256 = (
+    "ed6218f3ba83459fc7c436416ef708130e2622a27df6772d4d62bf6a9d822bf7"
+)
+ASSEMBLED_SUPPORT_UPPER_Z_OFFSET_M = 0.160
+SO101_SOCKET_AXIS_Y_ABS_M = 0.127
+SEMI_SUPPORT_BASE_SIZE_M = (0.160, 0.180, 0.025)
+SEMI_SUPPORT_COLUMN_SIZE_M = (0.090, 0.100, 0.275)
+SEMI_SUPPORT_COLUMN_TOP_LOCAL_Z_M = 0.300
+SEMI_SUPPORT_LOCAL_MAX_Z_M = 0.31600000010259134
+SEMI_SUPPORT_BIG_HOLE_RADIUS_M = 0.0085
+SEMI_SUPPORT_BIG_HOLE_CENTERS_LOCAL_M = (
+    (0.0, +SO101_SOCKET_AXIS_Y_ABS_M, 0.302550896),
+    (0.0, -SO101_SOCKET_AXIS_Y_ABS_M, 0.302550896),
+)
+SEMI_SUPPORT_BOTTOM_HOLES_LOCAL_M = (
+    (-0.077, -0.087, 0.0),
+    (-0.077, +0.087, 0.0),
+    (+0.077, -0.087, 0.0),
+    (+0.077, +0.087, 0.0),
+)
 
 
 def mesh_mm_to_base_link_m(point_mm: Sequence[float]) -> tuple[float, float, float]:

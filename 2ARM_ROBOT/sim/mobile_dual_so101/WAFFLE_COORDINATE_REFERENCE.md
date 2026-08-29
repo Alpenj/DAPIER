@@ -1,4 +1,4 @@
-# Waffle Pi 좌표 기준과 dual-tower 배치
+# Waffle Pi 좌표 기준과 중앙 STEP 지지대 배치
 
 이 문서는 ROBOTIS 공식 Jazzy URDF, 조립 STL과
 `TB3_WAFFLE_PLATE-IPL-01` PDF/STEP을 기준으로 만든 제작 좌표표다. 단위는 별도
@@ -58,20 +58,32 @@ p_base_link[m] = 0.001 * p_mesh[mm] + (-0.064, 0, 0)
 6개 중심은 공식 조립 STL의 최상단에서 열린 원형 피처로 추출했다. 실제 로봇에서
 하부 nut 접근, 이미 사용 중인 support와 케이블 간섭은 조립 전에 다시 확인한다.
 
-## tower layout 기준 좌표
+## 분할 `assem_base.step` layout 기준 좌표
 
 | 대상 | `base_link` 중심 `(X, Y, Z)` | 근거/상태 |
 | --- | --- | --- |
 | top datum | `(-64, 0, 91.5)` | 공식 URDF transform + 조립 STL |
-| common deck | `(-64, 0, 95.5)` | 바닥 Z=91.5, 두께 8 |
-| deck 외형 | `192 × 256 × 8` | 6-hole pattern과 tower footprint 포함 |
-| left tower/arm mount | `(-64, +100, 380)` | 좌측, camera 폭 여유 포함 |
-| right tower/arm mount | `(-64, -100, 380)` | 우측 대칭 |
-| depth camera | `(+25, 0, 450)` | 두 tower 정중앙, 외형은 아직 provisional |
+| STEP bottom contact | `(-64, 0, 91.5)` | 바닥면을 공식 Waffle 상판에 접촉 |
+| STEP base 외형 | `160 × 180 × 25` | STEP에서 읽은 bottom footprint |
+| STEP bottom hole 4개 | `(-64+/-77, +/-87, 91.5)` | 반지름 3; Waffle M3 후보와 불일치 |
+| lower print part | `160 × 180 × 170` | assembly local Z=0~170 |
+| source upper print part | `110.963 × 254 × 156` | 원본 보존, Z=160~316 |
+| upper socket print part | `110.963 × 254 × 156` | 원본 유지, Z=160~316 |
+| central column top | Z=`391.5` | assembly local Z=300 |
+| left upper socket axis | `(-64, +127, 394.050896)` | radius 8.5 |
+| right upper socket axis | `(-64, -127, 394.050896)` | 좌우 대칭 |
+| left SO-101 arm frame | `(-64, +93.4, 387.686186)` | socket axis offset 역산 |
+| right SO-101 arm frame | `(-64, -93.4, 387.686186)` | socket axis offset 역산 |
+| depth camera body center | `(-64, 0, 550)` | 전용 mast, 27도 하향 |
 
-팔 높이 380과 camera X/Z는 작업영역 및 시야 concept 값이다. Waffle 좌표에서
-정확히 표현했지만 실물 치수 확정값은 아니다. 특히 camera model/체결홀/optical
-origin과 팔 장착 flange는 실측 뒤 CAD revision에서 교체한다.
+원본 STEP과 두 STL은 수정 없이 사용한다. upper 좌우 소켓이 stock SO-101의
+`base_motor_holder_so101_v1`, `base_so101_v2`,
+`waveshare_mounting_plate_so101_v2`를 대체한다. base servo와 shoulder 이후 joint chain은
+유지하며, 원본 socket 큰 홀 축과 SO-101 base frame 변환을 맞춘다. 팔 frame 좌표를
+외부 장착홀 간격으로 해석하면 안 된다. STEP bottom hole 네 개는
+공식 Waffle 체결 후보와 직접 일치하지 않으므로 adapter plate와 fit coupon이
+필요하다. 카메라 model/체결홀/optical origin과 지지대 재료·질량은 실측 뒤 CAD와
+동역학 모델에서 교체한다.
 
 ## 원본과 무결성
 
@@ -84,6 +96,14 @@ origin과 팔 장착 flange는 실측 뒤 CAD revision에서 교체한다.
   `f4568fa9e642e54998a2be0224c906b1dfec823d5bb9c10a8450833eb00e8105`
 - official plate STEP SHA-256:
   `966d4e1a0236ef69674870bbb130ae7ce7fceb2168eb5eb7847e4b01c8a268d3`
+- teammate `assem_base.step` SHA-256:
+  `f9f77f71a77f962aac3c7a3898bf5df7232b12982be3f16e3e2fc20d39c1bb3b`
+- lower STL SHA-256:
+  `f91c58b14bd9932757787d9fea1f72104bae537d38b003d2a430576fecc70076`
+- upper STL SHA-256:
+  `ed6218f3ba83459fc7c436416ef708130e2622a27df6772d4d62bf6a9d822bf7`
+- SO-101 `base_so101_v2.stl` SHA-256:
+  `bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d`
 
 출처:
 

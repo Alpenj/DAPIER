@@ -14,7 +14,7 @@ A/B/C는 셋 중 하나를 고르는 대안이 아니라 **A→B→C를 순서�
 → IK·policy·control → safety gate → 통합 시험 → 실패 분석 → 문서/PR/demo
 ```
 
-현재 tower, Waffle 좌표, depth camera와 jitter 작업은 이 전체 제품 흐름을 지원하는
+현재 중앙 지지대, Waffle 좌표, depth camera와 jitter 작업은 이 전체 제품 흐름을 지원하는
 하위 트랙이다. 회의의 중심 질문은 구조물 하나가 아니라 다음 문장이다.
 
 > 바닥의 신발을 인식하고 안전하게 집어, 양팔로 자세를 정돈한 뒤 지정 위치에
@@ -49,7 +49,7 @@ A/B/C는 셋 중 하나를 고르는 대안이 아니라 **A→B→C를 순서�
 | 분야 | A에서 직접 해볼 것 |
 | --- | --- |
 | 제품/UX | 시작 위치, 목표 zone, 성공/실패 정의와 demo script 작성 |
-| 기구 | Waffle 6-hole deck, dual-tower, 중앙 camera dummy와 fit coupon |
+| 기구 | Waffle adapter, 중앙 STEP 지지대, shoulder/camera fit coupon |
 | 출력 | K1 Max + Hyper PLA로 coupon 및 축소/분할 prototype 출력 |
 | digital twin | 공식 Waffle mesh, SO-101, 신발 free body와 camera frame 검증 |
 | perception | 고정된 신발 또는 MOCK pose로 3D pose contract 작성 |
@@ -77,7 +77,7 @@ A는 단순 목업이 아니라 모든 분야의 첫 번째 작은 완주다.
 | 분야 | B에서 확장할 것 |
 | --- | --- |
 | 제품/UX | 한 켤레 정렬 기준, 좌/우 slot, 허용 오차와 사람 개입 규칙 |
-| 기구 | 모듈형 dual-tower, 교체형 arm plate와 camera cradle, bolt/금속 보강 |
+| 기구 | 모듈형 중앙 지지대, 교체형 shoulder plate와 camera cradle, bolt/금속 보강 |
 | 출력 | 파라메트릭 CAD/STEP/STL, fit coupon, BOM, revision 고정 G-code |
 | perception | RGB-D segmentation, 6D/평면 pose, 좌우/짝 분류와 confidence |
 | 데이터 | 실제 실패·성공이 포함된 teleop dataset, train/validation split |
@@ -136,17 +136,18 @@ recovery와 safety 결과가 반복 가능하게 남는 것이다.
 
 ## 전체 회의 의제
 
-회의는 다음 순서로 진행하면 tower 세부 설계에만 갇히지 않는다.
+회의는 다음 순서로 진행하면 지지대 세부 설계에만 갇히지 않는다.
 
 1. **제품 목표:** 정리 장소가 floor zone인지 rack인지, 신발 한 짝/한 켤레의 정의
 2. **성공 지표:** 성공률, 정렬 오차, 시간, 개입, recovery와 안전 지표
 3. **A demo:** 가장 작은 end-to-end 입력·출력과 20-trial test 정의
 4. **B MVP:** 양팔이 반드시 필요한 동작과 한 팔로 처리할 동작 구분
 5. **인지/데이터:** camera model, annotation, dataset 규모와 policy baseline
-6. **기구/제작:** tower 높이·폭, arm/camera interface, K1 Max 출력과 보강
+6. **기구/제작:** 중앙 지지대 높이·폭, shoulder/camera interface, K1 Max 출력과 보강
 7. **제어/안전:** jitter, limits, watchdog, base-arm interlock, HW 승인 절차
-8. **C 확장:** 이동과 여러 켤레를 넣을 시점 및 진입 gate
-9. **역할/일정:** 각 산출물 담당, review 담당, 실측 날짜와 demo 날짜
+8. **LLM 감독기:** 허용 skill, schema, 재계획 횟수, 사람 개입과 안전 veto 경계
+9. **C 확장:** 이동과 여러 켤레를 넣을 시점 및 진입 gate
+10. **역할/일정:** 각 산출물 담당, review 담당, 실측 날짜와 demo 날짜
 
 회의에서 반드시 정할 결정:
 
@@ -154,7 +155,8 @@ recovery와 safety 결과가 반복 가능하게 남는 것이다.
 - B의 최종 정리 형상과 양팔 사용 이유
 - camera 정확 모델 확인 담당과 기한
 - SO-101/Waffle 실측 담당과 기한
-- 장착 높이 380 mm, tower 간격 200 mm, 전체 통과 폭의 허용 범위
+- upper socket 홀 중심 높이 394.051 mm·간격 254 mm, arm frame Z=387.686 mm와
+  camera mast Z=550 mm의 전체 통과 폭 허용 범위
 - A prototype에 금속 보강을 바로 넣을지, 변형 측정 후 넣을지
 - 각 단계의 HW gate 승인자와 중단 기준
 
@@ -162,13 +164,14 @@ recovery와 safety 결과가 반복 가능하게 남는 것이다.
 
 | 트랙 | 현재 상태 | 다음 산출물/게이트 |
 | --- | --- | --- |
-| Waffle 좌표·형상 | 공식 URDF/STL/STEP 좌표와 6-hole 후보 반영, 46개 관련 테스트 통과 | 실물 하부 nut 접근 확인 |
-| tower/camera | 중앙 camera concept와 시야 ray 검증 | 정확 camera enclosure/mount/optical datum |
-| SO-101 interface | 공식 Base STL/STEP 확보 | flange hole pitch·두께·bolt 방향 및 coupon |
+| Waffle 좌표·형상 | 공식 URDF/STL/STEP 좌표와 6-hole 후보 반영, 전체 49개 테스트 통과 | 실물 하부 nut 접근 확인 |
+| support/camera | 상·하부 원본 STL과 10 mm overlap, 전용 mast camera Z=550 mm·27° | 실제 hole/optical datum 및 mast 출력 검증 |
+| SO-101 interface | upper socket이 stock base 출력물을 대체하고 servo·shoulder chain 삽입 | 조립 순서·bolt 방향 및 fit coupon |
 | physics/IK | physics-executed IK 구현, raw actual jerk gate는 FAIL | backlash/update latency 식별값 반영 |
 | jitter | temporal ensemble 포함 후보 정리 중 | baseline/filter/ensemble 평가표와 test harness |
 | shoe task | free shoe와 기본 task/test 존재 | A의 한 짝 state machine·20-trial metric |
 | fabrication | K1 Max, Hyper PLA Black 1.75 mm/1 kg 확인 | nozzle·slicer/version 후 STL/G-code revision |
+| LLM supervisor | provider-neutral typed skill schema와 fail-closed validator | deterministic task executor 연결 후 replay 평가 |
 | safety | simulation-only, hardware 실행 없음 | dummy-load→정적 proof→승인된 제한 HW |
 
 이 작업들은 회의 결정을 기다리며 멈추지 않는다. 다만 camera/arm interface의 최종 CAD와

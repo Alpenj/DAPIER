@@ -78,6 +78,22 @@ def _collision_geoms_for_arm(
     )
 
 
+def _collision_geoms_for_body_prefixes(
+    model: mujoco.MjModel, prefixes: Sequence[str]
+) -> tuple[int, ...]:
+    return tuple(
+        geom_id
+        for geom_id in range(model.ngeom)
+        if int(model.geom_contype[geom_id]) != 0
+        and _body_name_for_geom(model, geom_id).startswith(tuple(prefixes))
+    )
+
+
+def _geom_id_if_present(model: mujoco.MjModel, name: str) -> int | None:
+    geom_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
+    return int(geom_id) if geom_id >= 0 else None
+
+
 def bimanual_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
     """Return every left collision geom against every right collision geom."""
 
@@ -89,31 +105,83 @@ def bimanual_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
 
 
 def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
-    """Return arm-arm and arm-front-camera collision pairs."""
+    """Return fail-closed pairs for arms, camera, base, and tower structure."""
 
     left = _collision_geoms_for_arm(model, "left")
     right = _collision_geoms_for_arm(model, "right")
+    all_arm_geoms = (*left, *right)
     pairs = list(bimanual_geom_pairs(model))
 
-    camera_id = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_GEOM, "depth_camera_collision"
-    )
-    if camera_id < 0:
+    camera_id = _geom_id_if_present(model, "depth_camera_collision")
+    if camera_id is None:
         raise RuntimeError("front depth camera collision geometry is missing")
-    pairs.extend((arm_id, camera_id) for arm_id in (*left, *right))
-    return tuple(pairs)
+    pairs.extend((arm_id, camera_id) for arm_id in all_arm_geoms)
+
+    # The requested interference risk is the moving gripper against the Waffle
+    # body. Protect wheels and casters too, since folded poses can reach down.
+    gripper_geoms = _collision_geoms_for_body_prefixes(
+        model,
+        (
+            "left_gripper",
+            "left_moving_jaw",
+            "right_gripper",
+            "right_moving_jaw",
+        ),
+    )
+    base_geoms = _collision_geoms_for_body_prefixes(model, ("tb3_",))
+    pairs.extend(
+        (gripper_id, base_id)
+        for gripper_id in gripper_geoms
+        for base_id in base_geoms
+    )
+
+    support_names = (
+        "semi_support_base_collision",
+        "semi_support_column_collision",
+        "tower_camera_mast_collision",
+        "tower_camera_interface_plate_collision",
+    )
+    support_geoms = tuple(
+        geom_id
+        for name in support_names
+        if (geom_id := _geom_id_if_present(model, name)) is not None
+    )
+    for arm_id in all_arm_geoms:
+        body_name = _body_name_for_geom(model, arm_id)
+        for support_id in support_geoms:
+            support_name = (
+                mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_GEOM, support_id
+                )
+                or ""
+            )
+            # Both shoulders bolt to side interfaces on the central STEP
+            # support. Their overlap with the conservative solid column proxy
+            # is intentional; every downstream moving link stays protected.
+            own_support_interface = (
+                body_name in {"left_shoulder", "right_shoulder"}
+                and support_name == "semi_support_column_collision"
+            )
+            if not own_support_interface:
+                pairs.append((arm_id, support_id))
+
+    return tuple(dict.fromkeys(pairs))
 
 
 def minimum_protected_clearance(
     model: mujoco.MjModel,
     data: mujoco.MjData,
     pairs: Sequence[tuple[int, int]] | None = None,
+    *,
+    distance_cap_m: float = 2.0,
 ) -> tuple[float, int, int]:
     """Measure the closest protected geom pair at the current pose."""
 
     resolved_pairs = protected_geom_pairs(model) if pairs is None else pairs
     if not resolved_pairs:
         raise ValueError("at least one protected geom pair is required")
+    if not math.isfinite(distance_cap_m) or distance_cap_m <= 0:
+        raise ValueError("distance_cap_m must be finite and positive")
     from_to = np.zeros(6, dtype=float)
     best_distance = math.inf
     best_pair = (-1, -1)
@@ -124,7 +192,7 @@ def minimum_protected_clearance(
                 data,
                 int(first),
                 int(second),
-                2.0,
+                distance_cap_m,
                 from_to,
             )
         )
@@ -178,7 +246,10 @@ def check_bimanual_path(
         action = current + fraction * (target - current)
         apply_control_as_pose(model, data, action)
         distance, first, second = minimum_protected_clearance(
-            model, data, pairs
+            model,
+            data,
+            pairs,
+            distance_cap_m=required_clearance_m,
         )
         if distance < best[0]:
             best = (distance, first, second, fraction)
