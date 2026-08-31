@@ -111,8 +111,13 @@ class EmbodimentSpec:
                 "every simulator lower bound must be below its upper bound"
             )
         if (
-            not self.calibration_id.startswith("sha256:")
+            not isinstance(self.calibration_id, str)
+            or not self.calibration_id.startswith("sha256:")
             or len(self.calibration_id) != 71
+            or any(
+                character not in "0123456789abcdefABCDEF"
+                for character in self.calibration_id[7:]
+            )
         ):
             raise ValueError("calibration_id must be sha256:<64-hex>")
 
@@ -207,8 +212,27 @@ class BimanualEmbodimentSpec:
     right: EmbodimentSpec
 
     def __post_init__(self) -> None:
-        if self.left.channel_names != self.right.channel_names:
-            raise ValueError("left and right arms must use the same channel contract")
+        expected_contract = (
+            ("embodiment_id", "so101-single-arm"),
+            ("embodiment_revision", "so101-new-calibration-v1"),
+            ("channel_names", SO101_CHANNEL_NAMES),
+            ("action_units", SO101_ACTION_UNITS),
+            ("sim_units", SO101_SIM_UNITS),
+            ("sim_lower", SO101_NEW_CALIBRATION_SIM_LOWER),
+            ("sim_upper", SO101_NEW_CALIBRATION_SIM_UPPER),
+        )
+        for role, spec in zip(SO101_ARM_ROLES, (self.left, self.right), strict=True):
+            mismatches = tuple(
+                field_name
+                for field_name, expected in expected_contract
+                if getattr(spec, field_name) != expected
+            )
+            if mismatches:
+                mismatch_list = ", ".join(mismatches)
+                raise ValueError(
+                    f"{role} arm must use the canonical SO-101 new-calibration "
+                    f"contract; mismatched fields: {mismatch_list}"
+                )
 
     @property
     def embodiment_id(self) -> str:

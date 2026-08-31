@@ -5,6 +5,8 @@ on:
     paths:
       - "2ARM_ROBOT/sim/mobile_dual_so101/**"
       - "2ARM_ROBOT/sim/turtlebot3_waffle_pi/**"
+      - "dapier_sim_first/embodiment.py"
+      - "dapier_sim_first/__init__.py"
       - "scripts/setup-mujoco-sim"
       - "scripts/verify-mujoco-headless"
       - "requirements-mujoco.in"

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import unittest
 
 from dapier_sim_first.embodiment import (
+    BimanualEmbodimentSpec,
     SO101_CHANNEL_NAMES,
     so101_bimanual_new_calibration_spec,
 )
@@ -74,6 +76,30 @@ class BimanualEmbodimentContractTest(unittest.TestCase):
             now_ns=now_ns,
             control_period_ns=33_333_333,
         )
+
+    def test_noncanonical_child_contract_is_rejected_even_when_both_arms_match(
+        self,
+    ) -> None:
+        replacements = {
+            "embodiment_id": "not-so101",
+            "embodiment_revision": "not-new-calibration",
+            "channel_names": tuple(reversed(SO101_CHANNEL_NAMES)),
+            "action_units": ("radian",) * 6,
+            "sim_units": ("degree",) * 6,
+            "sim_lower": tuple(value - 0.01 for value in self.spec.left.sim_lower),
+            "sim_upper": tuple(value + 0.01 for value in self.spec.left.sim_upper),
+        }
+        for field, value in replacements.items():
+            with self.subTest(field=field):
+                left = replace(self.spec.left, **{field: value})
+                right = replace(self.spec.right, **{field: value})
+                with self.assertRaisesRegex(ValueError, "canonical SO-101"):
+                    BimanualEmbodimentSpec(left=left, right=right)
+
+    def test_one_noncanonical_child_contract_is_rejected(self) -> None:
+        right = replace(self.spec.right, action_units=("radian",) * 6)
+        with self.assertRaisesRegex(ValueError, "right.*canonical SO-101"):
+            BimanualEmbodimentSpec(left=self.spec.left, right=right)
 
 
 if __name__ == "__main__":

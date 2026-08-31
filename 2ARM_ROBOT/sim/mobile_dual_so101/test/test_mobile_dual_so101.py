@@ -6,7 +6,9 @@ import sys
 import unittest
 
 
+DAPIER_ROOT = Path(__file__).resolve().parents[4]
 PROJECT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(DAPIER_ROOT))
 sys.path.insert(0, str(PROJECT_DIR))
 
 try:
@@ -30,6 +32,7 @@ from mobile_dual_so101 import (
     resolve_so101_model,
     validate_model,
 )
+from dapier_sim_first.embodiment import so101_bimanual_new_calibration_spec
 
 
 TEST_MOUNT_HEIGHT_M = 0.42
@@ -52,6 +55,19 @@ class MobileDualSO101Test(unittest.TestCase):
             for index in range(self.model.nu)
         )
         self.assertEqual(actual, ACTION_NAMES)
+
+    def test_embodiment_contract_matches_loaded_mujoco_model(self) -> None:
+        spec = so101_bimanual_new_calibration_spec(
+            "sha256:" + "1" * 64,
+            "sha256:" + "2" * 64,
+        )
+        self.assertEqual(spec.channel_names, ACTION_NAMES)
+        for actuator_id, (expected_lower, expected_upper) in enumerate(
+            zip(spec.sim_lower, spec.sim_upper, strict=True)
+        ):
+            actual_lower, actual_upper = self.model.actuator_ctrlrange[actuator_id]
+            self.assertAlmostEqual(float(actual_lower), expected_lower, delta=1e-5)
+            self.assertAlmostEqual(float(actual_upper), expected_upper, delta=1e-5)
 
     def test_arms_are_namespaced_children_of_base(self) -> None:
         base_id = mujoco.mj_name2id(
