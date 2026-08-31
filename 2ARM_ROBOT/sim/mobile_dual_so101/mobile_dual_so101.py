@@ -1066,6 +1066,41 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--smoke-steps", type=int, default=1000)
     parser.add_argument("--viewer", action="store_true")
     parser.add_argument("--pose-editor", action="store_true")
+    parser.add_argument(
+        "--teleop",
+        action="store_true",
+        help="run bounded keyboard teleoperation inside MuJoCo only",
+    )
+    parser.add_argument(
+        "--teleop-step-deg",
+        type=float,
+        default=5.0,
+        help="requested target increment for each Up/Down press or repeat",
+    )
+    parser.add_argument(
+        "--teleop-min-key-interval-ms",
+        type=float,
+        default=0.0,
+        help="minimum interval between accepted motion key events",
+    )
+    parser.add_argument(
+        "--teleop-max-speed-deg-s",
+        type=float,
+        default=45.0,
+        help="maximum slew speed for smooth simulator control targets",
+    )
+    parser.add_argument(
+        "--teleop-accel-deg-s2",
+        type=float,
+        default=180.0,
+        help="acceleration and braking limit for simulator control targets",
+    )
+    parser.add_argument(
+        "--teleop-clearance-m",
+        type=float,
+        default=0.03,
+        help="protected simulator clearance required for every target path",
+    )
     parser.add_argument("--save-pose", type=Path)
     parser.add_argument(
         "--initial-action-rad",
@@ -1075,10 +1110,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="12 simulator-only initial targets in ACTION_NAMES order",
     )
     args = parser.parse_args(argv)
-    if args.viewer and args.pose_editor:
-        parser.error("--viewer and --pose-editor are mutually exclusive")
+    if sum((args.viewer, args.pose_editor, args.teleop)) > 1:
+        parser.error("--viewer, --pose-editor, and --teleop are mutually exclusive")
     if args.save_pose is not None and not args.pose_editor:
         parser.error("--save-pose requires --pose-editor")
+    if args.teleop_step_deg <= 0:
+        parser.error("--teleop-step-deg must be positive")
+    if args.teleop_min_key_interval_ms < 0:
+        parser.error("--teleop-min-key-interval-ms must be non-negative")
+    if args.teleop_max_speed_deg_s <= 0:
+        parser.error("--teleop-max-speed-deg-s must be positive")
+    if args.teleop_accel_deg_s2 <= 0:
+        parser.error("--teleop-accel-deg-s2 must be positive")
+    if args.teleop_clearance_m <= 0:
+        parser.error("--teleop-clearance-m must be positive")
 
     initial_action = (
         tuple(args.initial_action_rad)
@@ -1109,6 +1154,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         _run_viewer(model, initial_action)
     if args.pose_editor:
         _run_pose_editor(model, source, args.save_pose, initial_action)
+    if args.teleop:
+        from sim_teleop import run_sim_teleop
+
+        run_sim_teleop(
+            model,
+            initial_action=initial_action,
+            step_rad=math.radians(args.teleop_step_deg),
+            min_key_interval_s=args.teleop_min_key_interval_ms / 1000.0,
+            required_clearance_m=args.teleop_clearance_m,
+            max_speed_rad_s=math.radians(args.teleop_max_speed_deg_s),
+            accel_rad_s2=math.radians(args.teleop_accel_deg_s2),
+        )
     return 0
 
 

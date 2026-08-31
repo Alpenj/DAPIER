@@ -185,6 +185,64 @@ MuJoCo `Control` 슬라이더로 양팔 자세를 직접 잡으려면:
 `--save-pose /tmp/new-pose.json`을 함께 주면 기존 파일은 덮어쓰지 않고 새 JSON에만
 저장한다. 이 값은 자동으로 실물에 전송되지 않는다.
 
+### simulation-only Control panel + keyboard teleop
+
+`--pose-editor`는 설계 자세를 빠르게 확인하려고 qpos와 control target을 함께 맞추는
+kinematic 도구다. 반면 `--teleop`은 Control panel이나 키 입력으로 actuator target만 바꾸고
+`mj_step()`이 질량, 관성, 중력, 마찰, damping과 actuator force를 계산하게 한다. 나는
+두 경로를 구분해 자세 편집 결과를 물리 실행 결과로 잘못 해석하지 않도록 한다.
+
+현재 중앙 STEP 지지대와 전용 depth-camera mast를 사용하는 model은 main 실행 파일에서
+다음처럼 연다.
+
+    DAPIER_SO101_MJCF=/absolute/path/to/so101_new_calib.xml \
+      ~/DAPIER/so101_imitation_learning/.venv/bin/python \
+      mobile_dual_so101.py --mount-layout tower \
+      --arm-mount-height-m 0.387686186 --smoke-steps 0 --teleop
+
+오른쪽 `Control` section을 펼쳐 12개 joint slider로 양팔 자세를 직접 조절하는 방식을
+주 조작으로 권장한다. slider 변경은 현재 안전 target에서 새 target까지 충돌 검사를
+통과한 뒤 즉시 `data.ctrl`에 채택되며 qpos를 직접 쓰지 않는다. keyboard는 panel에서
+잡은 자세를 기준으로 특정 축만 보정하는 선택 입력이다.
+
+선택적인 keyboard 입력은 다음과 같다.
+
+- `←` / `→`: 왼팔·오른팔 선택
+- 숫자열 또는 keypad `1`~`6`: shoulder pan, shoulder lift, elbow flex,
+  wrist flex, wrist roll, gripper 선택
+- `↑` / `↓`: 선택 관절 목표를 증감. 누르고 있으면 viewer의 key-repeat마다 계속 변함
+- `O` / `C`: 선택한 팔 gripper 열기·닫기
+- `H`: 기록된 양팔 home target 요청
+- `Space`: simulation stop 또는 현재 pose hold 상태에서 재개
+- `Esc`: viewer 닫기
+
+`L/R`와 `+/-` 별칭은 키 역할이 겹쳐 보이는 문제를 피하려고 제거했다. keyboard
+입력은 repeat마다 5도이고 입력 대기는 0 ms다. keyboard 누적 목표는 `data.ctrl`에
+즉시 점프시키지 않고 50 Hz에서 최대 45 deg/s, 180 deg/s²의 가속·감속 ramp로
+추종한다. 다음 옵션으로 체감 속도를 바꿀 수 있다.
+
+    --teleop-step-deg 5 \
+    --teleop-min-key-interval-ms 0 \
+    --teleop-max-speed-deg-s 45 \
+    --teleop-accel-deg-s2 180
+
+MuJoCo actuator의 공식 관절 범위와 collision guard의 30 mm protected clearance는
+해제하지 않는다. panel 목표 경로와 keyboard의 실제 스무딩 제어 경로를 최대 2도
+간격으로 각각 검사해 양팔, camera, 중앙 지지대와 TurtleBot 본체 간 간섭을 거부한다.
+stop 진입 순간 simulator qpos를 한 번 latch하고
+그 target을 유지하며, stop 중 drift를 새 target으로 계속 따라가지 않는다. 이 기능은
+serial, ROS, LeRobot hardware API를 import하지 않고 `data.ctrl`만 갱신한다. 따라서
+MuJoCo teleop이 실물 SO-101을 움직이지 않는다.
+
+최종 목표인 MuJoCo 병렬 학습에서 이 teleop은 입력 계약을 확인하는 첫 단계다. 다음
+단계에서는 RGB-D, joint state, accepted action, monotonic timestamp와 safety rejection을
+동일 episode schema로 기록한다. GUI가 없는 병렬 rollout worker는 같은 12차원 action
+순서와 guard를 재사용하고, ACT의 Receding Horizon·Temporal Ensembling을 먼저 비교한다.
+학습 checkpoint는 simulation success, collision, tracking error, latency와 jerk gate를
+통과한 뒤에만 sim-to-real 후보가 된다. 실물 적용은 좌우 독립 calibration, measured
+state freshness, velocity/effort limit, watchdog, E-stop과 같은 대화의 명시적 현장 승인
+뒤에 별도 bridge가 수행한다. SIM 성공은 HW 성공 근거가 아니다.
+
 ## 실물 좌우 매핑
 
 `/dev/ttyACM0` 같은 번호는 재연결 순서에 따라 바뀌므로 사용하지 않는다. 좌우 팔을
