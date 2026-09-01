@@ -15,6 +15,13 @@ from typing import Sequence
 
 from mobile_dual_so101 import ACTION_NAMES, actuator_targets_from_qpos
 from shoe_task import OBSERVATION_NAMES, ShoeTaskConfig, ShoeTaskEnv
+from sim_policy import (
+    ActionChunkExecutor,
+    EXECUTION_MODES,
+    HoldChunkPolicy,
+    actuator_targets_to_policy_action,
+    policy_action_to_actuator_targets,
+)
 
 
 @dataclass(frozen=True)
@@ -22,6 +29,9 @@ class ParallelRolloutConfig:
     workers: int = 4
     episodes: int = 8
     steps_per_episode: int = 100
+    execution_mode: str = "receding_horizon"
+    chunk_size: int = 4
+    n_action_steps: int = 1
 
     def validate(self) -> None:
         if self.workers <= 0:
@@ -30,6 +40,12 @@ class ParallelRolloutConfig:
             raise ValueError("episodes must be positive")
         if self.steps_per_episode <= 0:
             raise ValueError("steps_per_episode must be positive")
+        if self.execution_mode not in EXECUTION_MODES:
+            raise ValueError(f"execution_mode must be one of {EXECUTION_MODES}")
+        if self.chunk_size <= 0:
+            raise ValueError("chunk_size must be positive")
+        if self.n_action_steps <= 0 or self.n_action_steps > self.chunk_size:
+            raise ValueError("n_action_steps must be in [1, chunk_size]")
 
 
 def _rollout_worker(
@@ -37,6 +53,9 @@ def _rollout_worker(
     episode_count: int,
     steps_per_episode: int,
     shoe_config: ShoeTaskConfig,
+    execution_mode: str,
+    chunk_size: int,
+    n_action_steps: int,
 ) -> dict[str, object]:
     env = ShoeTaskEnv(shoe_config)
     transitions = 0
@@ -44,6 +63,7 @@ def _rollout_worker(
     finite = True
     hardware_execution = False
     final_shoe_y = 0.0
+    policy_queries = 0
     for episode_index in range(episode_count):
         observation, reset_info = env.reset(
             seed=worker_id * 100_000 + episode_index
@@ -51,9 +71,22 @@ def _rollout_worker(
         hardware_execution = hardware_execution or bool(
             reset_info["hardware_execution"]
         )
-        hold = actuator_targets_from_qpos(env.model, env.data.qpos)
+        hold = actuator_targets_to_policy_action(
+            env.model,
+            actuator_targets_from_qpos(env.model, env.data.qpos),
+        )
+        executor = ActionChunkExecutor(
+            HoldChunkPolicy(hold, chunk_size=chunk_size),
+            mode=execution_mode,
+            n_action_steps=n_action_steps,
+        )
+        executor.reset()
         for _ in range(steps_per_episode):
-            observation, _, _, _, info = env.step(hold)
+            policy_action = executor.next_action(observation)
+            actuator_targets = policy_action_to_actuator_targets(
+                env.model, policy_action
+            )
+            observation, _, _, _, info = env.step(actuator_targets)
             hardware_execution = hardware_execution or bool(
                 info["hardware_execution"]
             )
@@ -61,12 +94,14 @@ def _rollout_worker(
             finite = finite and all(math.isfinite(value) for value in vector)
             observation_checksum += sum(vector)
             transitions += 1
+        policy_queries += executor.policy_queries
         final_shoe_y = float(observation["shoe"]["position_map_m"][1])
     return {
         "worker_id": worker_id,
         "pid": os.getpid(),
         "episodes": episode_count,
         "transitions": transitions,
+        "policy_queries": policy_queries,
         "observation_checksum": observation_checksum,
         "finite_observations": finite,
         "hardware_execution": hardware_execution,
@@ -113,6 +148,9 @@ def run_parallel_rollouts(
                 episode_count,
                 config.steps_per_episode,
                 worker_config,
+                config.execution_mode,
+                config.chunk_size,
+                config.n_action_steps,
             )
             for worker_id, episode_count, worker_config in jobs
         ]
@@ -120,6 +158,7 @@ def run_parallel_rollouts(
     wall_seconds = time.perf_counter() - started
 
     transitions = sum(int(worker["transitions"]) for worker in workers)
+    policy_queries = sum(int(worker["policy_queries"]) for worker in workers)
     pids = {int(worker["pid"]) for worker in workers}
     finite = all(bool(worker["finite_observations"]) for worker in workers)
     hardware_execution = any(
@@ -139,6 +178,11 @@ def run_parallel_rollouts(
         "episodes": config.episodes,
         "steps_per_episode": config.steps_per_episode,
         "transitions": transitions,
+        "policy_adapter": "hold_chunk_fixture",
+        "execution_mode": config.execution_mode,
+        "chunk_size": config.chunk_size,
+        "n_action_steps": config.n_action_steps,
+        "policy_queries": policy_queries,
         "wall_seconds": wall_seconds,
         "transitions_per_second": transitions / wall_seconds,
         "independent_processes": True,
@@ -156,12 +200,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--episodes", type=int, default=8)
     parser.add_argument("--steps", type=int, default=100)
+    parser.add_argument(
+        "--execution-mode",
+        choices=EXECUTION_MODES,
+        default="receding_horizon",
+    )
+    parser.add_argument("--chunk-size", type=int, default=4)
+    parser.add_argument("--n-action-steps", type=int, default=1)
     args = parser.parse_args(argv)
     report = run_parallel_rollouts(
         ParallelRolloutConfig(
             workers=args.workers,
             episodes=args.episodes,
             steps_per_episode=args.steps,
+            execution_mode=args.execution_mode,
+            chunk_size=args.chunk_size,
+            n_action_steps=args.n_action_steps,
         )
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))

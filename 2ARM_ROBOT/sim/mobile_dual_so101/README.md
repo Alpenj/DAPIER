@@ -324,3 +324,56 @@ action을 받는다.
 닫으려면 RGB/depth capture, episode writer, 12차원 action normalization, train/validation
 split과 checkpoint adapter가 추가로 필요하다. primitive 신발, stationary base,
 domain randomization과 실물 실행도 아직 검증하지 않았다.
+
+### MuJoCo episode와 action-chunk 경계
+
+`sim_episode.py`는 front depth camera의 RGB와 metric depth, 좌우 follower state,
+실제로 `data.ctrl`에 전달한 12축 target, simulation timestamp를 20 Hz의 같은 frame으로
+기록한다. 팔 action은 radian이고 gripper action은 dataset 경계에서 0~1로 정규화한다.
+원본 actuator 단위와 policy 단위의 양방향 변환은 round-trip test로 고정했다.
+
+    ~/DAPIER/so101_imitation_learning/.venv/bin/python sim_episode.py \
+      --output /tmp/DAPIER-2026-08-31-mujoco-episode-001 \
+      --episode-id DAPIER-2026-08-31-mujoco-episode-001 \
+      --samples 20 --fps 20 --width 64 --height 48
+
+현재 기본 action source는 home target을 유지하는 contract fixture다. 신발 task가 실제로
+성공하지 않으면 manifest를 `accepted`로 거짓 표기하지 않고 `recorded`로 남긴다. 따라서
+이 명령만 실행해 만든 hold episode는 RGB-D writer 검증에는 쓰지만 ACT train set에는
+포함하지 않는다. 실물 leader/follower recorder도 같은 12축 순서와 unit을 사용하되
+serial 연결은 별도 human hardware gate 뒤의 후속 작업이다.
+
+`sim_policy.py`는 policy가 반환한 H-step action chunk와 MuJoCo actuator 사이의 경계다.
+기본 `receding_horizon`은 매 step 새 chunk의 첫 action만 사용한다. 비교용
+`action_queue`는 `n_action_steps`만큼의 prefix만 사용하고 reset 또는 skill 전환에서
+남은 action을 폐기한다.
+
+    ~/DAPIER/so101_imitation_learning/.venv/bin/python \
+      parallel_shoe_rollout.py --workers 4 --episodes 8 --steps 500 \
+      --execution-mode receding_horizon
+
+    ~/DAPIER/so101_imitation_learning/.venv/bin/python \
+      parallel_shoe_rollout.py --workers 4 --episodes 8 --steps 500 \
+      --execution-mode action_queue --chunk-size 16 --n-action-steps 4
+
+현재 병렬 worker의 policy는 checkpoint가 아니라 `hold_chunk_fixture`다. 이 단계가
+증명하는 것은 worker별 독립 model/data, 12축 policy unit, chunk query/reset semantics와
+simulation-only 경계다. DAPIER-native ACT checkpoint의 live RGB-D inference adapter와
+Temporal Ensembling, randomized shoe/friction/camera/latency는 다음 단계다.
+
+### 집기 후 TurtleBot 이동
+
+첫 baseline에서는 팔 ACT와 navigation을 한 policy로 합치지 않는다.
+
+    manipulation ACT (base stationary)
+      -> grasp verified
+      -> carry-ready pose and bounded gripper hold
+      -> navigation (arm chunk reset, arm proposal blocked)
+      -> base settled and observation fresh
+      -> new place ACT generation
+
+`MobileSkillGate`는 lift와 gripper hold가 함께 확인되고 양팔이 carry envelope 안에 있을
+때만 navigation으로 전환한다. 전환 순간 stale arm chunk를 폐기하며, 이동 중에는 새
+arm policy proposal을 허용하지 않는다. 집은 팔의 transport hold target은 별도로
+보존한다. 도착 뒤 base linear/angular velocity와 observation age gate를 통과해야 새
+place generation을 시작한다. 이 클래스는 base나 팔 command를 직접 publish하지 않는다.

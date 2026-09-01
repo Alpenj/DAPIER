@@ -24,6 +24,9 @@ class ParallelShoeRolloutTest(unittest.TestCase):
             ParallelRolloutConfig(workers=0),
             ParallelRolloutConfig(episodes=0),
             ParallelRolloutConfig(steps_per_episode=0),
+            ParallelRolloutConfig(execution_mode="unknown"),
+            ParallelRolloutConfig(chunk_size=0),
+            ParallelRolloutConfig(chunk_size=2, n_action_steps=3),
         ):
             with self.assertRaises(ValueError):
                 config.validate()
@@ -45,6 +48,24 @@ class ParallelShoeRolloutTest(unittest.TestCase):
         self.assertEqual(report["observation_dimension"], 21)
         self.assertEqual(report["action_dimension"], 12)
         self.assertEqual(report["transitions"], 10)
+        self.assertEqual(report["execution_mode"], "receding_horizon")
+        self.assertEqual(report["policy_queries"], 10)
+        self.assertEqual(report["policy_adapter"], "hold_chunk_fixture")
+
+    def test_action_queue_reuses_only_the_configured_chunk_prefix(self) -> None:
+        report = run_parallel_rollouts(
+            ParallelRolloutConfig(
+                workers=1,
+                episodes=1,
+                steps_per_episode=5,
+                execution_mode="action_queue",
+                chunk_size=4,
+                n_action_steps=2,
+            )
+        )
+        self.assertEqual(report["transitions"], 5)
+        self.assertEqual(report["policy_queries"], 3)
+        self.assertEqual(report["n_action_steps"], 2)
 
 
 if __name__ == "__main__":
