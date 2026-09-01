@@ -99,6 +99,10 @@ class MissionEvent:
     transport_hold_ok: bool = True
     object_released: bool = False
     at_start_zone: bool = False
+    tactile_available: bool = False
+    tactile_contact: bool = False
+    tactile_slip: bool = False
+    tactile_overpressure: bool = False
     failure_code: str = ""
     detail: str = ""
 
@@ -127,6 +131,16 @@ class MissionEvent:
             raise ValueError("pose_confidence must be inside [0, 1]")
         if len(self.failure_code) > 100 or len(self.detail) > 500:
             raise ValueError("failure_code or detail is too long")
+        tactile_flags = (
+            self.tactile_available,
+            self.tactile_contact,
+            self.tactile_slip,
+            self.tactile_overpressure,
+        )
+        if not all(isinstance(value, bool) for value in tactile_flags):
+            raise ValueError("tactile event flags must be booleans")
+        if not self.tactile_available and any(tactile_flags[1:]):
+            raise ValueError("tactile measurements require tactile_available")
         if self.kind == MissionEventType.NAVIGATION_RESULT and self.location is None:
             raise ValueError("navigation_result requires a location")
         if self.kind == MissionEventType.FAULT and not self.failure_code.strip():
@@ -319,11 +333,17 @@ class MissionController:
         )
 
     def _grasp_result(self, event: MissionEvent) -> MissionTransition:
+        tactile_ok = not event.tactile_available or (
+            event.tactile_contact
+            and not event.tactile_slip
+            and not event.tactile_overpressure
+        )
         grasp_ok = (
             event.success
             and event.object_lifted
             and event.gripper_holding
             and event.carry_pose_clear
+            and tactile_ok
         )
         if not grasp_ok:
             return self._retry_or_stop(
@@ -348,7 +368,16 @@ class MissionController:
     def _navigation_to_a(self, event: MissionEvent) -> MissionTransition:
         if event.location != MissionLocation.A:
             return self._safe_stop(self.phase, event, "navigation result location is not A")
-        if not self._carrying or not event.transport_hold_ok:
+        tactile_hold_ok = not event.tactile_available or (
+            event.tactile_contact
+            and not event.tactile_slip
+            and not event.tactile_overpressure
+        )
+        if (
+            not self._carrying
+            or not event.transport_hold_ok
+            or not tactile_hold_ok
+        ):
             return self._safe_stop(self.phase, event, "transport hold was lost")
         if not event.success:
             if not event.base_stationary:

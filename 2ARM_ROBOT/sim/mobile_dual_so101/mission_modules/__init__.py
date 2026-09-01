@@ -41,6 +41,15 @@ from .object_pose import (
     validate_object_pose_inputs,
 )
 from .types import Pose2D, Pose3D
+from .tactile import (
+    ALL_TACTILE_ROLES,
+    TactileChannelStatus,
+    TactileLimits,
+    TactileModality,
+    TactilePort,
+    TactileRigStatus,
+    TactileRole,
+)
 from .transport import (
     AckStatus,
     CommandAck,
@@ -61,6 +70,7 @@ from .world_state import WorldStateSnapshot
 
 __all__ = [
     "ALL_CAMERA_ROLES",
+    "ALL_TACTILE_ROLES",
     "ArmSide",
     "ArmTelemetry",
     "ManipulationAction",
@@ -93,6 +103,12 @@ __all__ = [
     "ShoePoseEstimate",
     "SlamEstimate",
     "SlamTrackingState",
+    "TactileChannelStatus",
+    "TactileLimits",
+    "TactileModality",
+    "TactilePort",
+    "TactileRigStatus",
+    "TactileRole",
     "AckStatus",
     "CommandAck",
     "CommandEnvelope",

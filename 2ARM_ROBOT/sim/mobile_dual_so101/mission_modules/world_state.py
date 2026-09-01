@@ -12,6 +12,7 @@ from .health import EdgeResourceLimits, RuntimeHealthSnapshot
 from .manipulator import ManipulatorStatus
 from .mobility import MobilityStatus
 from .object_pose import ShoePoseEstimate
+from .tactile import TactileLimits, TactileRigStatus
 from .transport import LinkHeartbeat
 from .visual_slam import SlamEstimate
 
@@ -28,6 +29,7 @@ class WorldStateSnapshot:
     runtime_health: RuntimeHealthSnapshot
     link_heartbeat: LinkHeartbeat
     shoe_pose: ShoePoseEstimate | None = None
+    tactile_status: TactileRigStatus | None = None
 
     def validate(self) -> None:
         for label, value in (
@@ -48,6 +50,8 @@ class WorldStateSnapshot:
             self.shoe_pose.validate()
             if self.shoe_pose.map_id != self.slam.map_id:
                 raise ValueError("shoe pose and SLAM map_id must match")
+        if self.tactile_status is not None:
+            self.tactile_status.validate()
 
     def age_ms(self, *, now_monotonic_ns: int) -> float:
         self.validate()
@@ -77,10 +81,12 @@ class WorldStateSnapshot:
         self,
         *,
         edge_limits: EdgeResourceLimits,
+        tactile_limits: TactileLimits | None = None,
     ) -> dict[str, object]:
         """Return bounded metadata; raw camera payloads are intentionally absent."""
 
         self.validate()
+        resolved_tactile_limits = tactile_limits or TactileLimits()
         pose = self.mobility.pose_map
         shoe_pose: dict[str, object] | None = None
         if self.shoe_pose is not None:
@@ -121,6 +127,7 @@ class WorldStateSnapshot:
                 ),
                 "carry_pose_clear": self.manipulator.carry_pose_clear,
             },
+            "tactile": self._tactile_summary(resolved_tactile_limits),
             "edge": {
                 "motion_allowed": self.runtime_health.motion_allowed(edge_limits),
                 "alert_codes": list(self.runtime_health.alert_codes(edge_limits)),
@@ -143,5 +150,28 @@ class WorldStateSnapshot:
             ],
         }
 
+
+    def _tactile_summary(self, limits: TactileLimits) -> dict[str, object]:
+        if self.tactile_status is None:
+            return {"available": False, "alert_codes": [], "channels": []}
+        return {
+            "available": any(channel.enabled for channel in self.tactile_status.channels),
+            "alert_codes": list(self.tactile_status.alert_codes(limits)),
+            "channels": [
+                {
+                    "role": channel.role.value,
+                    "enabled": channel.enabled,
+                    "modality": (
+                        channel.modality.value if channel.modality is not None else None
+                    ),
+                    "contact": channel.contact,
+                    "normal_force_n": channel.normal_force_n,
+                    "slip_probability": channel.slip_probability,
+                    "overpressure": channel.overpressure,
+                    "observation_age_ms": channel.observation_age_ms,
+                }
+                for channel in self.tactile_status.channels
+            ],
+        }
 
 __all__ = ["WorldStateSnapshot"]

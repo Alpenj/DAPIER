@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import replace
 
 import json
 from pathlib import Path
@@ -15,6 +16,12 @@ from mission_modules.health import EdgeComputeHealth, EdgeResourceLimits, Runtim
 from mission_modules.manipulator import ArmSide, ArmTelemetry, ManipulatorStatus
 from mission_modules.mobility import MobilityStatus
 from mission_modules.object_pose import ShoePoseEstimate
+from mission_modules.tactile import (
+    TactileChannelStatus,
+    TactileModality,
+    TactileRigStatus,
+    TactileRole,
+)
 from mission_modules.transport import LinkHeartbeat
 from mission_modules.types import Pose2D, Pose3D
 from mission_modules.visual_slam import SlamEstimate, SlamTrackingState
@@ -139,6 +146,50 @@ class WorldStateContractTest(unittest.TestCase):
                 now_monotonic_ns=1_300_000_000,
                 max_snapshot_age_ms=500.0,
             )
+        )
+
+    def test_tactile_summary_contains_fsr_alerts_not_raw_samples(self) -> None:
+        left = TactileChannelStatus(
+            role=TactileRole.LEFT_GRIPPER,
+            enabled=True,
+            modality=TactileModality.NORMAL_FORCE,
+            sensor_id="left-fsr",
+            calibration_id="left-fsr-cal-v1",
+            sequence=2,
+            normal_force_n=2.0,
+            slip_probability=0.8,
+            contact=True,
+            overpressure=False,
+            valid=True,
+            observation_age_ms=5.0,
+        )
+        right = TactileChannelStatus(
+            role=TactileRole.RIGHT_GRIPPER,
+            enabled=False,
+            modality=None,
+            sensor_id="",
+            calibration_id="",
+            sequence=0,
+            normal_force_n=0.0,
+            slip_probability=0.0,
+            contact=False,
+            overpressure=False,
+            valid=False,
+            observation_age_ms=0.0,
+        )
+        state = replace(
+            snapshot(),
+            tactile_status=TactileRigStatus(channels=(left, right)),
+        )
+        summary = state.as_supervisor_summary(edge_limits=EdgeResourceLimits())
+        self.assertTrue(summary["tactile"]["available"])
+        self.assertIn(
+            "left_gripper:slip",
+            summary["tactile"]["alert_codes"],
+        )
+        self.assertEqual(
+            summary["tactile"]["channels"][0]["modality"],
+            "normal_force",
         )
 
     def test_shoe_pose_and_slam_map_must_match(self) -> None:
