@@ -59,6 +59,11 @@ class SimPolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside"):
             policy_action_to_actuator_targets(self.model, action)
 
+        targets = list(actuator_targets_from_qpos(self.model, data.qpos))
+        targets[0] = 100.0
+        with self.assertRaisesRegex(ValueError, "actuator target"):
+            actuator_targets_to_policy_action(self.model, targets)
+
     def test_receding_horizon_and_queue_have_explicit_query_counts(self) -> None:
         env = ShoeTaskEnv()
         observation, _ = env.reset(seed=0)
@@ -92,9 +97,10 @@ class SimPolicyTest(unittest.TestCase):
     def test_navigation_resets_stale_arm_chunk_and_requires_settled_base(self) -> None:
         env = ShoeTaskEnv()
         observation, _ = env.reset(seed=0)
+        current = actuator_targets_from_qpos(env.model, env.data.qpos)
         hold = actuator_targets_to_policy_action(
             env.model,
-            actuator_targets_from_qpos(env.model, env.data.qpos),
+            current,
         )
         executor = ActionChunkExecutor(
             HoldChunkPolicy(hold, chunk_size=4),
@@ -108,17 +114,65 @@ class SimPolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "verified carry-ready"):
             gate.begin_navigation(
                 executor,
+                model=env.model,
+                current_actuator_targets=current,
                 transport_hold_action=hold,
                 carry_pose_clear=True,
             )
         gate.verify_grasp(object_lifted=True, gripper_holding=True)
+        invalid_hold = list(hold)
+        invalid_hold[0] = 100.0
+        with self.assertRaisesRegex(ValueError, "outside"):
+            gate.begin_navigation(
+                executor,
+                model=env.model,
+                current_actuator_targets=current,
+                transport_hold_action=invalid_hold,
+                carry_pose_clear=True,
+            )
         gate.begin_navigation(
             executor,
+            model=env.model,
+            current_actuator_targets=current,
             transport_hold_action=hold,
             carry_pose_clear=True,
         )
         self.assertFalse(gate.arm_policy_allowed)
         self.assertEqual(gate.transport_hold_action, hold)
+        with self.assertRaisesRegex(RuntimeError, "verified transport hold"):
+            gate.begin_place(
+                executor,
+                base_linear_velocity_mps=0.0,
+                base_angular_velocity_radps=0.0,
+                observation_age_ms=10.0,
+            )
+
+        loss_gate = MobileSkillGate()
+        loss_gate.verify_grasp(object_lifted=True, gripper_holding=True)
+        loss_gate.begin_navigation(
+            executor,
+            model=env.model,
+            current_actuator_targets=current,
+            transport_hold_action=hold,
+            carry_pose_clear=True,
+        )
+        with self.assertRaisesRegex(RuntimeError, "grasp lost"):
+            loss_gate.monitor_transport_hold(
+                observation,
+                object_lifted=False,
+                gripper_holding=True,
+            )
+        self.assertEqual(loss_gate.phase, "safe_stopped")
+
+        self.assertEqual(
+            gate.monitor_transport_hold(
+                observation,
+                object_lifted=True,
+                gripper_holding=True,
+            ),
+            hold,
+        )
+        self.assertTrue(gate.transport_hold_verified)
 
         with self.assertRaisesRegex(ValueError, "not settled"):
             gate.begin_place(

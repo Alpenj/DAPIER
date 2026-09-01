@@ -15,13 +15,14 @@ from typing import Mapping, Protocol, Sequence
 
 import mujoco
 
+from collision_guard import check_bimanual_path
 from mobile_dual_so101 import ACTION_NAMES
 
 
 POLICY_ACTION_DIM = len(ACTION_NAMES)
 GRIPPER_ACTION_INDICES = (5, 11)
 EXECUTION_MODES = ("receding_horizon", "action_queue")
-MOBILE_SKILL_PHASES = ("manipulation", "carry_ready", "navigation", "place")
+MOBILE_SKILL_PHASES = ("manipulation", "carry_ready", "navigation", "place", "safe_stopped")
 
 
 def _finite_vector(values: Sequence[float], *, label: str) -> tuple[float, ...]:
@@ -60,11 +61,16 @@ def actuator_targets_to_policy_action(
     """Convert MuJoCo actuator radians to the dataset policy unit contract."""
 
     targets = list(_finite_vector(actuator_targets, label="actuator targets"))
-    for index in GRIPPER_ACTION_INDICES:
+    for index, target in enumerate(targets):
         lower, upper = (float(value) for value in model.actuator_ctrlrange[index])
         if upper <= lower:
-            raise ValueError(f"invalid gripper actuator range at index {index}")
-        targets[index] = (targets[index] - lower) / (upper - lower)
+            raise ValueError(f"invalid actuator range at index {index}")
+        if not lower <= target <= upper:
+            raise ValueError(
+                f"actuator target {ACTION_NAMES[index]}={target} is outside [{lower}, {upper}]"
+            )
+        if index in GRIPPER_ACTION_INDICES:
+            targets[index] = (target - lower) / (upper - lower)
     return _finite_vector(targets, label="policy action")
 
 
@@ -172,6 +178,10 @@ class MobileSkillGate:
         self.phase = "manipulation"
         self.grasp_verified = False
         self.transport_hold_action: tuple[float, ...] | None = None
+        self.transport_hold_verified = False
+        self.stop_reason: str | None = None
+        self._transport_model: mujoco.MjModel | None = None
+        self._transport_hold_actuator: tuple[float, ...] | None = None
 
     @property
     def arm_policy_allowed(self) -> bool:
@@ -189,6 +199,8 @@ class MobileSkillGate:
         self,
         executor: ActionChunkExecutor,
         *,
+        model: mujoco.MjModel,
+        current_actuator_targets: Sequence[float],
         transport_hold_action: Sequence[float],
         carry_pose_clear: bool,
     ) -> None:
@@ -196,12 +208,78 @@ class MobileSkillGate:
             raise RuntimeError("navigation requires a verified carry-ready grasp")
         if not carry_pose_clear:
             raise ValueError("navigation requires both arms inside the carry envelope")
-        self.transport_hold_action = _finite_vector(
+        hold_policy = _finite_vector(
             transport_hold_action,
             label="transport hold action",
         )
+        hold_actuator = policy_action_to_actuator_targets(
+            model,
+            hold_policy,
+        )
+        current = _finite_vector(
+            current_actuator_targets,
+            label="current actuator targets",
+        )
+        actuator_targets_to_policy_action(model, current)
+        assessment = check_bimanual_path(
+            model,
+            current,
+            hold_actuator,
+        )
+        if not assessment.safe:
+            raise ValueError(f"unsafe transport hold: {assessment.reason}")
+        self.transport_hold_action = hold_policy
+        self.transport_hold_verified = False
+        self._transport_model = model
+        self._transport_hold_actuator = hold_actuator
         executor.reset()
         self.phase = "navigation"
+
+    def monitor_transport_hold(
+        self,
+        observation: Mapping[str, object],
+        *,
+        object_lifted: bool,
+        gripper_holding: bool,
+        max_hold_deviation: float = 0.05,
+    ) -> tuple[float, ...]:
+        """Return the enforced hold, or latch a safe stop on carry failure."""
+
+        if self.phase != "navigation":
+            raise RuntimeError("transport hold monitoring requires navigation")
+        if not math.isfinite(max_hold_deviation) or max_hold_deviation <= 0:
+            raise ValueError("max_hold_deviation must be finite and positive")
+        if not object_lifted or not gripper_holding:
+            self._stop_transport("transport grasp lost")
+        if (
+            self.transport_hold_action is None
+            or self._transport_model is None
+            or self._transport_hold_actuator is None
+        ):
+            self._stop_transport("transport hold is not initialized")
+        state = observation_to_policy_state(observation)
+        deviation = max(
+            abs(current - target)
+            for current, target in zip(state, self.transport_hold_action, strict=True)
+        )
+        if deviation > max_hold_deviation:
+            self._stop_transport(f"transport hold deviation {deviation:.6f}")
+        current_actuator = policy_action_to_actuator_targets(self._transport_model, state)
+        assessment = check_bimanual_path(
+            self._transport_model,
+            current_actuator,
+            self._transport_hold_actuator,
+        )
+        if not assessment.safe:
+            self._stop_transport(f"unsafe transport recovery: {assessment.reason}")
+        self.transport_hold_verified = True
+        return self.transport_hold_action
+
+    def _stop_transport(self, reason: str) -> None:
+        self.phase = "safe_stopped"
+        self.stop_reason = reason
+        self.transport_hold_verified = False
+        raise RuntimeError(reason)
 
     def begin_place(
         self,
@@ -214,6 +292,8 @@ class MobileSkillGate:
     ) -> None:
         if self.phase != "navigation":
             raise RuntimeError("place requires the navigation phase")
+        if not self.transport_hold_verified:
+            raise RuntimeError("place requires a verified transport hold")
         values = (
             base_linear_velocity_mps,
             base_angular_velocity_radps,

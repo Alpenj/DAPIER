@@ -16,6 +16,11 @@ from typing import Sequence
 
 import mujoco
 
+from collision_guard import (
+    DEFAULT_CLEARANCE_M,
+    CollisionAssessment,
+    check_bimanual_path,
+)
 from mobile_dual_so101 import (
     ACTION_NAMES,
     ARM_CONTROL_NAMES,
@@ -68,6 +73,7 @@ class ShoeTaskConfig:
     frame_skip: int = DEFAULT_FRAME_SKIP
     success_height_m: float = SUCCESS_HEIGHT_M
     success_gripper_distance_m: float = SUCCESS_GRIPPER_DISTANCE_M
+    required_clearance_m: float = DEFAULT_CLEARANCE_M
 
     def validate(self) -> None:
         if len(self.shoe_position_m) != 3 or not all(
@@ -90,6 +96,16 @@ class ShoeTaskConfig:
             raise ValueError("success_height_m must be positive")
         if self.success_gripper_distance_m <= 0:
             raise ValueError("success_gripper_distance_m must be positive")
+        if not math.isfinite(self.required_clearance_m) or self.required_clearance_m <= 0:
+            raise ValueError("required_clearance_m must be finite and positive")
+
+
+class UnsafeActionError(RuntimeError):
+    """Raised before physics advances when a protected path is unsafe."""
+
+    def __init__(self, assessment: CollisionAssessment) -> None:
+        super().__init__(assessment.reason)
+        self.assessment = assessment
 
 
 def _yaw_quaternion(yaw_rad: float) -> tuple[float, float, float, float]:
@@ -368,20 +384,10 @@ class ShoeTaskEnv:
     def step(
         self, action: Sequence[float]
     ) -> tuple[dict[str, object], float, bool, bool, dict[str, object]]:
-        if len(action) != len(ACTION_NAMES):
-            raise ValueError(
-                f"expected {len(ACTION_NAMES)} actions, received {len(action)}"
-            )
-        clipped = []
-        for actuator_id, raw_value in enumerate(action):
-            value = float(raw_value)
-            if not math.isfinite(value):
-                raise ValueError("actions must be finite")
-            lower, upper = self.model.actuator_ctrlrange[actuator_id]
-            clipped.append(min(float(upper), max(float(lower), value)))
-        self.data.ctrl[:] = clipped
-        for _ in range(self.config.frame_skip):
-            mujoco.mj_step(self.model, self.data)
+        clipped, assessment = self.apply_action(
+            action,
+            physics_steps=self.config.frame_skip,
+        )
         metrics = task_metrics(
             self.model,
             self.data,
@@ -391,9 +397,50 @@ class ShoeTaskEnv:
         observation = ground_truth_observation(self.model, self.data)
         return observation, float(metrics["reward"]), bool(metrics["success"]), False, {
             **metrics,
-            "action_clipped": tuple(clipped),
+            "action_clipped": clipped,
+            "collision_guard": assessment.as_report(),
             "hardware_execution": False,
         }
+
+    def apply_action(
+        self,
+        action: Sequence[float],
+        *,
+        physics_steps: int,
+    ) -> tuple[tuple[float, ...], CollisionAssessment]:
+        """Guard and execute one simulator action for an explicit step count."""
+
+        if len(action) != len(ACTION_NAMES):
+            raise ValueError(
+                f"expected {len(ACTION_NAMES)} actions, received {len(action)}"
+            )
+        if physics_steps <= 0:
+            raise ValueError("physics_steps must be positive")
+        clipped = []
+        for actuator_id, raw_value in enumerate(action):
+            value = float(raw_value)
+            if not math.isfinite(value):
+                raise ValueError("actions must be finite")
+            lower, upper = self.model.actuator_ctrlrange[actuator_id]
+            if not float(lower) <= value <= float(upper):
+                raise ValueError(
+                    f"action {ACTION_NAMES[actuator_id]} is outside actuator range"
+                )
+            clipped.append(value)
+        bounded = tuple(clipped)
+        current = tuple(float(value) for value in self.data.ctrl)
+        assessment = check_bimanual_path(
+            self.model,
+            current,
+            bounded,
+            required_clearance_m=self.config.required_clearance_m,
+        )
+        if not assessment.safe:
+            raise UnsafeActionError(assessment)
+        self.data.ctrl[:] = bounded
+        for _ in range(physics_steps):
+            mujoco.mj_step(self.model, self.data)
+        return bounded, assessment
 
 
 def validate_shoe_task(smoke_steps: int = 200) -> dict[str, object]:

@@ -8,8 +8,10 @@ from dataclasses import dataclass
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import sys
+import tempfile
 from typing import Callable, Mapping, Sequence
 
 import mujoco
@@ -125,10 +127,13 @@ def record_sim_episode(
     """Record one simulation-only episode and return its manifest path."""
 
     config.validate()
-    root = Path(output_dir).expanduser().resolve()
-    if root.exists():
-        raise ValueError(f"output directory already exists: {root}")
-    root.mkdir(parents=True)
+    target = Path(output_dir).expanduser().resolve()
+    if target.exists():
+        raise ValueError(f"output directory already exists: {target}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    root = Path(
+        tempfile.mkdtemp(prefix=f".{target.name}.staging-", dir=target.parent)
+    )
 
     env = ShoeTaskEnv()
     observation, reset_info = env.reset(seed=config.seed)
@@ -146,7 +151,6 @@ def record_sim_episode(
     initial_targets = tuple(actuator_targets_from_qpos(env.model, env.data.qpos))
     source = action_source or (lambda _index, _observation: initial_targets)
     samples: list[dict[str, object]] = []
-    last_metrics: Mapping[str, object] = task_metrics(env.model, env.data)
 
     with mujoco.Renderer(
         env.model,
@@ -168,7 +172,6 @@ def record_sim_episode(
                     raise ValueError(
                         f"action source target {actuator_id} is outside actuator range"
                     )
-            env.data.ctrl[:] = requested
             timestamp_ns = round(float(env.data.time) * 1_000_000_000)
             rgb, depth = _render_rgbd(renderer, env.data)
             frame_metrics = task_metrics(env.model, env.data)
@@ -247,13 +250,15 @@ def record_sim_episode(
                     },
                 }
             )
-            for _ in range(steps_per_sample):
-                mujoco.mj_step(env.model, env.data)
+            _, assessment = env.apply_action(
+                requested,
+                physics_steps=steps_per_sample,
+            )
+            samples[-1]["simulation"]["collision_guard"] = assessment.as_report()
             observation = ground_truth_observation(env.model, env.data)
-            last_metrics = task_metrics(env.model, env.data)
 
     digest = _write_samples(root / "samples.jsonl", samples)
-    success = bool(last_metrics["success"])
+    success = bool(samples[-1]["simulation"]["task_success"])
     manifest = build_manifest(
         episode_id=config.episode_id,
         sample_count=config.sample_count,
@@ -285,7 +290,9 @@ def record_sim_episode(
     validate_manifest(manifest)
     manifest_path = root / "episode_manifest.json"
     save_manifest(manifest_path, manifest)
-    return manifest_path
+    os.replace(root, target)
+    finalized_manifest = target / "episode_manifest.json"
+    return finalized_manifest
 
 
 def main() -> int:

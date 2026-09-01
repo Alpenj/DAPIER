@@ -21,6 +21,7 @@ from shoe_task import (
     SHOE_FREE_JOINT_NAME,
     ShoeTaskConfig,
     ShoeTaskEnv,
+    UnsafeActionError,
     ground_truth_observation,
     task_metrics,
     task_reachability,
@@ -28,6 +29,21 @@ from shoe_task import (
 )
 from mobile_dual_so101 import HUMANOID_HOME_ACTION, apply_control_as_pose
 
+
+UNSAFE_BIMANUAL_TARGET = (
+    0.195731791341601,
+    1.6758398119082343,
+    -0.1950753295290686,
+    -0.5266413229575377,
+    0.3401861733712628,
+    0.4411373258803475,
+    -0.485894097852944,
+    0.5940617023869152,
+    0.4596671975241349,
+    0.45149208438578126,
+    -1.875765584091561,
+    1.0153142196339973,
+)
 
 class ShoeTaskTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -92,13 +108,21 @@ class ShoeTaskTest(unittest.TestCase):
         self.assertFalse(truncated)
         self.assertFalse(info["hardware_execution"])
 
-    def test_action_is_clipped_to_model_range(self) -> None:
-        _, _, _, _, info = self.env.step([100.0] * len(ACTION_NAMES))
-        for actuator_id, value in enumerate(info["action_clipped"]):
-            self.assertEqual(
-                value,
-                self.env.model.actuator_ctrlrange[actuator_id, 1],
-            )
+    def test_action_outside_model_range_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "outside actuator range"):
+            self.env.step([100.0] * len(ACTION_NAMES))
+
+    def test_collision_target_is_rejected_before_physics_advances(self) -> None:
+        before_time = float(self.env.data.time)
+        before_ctrl = tuple(float(value) for value in self.env.data.ctrl)
+        with self.assertRaises(UnsafeActionError) as raised:
+            self.env.step(UNSAFE_BIMANUAL_TARGET)
+        self.assertLess(
+            raised.exception.assessment.minimum_clearance_m,
+            0.03,
+        )
+        self.assertEqual(float(self.env.data.time), before_time)
+        self.assertEqual(tuple(float(value) for value in self.env.data.ctrl), before_ctrl)
 
     def test_invalid_action_dimension_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "expected 12 actions"):
