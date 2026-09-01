@@ -10,6 +10,14 @@ from .camera import (
     CameraStreamHealth,
     MultiCameraFrameSet,
 )
+from .health import (
+    EdgeComputeHealth,
+    EdgeResourceLimits,
+    HealthIssue,
+    HealthPort,
+    HealthSeverity,
+    RuntimeHealthSnapshot,
+)
 from .mobility import (
     DEFAULT_ANGULAR_SETTLED_RADPS,
     DEFAULT_LINEAR_SETTLED_MPS,
@@ -57,6 +65,12 @@ __all__ = [
     "CameraRigHealth",
     "CameraRole",
     "CameraStreamHealth",
+    "EdgeComputeHealth",
+    "EdgeResourceLimits",
+    "HealthIssue",
+    "HealthPort",
+    "HealthSeverity",
+    "RuntimeHealthSnapshot",
     "MultiCameraFrameSet",
     "DEFAULT_ANGULAR_SETTLED_RADPS",
     "DEFAULT_LINEAR_SETTLED_MPS",
