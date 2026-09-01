@@ -41,6 +41,15 @@ from .object_pose import (
     validate_object_pose_inputs,
 )
 from .types import Pose2D, Pose3D
+from .transport import (
+    AckStatus,
+    CommandAck,
+    CommandEnvelope,
+    CommandSequenceGate,
+    EdgeCommandKind,
+    EdgeTransportPort,
+    LinkHeartbeat,
+)
 from .visual_slam import (
     SlamEstimate,
     SlamTrackingState,
@@ -83,6 +92,13 @@ __all__ = [
     "ShoePoseEstimate",
     "SlamEstimate",
     "SlamTrackingState",
+    "AckStatus",
+    "CommandAck",
+    "CommandEnvelope",
+    "CommandSequenceGate",
+    "EdgeCommandKind",
+    "EdgeTransportPort",
+    "LinkHeartbeat",
     "VisualSlamPort",
     "validate_object_pose_inputs",
     "validate_slam_inputs",
