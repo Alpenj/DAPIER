@@ -17,7 +17,18 @@ from .mobility import (
     MobilityStatus,
     NavigationRequest,
 )
-from .types import Pose2D
+from .object_pose import (
+    ObjectPosePort,
+    ShoePoseEstimate,
+    validate_object_pose_inputs,
+)
+from .types import Pose2D, Pose3D
+from .visual_slam import (
+    SlamEstimate,
+    SlamTrackingState,
+    VisualSlamPort,
+    validate_slam_inputs,
+)
 
 
 __all__ = [
@@ -34,5 +45,13 @@ __all__ = [
     "MobilityPort",
     "MobilityStatus",
     "NavigationRequest",
+    "ObjectPosePort",
     "Pose2D",
+    "Pose3D",
+    "ShoePoseEstimate",
+    "SlamEstimate",
+    "SlamTrackingState",
+    "VisualSlamPort",
+    "validate_object_pose_inputs",
+    "validate_slam_inputs",
 ]
