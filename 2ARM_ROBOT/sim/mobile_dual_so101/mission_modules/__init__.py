@@ -56,6 +56,7 @@ from .visual_slam import (
     VisualSlamPort,
     validate_slam_inputs,
 )
+from .world_state import WorldStateSnapshot
 
 
 __all__ = [
@@ -100,6 +101,7 @@ __all__ = [
     "EdgeTransportPort",
     "LinkHeartbeat",
     "VisualSlamPort",
+    "WorldStateSnapshot",
     "validate_object_pose_inputs",
     "validate_slam_inputs",
 ]
