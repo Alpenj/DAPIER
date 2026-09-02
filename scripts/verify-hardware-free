@@ -108,6 +108,18 @@ c++ -std=c++17 -Wall -Wextra -Wpedantic \
   -o "$tmp_dir/orbslam3-bridge-smoke"
 "$tmp_dir/orbslam3-bridge-smoke"
 
+printf '==> C++ safety controller and mock sink smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_safety_core/include \
+  -Iso101_ros2/dapier_so101_core/include \
+  -Iso101_ros2/dapier_localization_core/include \
+  so101_ros2/dapier_so101_core/src/realtime_control.cpp \
+  so101_ros2/dapier_localization_core/src/localization_runtime.cpp \
+  so101_ros2/dapier_safety_core/src/safety_controller.cpp \
+  so101_ros2/dapier_safety_core/test/safety_controller_smoke.cpp \
+  -o "$tmp_dir/safety-controller-smoke"
+"$tmp_dir/safety-controller-smoke"
+
 printf '==> dapier_sim_first unit tests\n'
 python3 -m unittest discover -s dapier_sim_first/test -v
 
