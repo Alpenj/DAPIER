@@ -18,6 +18,12 @@ from .health import (
     HealthSeverity,
     RuntimeHealthSnapshot,
 )
+from .grasp_planner import (
+    GraspCandidateAssessment,
+    GraspMode,
+    GraspSelection,
+    select_grasp_candidate,
+)
 from .mobility import (
     DEFAULT_ANGULAR_SETTLED_RADPS,
     DEFAULT_LINEAR_SETTLED_MPS,
@@ -73,6 +79,9 @@ __all__ = [
     "ALL_TACTILE_ROLES",
     "ArmSide",
     "ArmTelemetry",
+    "GraspCandidateAssessment",
+    "GraspMode",
+    "GraspSelection",
     "ManipulationAction",
     "ManipulationRequest",
     "ManipulatorPort",
@@ -118,6 +127,7 @@ __all__ = [
     "LinkHeartbeat",
     "VisualSlamPort",
     "WorldStateSnapshot",
+    "select_grasp_candidate",
     "validate_object_pose_inputs",
     "validate_slam_inputs",
 ]
