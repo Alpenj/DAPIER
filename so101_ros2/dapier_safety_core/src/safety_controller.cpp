@@ -330,6 +330,16 @@ std::optional<SafeCommand> SafetyController::tick(
   return std::nullopt;
 }
 
+SafeCommand SafetyController::request_safe_stop(
+  const MeasuredRobotState & measured,
+  const std::string & reason)
+{
+  if (reason.empty()) {
+    throw std::invalid_argument("safe-stop reason must not be empty");
+  }
+  return latch_safe_stop(measured, reason);
+}
+
 void SafetyController::acknowledge_safe_stop()
 {
   if (operator_enabled_) {
@@ -356,6 +366,11 @@ bool SafetyController::estop_healthy() const noexcept
 bool SafetyController::safe_stop_latched() const noexcept
 {
   return safe_stop_latched_;
+}
+
+bool SafetyController::motion_armed() const noexcept
+{
+  return motion_armed_;
 }
 
 std::optional<std::uint64_t> SafetyController::last_accepted_sequence() const noexcept
