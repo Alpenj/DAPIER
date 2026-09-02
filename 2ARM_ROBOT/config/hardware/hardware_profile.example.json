@@ -1,0 +1,77 @@
+{
+  "schema_version": "dapier.hardware-readiness.v1",
+  "profile_id": "REPLACE_WITH_SITE_PROFILE_ID",
+  "robot": {
+    "platform": "turtlebot3_waffle_pi_dual_so101",
+    "frame_id": "base_link"
+  },
+  "turtlebot3": {
+    "host": "REPLACE_WITH_TB3_HOST",
+    "user": "user",
+    "auth_mode": "ssh-key",
+    "ssh_key_path": "REPLACE_WITH_LOCAL_SSH_KEY_PATH",
+    "ros_domain_id": 73,
+    "cmd_vel_topic": "/cmd_vel",
+    "odom_topic": "/odom"
+  },
+  "arms": {
+    "left": {
+      "serial_path": "/dev/serial/by-id/REPLACE_LEFT_CONTROLLER",
+      "controller_identity_sha256": "REPLACE_LEFT_IDENTITY_SHA256",
+      "calibration_id": "REPLACE_LEFT_CALIBRATION_ID",
+      "calibration_verified": false,
+      "joint_names": [
+        "left_shoulder_pan", "left_shoulder_lift", "left_elbow_flex",
+        "left_wrist_flex", "left_wrist_roll", "left_gripper"
+      ]
+    },
+    "right": {
+      "serial_path": "/dev/serial/by-id/REPLACE_RIGHT_CONTROLLER",
+      "controller_identity_sha256": "REPLACE_RIGHT_IDENTITY_SHA256",
+      "calibration_id": "REPLACE_RIGHT_CALIBRATION_ID",
+      "calibration_verified": false,
+      "joint_names": [
+        "right_shoulder_pan", "right_shoulder_lift", "right_elbow_flex",
+        "right_wrist_flex", "right_wrist_roll", "right_gripper"
+      ]
+    }
+  },
+  "cameras": {
+    "workspace_rgbd": {
+      "device_path": "/dev/v4l/by-id/REPLACE_RGBD_CAMERA",
+      "frame_id": "workspace_camera_optical_frame",
+      "calibration_id": "REPLACE_RGBD_CALIBRATION_ID",
+      "calibration_verified": false,
+      "intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 0.0,
+        "fy": 0.0,
+        "cx": 319.5,
+        "cy": 239.5
+      },
+      "base_from_optical": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    }
+  },
+  "safety": {
+    "e_stop_required": true,
+    "command_watchdog_ms": 100,
+    "measured_state_timeout_ms": 100,
+    "max_base_linear_mps": 0.08,
+    "max_base_angular_rad_s": 0.35,
+    "base_settle_linear_mps": 0.01,
+    "base_settle_angular_rad_s": 0.03
+  },
+  "evidence": {
+    "stationary_base_verified": false,
+    "dual_arm_read_only_verified": false,
+    "camera_stream_verified": false,
+    "ros_graph_verified": false,
+    "estop_verified": false
+  }
+}
