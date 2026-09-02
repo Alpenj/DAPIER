@@ -13,6 +13,8 @@ find_package(ament_cmake REQUIRED)
 
 add_library(dapier_localization_core SHARED
   src/localization_runtime.cpp
+  src/localization_monitor.cpp
+  src/orbslam3_bridge.cpp
 )
 target_include_directories(dapier_localization_core
   PUBLIC
@@ -46,6 +48,32 @@ if(BUILD_TESTING)
   add_test(
     NAME test_localization_runtime_contract
     COMMAND test_localization_runtime_contract
+  )
+
+  add_executable(
+    test_localization_monitor
+    test/localization_monitor_smoke.cpp
+  )
+  target_link_libraries(
+    test_localization_monitor
+    dapier_localization_core
+  )
+  add_test(
+    NAME test_localization_monitor
+    COMMAND test_localization_monitor
+  )
+
+  add_executable(
+    test_orbslam3_bridge
+    test/orbslam3_bridge_smoke.cpp
+  )
+  target_link_libraries(
+    test_orbslam3_bridge
+    dapier_localization_core
+  )
+  add_test(
+    NAME test_orbslam3_bridge
+    COMMAND test_orbslam3_bridge
   )
 endif()
 
