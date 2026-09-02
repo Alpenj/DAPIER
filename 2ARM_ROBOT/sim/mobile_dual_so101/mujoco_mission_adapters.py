@@ -76,24 +76,19 @@ def _object_id(
     return object_id
 
 
-def _add_gripper_cameras(spec: mujoco.MjSpec) -> None:
-    # Provisional optical pose: local +X look direction, small +Z clearance.
-    optical_quaternion = [-0.5, -0.5, 0.5, 0.5]
+def _reuse_calibrated_gripper_cameras(spec: mujoco.MjSpec) -> None:
+    """Expose the source MJCF wrist cameras as the two gripper RGB roles.
+
+    The pinned SO-101 MJCF already contains a camera calibrated for the real
+    InnoMaker 130-degree wrist camera. Adding another provisional camera per
+    arm produced five MuJoCo cameras for a three-camera mission contract.
+    """
+
     for side in ("left", "right"):
-        gripper = spec.body(f"{side}_gripper")
-        gripper.add_camera(
-            name=f"{side}_gripper_camera",
-            pos=[0.045, 0.0, 0.018],
-            quat=optical_quaternion,
-            fovy=65.0,
-        )
-        gripper.add_site(
-            name=f"{side}_gripper_camera_optical_frame",
-            type=mujoco.mjtGeom.mjGEOM_SPHERE,
-            pos=[0.045, 0.0, 0.018],
-            size=[0.002, 0.002, 0.002],
-            rgba=[0.9, 0.3, 0.1, 0.8],
-        )
+        camera = spec.camera(f"{side}_wrist_cam")
+        if camera is None:
+            raise RuntimeError(f"calibrated {side} wrist camera is missing")
+        camera.name = f"{side}_gripper_camera"
 
 
 def build_mobile_shoe_mission_model(
@@ -110,7 +105,7 @@ def build_mobile_shoe_mission_model(
     )
     base_root = spec.body("tb3_base_footprint")
     base_root.add_freejoint(name=MOBILE_BASE_FREE_JOINT)
-    _add_gripper_cameras(spec)
+    _reuse_calibrated_gripper_cameras(spec)
     _add_primitive_shoe(
         spec,
         position_m=resolved.shoe_position_m,
@@ -378,7 +373,7 @@ class MuJoCoMultiCameraAdapter:
                     role=role,
                     modality=CameraModality.RGB,
                     frame_id=self._sequence,
-                    optical_frame=f"{side}_gripper_camera_optical_frame",
+                    optical_frame=f"{side}_gripper_camera",
                     calibration_id=f"mujoco-{side}-gripper-rgb-v1",
                     width=self.width,
                     height=self.height,

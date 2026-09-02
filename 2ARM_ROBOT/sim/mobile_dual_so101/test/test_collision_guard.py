@@ -41,6 +41,7 @@ UNSAFE_BIMANUAL_TARGET = (
     -1.875765584091561,
     1.0153142196339973,
 )
+RESTORED_BASE_CAMERA_CLEARANCE_M = 0.10
 
 
 class CollisionGuardTest(unittest.TestCase):
@@ -135,7 +136,13 @@ class CollisionGuardTest(unittest.TestCase):
             camera_pairs,
             distance_cap_m=2.0,
         )
-        self.assertGreater(camera_clearance, 0.13)
+        # The restored SO-101 Waveshare mounting plate is the intentional
+        # nearest camera pair. Preserve at least a 100 mm nominal envelope;
+        # the operational protected-path gate remains 30 mm above.
+        self.assertGreaterEqual(
+            camera_clearance,
+            RESTORED_BASE_CAMERA_CLEARANCE_M,
+        )
         self.assertFalse(result.hardware_execution)
 
     def test_invalid_clearance_fails_closed(self) -> None:
