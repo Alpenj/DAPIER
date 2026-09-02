@@ -1,0 +1,49 @@
+name: Hardware-ready offline gates
+
+on:
+  pull_request:
+    paths:
+      - "2ARM_ROBOT/research/**"
+      - "2ARM_ROBOT/docs/**"
+      - "contracts/**"
+      - "scripts/replay-localization-scenarios"
+      - "scripts/verify-architecture-boundaries"
+      - "scripts/verify-hardware-free"
+      - "so101_ros2/dapier_localization_core/**"
+      - "so101_ros2/dapier_so101_core/**"
+      - ".github/workflows/hardware-ready.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hardware-ready-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hardware-free-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install shell test tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends bats shellcheck
+
+      - name: Install pinned Python dependency
+        run: python3 -m pip install --only-binary=:all: --require-hashes -r requirements-cowork.txt
+
+      - name: Run hardware-free verification
+        run: scripts/verify-hardware-free
