@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hardware-free checks for Python, localization, safety, and real-time boundaries."""
+"""Hardware-free checks for Python, localization, safety, bridge and control boundaries."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 RESEARCH_SRC = REPO_ROOT / "2ARM_ROBOT" / "research" / "src"
 CPP_LOCALIZATION_ROOT = REPO_ROOT / "so101_ros2" / "dapier_localization_core"
 CPP_SAFETY_ROOT = REPO_ROOT / "so101_ros2" / "dapier_safety_core"
+CPP_BRIDGE_ROOT = REPO_ROOT / "so101_ros2" / "dapier_safety_bridge"
 CPP_REALTIME_ROOT = REPO_ROOT / "so101_ros2" / "dapier_so101_core"
 REMOTE_EXAMPLE = REPO_ROOT / "2ARM_ROBOT" / "config" / "turtlebot3.env.example"
 CONTROL_GENERATOR = REPO_ROOT / "scripts" / "generate-control-contract-header"
@@ -60,6 +61,18 @@ BANNED_SAFETY_IO_TEXT = {
     "std_msgs",
     "trajectory_msgs",
     "torque_enable",
+    "write_register",
+}
+BANNED_BRIDGE_ACTUATOR_TEXT = {
+    '"/cmd_vel"',
+    '"/joint_trajectory"',
+    '"/position_controller/commands"',
+    "/dev/",
+    "dynamixel",
+    "hardware_execution = true",
+    "scservo",
+    "torque_enable",
+    "trajectory_msgs",
     "write_register",
 }
 FORBIDDEN_REMOTE_KEY = re.compile(
@@ -164,6 +177,19 @@ def verify_cpp_safety_layer() -> None:
     print(f"C++ safety boundary passed: {len(cpp_files)} source files")
 
 
+def verify_cpp_bridge_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_BRIDGE_ROOT,
+        "C++ ROS safety bridge",
+    )
+    verify_forbidden_fragments(
+        cpp_files,
+        BANNED_BRIDGE_ACTUATOR_TEXT,
+        "C++ ROS safety bridge",
+    )
+    print(f"C++ ROS safety bridge boundary passed: {len(cpp_files)} source files")
+
+
 def verify_cpp_realtime_layer() -> None:
     cpp_files = verify_cpp_no_python_embedding(
         CPP_REALTIME_ROOT,
@@ -226,6 +252,7 @@ def main() -> int:
     verify_python_research_layer()
     verify_cpp_localization_layer()
     verify_cpp_safety_layer()
+    verify_cpp_bridge_layer()
     verify_cpp_realtime_layer()
     verify_remote_template()
     verify_generated_contracts()
