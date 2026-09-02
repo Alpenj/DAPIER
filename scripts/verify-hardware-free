@@ -33,6 +33,11 @@ bash -n scripts/cowork scripts/verify-hardware-free
 printf '==> ShellCheck\n'
 shellcheck scripts/cowork scripts/verify-hardware-free
 
+# Keep cowork's path-resolution contract ahead of repository-specific checks.
+# Its fixture intentionally exits before Python or additional scripts run.
+printf '==> Cowork integration tests\n'
+bats test/cowork.bats test/cowork-verify-path.bats
+
 printf '==> Architecture boundary checks\n'
 scripts/verify-architecture-boundaries
 
@@ -46,9 +51,6 @@ c++ -std=c++17 -Wall -Wextra -Wpedantic \
   so101_ros2/dapier_so101_core/test/realtime_control_contract_smoke.cpp \
   -o "$tmp_dir/realtime-control-contract-smoke"
 "$tmp_dir/realtime-control-contract-smoke"
-
-printf '==> Cowork integration tests\n'
-bats test/cowork.bats test/cowork-verify-path.bats
 
 printf '==> dapier_sim_first unit tests\n'
 python3 -m unittest discover -s dapier_sim_first/test -v
