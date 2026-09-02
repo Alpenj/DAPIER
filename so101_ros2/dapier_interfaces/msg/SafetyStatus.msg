@@ -1,0 +1,13 @@
+# Observable status for logging, operator UI and commissioning evidence.
+string state
+string reason
+bool operator_enabled
+bool estop_healthy
+bool safe_stop_latched
+bool measured_state_fresh
+bool localization_allows_motion
+bool has_last_intent_sequence
+uint64 last_intent_sequence
+bool has_last_localization_sequence
+uint64 last_localization_sequence
+bool hardware_execution
