@@ -40,6 +40,27 @@ MuJoCo adapter와 실행 예시는
 설계 근거는
 [`ADR 0002`](../../docs/architecture/0002-vision-first-sim-to-real-perception.md)에 있다.
 
+## Observation provenance gate
+
+[`observation_contract.py`](src/dapier_research/observation_contract.py)는 policy와
+학습 episode가 어떤 관측을 소비했는지 명시적으로 구분한다.
+
+- `sensor_runtime`: RGB/RGB-D, joint state, base twist처럼 실제 장비에도 존재하는 관측
+- `simulator_privileged`: MuJoCo body pose, geom/segmentation ID처럼 시뮬레이터만 아는 값
+- `policy_runtime`, `training_episode`, `control_monitor`는 `sensor_runtime`만 허용
+- `evaluation_oracle`, `reset_reward`만 privileged observation을 허용
+- provenance가 없거나 truth flag와 모순되면 추론하지 않고 거부
+- sensor detection 실패를 MuJoCo object pose로 자동 대체하지 않음
+
+[`sim_to_real_policy.py`](src/dapier_research/sim_to_real_policy.py)의
+`SensorPolicyExecutor`는 기존 chunk executor 앞에서 provenance를 검사한다. 기존
+`sim_policy.py`와 `sim_episode.py`는 simulation baseline으로 남아 있으며, 그 출력은
+새 dataset gate를 통과하기 전에는 sim-to-real 학습 입력으로 사용할 수 없다.
+
+계약과 학습용 예시는
+[`OBSERVATION_PROVENANCE.md`](OBSERVATION_PROVENANCE.md)와
+[`ADR 0003`](../../docs/architecture/0003-sim-to-real-observation-provenance.md)을 본다.
+
 ## 장비 없이 테스트
 
 ```bash
