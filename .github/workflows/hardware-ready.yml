@@ -11,6 +11,7 @@ on:
       - "scripts/verify-hardware-free"
       - "so101_ros2/dapier_localization_core/**"
       - "so101_ros2/dapier_so101_core/**"
+      - "so101_ros2/dapier_safety_core/**"
       - ".github/workflows/hardware-ready.yml"
   workflow_dispatch:
 
