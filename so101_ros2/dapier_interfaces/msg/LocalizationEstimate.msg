@@ -1,0 +1,19 @@
+# Sensor-derived localization estimate. Source time is trace-only across hosts.
+string schema_version
+uint64 sequence
+int64 source_timestamp_ns
+int64 ttl_ns
+string parent_frame
+string child_frame
+string map_id
+string session_id
+uint64 reset_generation
+string tracking_state
+float64[3] position_m
+float64[4] orientation_xyzw
+float64[36] covariance
+uint32 tracked_features
+float64 mean_reprojection_error_px
+float64 confidence
+bool simulator_truth_used
+bool control_authorized
