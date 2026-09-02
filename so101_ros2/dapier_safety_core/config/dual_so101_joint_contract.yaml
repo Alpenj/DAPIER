@@ -1,0 +1,32 @@
+schema_version: 1
+units:
+  position: radian
+  velocity: radian_per_second
+# motor_id values are logical identifiers for the combined safety model.
+# Each physical arm may still use bus-local IDs 1..6 on distinct serial buses.
+joint_order:
+  - left_shoulder_pan
+  - left_shoulder_lift
+  - left_elbow_flex
+  - left_wrist_flex
+  - left_wrist_roll
+  - left_gripper
+  - right_shoulder_pan
+  - right_shoulder_lift
+  - right_elbow_flex
+  - right_wrist_flex
+  - right_wrist_roll
+  - right_gripper
+joints:
+  - {name: left_shoulder_pan, motor_id: 1, lower_limit: -1.91986, upper_limit: 1.91986, max_velocity: 0.35}
+  - {name: left_shoulder_lift, motor_id: 2, lower_limit: -1.74533, upper_limit: 1.74533, max_velocity: 0.35}
+  - {name: left_elbow_flex, motor_id: 3, lower_limit: -1.69000, upper_limit: 1.69000, max_velocity: 0.35}
+  - {name: left_wrist_flex, motor_id: 4, lower_limit: -1.65806, upper_limit: 1.65806, max_velocity: 0.35}
+  - {name: left_wrist_roll, motor_id: 5, lower_limit: -2.74385, upper_limit: 2.84121, max_velocity: 0.50}
+  - {name: left_gripper, motor_id: 6, lower_limit: -0.174533, upper_limit: 1.74533, max_velocity: 0.50}
+  - {name: right_shoulder_pan, motor_id: 101, lower_limit: -1.91986, upper_limit: 1.91986, max_velocity: 0.35}
+  - {name: right_shoulder_lift, motor_id: 102, lower_limit: -1.74533, upper_limit: 1.74533, max_velocity: 0.35}
+  - {name: right_elbow_flex, motor_id: 103, lower_limit: -1.69000, upper_limit: 1.69000, max_velocity: 0.35}
+  - {name: right_wrist_flex, motor_id: 104, lower_limit: -1.65806, upper_limit: 1.65806, max_velocity: 0.35}
+  - {name: right_wrist_roll, motor_id: 105, lower_limit: -2.74385, upper_limit: 2.84121, max_velocity: 0.50}
+  - {name: right_gripper, motor_id: 106, lower_limit: -0.174533, upper_limit: 1.74533, max_velocity: 0.50}
