@@ -35,6 +35,7 @@ install(
   RUNTIME DESTINATION bin
 )
 install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY config/ DESTINATION share/dapier_safety_core/config)
 
 ament_export_targets(export_dapier_safety_core HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)
