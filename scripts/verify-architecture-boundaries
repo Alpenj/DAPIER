@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hardware-free checks for the Python research/C++ real-time boundary."""
+"""Hardware-free checks for Python, localization, and real-time boundaries."""
 
 from __future__ import annotations
 
@@ -12,9 +12,13 @@ import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RESEARCH_SRC = REPO_ROOT / "2ARM_ROBOT" / "research" / "src"
+CPP_LOCALIZATION_ROOT = REPO_ROOT / "so101_ros2" / "dapier_localization_core"
 CPP_REALTIME_ROOT = REPO_ROOT / "so101_ros2" / "dapier_so101_core"
 REMOTE_EXAMPLE = REPO_ROOT / "2ARM_ROBOT" / "config" / "turtlebot3.env.example"
-GENERATOR = REPO_ROOT / "scripts" / "generate-control-contract-header"
+CONTROL_GENERATOR = REPO_ROOT / "scripts" / "generate-control-contract-header"
+LOCALIZATION_GENERATOR = (
+    REPO_ROOT / "scripts" / "generate-localization-contract-header"
+)
 
 BANNED_RESEARCH_IMPORTS = {
     "dynamixel_sdk",
@@ -37,7 +41,18 @@ BANNED_CPP_TEXT = {
     "popen(",
     "std::system(",
 }
-FORBIDDEN_REMOTE_KEY = re.compile(r"(?:PASSWORD|PASSWD|SECRET|TOKEN|PRIVATE_KEY)", re.IGNORECASE)
+BANNED_LOCALIZATION_CONTROL_TEXT = {
+    "/cmd_vel",
+    "/dev/serial",
+    "/dev/tty",
+    "eeprom_write",
+    "torque_enable",
+    "write_register",
+}
+FORBIDDEN_REMOTE_KEY = re.compile(
+    r"(?:PASSWORD|PASSWD|SECRET|TOKEN|PRIVATE_KEY)",
+    re.IGNORECASE,
+)
 
 
 def fail(message: str) -> None:
@@ -75,25 +90,56 @@ def verify_python_research_layer() -> None:
     print(f"Python research boundary passed: {len(python_files)} source files")
 
 
-def verify_cpp_realtime_layer() -> None:
-    cpp_files = sorted(
+def cpp_source_files(root: Path) -> list[Path]:
+    return sorted(
         path
         for suffix in ("*.cpp", "*.hpp", "*.h")
-        for path in CPP_REALTIME_ROOT.rglob(suffix)
+        for path in root.rglob(suffix)
     )
+
+
+def verify_cpp_no_python_embedding(root: Path, layer_name: str) -> list[Path]:
+    cpp_files = cpp_source_files(root)
     if not cpp_files:
-        fail(f"C++ real-time source is missing under {CPP_REALTIME_ROOT}")
+        fail(f"{layer_name} source is missing under {root}")
     for path in cpp_files:
         text = path.read_text(encoding="utf-8")
         for fragment in BANNED_CPP_TEXT:
             if fragment in text:
                 fail(f"{path} embeds or launches Python: {fragment}")
+    return cpp_files
+
+
+def verify_cpp_localization_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_LOCALIZATION_ROOT,
+        "C++ localization",
+    )
+    for path in cpp_files:
+        lowered = path.read_text(encoding="utf-8").lower()
+        for fragment in BANNED_LOCALIZATION_CONTROL_TEXT:
+            if fragment.lower() in lowered:
+                fail(
+                    f"{path} contains direct actuator/hardware fragment in "
+                    f"localization layer: {fragment}"
+                )
+    print(f"C++ localization boundary passed: {len(cpp_files)} source files")
+
+
+def verify_cpp_realtime_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_REALTIME_ROOT,
+        "C++ real-time",
+    )
     print(f"C++ real-time boundary passed: {len(cpp_files)} source files")
 
 
 def parse_env_template(path: Path) -> dict[str, str]:
     result: dict[str, str] = {}
-    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for line_number, raw_line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(),
+        1,
+    ):
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
@@ -122,9 +168,9 @@ def verify_remote_template() -> None:
     print("TurtleBot3 remote template passed: secret-free SSH-key configuration")
 
 
-def verify_generated_contract() -> None:
+def run_generator_check(generator: Path) -> None:
     completed = subprocess.run(
-        [sys.executable, str(GENERATOR), "--check"],
+        [sys.executable, str(generator), "--check"],
         cwd=REPO_ROOT,
         check=False,
         text=True,
@@ -133,11 +179,17 @@ def verify_generated_contract() -> None:
         raise SystemExit(completed.returncode)
 
 
+def verify_generated_contracts() -> None:
+    run_generator_check(CONTROL_GENERATOR)
+    run_generator_check(LOCALIZATION_GENERATOR)
+
+
 def main() -> int:
     verify_python_research_layer()
+    verify_cpp_localization_layer()
     verify_cpp_realtime_layer()
     verify_remote_template()
-    verify_generated_contract()
+    verify_generated_contracts()
     print("architecture boundary verification passed")
     return 0
 

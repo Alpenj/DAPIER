@@ -11,10 +11,19 @@ These rules add to the repository root `AGENTS.md` for this directory.
   segmentation labels to create grasp/IK targets. Use rendered sensor observations and
   transforms that have a physical calibration/TF equivalent. Simulator truth is limited
   to reset, reward, offline labels, and test-only error measurement.
+- Visual SLAM, localization quality, map/session identity, reset generation, and TF adapter
+  logic belong in the C++ localization packages under `so101_ros2/dapier_localization_*`.
+  Localization code must not publish actuator commands, open motor/serial devices, or
+  authorize hardware. Its language-neutral boundary is
+  `contracts/localization_runtime_v1.json`.
 - Real-time command validation, limits, watchdogs, safe stop, and hardware I/O belong in
-  the C++ packages under `so101_ros2/`. Python may not bypass those gates.
-- The cross-language boundary is `contracts/research_realtime_control_v1.json`.
-  Change the JSON first and regenerate the C++ header instead of editing generated values.
+  the C++ control packages under `so101_ros2/dapier_so101_*`. Python and localization
+  packages may not bypass those gates.
+- The Python-to-control boundary is `contracts/research_realtime_control_v1.json`.
+  Change contract JSON first and regenerate the corresponding C++ header instead of
+  editing generated values.
+- A localization `relocalized`, `lost`, or map/reset-generation change must invalidate
+  stale navigation goals, shoe targets, and action chunks before motion resumes.
 - Do not run hardware teleop, motor jog, torque control, EEPROM/register writes,
   hardware snapshot scripts, or actuator publishers without the root hardware approval
   gate. Read-only snapshots still require approval when they contact physical devices.
@@ -31,7 +40,10 @@ These rules add to the repository root `AGENTS.md` for this directory.
 - Flag new mobile-base or arm command paths that lack an explicit human gate, bounded
   motion, timeout/watchdog, and fail-safe stop behavior.
 - Simulation entrypoints must remain usable without importing or opening hardware APIs.
-- Flag Python research changes that acquire direct hardware dispatch responsibility or
-  C++ real-time changes that embed/launch Python inside the control loop.
+- Flag Python research changes that acquire direct hardware dispatch responsibility,
+  localization changes that acquire actuator authority, or C++ real-time changes that
+  embed/launch Python or Visual SLAM inside the bounded command loop.
 - Flag any runtime IK/grasp target derived from simulator truth rather than RGB/RGB-D
   perception, calibrated transforms, and an explicit confidence/uncertainty gate.
+- Flag localization consumers that ignore tracking state, receiver-local TTL, covariance,
+  or map/reset generation when accepting navigation or manipulation motion.

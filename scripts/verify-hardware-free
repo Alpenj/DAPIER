@@ -52,6 +52,14 @@ c++ -std=c++17 -Wall -Wextra -Wpedantic \
   -o "$tmp_dir/realtime-control-contract-smoke"
 "$tmp_dir/realtime-control-contract-smoke"
 
+printf '==> C++ localization contract smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_localization_core/include \
+  so101_ros2/dapier_localization_core/src/localization_runtime.cpp \
+  so101_ros2/dapier_localization_core/test/localization_runtime_contract_smoke.cpp \
+  -o "$tmp_dir/localization-contract-smoke"
+"$tmp_dir/localization-contract-smoke"
+
 printf '==> dapier_sim_first unit tests\n'
 python3 -m unittest discover -s dapier_sim_first/test -v
 
