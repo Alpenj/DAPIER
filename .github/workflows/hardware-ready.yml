@@ -11,9 +11,11 @@ on:
       - "scripts/replay-localization-scenarios"
       - "scripts/verify-architecture-boundaries"
       - "scripts/verify-hardware-free"
+      - "so101_ros2/dapier_interfaces/**"
       - "so101_ros2/dapier_localization_core/**"
       - "so101_ros2/dapier_so101_core/**"
       - "so101_ros2/dapier_safety_core/**"
+      - "so101_ros2/dapier_safety_bridge/**"
       - ".github/workflows/hardware-ready.yml"
   pull_request:
     paths:
@@ -23,9 +25,11 @@ on:
       - "scripts/replay-localization-scenarios"
       - "scripts/verify-architecture-boundaries"
       - "scripts/verify-hardware-free"
+      - "so101_ros2/dapier_interfaces/**"
       - "so101_ros2/dapier_localization_core/**"
       - "so101_ros2/dapier_so101_core/**"
       - "so101_ros2/dapier_safety_core/**"
+      - "so101_ros2/dapier_safety_bridge/**"
       - ".github/workflows/hardware-ready.yml"
   workflow_dispatch: {}
 
