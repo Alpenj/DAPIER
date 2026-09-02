@@ -6,7 +6,7 @@ fail() {
   exit 1
 }
 
-for required_command in bash shellcheck bats python3; do
+for required_command in bash shellcheck bats python3 c++; do
   command -v "$required_command" >/dev/null 2>&1 ||
     fail "$required_command is required for hardware-free verification"
 done
@@ -17,6 +17,12 @@ repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" ||
   fail "verification script is not inside the DAPIER repository"
 cd -- "$repo_root" || fail "cannot enter repository root: $repo_root"
 
+tmp_dir="$(mktemp -d)" || fail "cannot create temporary verification directory"
+cleanup() {
+  rm -rf -- "$tmp_dir"
+}
+trap cleanup EXIT
+
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONHASHSEED=0
 export PYTHONNOUSERSITE=1
@@ -26,6 +32,20 @@ bash -n scripts/cowork scripts/verify-hardware-free
 
 printf '==> ShellCheck\n'
 shellcheck scripts/cowork scripts/verify-hardware-free
+
+printf '==> Architecture boundary checks\n'
+scripts/verify-architecture-boundaries
+
+printf '==> Python research contract tests\n'
+python3 -m unittest discover -s 2ARM_ROBOT/research/test -v
+
+printf '==> C++ real-time contract smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_so101_core/include \
+  so101_ros2/dapier_so101_core/src/realtime_control.cpp \
+  so101_ros2/dapier_so101_core/test/realtime_control_contract_smoke.cpp \
+  -o "$tmp_dir/realtime-control-contract-smoke"
+"$tmp_dir/realtime-control-contract-smoke"
 
 printf '==> Cowork integration tests\n'
 bats test/cowork.bats test/cowork-verify-path.bats
