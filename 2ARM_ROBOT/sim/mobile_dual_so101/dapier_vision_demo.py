@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """DAPIER scene profile for RGB-D shoe detection and reach planning.
 
-The current tower camera geometry predates the vision-first policy path.  This
+The current tower camera geometry predates the vision-first policy path. This
 module constructs a *provisional simulation profile* with a 35-degree downward
-camera tilt so the default near-floor shoe enters the real camera frustum.  The
+camera tilt so the default near-floor shoe enters the real camera frustum. The
 same mounting angle must be measured and confirmed on the physical camera
 before sim-to-real use.
 
-No simulator object pose or segmentation ID is used to create the target.  The
+No simulator object pose or segmentation ID is used to create the target. The
 object body pose remains available to tests only as an error-measurement oracle.
 """
 
@@ -148,14 +148,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--width", type=int, default=320)
     parser.add_argument("--height", type=int, default=240)
     parser.add_argument("--artifact-dir", type=Path)
+    parser.add_argument(
+        "--artifact-only",
+        action="store_true",
+        help="write sensor review artifacts without requiring the IK plan to succeed",
+    )
     args = parser.parse_args(argv)
 
+    if args.artifact_only and args.artifact_dir is None:
+        parser.error("--artifact-only requires --artifact-dir")
+
     if args.artifact_dir is not None:
-        write_vision_artifacts(
+        report_path = write_vision_artifacts(
             args.artifact_dir,
             width=args.width,
             height=args.height,
         )
+        if args.artifact_only:
+            print(report_path)
+            return 0
+
     _, plan = capture_dapier_vision_plan(
         side=args.side,
         width=args.width,
