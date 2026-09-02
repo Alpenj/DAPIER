@@ -113,6 +113,20 @@ class ControlIntentTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "sequence"):
             validate_intent(invalid, self.contract)
 
+    def test_string_is_not_accepted_as_joint_name_array(self) -> None:
+        intent = arm_joint_position_intent(
+            sequence=1,
+            source="test",
+            source_monotonic_ns=1,
+            joint_names=("joint_1",),
+            joint_position_rad=(0.0,),
+            joint_max_velocity_rad_s=(0.2,),
+            contract=self.contract,
+        )
+        invalid = intent.__class__(**{**intent.as_dict(), "joint_names": "joint_1"})
+        with self.assertRaisesRegex(ValueError, "joint_names must be an array"):
+            validate_intent(invalid, self.contract)
+
     def test_research_intent_has_no_hardware_authorization_field(self) -> None:
         intent = hold_intent(
             sequence=1,

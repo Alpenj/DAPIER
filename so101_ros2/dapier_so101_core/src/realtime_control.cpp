@@ -5,6 +5,7 @@
 #include "dapier_so101_core/generated/research_realtime_contract.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -18,11 +19,22 @@ namespace dapier_so101_core
 namespace
 {
 
+static_assert(generated::kAllowedIntentKinds.size() == 3);
+static_assert(generated::kAllowedIntentKinds[0] == "hold");
+static_assert(generated::kAllowedIntentKinds[1] == "arm_joint_position");
+static_assert(generated::kAllowedIntentKinds[2] == "base_twist");
+
 ResearchIntentValidation reject(
   ResearchIntentRejection rejection,
   std::string reason)
 {
   return ResearchIntentValidation{false, rejection, std::move(reason), 0};
+}
+
+bool is_blank(const std::string & value)
+{
+  return value.empty() || std::all_of(
+    value.begin(), value.end(), [](unsigned char character) {return std::isspace(character) != 0;});
 }
 
 bool is_zero_base(const ResearchControlIntent & intent)
@@ -69,7 +81,7 @@ ResearchIntentValidation validate_research_control_intent(
       ResearchIntentRejection::kInvalidTtl,
       "ttl is outside the shared control boundary");
   }
-  if (intent.source.empty()) {
+  if (is_blank(intent.source)) {
     return reject(
       ResearchIntentRejection::kInvalidSource,
       "source must be a non-empty identifier");
@@ -111,7 +123,7 @@ ResearchIntentValidation validate_research_control_intent(
         std::unordered_set<std::string> unique_names;
         unique_names.reserve(joint_count);
         for (const auto & name : intent.joint_names) {
-          if (name.empty()) {
+          if (is_blank(name)) {
             return reject(
               ResearchIntentRejection::kInvalidShape,
               "joint names must be non-empty");

@@ -124,8 +124,15 @@ def _finite_scalar(value: object, name: str) -> float:
     return converted
 
 
+def _require_sequence(value: object, name: str) -> Sequence[object]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError(f"{name} must be an array")
+    return value
+
+
 def _finite_tuple(values: Sequence[object], name: str) -> tuple[float, ...]:
-    return tuple(_finite_scalar(value, f"{name} entry") for value in values)
+    normalized = _require_sequence(values, name)
+    return tuple(_finite_scalar(value, f"{name} entry") for value in normalized)
 
 
 def validate_intent(
@@ -144,7 +151,8 @@ def validate_intent(
     if intent.kind not in resolved.allowed_intent_kinds:
         raise ValueError(f"unsupported intent kind: {intent.kind!r}")
 
-    joint_names = tuple(_require_text(name, "joint name") for name in intent.joint_names)
+    raw_joint_names = _require_sequence(intent.joint_names, "joint_names")
+    joint_names = tuple(_require_text(name, "joint name") for name in raw_joint_names)
     if len(set(joint_names)) != len(joint_names):
         raise ValueError("joint_names must be unique")
     positions = _finite_tuple(intent.joint_position_rad, "joint_position_rad")

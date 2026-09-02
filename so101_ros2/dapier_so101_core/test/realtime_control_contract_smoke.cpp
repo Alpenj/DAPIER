@@ -79,6 +79,16 @@ int main()
   expect(result.rejection == ResearchIntentRejection::kMixedControlDomains, "hold with targets should fail");
 
   arm = valid_arm_intent();
+  arm.source = "   ";
+  result = validate_research_control_intent(arm, 500);
+  expect(result.rejection == ResearchIntentRejection::kInvalidSource, "blank source should fail");
+
+  arm = valid_arm_intent();
+  arm.joint_names[0] = "   ";
+  result = validate_research_control_intent(arm, 500);
+  expect(result.rejection == ResearchIntentRejection::kInvalidShape, "blank joint name should fail");
+
+  arm = valid_arm_intent();
   arm.ttl_ns = 100;
   result = validate_research_control_intent(
     arm,
