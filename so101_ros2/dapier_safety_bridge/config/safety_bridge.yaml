@@ -1,0 +1,16 @@
+dapier_safety_bridge:
+  ros__parameters:
+    measured_state_timeout_ms: 100
+    command_watchdog_ms: 250
+    command_horizon_s: 0.05
+    maximum_base_linear_mps: 0.08
+    maximum_base_angular_rad_s: 0.25
+    settled_base_linear_mps: 0.0025
+    settled_base_angular_rad_s: 0.0021
+    require_verified_grasp_for_base_motion: true
+    localization_interarrival_timeout_ms: 100
+    localization_minimum_confidence: 0.5
+    localization_minimum_tracked_features: 20
+    localization_maximum_reprojection_error_px: 3.0
+    localization_maximum_position_variance_m2: 0.01
+    localization_maximum_rotation_variance_rad2: 0.04
