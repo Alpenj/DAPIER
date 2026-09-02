@@ -98,11 +98,16 @@ public:
     const MeasuredRobotState & measured,
     std::int64_t receiver_monotonic_ns);
 
+  [[nodiscard]] SafeCommand request_safe_stop(
+    const MeasuredRobotState & measured,
+    const std::string & reason);
+
   void acknowledge_safe_stop();
 
   [[nodiscard]] bool operator_enabled() const noexcept;
   [[nodiscard]] bool estop_healthy() const noexcept;
   [[nodiscard]] bool safe_stop_latched() const noexcept;
+  [[nodiscard]] bool motion_armed() const noexcept;
   [[nodiscard]] std::optional<std::uint64_t> last_accepted_sequence() const noexcept;
 
 private:
