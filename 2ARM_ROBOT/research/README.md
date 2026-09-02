@@ -15,11 +15,30 @@ Python은 [`ControlIntent`](src/dapier_research/control_intent.py)를 만들 수
 그 intent는 제안일 뿐이다. `so101_ros2`의 C++ 계층이 receiver-local timestamp,
 sequence, TTL, limit, interlock과 실행 허가를 다시 검사한다.
 
-공유 계약은 저장소 루트의
+공유 제어 계약은 저장소 루트의
 [`contracts/research_realtime_control_v1.json`](../../contracts/research_realtime_control_v1.json)이
 단일 기준이다. 서로 다른 컴퓨터의 monotonic clock은 비교하지 않는다. Python이
 남긴 `source_monotonic_ns`는 trace용이고, C++ 수신기가 자신의 monotonic clock으로
 `ttl_ns`를 시작한다.
+
+## RGB-D target geometry
+
+[`vision_target.py`](src/dapier_research/vision_target.py)는 detector mask와 aligned
+metric depth를 pinhole camera model로 역투영하고, calibrated 4x4 transform을 적용해
+robot/planning frame의 visible-surface target과 불확실성을 계산한다.
+
+이 경로의 원칙은 다음과 같다.
+
+- runtime target은 RGB/RGB-D 센서 결과에서 계산한다.
+- MuJoCo object pose와 segmentation ID는 runtime planner 입력으로 사용하지 않는다.
+- simulator truth는 reset, reward, offline label과 test-only 오차 측정에만 사용한다.
+- 깊이 결측, low confidence와 privileged detection은 fail-closed 처리한다.
+- RGB-only 영상에서 검증되지 않은 절대 깊이를 만들어내지 않는다.
+
+MuJoCo adapter와 실행 예시는
+[`VISION_GUIDED_REACH.md`](../sim/mobile_dual_so101/VISION_GUIDED_REACH.md)를 본다.
+설계 근거는
+[`ADR 0002`](../../docs/architecture/0002-vision-first-sim-to-real-perception.md)에 있다.
 
 ## 장비 없이 테스트
 
@@ -27,6 +46,12 @@ sequence, TTL, limit, interlock과 실행 허가를 다시 검사한다.
 cd ~/DAPIER
 python3 -m unittest discover -s 2ARM_ROBOT/research/test -v
 scripts/verify-architecture-boundaries
+```
+
+MuJoCo 의존 테스트는 다음 검증에 포함된다.
+
+```bash
+scripts/verify-mujoco-headless --artifact-dir /tmp/dapier-mujoco-artifacts
 ```
 
 기존 `2ARM_ROBOT/src/shoe_sorting_data`에는 실험 초기에 만든 ROS·하드웨어 인접
