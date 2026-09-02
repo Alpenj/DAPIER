@@ -1,0 +1,23 @@
+{
+  "schema_version": "dapier.vision-policy-observation.v1",
+  "max_observation_age_ns": 250000000,
+  "max_joint_count": 12,
+  "minimum_target_confidence": 0.35,
+  "required_false_fields": [
+    "ground_truth_used",
+    "privileged_state",
+    "control_authorized",
+    "hardware_execution"
+  ],
+  "forbidden_runtime_fields": [
+    "body_id",
+    "geom_id",
+    "segmentation_id",
+    "simulator_object_pose",
+    "object_xpos",
+    "object_xquat",
+    "shoe_x_map_m",
+    "shoe_y_map_m",
+    "shoe_z_map_m"
+  ]
+}
