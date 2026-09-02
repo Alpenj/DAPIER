@@ -1,6 +1,19 @@
 name: Hardware-ready offline gates
 
 on:
+  push:
+    branches:
+      - "pro/**"
+    paths:
+      - "2ARM_ROBOT/research/**"
+      - "2ARM_ROBOT/docs/**"
+      - "contracts/**"
+      - "scripts/replay-localization-scenarios"
+      - "scripts/verify-architecture-boundaries"
+      - "scripts/verify-hardware-free"
+      - "so101_ros2/dapier_localization_core/**"
+      - "so101_ros2/dapier_so101_core/**"
+      - ".github/workflows/hardware-ready.yml"
   pull_request:
     paths:
       - "2ARM_ROBOT/research/**"
@@ -12,13 +25,13 @@ on:
       - "so101_ros2/dapier_localization_core/**"
       - "so101_ros2/dapier_so101_core/**"
       - ".github/workflows/hardware-ready.yml"
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: hardware-ready-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: "hardware-ready-${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
