@@ -89,6 +89,11 @@ int main()
   expect(result.rejection == ResearchIntentRejection::kInvalidShape, "blank joint name should fail");
 
   arm = valid_arm_intent();
+  arm.kind = static_cast<ResearchIntentKind>(99);
+  result = validate_research_control_intent(arm, 500);
+  expect(result.rejection == ResearchIntentRejection::kUnknownKind, "unknown enum value should fail");
+
+  arm = valid_arm_intent();
   arm.ttl_ns = 100;
   result = validate_research_control_intent(
     arm,

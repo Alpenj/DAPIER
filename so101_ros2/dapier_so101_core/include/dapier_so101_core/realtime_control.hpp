@@ -25,6 +25,7 @@ enum class ResearchIntentRejection
   kInvalidTimestamp,
   kInvalidTtl,
   kInvalidSource,
+  kUnknownKind,
   kInvalidShape,
   kDuplicateJoint,
   kNonFiniteValue,

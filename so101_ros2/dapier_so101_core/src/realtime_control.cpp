@@ -34,7 +34,9 @@ ResearchIntentValidation reject(
 bool is_blank(const std::string & value)
 {
   return value.empty() || std::all_of(
-    value.begin(), value.end(), [](unsigned char character) {return std::isspace(character) != 0;});
+    value.begin(), value.end(), [](unsigned char character) {
+      return std::isspace(character) != 0;
+    });
 }
 
 bool is_zero_base(const ResearchControlIntent & intent)
@@ -51,7 +53,9 @@ bool joint_fields_are_empty(const ResearchControlIntent & intent)
 bool contains_non_finite(const std::vector<double> & values)
 {
   return std::any_of(
-    values.begin(), values.end(), [](double value) {return !std::isfinite(value);});
+    values.begin(), values.end(), [](double value) {
+      return !std::isfinite(value);
+    });
 }
 
 }  // namespace
@@ -153,6 +157,11 @@ ResearchIntentValidation validate_research_control_intent(
           "base intent must not contain joint targets");
       }
       break;
+
+    default:
+      return reject(
+        ResearchIntentRejection::kUnknownKind,
+        "intent kind is not part of the generated control boundary");
   }
 
   if (intent.ttl_ns > std::numeric_limits<std::int64_t>::max() - receiver_monotonic_ns) {

@@ -9,7 +9,10 @@ import unittest
 RESEARCH_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RESEARCH_ROOT / "src"))
 
-from dapier_research import (  # noqa: E402
+from dapier_research.control_intent import (  # noqa: E402
+    INT64_MAX,
+    UINT64_MAX,
+    ControlIntent,
     arm_joint_position_intent,
     base_twist_intent,
     hold_intent,
@@ -31,7 +34,7 @@ class ControlIntentTest(unittest.TestCase):
             "dapier.research-realtime-control.v1",
         )
 
-    def test_arm_intent_round_trip(self) -> None:
+    def test_arm_intent_round_trip_is_json_compatible(self) -> None:
         intent = arm_joint_position_intent(
             sequence=7,
             source="act_policy_eval",
@@ -41,8 +44,9 @@ class ControlIntentTest(unittest.TestCase):
             joint_max_velocity_rad_s=(0.4, 0.4),
             contract=self.contract,
         )
-        restored = intent_from_mapping(intent.as_dict(), self.contract)
-        self.assertEqual(restored, intent)
+        payload = intent.as_dict()
+        self.assertIsInstance(payload["joint_names"], list)
+        self.assertEqual(intent_from_mapping(payload, self.contract), intent)
 
     def test_base_and_hold_intents_are_separate(self) -> None:
         base = base_twist_intent(
@@ -109,12 +113,12 @@ class ControlIntentTest(unittest.TestCase):
             source_monotonic_ns=1,
             contract=self.contract,
         )
-        invalid = intent.__class__(**{**intent.as_dict(), "sequence": True})
+        invalid = ControlIntent(**{**intent.as_dict(), "sequence": True})
         with self.assertRaisesRegex(ValueError, "sequence"):
             validate_intent(invalid, self.contract)
 
-    def test_string_is_not_accepted_as_joint_name_array(self) -> None:
-        intent = arm_joint_position_intent(
+    def test_wire_mapping_rejects_string_arrays_and_extra_authorization(self) -> None:
+        payload = arm_joint_position_intent(
             sequence=1,
             source="test",
             source_monotonic_ns=1,
@@ -122,20 +126,53 @@ class ControlIntentTest(unittest.TestCase):
             joint_position_rad=(0.0,),
             joint_max_velocity_rad_s=(0.2,),
             contract=self.contract,
-        )
-        invalid = intent.__class__(**{**intent.as_dict(), "joint_names": "joint_1"})
+        ).as_dict()
+        payload["joint_names"] = "j"
         with self.assertRaisesRegex(ValueError, "joint_names must be an array"):
-            validate_intent(invalid, self.contract)
+            intent_from_mapping(payload, self.contract)
 
-    def test_research_intent_has_no_hardware_authorization_field(self) -> None:
+        payload = hold_intent(
+            sequence=1,
+            source="test",
+            source_monotonic_ns=1,
+            contract=self.contract,
+        ).as_dict()
+        payload["hardware_authorized"] = True
+        with self.assertRaisesRegex(ValueError, "unexpected keys"):
+            intent_from_mapping(payload, self.contract)
+
+    def test_wire_integer_ranges_match_cpp_types(self) -> None:
         intent = hold_intent(
             sequence=1,
             source="test",
             source_monotonic_ns=1,
             contract=self.contract,
         )
-        self.assertNotIn("hardware_authorized", intent.as_dict())
-        self.assertNotIn("device", intent.as_dict())
+        with self.assertRaisesRegex(ValueError, "unsigned 64-bit"):
+            validate_intent(
+                ControlIntent(**{**intent.as_dict(), "sequence": UINT64_MAX + 1}),
+                self.contract,
+            )
+        with self.assertRaisesRegex(ValueError, "signed 64-bit"):
+            validate_intent(
+                ControlIntent(
+                    **{
+                        **intent.as_dict(),
+                        "source_monotonic_ns": INT64_MAX + 1,
+                    }
+                ),
+                self.contract,
+            )
+
+    def test_research_intent_has_no_hardware_authorization_field(self) -> None:
+        payload = hold_intent(
+            sequence=1,
+            source="test",
+            source_monotonic_ns=1,
+            contract=self.contract,
+        ).as_dict()
+        self.assertNotIn("hardware_authorized", payload)
+        self.assertNotIn("device", payload)
 
 
 if __name__ == "__main__":

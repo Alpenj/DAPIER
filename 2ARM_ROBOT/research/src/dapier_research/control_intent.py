@@ -1,13 +1,13 @@
 """Versioned, hardware-agnostic intents produced by the Python research layer.
 
 The Python layer may propose bounded semantic intents, but it never authorizes or
-performs hardware I/O. The C++ real-time ingress is the authoritative validator
-for sequence, receiver-local TTL, robot limits, watchdogs, and dispatch.
+performs hardware I/O. The C++ real-time ingress remains authoritative for
+receiver-local TTL, sequence, robot limits, watchdogs, and dispatch.
 """
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 import json
 import math
 import os
@@ -17,6 +17,29 @@ from typing import Any, Mapping, Sequence
 
 
 CONTRACT_FILE_NAME = "research_realtime_control_v1.json"
+UINT64_MAX = (1 << 64) - 1
+INT64_MAX = (1 << 63) - 1
+
+_REQUIRED_INTENT_KEYS = frozenset(
+    {
+        "schema_version",
+        "sequence",
+        "kind",
+        "source",
+        "source_monotonic_ns",
+        "ttl_ns",
+    }
+)
+_OPTIONAL_INTENT_KEYS = frozenset(
+    {
+        "joint_names",
+        "joint_position_rad",
+        "joint_max_velocity_rad_s",
+        "base_linear_x_mps",
+        "base_angular_z_rad_s",
+    }
+)
+_ALLOWED_INTENT_KEYS = _REQUIRED_INTENT_KEYS | _OPTIONAL_INTENT_KEYS
 
 
 @dataclass(frozen=True)
@@ -33,9 +56,9 @@ class ControlBoundaryContract:
 class ControlIntent:
     """One proposal sent toward the C++ real-time control ingress.
 
-    ``source_monotonic_ns`` is trace metadata from the producer's host. It is
-    never compared against a different host's monotonic clock. The C++ ingress
-    starts the bounded ``ttl_ns`` window from its own receive timestamp.
+    ``source_monotonic_ns`` is trace metadata from the producer host. It must
+    never be compared with another host's monotonic clock. The C++ ingress
+    starts ``ttl_ns`` from its own receiver-local monotonic timestamp.
     """
 
     schema_version: str
@@ -51,7 +74,20 @@ class ControlIntent:
     base_angular_z_rad_s: float = 0.0
 
     def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        """Return a JSON-compatible mapping with explicit empty arrays."""
+        return {
+            "schema_version": self.schema_version,
+            "sequence": self.sequence,
+            "kind": self.kind,
+            "source": self.source,
+            "source_monotonic_ns": self.source_monotonic_ns,
+            "ttl_ns": self.ttl_ns,
+            "joint_names": list(self.joint_names),
+            "joint_position_rad": list(self.joint_position_rad),
+            "joint_max_velocity_rad_s": list(self.joint_max_velocity_rad_s),
+            "base_linear_x_mps": self.base_linear_x_mps,
+            "base_angular_z_rad_s": self.base_angular_z_rad_s,
+        }
 
 
 def default_contract_path() -> Path:
@@ -61,22 +97,61 @@ def default_contract_path() -> Path:
     return Path(__file__).resolve().parents[4] / "contracts" / CONTRACT_FILE_NAME
 
 
+def _require_text(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    return value
+
+
 def _require_positive_int(value: object, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValueError(f"{name} must be a positive integer")
     return value
 
 
-def _require_non_negative_int(value: object, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ValueError(f"{name} must be a non-negative integer")
+def _require_uint64(value: object, name: str) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or not 0 <= value <= UINT64_MAX
+    ):
+        raise ValueError(f"{name} must be an unsigned 64-bit integer")
     return value
 
 
-def _require_text(value: object, name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{name} must be a non-empty string")
+def _require_non_negative_int64(value: object, name: str) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or not 0 <= value <= INT64_MAX
+    ):
+        raise ValueError(f"{name} must be a non-negative signed 64-bit integer")
     return value
+
+
+def _require_array(value: object, name: str) -> Sequence[object]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError(f"{name} must be an array")
+    return value
+
+
+def _finite_scalar(value: object, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a finite number")
+    converted = float(value)
+    if not math.isfinite(converted):
+        raise ValueError(f"{name} must be a finite number")
+    return converted
+
+
+def _finite_tuple(value: object, name: str) -> tuple[float, ...]:
+    values = _require_array(value, name)
+    return tuple(_finite_scalar(item, f"{name} entry") for item in values)
+
+
+def _text_tuple(value: object, name: str) -> tuple[str, ...]:
+    values = _require_array(value, name)
+    return tuple(_require_text(item, f"{name} entry") for item in values)
 
 
 def load_contract(path: str | Path | None = None) -> ControlBoundaryContract:
@@ -90,15 +165,10 @@ def load_contract(path: str | Path | None = None) -> ControlBoundaryContract:
     if not isinstance(raw, Mapping):
         raise ValueError("control boundary contract must be a JSON object")
 
-    kinds = raw.get("allowed_intent_kinds")
-    if not isinstance(kinds, Sequence) or isinstance(kinds, (str, bytes)):
-        raise ValueError("allowed_intent_kinds must be an array")
-    normalized_kinds = tuple(_require_text(kind, "allowed_intent_kinds entry") for kind in kinds)
-    if not normalized_kinds or len(set(normalized_kinds)) != len(normalized_kinds):
+    kinds = _text_tuple(raw.get("allowed_intent_kinds"), "allowed_intent_kinds")
+    if not kinds or len(set(kinds)) != len(kinds):
         raise ValueError("allowed_intent_kinds must be non-empty and unique")
-
-    may_authorize = raw.get("research_may_authorize_hardware")
-    if may_authorize is not False:
+    if raw.get("research_may_authorize_hardware") is not False:
         raise ValueError("research_may_authorize_hardware must remain false")
 
     return ControlBoundaryContract(
@@ -110,66 +180,44 @@ def load_contract(path: str | Path | None = None) -> ControlBoundaryContract:
         max_arm_joint_count=_require_positive_int(
             raw.get("max_arm_joint_count"), "max_arm_joint_count"
         ),
-        allowed_intent_kinds=normalized_kinds,
+        allowed_intent_kinds=kinds,
         research_may_authorize_hardware=False,
     )
-
-
-def _finite_scalar(value: object, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{name} must be a finite number")
-    converted = float(value)
-    if not math.isfinite(converted):
-        raise ValueError(f"{name} must be a finite number")
-    return converted
-
-
-def _require_sequence(value: object, name: str) -> Sequence[object]:
-    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
-        raise ValueError(f"{name} must be an array")
-    return value
-
-
-def _finite_tuple(values: Sequence[object], name: str) -> tuple[float, ...]:
-    normalized = _require_sequence(values, name)
-    return tuple(_finite_scalar(value, f"{name} entry") for value in normalized)
 
 
 def validate_intent(
     intent: ControlIntent,
     contract: ControlBoundaryContract | None = None,
 ) -> None:
+    if not isinstance(intent, ControlIntent):
+        raise ValueError("intent must be a ControlIntent")
     resolved = contract or load_contract()
+
     if intent.schema_version != resolved.schema_version:
         raise ValueError("intent schema_version does not match the shared contract")
-    _require_non_negative_int(intent.sequence, "sequence")
+    _require_uint64(intent.sequence, "sequence")
     _require_text(intent.source, "source")
-    _require_non_negative_int(intent.source_monotonic_ns, "source_monotonic_ns")
+    _require_non_negative_int64(intent.source_monotonic_ns, "source_monotonic_ns")
     ttl_ns = _require_positive_int(intent.ttl_ns, "ttl_ns")
     if ttl_ns > resolved.max_intent_ttl_ns:
         raise ValueError("ttl_ns exceeds the shared contract maximum")
     if intent.kind not in resolved.allowed_intent_kinds:
         raise ValueError(f"unsupported intent kind: {intent.kind!r}")
 
-    raw_joint_names = _require_sequence(intent.joint_names, "joint_names")
-    joint_names = tuple(_require_text(name, "joint name") for name in raw_joint_names)
+    joint_names = _text_tuple(intent.joint_names, "joint_names")
     if len(set(joint_names)) != len(joint_names):
         raise ValueError("joint_names must be unique")
     positions = _finite_tuple(intent.joint_position_rad, "joint_position_rad")
     velocities = _finite_tuple(
         intent.joint_max_velocity_rad_s, "joint_max_velocity_rad_s"
     )
-    base_linear_x_mps = _finite_scalar(
-        intent.base_linear_x_mps, "base_linear_x_mps"
-    )
-    base_angular_z_rad_s = _finite_scalar(
-        intent.base_angular_z_rad_s, "base_angular_z_rad_s"
-    )
+    linear = _finite_scalar(intent.base_linear_x_mps, "base_linear_x_mps")
+    angular = _finite_scalar(intent.base_angular_z_rad_s, "base_angular_z_rad_s")
 
     if intent.kind == "hold":
         if joint_names or positions or velocities:
             raise ValueError("hold intent must not contain joint targets")
-        if base_linear_x_mps != 0.0 or base_angular_z_rad_s != 0.0:
+        if linear != 0.0 or angular != 0.0:
             raise ValueError("hold intent must request zero base motion")
         return
 
@@ -180,7 +228,7 @@ def validate_intent(
             raise ValueError("arm intent joint arrays must have identical lengths")
         if any(velocity <= 0.0 for velocity in velocities):
             raise ValueError("joint_max_velocity_rad_s entries must be positive")
-        if base_linear_x_mps != 0.0 or base_angular_z_rad_s != 0.0:
+        if linear != 0.0 or angular != 0.0:
             raise ValueError("arm intent must not request base motion")
         return
 
@@ -188,7 +236,7 @@ def validate_intent(
         raise ValueError("base intent must not contain joint targets")
 
 
-def _base_intent(
+def _build_intent(
     *,
     contract: ControlBoundaryContract,
     sequence: int,
@@ -213,7 +261,7 @@ def _base_intent(
             else source_monotonic_ns
         ),
         ttl_ns=ttl_ns,
-        joint_names=tuple(joint_names),
+        joint_names=_text_tuple(joint_names, "joint_names"),
         joint_position_rad=_finite_tuple(
             joint_position_rad, "joint_position_rad"
         ),
@@ -240,7 +288,7 @@ def hold_intent(
     contract: ControlBoundaryContract | None = None,
 ) -> ControlIntent:
     resolved = contract or load_contract()
-    return _base_intent(
+    return _build_intent(
         contract=resolved,
         sequence=sequence,
         kind="hold",
@@ -262,7 +310,7 @@ def arm_joint_position_intent(
     contract: ControlBoundaryContract | None = None,
 ) -> ControlIntent:
     resolved = contract or load_contract()
-    return _base_intent(
+    return _build_intent(
         contract=resolved,
         sequence=sequence,
         kind="arm_joint_position",
@@ -286,7 +334,7 @@ def base_twist_intent(
     contract: ControlBoundaryContract | None = None,
 ) -> ControlIntent:
     resolved = contract or load_contract()
-    return _base_intent(
+    return _build_intent(
         contract=resolved,
         sequence=sequence,
         kind="base_twist",
@@ -302,23 +350,40 @@ def intent_from_mapping(
     value: Mapping[str, Any],
     contract: ControlBoundaryContract | None = None,
 ) -> ControlIntent:
-    try:
-        intent = ControlIntent(
-            schema_version=value["schema_version"],
-            sequence=value["sequence"],
-            kind=value["kind"],
-            source=value["source"],
-            source_monotonic_ns=value["source_monotonic_ns"],
-            ttl_ns=value["ttl_ns"],
-            joint_names=tuple(value.get("joint_names", ())),
-            joint_position_rad=tuple(value.get("joint_position_rad", ())),
-            joint_max_velocity_rad_s=tuple(
-                value.get("joint_max_velocity_rad_s", ())
-            ),
-            base_linear_x_mps=value.get("base_linear_x_mps", 0.0),
-            base_angular_z_rad_s=value.get("base_angular_z_rad_s", 0.0),
-        )
-    except KeyError as error:
-        raise ValueError(f"intent is missing key: {error.args[0]}") from error
+    if not isinstance(value, Mapping):
+        raise ValueError("intent payload must be a JSON object")
+
+    keys = set(value)
+    missing = _REQUIRED_INTENT_KEYS - keys
+    if missing:
+        raise ValueError(f"intent is missing keys: {sorted(missing)}")
+    unexpected = keys - _ALLOWED_INTENT_KEYS
+    if unexpected:
+        rendered = sorted(repr(key) for key in unexpected)
+        raise ValueError(f"intent has unexpected keys: {rendered}")
+
+    intent = ControlIntent(
+        schema_version=value["schema_version"],
+        sequence=value["sequence"],
+        kind=value["kind"],
+        source=value["source"],
+        source_monotonic_ns=value["source_monotonic_ns"],
+        ttl_ns=value["ttl_ns"],
+        joint_names=_text_tuple(value.get("joint_names", ()), "joint_names"),
+        joint_position_rad=_finite_tuple(
+            value.get("joint_position_rad", ()), "joint_position_rad"
+        ),
+        joint_max_velocity_rad_s=_finite_tuple(
+            value.get("joint_max_velocity_rad_s", ()),
+            "joint_max_velocity_rad_s",
+        ),
+        base_linear_x_mps=_finite_scalar(
+            value.get("base_linear_x_mps", 0.0), "base_linear_x_mps"
+        ),
+        base_angular_z_rad_s=_finite_scalar(
+            value.get("base_angular_z_rad_s", 0.0),
+            "base_angular_z_rad_s",
+        ),
+    )
     validate_intent(intent, contract)
     return intent
