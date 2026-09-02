@@ -28,6 +28,12 @@ class RosInterfaceContractTest(unittest.TestCase):
             fields.append((field_type, field_name))
         return fields
 
+    def fields_by_name(self, name: str) -> dict[str, str]:
+        return {
+            field_name: field_type
+            for field_type, field_name in self.parse_fields(name)
+        }
+
     def test_research_intent_keeps_authorization_explicit_and_false_by_contract(self) -> None:
         fields = self.parse_fields("ResearchControlIntent.msg")
         self.assertIn(("bool", "control_authorized"), fields)
@@ -37,7 +43,7 @@ class RosInterfaceContractTest(unittest.TestCase):
         self.assertEqual(fields[1], ("uint64", "sequence"))
 
     def test_localization_shape_matches_language_neutral_contract(self) -> None:
-        fields = dict(self.parse_fields("LocalizationEstimate.msg"))
+        fields = self.fields_by_name("LocalizationEstimate.msg")
         self.assertEqual(fields["position_m"], "float64[3]")
         self.assertEqual(fields["orientation_xyzw"], "float64[4]")
         self.assertEqual(fields["covariance"], "float64[36]")
@@ -45,7 +51,7 @@ class RosInterfaceContractTest(unittest.TestCase):
         self.assertIn("control_authorized", fields)
 
     def test_safe_command_remains_non_authorizing_and_observable(self) -> None:
-        fields = dict(self.parse_fields("SafeCommand.msg"))
+        fields = self.fields_by_name("SafeCommand.msg")
         self.assertIn("dispatch_allowed", fields)
         self.assertIn("safe_stop_latched", fields)
         self.assertIn("hardware_execution", fields)
