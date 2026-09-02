@@ -7,6 +7,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ResearchControlIntent.msg"
   "msg/LocalizationEstimate.msg"
+  "msg/ReplanAcknowledgement.msg"
   "msg/InterlockState.msg"
   "msg/SafeCommand.msg"
   "msg/SafetyStatus.msg"
