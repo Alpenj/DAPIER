@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hardware-free checks for Python, localization, and real-time boundaries."""
+"""Hardware-free checks for Python, localization, safety, and real-time boundaries."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RESEARCH_SRC = REPO_ROOT / "2ARM_ROBOT" / "research" / "src"
 CPP_LOCALIZATION_ROOT = REPO_ROOT / "so101_ros2" / "dapier_localization_core"
+CPP_SAFETY_ROOT = REPO_ROOT / "so101_ros2" / "dapier_safety_core"
 CPP_REALTIME_ROOT = REPO_ROOT / "so101_ros2" / "dapier_so101_core"
 REMOTE_EXAMPLE = REPO_ROOT / "2ARM_ROBOT" / "config" / "turtlebot3.env.example"
 CONTROL_GENERATOR = REPO_ROOT / "scripts" / "generate-control-contract-header"
@@ -46,6 +47,18 @@ BANNED_LOCALIZATION_CONTROL_TEXT = {
     "/dev/serial",
     "/dev/tty",
     "eeprom_write",
+    "torque_enable",
+    "write_register",
+}
+BANNED_SAFETY_IO_TEXT = {
+    "/dev/",
+    "dynamixel",
+    "rclcpp",
+    "scservo",
+    "serial_port",
+    "sensor_msgs",
+    "std_msgs",
+    "trajectory_msgs",
     "torque_enable",
     "write_register",
 }
@@ -110,20 +123,45 @@ def verify_cpp_no_python_embedding(root: Path, layer_name: str) -> list[Path]:
     return cpp_files
 
 
+def verify_forbidden_fragments(
+    cpp_files: list[Path],
+    fragments: set[str],
+    layer_name: str,
+) -> None:
+    for path in cpp_files:
+        lowered = path.read_text(encoding="utf-8").lower()
+        for fragment in fragments:
+            if fragment.lower() in lowered:
+                fail(
+                    f"{path} contains prohibited fragment in {layer_name}: "
+                    f"{fragment}"
+                )
+
+
 def verify_cpp_localization_layer() -> None:
     cpp_files = verify_cpp_no_python_embedding(
         CPP_LOCALIZATION_ROOT,
         "C++ localization",
     )
-    for path in cpp_files:
-        lowered = path.read_text(encoding="utf-8").lower()
-        for fragment in BANNED_LOCALIZATION_CONTROL_TEXT:
-            if fragment.lower() in lowered:
-                fail(
-                    f"{path} contains direct actuator/hardware fragment in "
-                    f"localization layer: {fragment}"
-                )
+    verify_forbidden_fragments(
+        cpp_files,
+        BANNED_LOCALIZATION_CONTROL_TEXT,
+        "C++ localization layer",
+    )
     print(f"C++ localization boundary passed: {len(cpp_files)} source files")
+
+
+def verify_cpp_safety_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_SAFETY_ROOT,
+        "C++ safety",
+    )
+    verify_forbidden_fragments(
+        cpp_files,
+        BANNED_SAFETY_IO_TEXT,
+        "C++ safety core",
+    )
+    print(f"C++ safety boundary passed: {len(cpp_files)} source files")
 
 
 def verify_cpp_realtime_layer() -> None:
@@ -187,6 +225,7 @@ def verify_generated_contracts() -> None:
 def main() -> int:
     verify_python_research_layer()
     verify_cpp_localization_layer()
+    verify_cpp_safety_layer()
     verify_cpp_realtime_layer()
     verify_remote_template()
     verify_generated_contracts()
