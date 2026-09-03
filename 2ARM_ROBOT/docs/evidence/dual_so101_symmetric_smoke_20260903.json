@@ -1,0 +1,51 @@
+{
+  "schema_version": "dapier.dual-so101-smoke-summary.v1",
+  "observed_at": "2026-09-03T14:51:36+09:00",
+  "hardware_identity": {
+    "left": "SO-101, stable left alias, motor IDs 1-6",
+    "right": "SO-101, stable right alias, motor IDs 1-6",
+    "rule": "same hardware and bus API; distinct per-arm calibration",
+    "controller_serials_redacted": true
+  },
+  "motion": {
+    "joint": "shoulder_pan",
+    "requested_degrees": {"left": 3.0, "right": -3.0},
+    "duration_each_way_seconds": 1.5,
+    "returned_to_start": true,
+    "torque_disabled_after_run": true
+  },
+  "preflight": {
+    "operating_mode_all": 0,
+    "status_all": 0,
+    "torque_enable_all": 0,
+    "temperature_c_range": [30, 36],
+    "voltage_raw_range": [121, 124]
+  },
+  "measured": {
+    "left": {
+      "start_degrees": -4.835164835164835,
+      "peak_degrees": -2.2857142857142856,
+      "excursion_degrees": 2.5494505494505493,
+      "post_run_degrees": -4.571428571428571,
+      "residual_degrees": 0.2637362637362637,
+      "peak_temperature_c": 33,
+      "status_values": [0]
+    },
+    "right": {
+      "start_degrees": -1.4945054945054945,
+      "peak_degrees": -4.21978021978022,
+      "excursion_degrees": -2.7252747252747254,
+      "post_run_degrees": -1.8461538461538463,
+      "residual_degrees": -0.35164835164835173,
+      "peak_temperature_c": 38,
+      "status_values": [0]
+    }
+  },
+  "postcheck": {
+    "torque_enable_all": 0,
+    "status_all": 0,
+    "moving_all": 0,
+    "temperature_c_range": [30, 33]
+  },
+  "scope": "bounded joint smoke only; not box opening or shoe grasp acceptance"
+}

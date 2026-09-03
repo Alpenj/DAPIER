@@ -354,3 +354,60 @@ commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은
 실행 스크립트는 `OPENNI2_REDIST`와 `LD_LIBRARY_PATH`를 검증된 redist로 고정한다.
 Ubuntu 24.04의 FreeGLUT SONAME 차이는 설치된 `libglut.so.3.12`를 로컬 `compat`
 경로에서만 연결해 해결했으며 시스템 라이브러리나 firmware는 수정하지 않았다.
+
+## HW-1 · 동일 SO-101 양팔 저속 왕복 검증 · 완료
+
+### 잘못 판단했던 부분과 정정
+
+나는 LeRobot 보정 파일이 왼쪽은 `robots/so_follower`, 오른쪽은 `teleoperators/so_leader`
+아래에 있다는 이유로 실물도 follower/leader 역할이라고 잘못 판단했다. 두 장비를 다시 코드와
+레지스터 수준에서 확인한 결과 양쪽 모두 같은 `FeetechMotorsBus`, STS3215 모터 ID 1~6,
+`Goal_Position` 명령을 사용하는 동일한 SO-101이다. 보정 파일 경로는 과거 소프트웨어 사용 방식의
+흔적일 뿐 실물 역할이 아니다.
+
+이후 기준은 다음으로 고정했다.
+
+- 좌·우는 controller serial 기반 `/dev/dapier/left_arm`, `/dev/dapier/right_arm`으로 식별한다.
+- 두 팔은 동일한 SO-101 명령 경로를 사용한다.
+- 기구별 offset과 range가 다르므로 각 팔의 기존 보정은 서로 바꾸거나 복사하지 않는다.
+- controller serial과 원본 전체 로그는 공개 저장소에 올리지 않는다.
+
+### 읽기 전용 사전점검
+
+양쪽 모터 1~6에서 위치, 토크, 동작 모드, 온도, 전압, 상태, moving을 읽었다. 이 단계에서는
+`Goal_Position`, torque, EEPROM을 쓰지 않았고 serial port도 토크 상태를 바꾸지 않고 닫았다.
+
+- 동작 모드: 전 모터 position mode `0`
+- 상태: 전 모터 `0`
+- 토크: 전 모터 `0`
+- 온도: 30~36°C
+- 전압 raw: 121~124
+- 읽기 전후 위치 변화 없음
+
+### 실행과 측정
+
+`dual_so101_smoke`에서 두 팔의 현재 6축 위치를 먼저 goal로 넣고 토크를 켠 뒤, shoulder-pan만
+왼쪽 +3도, 오른쪽 -3도로 30 step/1.5초 동안 보간했다. 같은 속도로 원위치 명령을 보냈고 매
+step마다 두 shoulder-pan 실측값을 기록했다. 종료 경로에서는 양쪽 토크를 해제했다.
+
+```bash
+python 2ARM_ROBOT/scripts/dual_so101_smoke
+python 2ARM_ROBOT/scripts/dual_so101_smoke \
+  --move-deg 3 --confirm MOVE_DUAL_SO101
+```
+
+| 팔 | 명령 | 실측 최대 excursion | 왕복 직후 잔류 오차 | 동작 중 최대 온도 | status |
+|---|---:|---:|---:|---:|---:|
+| 왼쪽 | +3.0° | +2.55° | +0.26° | 33°C | 0 |
+| 오른쪽 | -3.0° | -2.73° | -0.35° | 38°C | 0 |
+
+별도 읽기 전용 postcheck에서 전 모터 torque `0`, status `0`, moving `0`, 온도 30~33°C를
+확인했다. 비식별 요약은 `docs/evidence/dual_so101_symmetric_smoke_20260903.json`에 남겼다.
+
+### 이번 결과의 범위
+
+이번 검증으로 좌우 식별, 각 팔 보정 적용, 동일 명령 경로, 저속 양팔 응답, 상태 수집, 종료 후
+토크 해제까지 확인했다. MuJoCo의 전체 박스 동작을 실물에서 실행한 것은 아니다. 현재 simulation의
+왼 그리퍼는 이동측 finger contact가 0이라 파지 성공 gate를 통과하지 못했으므로 박스 개방·신발
+추출 명령은 실물에 보내지 않는다. 다음 실물 단계는 MuJoCo 양지 contact와 friction-only lift가
+성공한 뒤 검증된 joint waypoint를 같은 3도 제한 실행기에 넣는 것이다.

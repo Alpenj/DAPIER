@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""Read both SO-101 arms; optionally run one bounded symmetric motion."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import time
+from datetime import datetime
+from pathlib import Path
+
+from lerobot.motors import Motor, MotorCalibration, MotorNormMode
+from lerobot.motors.feetech import FeetechMotorsBus
+
+
+MOTORS = {
+    "shoulder_pan": (1, MotorNormMode.DEGREES),
+    "shoulder_lift": (2, MotorNormMode.DEGREES),
+    "elbow_flex": (3, MotorNormMode.DEGREES),
+    "wrist_flex": (4, MotorNormMode.DEGREES),
+    "wrist_roll": (5, MotorNormMode.DEGREES),
+    "gripper": (6, MotorNormMode.RANGE_0_100),
+}
+
+
+def load_bus(port: str, calibration_path: Path) -> FeetechMotorsBus:
+    raw = json.loads(calibration_path.read_text(encoding="utf-8"))
+    if set(raw) != set(MOTORS):
+        raise ValueError(f"unexpected calibration keys in {calibration_path}")
+    calibration = {name: MotorCalibration(**value) for name, value in raw.items()}
+    for name, (expected_id, _) in MOTORS.items():
+        if calibration[name].id != expected_id:
+            raise ValueError(f"{name}: expected motor {expected_id}, got {calibration[name].id}")
+    return FeetechMotorsBus(
+        port=port,
+        motors={name: Motor(id_, "sts3215", mode) for name, (id_, mode) in MOTORS.items()},
+        calibration=calibration,
+    )
+
+
+def health(bus: FeetechMotorsBus) -> dict[str, dict[str, float]]:
+    return {
+        name: bus.sync_read(name, normalize=False, num_retry=2)
+        for name in (
+            "Torque_Enable",
+            "Operating_Mode",
+            "Present_Temperature",
+            "Present_Voltage",
+            "Status",
+            "Moving",
+        )
+    }
+
+
+def interpolate(
+    buses: dict[str, FeetechMotorsBus],
+    starts: dict[str, dict[str, float]],
+    left_delta: float,
+    steps: int,
+    trace: list[dict[str, object]],
+) -> None:
+    for index in range(1, steps + 1):
+        goals = {}
+        for side, sign in (("left", 1.0), ("right", -1.0)):
+            goals[side] = dict(starts[side])
+            goals[side]["shoulder_pan"] += sign * left_delta * index / steps
+            buses[side].sync_write("Goal_Position", goals[side])
+        time.sleep(0.05)
+        observed = {
+            side: bus.sync_read("Present_Position", ["shoulder_pan"], num_retry=2)["shoulder_pan"]
+            for side, bus in buses.items()
+        }
+        trace.append(
+            {
+                "timestamp": datetime.now().astimezone().isoformat(),
+                "goal": {side: goal["shoulder_pan"] for side, goal in goals.items()},
+                "observed": observed,
+            }
+        )
+
+
+def main() -> int:
+    cache = Path.home() / ".cache/huggingface/lerobot/calibration"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--left-port", default="/dev/dapier/left_arm")
+    parser.add_argument("--right-port", default="/dev/dapier/right_arm")
+    parser.add_argument(
+        "--left-calibration", type=Path,
+        default=cache / "robots/so_follower/so101_follower_main.json",
+    )
+    parser.add_argument(
+        "--right-calibration", type=Path,
+        # Legacy LeRobot cache namespace; this does not define the physical arm's role.
+        default=cache / "teleoperators/so_leader/so101_leader_main.json",
+    )
+    parser.add_argument("--move-deg", type=float, default=0.0)
+    parser.add_argument("--confirm", default="")
+    parser.add_argument("--log", type=Path, default=Path("/tmp/dapier-dual-so101-smoke.json"))
+    args = parser.parse_args()
+    if abs(args.move_deg) > 3.0:
+        raise SystemExit("--move-deg is limited to 3 degrees")
+    if args.move_deg and args.confirm != "MOVE_DUAL_SO101":
+        raise SystemExit("motion requires --confirm MOVE_DUAL_SO101")
+
+    buses = {
+        "left": load_bus(args.left_port, args.left_calibration),
+        "right": load_bus(args.right_port, args.right_calibration),
+    }
+    record: dict[str, object] = {"motion_requested_deg": args.move_deg, "arms": {}, "trace": []}
+    failure: BaseException | None = None
+    try:
+        for bus in buses.values():
+            bus.connect()
+        starts = {side: bus.sync_read("Present_Position", num_retry=2) for side, bus in buses.items()}
+        for side, bus in buses.items():
+            record["arms"][side] = {"before": starts[side], "health": health(bus)}
+
+        if args.move_deg:
+            temperatures = [
+                value
+                for bus in buses.values()
+                for value in bus.sync_read("Present_Temperature", normalize=False, num_retry=2).values()
+            ]
+            if max(temperatures) >= 60:
+                raise RuntimeError(f"motor temperature too high: {max(temperatures)} C")
+            modes = [
+                value
+                for bus in buses.values()
+                for value in bus.sync_read("Operating_Mode", normalize=False, num_retry=2).values()
+            ]
+            if set(modes) != {0}:
+                raise RuntimeError(f"all motors must already be in position mode, got {modes}")
+            for side, bus in buses.items():
+                bus.sync_write("Goal_Position", starts[side])
+                bus.enable_torque()
+            interpolate(buses, starts, args.move_deg, 30, record["trace"])
+            time.sleep(0.5)
+            peaks = {
+                "left": {**starts["left"], "shoulder_pan": starts["left"]["shoulder_pan"] + args.move_deg},
+                "right": {**starts["right"], "shoulder_pan": starts["right"]["shoulder_pan"] - args.move_deg},
+            }
+            interpolate(buses, peaks, -args.move_deg, 30, record["trace"])
+            time.sleep(0.5)
+
+        for side, bus in buses.items():
+            record["arms"][side]["after"] = bus.sync_read("Present_Position", num_retry=2)
+            record["arms"][side]["health_before_disconnect"] = health(bus)
+    except BaseException as exc:
+        record["error"] = f"{type(exc).__name__}: {exc}"
+        failure = exc
+    finally:
+        disconnect_errors = []
+        for bus in buses.values():
+            if bus.is_connected:
+                try:
+                    bus.disconnect(disable_torque=bool(args.move_deg))
+                except Exception as exc:
+                    disconnect_errors.append(f"{type(exc).__name__}: {exc}")
+        if disconnect_errors:
+            record["disconnect_errors"] = disconnect_errors
+        args.log.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    if failure is not None:
+        raise failure
+    if disconnect_errors:
+        raise RuntimeError("failed to disconnect cleanly; inspect the log")
+    print(json.dumps(record, ensure_ascii=False, indent=2))
+    print(f"log={args.log}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
