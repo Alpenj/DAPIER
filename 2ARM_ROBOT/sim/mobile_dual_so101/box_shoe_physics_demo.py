@@ -206,10 +206,21 @@ def _finger_contact_normal_dot(
         normal = np.asarray(contact.frame[:3], dtype=np.float64)
         return normal if int(contact.geom1) == shoe_geom else -normal
 
+    return _most_opposing_normal_dot(
+        [shoe_outward(contact) for contact in fixed_contacts],
+        [shoe_outward(contact) for contact in moving_contacts],
+    )
+
+
+def _most_opposing_normal_dot(
+    fixed_normals: list[np.ndarray], moving_normals: list[np.ndarray]
+) -> float | None:
+    if not fixed_normals or not moving_normals:
+        return None
     return min(
-        float(np.dot(shoe_outward(fixed), shoe_outward(moving)))
-        for fixed in fixed_contacts
-        for moving in moving_contacts
+        float(np.dot(fixed, moving))
+        for fixed in fixed_normals
+        for moving in moving_normals
     )
 
 
