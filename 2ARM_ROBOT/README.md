@@ -95,13 +95,15 @@ episode는 없다. 따라서 현재 장비 역할은 `config/hardware_roles.json
 ```bash
 cd ~/DAPIER/2ARM_ROBOT
 bash scripts/capture_ros2_hardware_snapshot.sh \
-  output/hardware_snapshots/first_connected
+  output/hardware_snapshots/first_connected \
+  --confirm VISIBLE_ROS2_SNAPSHOT_READONLY
 ```
 
 이 스크립트는 node/topic/type, endpoint QoS, `JointState`, `CameraInfo`, base
 velocity/odometry의 첫 message를 저장한다. `Image`는 픽셀을 저장하지 않고
-header만 수집한다. 어떤 motion command도 publish하지 않으며 출력 폴더가 비어
-있지 않으면 덮어쓰지 않고 중단한다.
+header만 수집한다. 사용자가 현장에서 read-only graph 접근을 승인한 exact token이
+없으면 ROS 2를 호출하지 않는다. 어떤 motion command도 publish하지 않으며 Git에서
+제외된 `output/` 아래 새 폴더만 허용하고 기존 경로는 덮어쓰지 않는다.
 
 현재 장비 node가 하나도 실행되지 않았다면 exit 2와 `NO_CANDIDATE_TOPICS`를
 반환한다. snapshot을 확인한 뒤에만 mock topic mapping을 실제 이름으로 교체한다.

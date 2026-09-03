@@ -92,12 +92,14 @@ snapshot을 먼저 수집한다.
 
 ```bash
 bash scripts/capture_ros2_hardware_snapshot.sh \
-  output/hardware_snapshots/first_connected
+  output/hardware_snapshots/first_connected \
+  --confirm VISIBLE_ROS2_SNAPSHOT_READONLY
 ```
 
 snapshot은 ROS graph와 selected metadata만 저장하고 이미지 pixel이나 제어
-명령은 기록하지 않는다. 이 결과가 없으면 mock 이름·차원·주기를 실제 계약으로
-승격하지 않는다.
+명령은 기록하지 않는다. 사용자가 현장에서 exact token으로 승인하지 않으면 graph에
+접속하지 않으며, 결과는 Git에서 제외된 `output/` 아래 새 경로에만 쓴다. 이 결과가
+없으면 mock 이름·차원·주기를 실제 계약으로 승격하지 않는다.
 
 ## 다음 구현 단위
 

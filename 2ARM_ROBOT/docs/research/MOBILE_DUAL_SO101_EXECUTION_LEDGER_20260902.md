@@ -453,9 +453,10 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 과거 로그에는 좌우 식별, 각 팔 보정 적용, 동일 명령 경로, 저속 양팔 응답, 상태 수집, 종료 후
 토크 해제가 기록돼 있다. 다만 사용자가 화면으로 보며 확인한 commissioning은 아니므로 내일 같은
 범위를 다시 실행해 검증해야 한다. MuJoCo의 전체 박스 동작을 실물에서 실행한 것은 아니다. 현재 simulation의
-왼 그리퍼는 이동측 finger contact가 0이라 파지 성공 gate를 통과하지 못했으므로 박스 개방·신발
-추출 명령은 실물에 보내지 않는다. 다음 실물 단계는 MuJoCo 양지 contact와 friction-only lift가
-성공한 뒤 검증된 joint waypoint를 같은 3도 제한 실행기에 넣는 것이다.
+왼 그리퍼는 로컬에서 fixed/moving contact가 1/1, CI에서 1/0으로 경계가 달랐지만 두 환경 모두
+반대 방향 접촉과 friction-only lift가 없어 파지 성공 gate를 통과하지 못했다. 따라서 박스 개방·신발
+추출 명령은 실물에 보내지 않는다. 다음 실물 단계는 MuJoCo opposing contact와 friction-only lift가
+성공한 뒤 검증된 joint waypoint를 제한 실행기에 넣는 것이다.
 
 ## SIM P2 재현 · 파지축과 actuator 포화 분리 · 계속 실패
 
@@ -572,3 +573,9 @@ bilateral 또는 opposing-contact 실패를 확인한다. 법선 내적 판정�
 해석된 경로가 같으면 serial connect 전에 거부하도록 보강했다. 복사된 잘못된 파일까지 자동으로
 좌우 판별할 수는 없으므로, 실제 controller와 calibration 대응은 내일 read-only 확인이 여전히
 필수다.
+
+기존 ROS 2 snapshot 도구도 실물 안전 경계에 맞춰 다시 점검했다. 읽기 전용이라도 불명확한
+ROS graph 접속은 실물 접근이므로, `VISIBLE_ROS2_SNAPSHOT_READONLY` exact token이 없으면
+`ros2`를 호출하기 전에 종료한다. raw 결과는 Git에서 제외된 `2ARM_ROBOT/output/` 아래 새
+경로에만 저장하고 기존 경로는 덮어쓰지 않는다. 잘못된 토큰 거부 3개 집중시험과 전체 167개
+MuJoCo 헤드리스 회귀가 통과했으며 실제 ROS graph와 장치에는 접근하지 않았다.

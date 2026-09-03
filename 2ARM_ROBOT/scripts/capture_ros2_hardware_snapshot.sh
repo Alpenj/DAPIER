@@ -1,18 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: bash scripts/capture_ros2_hardware_snapshot.sh OUTPUT_DIRECTORY" >&2
+readonly CONFIRMATION="VISIBLE_ROS2_SNAPSHOT_READONLY"
+
+usage() {
+  echo "Usage: bash scripts/capture_ros2_hardware_snapshot.sh OUTPUT_DIRECTORY --confirm $CONFIRMATION" >&2
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -ne 3 || "$2" != "--confirm" || "$3" != "$CONFIRMATION" ]]; then
+  usage
   exit 2
 fi
 
-snapshot_dir="$1"
-if [[ -e "${snapshot_dir}" && ! -d "${snapshot_dir}" ]]; then
-  echo "ERROR: output path exists and is not a directory: ${snapshot_dir}" >&2
-  exit 1
-fi
-if [[ -d "${snapshot_dir}" && -n "$(ls -A -- "${snapshot_dir}")" ]]; then
-  echo "ERROR: output directory is not empty; refusing to overwrite: ${snapshot_dir}" >&2
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+output_root="$(realpath -m -- "$script_dir/../output")"
+snapshot_dir="$(realpath -m -- "$1")"
+case "$snapshot_dir/" in
+  "$output_root/"*) ;;
+  *) echo "ERROR: snapshot must be under $output_root" >&2; exit 1 ;;
+esac
+if [[ -e "${snapshot_dir}" ]]; then
+  echo "ERROR: refusing to overwrite: ${snapshot_dir}" >&2
   exit 1
 fi
 
@@ -97,6 +109,7 @@ done < "${snapshot_dir}/topics.txt"
   printf 'sampled_topic_count=%s\n' "${sampled_topic_count}"
   printf 'camera_payload_captured=false\n'
   printf 'motion_commands_sent=false\n'
+  printf 'hardware_execution=false\n'
 } > "${snapshot_dir}/summary.txt"
 
 if [[ ${candidate_topic_count} -eq 0 ]]; then

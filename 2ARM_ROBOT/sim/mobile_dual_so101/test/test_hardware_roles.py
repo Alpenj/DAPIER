@@ -66,6 +66,17 @@ class HardwareRolesTest(unittest.TestCase):
             2,
         )
 
+    def test_ros_snapshot_requires_exact_readonly_confirmation(self):
+        script = ROOT / "scripts/capture_ros2_hardware_snapshot.sh"
+        self.assertEqual(subprocess.run(["bash", script, "--help"], check=False).returncode, 0)
+        self.assertEqual(
+            subprocess.run(
+                ["bash", script, ROOT / "output/hardware_snapshots/test", "--confirm", "WRONG"],
+                check=False,
+            ).returncode,
+            2,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
