@@ -294,6 +294,13 @@ serial을 제공하지 않는 동일 모델 wrist camera 두 대는 외장 허�
 `scripts/install_hardware_aliases.sh`는 그 파일을 대상 PC 또는 Raspberry Pi 4의 udev에
 설치하고, 연결되지 않은 장치는 실패 대신 경고로 표시한다.
 
+### 권장 USB 배선
+
+- 전원형 USB 3.x 허브의 고정 1~4번 포트에 좌/우 wrist RGB와 좌/우 SO-101 controller를 함께 연결한다.
+- Astra S는 가능하면 호스트의 다른 포트 또는 별도 전원형 허브로 분리한다.
+- 허브 수가 아니라 `lsusb -t`의 root hub가 실제 대역폭 경계다. 같은 `480M` root hub 아래면
+  물리 허브를 나눠도 카메라 대역폭은 계속 공유하므로 전체 연결 뒤 동시 FPS/drop/reset을 측정한다.
+
 ### Astra S에서 직접 재현한 결과
 
 - Orbbec Viewer/SDK v1.10.37: Depth 1프레임 수신 성공
@@ -302,6 +309,8 @@ serial을 제공하지 않는 동일 모델 wrist camera 두 대는 외장 허�
 - 공식 OpenNI2 2.3.0.86: 현재 Ubuntu 24.04, kernel 7.0 환경에서 `device.open()` USB timeout
 - USB 장치 권한: `0666`, 권한 부족 아님
 - `usbcore.usbfs_memory_mb`: 16에서 공식 권장값 128로 임시 변경했지만 timeout 동일
+- kernel journal 재검토 결과 당시 Astra는 timeout 뒤에도 USB에 남아 있었고, 이후 여러 USB 장치와
+  함께 물리적으로 분리됐다. timeout이 장치를 끊었다는 이전 추정은 폐기한다.
 - 양쪽 wrist RGB: 320x240, YUYV, 15 FPS 화면 확인
 
 따라서 아직 Astra S Color를 성공으로 기록하지 않는다. 최신 SDK UI 설정 문제가 아니라
@@ -317,5 +326,7 @@ OpenNI2 단독 실행 순서로 진행한다. 펌웨어 변경은 복구 이미�
   `LD_LIBRARY_PATH`와 `OPENNI2_REDIST`에 명시해야 한다.
 - 공식 Color 원시 프레임 샘플은 `ColorReaderPoll`, Astra non-UVC RGB-D 표시 샘플은
   `SimpleViewer 0 0`임을 소스에서 확인했다.
+- `SimpleViewer`가 요구하는 `libpng12.so.0`은 같은 공식 배포본의 ThirdParty OpenCV 디렉터리로
+  고정했으며 `ldd`에서 누락 의존성이 없음을 확인했다.
 - `scripts/run_astra_openni2_color check|poll|viewer`가 위 경로 고정과 장치 별칭 확인을 담당한다.
 - 장비를 다른 팀원이 사용 중이어서 이 실행기의 실물 Color 프레임 검증은 대기 중이다.
