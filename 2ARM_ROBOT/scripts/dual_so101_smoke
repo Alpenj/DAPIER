@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import time
 from datetime import datetime
 from pathlib import Path
@@ -17,19 +18,22 @@ MOTORS = {
     "wrist_roll": (5, "DEGREES"),
     "gripper": (6, "RANGE_0_100"),
 }
+MOTION_CONFIRMATION = "VISIBLE_DUAL_SO101_3DEG"
 
 
-def load_bus(port: str, calibration_path: Path):
+def load_bus(port: str, calibration_path: Path | None):
     from lerobot.motors import Motor, MotorCalibration, MotorNormMode
     from lerobot.motors.feetech import FeetechMotorsBus
 
-    raw = json.loads(calibration_path.read_text(encoding="utf-8"))
-    if set(raw) != set(MOTORS):
-        raise ValueError(f"unexpected calibration keys in {calibration_path}")
-    calibration = {name: MotorCalibration(**value) for name, value in raw.items()}
-    for name, (expected_id, _) in MOTORS.items():
-        if calibration[name].id != expected_id:
-            raise ValueError(f"{name}: expected motor {expected_id}, got {calibration[name].id}")
+    calibration = None
+    if calibration_path is not None:
+        raw = json.loads(calibration_path.read_text(encoding="utf-8"))
+        if set(raw) != set(MOTORS):
+            raise ValueError(f"unexpected calibration keys in {calibration_path}")
+        calibration = {name: MotorCalibration(**value) for name, value in raw.items()}
+        for name, (expected_id, _) in MOTORS.items():
+            if calibration[name].id != expected_id:
+                raise ValueError(f"{name}: expected motor {expected_id}, got {calibration[name].id}")
     return FeetechMotorsBus(
         port=port,
         motors={
@@ -38,6 +42,24 @@ def load_bus(port: str, calibration_path: Path):
         },
         calibration=calibration,
     )
+
+
+def validate_motion_request(
+    move_deg: float,
+    confirm: str,
+    left_calibration: Path | None,
+    right_calibration: Path | None,
+) -> None:
+    if not math.isfinite(move_deg):
+        raise ValueError("--move-deg must be finite")
+    if abs(move_deg) > 3.0:
+        raise ValueError("--move-deg is limited to 3 degrees")
+    if not move_deg:
+        return
+    if confirm != MOTION_CONFIRMATION:
+        raise ValueError(f"motion requires --confirm {MOTION_CONFIRMATION}")
+    if left_calibration is None or right_calibration is None:
+        raise ValueError("motion requires explicit left and right calibration files")
 
 
 def health(bus) -> dict[str, dict[str, float]]:
@@ -113,27 +135,28 @@ def interpolate(
 
 
 def main() -> int:
-    cache = Path.home() / ".cache/huggingface/lerobot/calibration"
     parser = argparse.ArgumentParser()
     parser.add_argument("--left-port", default="/dev/dapier/left_arm")
     parser.add_argument("--right-port", default="/dev/dapier/right_arm")
     parser.add_argument(
         "--left-calibration", type=Path,
-        default=cache / "robots/so_follower/so101_follower_main.json",
     )
     parser.add_argument(
         "--right-calibration", type=Path,
-        # Legacy LeRobot cache namespace; this does not define the physical arm's role.
-        default=cache / "teleoperators/so_leader/so101_leader_main.json",
     )
     parser.add_argument("--move-deg", type=float, default=0.0)
     parser.add_argument("--confirm", default="")
     parser.add_argument("--log", type=Path, default=Path("/tmp/dapier-dual-so101-smoke.json"))
     args = parser.parse_args()
-    if abs(args.move_deg) > 3.0:
-        raise SystemExit("--move-deg is limited to 3 degrees")
-    if args.move_deg and args.confirm != "VISIBLE_DUAL_SO101_3DEG":
-        raise SystemExit("motion requires --confirm VISIBLE_DUAL_SO101_3DEG")
+    try:
+        validate_motion_request(
+            args.move_deg,
+            args.confirm,
+            args.left_calibration,
+            args.right_calibration,
+        )
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
 
     buses = {
         "left": load_bus(args.left_port, args.left_calibration),
@@ -144,7 +167,12 @@ def main() -> int:
     try:
         for bus in buses.values():
             bus.connect()
-        starts = {side: bus.sync_read("Present_Position", num_retry=2) for side, bus in buses.items()}
+        normalized = bool(args.move_deg)
+        starts = {
+            side: bus.sync_read("Present_Position", normalize=normalized, num_retry=2)
+            for side, bus in buses.items()
+        }
+        record["position_unit"] = "degree" if normalized else "raw_tick"
         for side, bus in buses.items():
             record["arms"][side] = {"before": starts[side], "health": health(bus)}
 
@@ -176,7 +204,9 @@ def main() -> int:
             time.sleep(0.5)
 
         for side, bus in buses.items():
-            record["arms"][side]["after"] = bus.sync_read("Present_Position", num_retry=2)
+            record["arms"][side]["after"] = bus.sync_read(
+                "Present_Position", normalize=normalized, num_retry=2
+            )
             record["arms"][side]["health_before_disconnect"] = health(bus)
     except BaseException as exc:
         record["error"] = f"{type(exc).__name__}: {exc}"

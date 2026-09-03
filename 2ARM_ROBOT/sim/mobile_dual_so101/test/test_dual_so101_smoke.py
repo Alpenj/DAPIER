@@ -23,6 +23,23 @@ class FakeBus:
 
 
 class DualSO101SmokeTest(unittest.TestCase):
+    def test_motion_requires_explicit_per_arm_calibration(self):
+        with self.assertRaisesRegex(ValueError, "finite"):
+            SMOKE["validate_motion_request"](float("nan"), "", None, None)
+        with self.assertRaisesRegex(ValueError, "explicit left and right"):
+            SMOKE["validate_motion_request"](
+                3.0,
+                SMOKE["MOTION_CONFIRMATION"],
+                None,
+                None,
+            )
+        SMOKE["validate_motion_request"](
+            3.0,
+            SMOKE["MOTION_CONFIRMATION"],
+            Path("left.json"),
+            Path("right.json"),
+        )
+
     def test_trace_records_position_load_and_current(self):
         trace = []
         buses = {"left": FakeBus(), "right": FakeBus()}

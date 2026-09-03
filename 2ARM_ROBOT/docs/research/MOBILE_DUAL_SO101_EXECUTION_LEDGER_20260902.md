@@ -429,8 +429,14 @@ step마다 두 shoulder-pan 실측값을 기록했다. 종료 경로에서는 �
 ```bash
 python 2ARM_ROBOT/scripts/dual_so101_smoke
 python 2ARM_ROBOT/scripts/dual_so101_smoke \
+  --left-calibration /path/to/verified-left-so101.json \
+  --right-calibration /path/to/verified-right-so101.json \
   --move-deg 3 --confirm VISIBLE_DUAL_SO101_3DEG
 ```
+
+첫 명령은 calibration 없이 raw tick과 health만 읽는다. 동작 명령에는 controller serial과
+좌우 실물 대응을 확인한 per-arm calibration 두 개를 명시해야 한다. LeRobot cache의
+`leader`/`follower` 디렉터리 이름만으로 좌우 역할을 추론하지 않는다.
 
 | 팔 | 명령 | 실측 최대 excursion | 왕복 직후 잔류 오차 | 동작 중 최대 온도 | status |
 |---|---:|---:|---:|---:|---:|
