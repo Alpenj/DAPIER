@@ -346,7 +346,7 @@ commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은
 ### 고정한 실행 경로
 
 - 로컬 런타임: `~/.local/opt/orbbec-openni2-ros2-v1.0.2`
-- 장치 별칭: `/dev/dapier/workspace_rgbd`
+- 장치 별칭: `/dev/dapier/front_slam_rgbd`
 - 준비 확인: `2ARM_ROBOT/scripts/run_astra_openni2_color check`
 - Color 원시 프레임: `2ARM_ROBOT/scripts/run_astra_openni2_color poll`
 - Color/Depth GUI: `2ARM_ROBOT/scripts/run_astra_openni2_color viewer`
@@ -428,7 +428,7 @@ step마다 두 shoulder-pan 실측값을 기록했다. 종료 경로에서는 �
 ```bash
 python 2ARM_ROBOT/scripts/dual_so101_smoke
 python 2ARM_ROBOT/scripts/dual_so101_smoke \
-  --move-deg 3 --confirm MOVE_DUAL_SO101
+  --move-deg 3 --confirm VISIBLE_DUAL_SO101_3DEG
 ```
 
 | 팔 | 명령 | 실측 최대 excursion | 왕복 직후 잔류 오차 | 동작 중 최대 온도 | status |
@@ -500,3 +500,8 @@ actual acceleration과 finite-difference jerk 제한을 넘었고 `strict_dynami
 모두 실패했다. 단순 감속으로 해결하지 않고, 다음 공개 실물 시험에서 STS3215의 `Acceleration`,
 `Goal_Time`, `Goal_Velocity`, 속도·가속도 상한과 `Present_Velocity`를 읽어 내부 프로파일을
 MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계측만 하고 변경하지 않는다.
+
+다음 실물 시험은 왼쪽·오른쪽 wrist RGB 창과 Astra viewer를 먼저 띄워 사용자가 팔을 직접
+볼 수 있게 한다. 이후 무동작 health 읽기, `lsusb -t`와 kernel USB 기준점 기록, 정확한 승인,
+양팔 ±3도 왕복, 사후 health와 USB reset 확인 순서로 진행한다. 카메라 동시 실행이 불안정하면
+모터를 움직이지 않고 스트림 단계에서 중단한다.

@@ -38,8 +38,8 @@ if [[ "${mode}" == check ]]; then
   printf 'OpenNI2 runtime ready: %s\n' "${bin_dir}"
   exit 0
 fi
-if [[ ! -e /dev/dapier/workspace_rgbd ]]; then
-  echo "Astra S is not connected: /dev/dapier/workspace_rgbd" >&2
+if [[ ! -e /dev/dapier/front_slam_rgbd ]]; then
+  echo "Astra S is not connected: /dev/dapier/front_slam_rgbd" >&2
   exit 3
 fi
 

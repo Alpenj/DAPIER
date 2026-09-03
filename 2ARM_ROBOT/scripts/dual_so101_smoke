@@ -132,8 +132,8 @@ def main() -> int:
     args = parser.parse_args()
     if abs(args.move_deg) > 3.0:
         raise SystemExit("--move-deg is limited to 3 degrees")
-    if args.move_deg and args.confirm != "MOVE_DUAL_SO101":
-        raise SystemExit("motion requires --confirm MOVE_DUAL_SO101")
+    if args.move_deg and args.confirm != "VISIBLE_DUAL_SO101_3DEG":
+        raise SystemExit("motion requires --confirm VISIBLE_DUAL_SO101_3DEG")
 
     buses = {
         "left": load_bus(args.left_port, args.left_calibration),
