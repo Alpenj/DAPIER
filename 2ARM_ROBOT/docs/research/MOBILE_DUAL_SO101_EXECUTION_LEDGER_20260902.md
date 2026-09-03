@@ -273,18 +273,19 @@ P2에서 기존 ShoePoseEstimate와 camera contract를 재사용해 RGB-D 관측
 연결한다. 양지 contact와 friction-only lift가 headless에서 통과한 뒤 사용자에게 관찰 항목을
 먼저 알리고 viewer 검증을 진행한다. 그 전에는 P3로 넘어가지 않는다.
 
-## HW 준비 · 장치 역할 고정과 Astra S Color 진단 · Color 복구 완료 · 동시 부하 검증 대기
+## HW 이력 · 2026-09-03 역할 변경 전 Astra S Color 진단
 
-### 직접 확인한 연결
+### 당시 직접 확인한 연결
 
 - 외장 허브 물리 1번: 왼쪽 wrist RGB
 - 외장 허브 물리 2번: 오른쪽 wrist RGB
 - 외장 허브 물리 3번: 왼팔 SO-101 controller
 - 외장 허브 물리 4번: 오른팔 SO-101 controller
-- 작업공간 RGB-D: Orbbec Astra S (`2bc5:0402`)
+- 당시 단일 RGB-D: Orbbec Astra S (`2bc5:0402`), 이후 TurtleBot3 전면 역할로 변경
 
-현재 노트북에서는 `/dev/dapier/left_arm`, `right_arm`, `left_wrist_rgb`,
-`right_wrist_rgb`, `workspace_rgbd` 별칭으로 접근한다. 팔 controller는 장치 serial로,
+당시 노트북에서는 `/dev/dapier/left_arm`, `right_arm`, `left_wrist_rgb`,
+`right_wrist_rgb`, `workspace_rgbd` 별칭으로 접근했다. 현재 RGB-D 역할과 별칭은 아래 변경 기록을
+정본으로 사용한다. 팔 controller는 장치 serial로,
 serial을 제공하지 않는 동일 모델 wrist camera 두 대는 외장 허브 downstream path로 역할을
 고정했다. 따라서 `/dev/ttyACM*`, `/dev/video*` 번호가 바뀌거나 허브 전체를 다른 host USB
 포트에 연결해도 역할을 유지한다. 단, 동일 wrist camera 두 개의 개별 허브 플러그를 서로
@@ -324,9 +325,9 @@ OpenNI 조합을 이 장치의 실행 경로에서 제외한다. firmware는 변
 같은 공식 tar에는 `arm`과 `arm64` redist도 포함되지만, 이번 실기 증거는 x64 노트북에만 해당한다.
 Raspberry Pi 4에서는 OS 아키텍처에 맞는 redist로 별도 FPS·온도·USB 동시 부하 검증을 수행한다.
 
-### USB root hub와 동시 스트림 판단
+### 당시 USB root hub와 동시 스트림 판단
 
-현재 외장 허브와 Astra는 모두 Bus 001의 같은 480M root hub를 공유한다. 두 wrist RGB의
+당시 외장 허브와 Astra는 모두 Bus 001의 같은 480M root hub를 공유했다. 두 wrist RGB의
 320x240 YUYV 15 FPS payload는 합계 약 36.9 Mbit/s다. Astra를 640x480 30 FPS,
 16-bit depth와 16-bit on-wire color로 가정하면 약 294.9 Mbit/s가 추가된다. 합계 약
 331.8 Mbit/s는 프로토콜 overhead와 예약 대역폭을 제외한 USB 2.0 안정 실효 범위에 가까우므로
@@ -343,7 +344,7 @@ Color+Depth+wrist 두 대를 동시에 실행해 FPS, frame drop, kernel reset�
 commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은 영상에 비해 작아서 대역폭
 병목의 주원인이 아니다.
 
-### 고정한 실행 경로
+### 현재 전면 Astra 실행 경로
 
 - 로컬 런타임: `~/.local/opt/orbbec-openni2-ros2-v1.0.2`
 - 장치 별칭: `/dev/dapier/front_slam_rgbd`
@@ -501,7 +502,8 @@ actual acceleration과 finite-difference jerk 제한을 넘었고 `strict_dynami
 `Goal_Time`, `Goal_Velocity`, 속도·가속도 상한과 `Present_Velocity`를 읽어 내부 프로파일을
 MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계측만 하고 변경하지 않는다.
 
-다음 실물 시험은 왼쪽·오른쪽 wrist RGB 창과 Astra viewer를 먼저 띄워 사용자가 팔을 직접
-볼 수 있게 한다. 이후 무동작 health 읽기, `lsusb -t`와 kernel USB 기준점 기록, 정확한 승인,
+다음 실물 시험은 왼쪽·오른쪽 wrist RGB, TurtleBot3 전면 Astra viewer, H201 top-view UVC 창을
+먼저 띄워 사용자가 팔과 센서 화면을 직접 볼 수 있게 한다. 이후 무동작 health 읽기,
+`lsusb -t`와 kernel USB 기준점 기록, 정확한 승인,
 양팔 ±3도 왕복, 사후 health와 USB reset 확인 순서로 진행한다. 카메라 동시 실행이 불안정하면
 모터를 움직이지 않고 스트림 단계에서 중단한다.
