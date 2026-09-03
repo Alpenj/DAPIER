@@ -77,6 +77,16 @@ class HardwareRolesTest(unittest.TestCase):
             2,
         )
 
+    def test_astra_stream_requires_exact_readonly_confirmation(self):
+        script = ROOT / "scripts/run_astra_openni2_color"
+        self.assertEqual(
+            subprocess.run(
+                ["bash", script, "viewer", "--operator-present", "--confirm", "WRONG"],
+                check=False,
+            ).returncode,
+            2,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

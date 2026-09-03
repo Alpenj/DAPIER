@@ -349,12 +349,14 @@ commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은
 - 로컬 런타임: `~/.local/opt/orbbec-openni2-ros2-v1.0.2`
 - 장치 별칭: `/dev/dapier/front_slam_rgbd`
 - 준비 확인: `2ARM_ROBOT/scripts/run_astra_openni2_color check`
-- Color 원시 프레임: `2ARM_ROBOT/scripts/run_astra_openni2_color poll`
-- Color/Depth GUI: `2ARM_ROBOT/scripts/run_astra_openni2_color viewer`
+- Color 원시 프레임: `2ARM_ROBOT/scripts/run_astra_openni2_color poll --operator-present --confirm VISIBLE_ASTRA_READONLY_STREAM`
+- Color/Depth GUI: `2ARM_ROBOT/scripts/run_astra_openni2_color viewer --operator-present --confirm VISIBLE_ASTRA_READONLY_STREAM`
 
 실행 스크립트는 `OPENNI2_REDIST`와 `LD_LIBRARY_PATH`를 검증된 redist로 고정한다.
 Ubuntu 24.04의 FreeGLUT SONAME 차이는 설치된 `libglut.so.3.12`를 로컬 `compat`
-경로에서만 연결해 해결했으며 시스템 라이브러리나 firmware는 수정하지 않았다.
+경로에서만 연결해 해결했으며 시스템 라이브러리나 firmware는 수정하지 않았다. `check`는
+설치 파일만 확인하지만 `poll`과 `viewer`는 실제 카메라를 열기 때문에 사용자 입회와 별도
+read-only stream token 없이는 장치 확인 전에 종료한다.
 
 ## HW 준비 보강 · H201 top-view + Astra front-SLAM 분리 · 모델/계약 완료
 
@@ -586,3 +588,8 @@ MuJoCo 헤드리스 회귀가 통과했으며 실제 ROS graph와 장치에는 �
 쓰지 않지만 serial을 여는 실물 접근이므로, `VISIBLE_DUAL_SO101_READONLY`와
 `--operator-present`가 모두 없으면 bus 생성·connect 전에 거부한다. calibration 없는 raw tick
 읽기라는 기능은 유지하며, 이 토큰이 ±3도 동작 승인을 대신하지는 않는다.
+
+전면 Astra 실행 경로도 같은 기준으로 분리했다. `check`는 설치된 공식 OpenNI2 runtime 파일만
+확인하므로 무승인 offline 검사로 유지한다. 실제 장치를 여는 `poll`과 `viewer`는
+`VISIBLE_ASTRA_READONLY_STREAM`과 `--operator-present`가 모두 없으면 `/dev` 확인과 stream
+open 전에 종료한다. 잘못된 토큰 테스트는 실제 카메라를 열지 않는다.

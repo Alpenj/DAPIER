@@ -3,10 +3,22 @@ set -euo pipefail
 
 bin_dir="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-ros2-v1.0.2}"
 compat_lib_dir="${bin_dir}/compat"
-mode="${1:-viewer}"
+readonly STREAM_CONFIRMATION="VISIBLE_ASTRA_READONLY_STREAM"
+mode="${1:-}"
+
+usage() {
+  echo "usage: $0 check | {poll|viewer} --operator-present --confirm $STREAM_CONFIRMATION" >&2
+}
+if [[ "$mode" == "poll" || "$mode" == "viewer" ]]; then
+  if [[ $# -ne 4 || "$2" != "--operator-present" || "$3" != "--confirm" || "$4" != "$STREAM_CONFIRMATION" ]]; then
+    usage
+    exit 2
+  fi
+fi
 
 case "${mode}" in
   check)
+    [[ $# -eq 1 ]] || { usage; exit 2; }
     required=(ColorReaderPoll NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
     executables=(ColorReaderPoll NiViewer)
     ;;
@@ -18,7 +30,7 @@ case "${mode}" in
     required=(NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
     executables=(NiViewer)
     ;;
-  *) echo "usage: $0 [check|poll|viewer]" >&2; exit 2 ;;
+  *) usage; exit 2 ;;
 esac
 
 for file in "${required[@]}"; do
