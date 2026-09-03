@@ -35,17 +35,25 @@ MuJoCo에서는 신발을 직육면체 proxy로 먼저 구현한다. 박스 실�
 
 - 박스 미션 단위 테스트: 5/5 통과
 - grasp planner 단위 테스트: 4/4 통과
-- 전체 suite: 149/151 통과, `hardware_execution=false`
+- 이전 후속 실행: 전체 suite 152/152 통과, hardware_execution=false
+- 수정된 물리 판정: 오른팔 날개 contact 2, 뚜껑 94.91도, 왼 고정측 contact 2,
+  왼 이동측 contact 0, shoe weld 없음, success=false
+- MuJoCo viewer에서 사용자가 몸에서 먼 방향으로 열리는 뚜껑 배치를 확인
 
-### 미완료 release gate
+### 남은 release gate
 
-1. 합성 모델은 5개 카메라를 노출하지만 기존 테스트는 3개를 기대한다. 실제 요구 계약과 테스트를 함께 정렬해야 한다.
-2. home pose의 bare-camera clearance는 0.1075 m로 현재 gate 0.13 m를 통과하지 못한다.
-3. 물리 데모에서 오른팔 뚜껑은 열리지만 왼 gripper–shoe 동적 contact가 0건이다.
-4. lid–left wrist 비의도 충돌이 관측됐다. 허용 접촉과 금지 접촉을 geom pair 단위로 분류해야 한다.
-5. 1,862줄 box prototype은 helper 중복과 boolean event 조합을 줄이는 구조 검토가 필요하다.
+1. 왼 고정측과 이동측이 각각 접촉한 뒤 weld 없이 마찰로 들어 올려야 한다.
+2. RGB-D pose와 gripper RGB 보정을 실제 grasp target에 연결해야 한다.
+3. 관절별 actuator saturation fraction이 높아 속도·gain·limit 조정이 필요하다.
+4. 정상·no-contact·collision·stale-camera run의 export, replay, timeline 시각화가 필요하다.
+5. 물리·센서·지연·모터·FSR parameter sweep과 반복 성공률이 아직 없다.
+6. 실제 판지 변형, servo current/temperature, backlash, FSR 값을 사용한 sim-real 검증이 필요하다.
+7. 1,862줄 box prototype은 helper 중복과 boolean event 조합을 줄이는 구조 검토가 필요하다.
 
-따라서 PR #40은 Draft 상태를 유지한다. 정적 IK residual이 작다는 사실을 동적 파지 성공으로 간주하지 않는다.
+이전 contact 2건은 양쪽 손가락이 아니라 같은 고정측 collision mesh의 접촉점 두 개였다.
+접촉 직후 shoe weld를 켜던 구현을 제거했으며, 현재 P2는 완료가 아니라 진행 중이다.
+PR #40은 Draft 상태를 유지한다. 정적 IK residual이나 단일측 contact를 동적 파지 성공으로
+간주하지 않는다.
 
 ## 3. 모듈 경계
 

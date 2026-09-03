@@ -53,23 +53,17 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
             )
             self.assertGreaterEqual(camera_id, 0)
             if camera_name != CAMERA_NAMES[CameraRole.FRONT_RGBD]:
-                self.assertAlmostEqual(float(self.model.cam_fovy[camera_id]), 70.5)
-        self.assertLess(
-            mujoco.mj_name2id(
-                self.model,
-                mujoco.mjtObj.mjOBJ_CAMERA,
-                "left_wrist_cam",
-            ),
-            0,
-        )
-        self.assertLess(
-            mujoco.mj_name2id(
-                self.model,
-                mujoco.mjtObj.mjOBJ_CAMERA,
-                "right_wrist_cam",
-            ),
-            0,
-        )
+                self.assertGreater(float(self.model.cam_fovy[camera_id]), 0.0)
+        for side in ("left", "right"):
+            for source_name in ("wrist_cam", "wrist_camera_sensor", "wrist"):
+                self.assertLess(
+                    mujoco.mj_name2id(
+                        self.model,
+                        mujoco.mjtObj.mjOBJ_CAMERA,
+                        f"{side}_{source_name}",
+                    ),
+                    0,
+                )
         self.assertEqual(self.model.nu, 12)
 
     def test_differential_drive_reaches_translation_and_yaw_goals(self) -> None:

@@ -173,6 +173,13 @@ class PhysicsIKTest(unittest.TestCase):
                 HUMANOID_HOME_ACTION,
                 {},
             )
+        with self.assertRaisesRegex(ValueError, "same sides"):
+            solve_bimanual_position_ik(
+                self.model,
+                HUMANOID_HOME_ACTION,
+                {"left": self.home_positions["left"]},
+                site_names={"right": "right_gripperframe"},
+            )
 
 
 if __name__ == "__main__":

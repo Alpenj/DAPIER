@@ -162,15 +162,18 @@ def solve_bimanual_position_ik(
     start_action_rad: Sequence[float],
     targets_m: Mapping[str, Sequence[float]],
     *,
+    site_names: Mapping[str, str] | None = None,
     damping: float = 0.02,
     tolerance_m: float = 5e-4,
     max_iterations: int = 100,
     max_joint_step_rad: float = 0.05,
 ) -> IKResult:
-    """Solve one or both gripper XYZ targets using bounded DLS IK."""
+    """Solve one or both arm-site XYZ targets using bounded DLS IK."""
 
     if not targets_m or any(side not in ("left", "right") for side in targets_m):
         raise ValueError("targets_m must contain left and/or right")
+    if site_names is not None and set(site_names) != set(targets_m):
+        raise ValueError("site_names must contain the same sides as targets_m")
     scalars = (damping, tolerance_m, max_joint_step_rad)
     if not all(math.isfinite(value) and value > 0.0 for value in scalars):
         raise ValueError("IK damping, tolerance, and step must be positive")
@@ -202,12 +205,14 @@ def solve_bimanual_position_ik(
     selected_ranges = model.actuator_ctrlrange[actuator_ids]
     site_ids = {
         side: mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_SITE, f"{side}_gripperframe"
+            model,
+            mujoco.mjtObj.mjOBJ_SITE,
+            site_names[side] if site_names is not None else f"{side}_gripperframe",
         )
         for side in sides
     }
     if min(site_ids.values()) < 0:
-        raise RuntimeError("gripperframe site is missing")
+        raise RuntimeError("requested IK site is missing")
 
     planning_data = mujoco.MjData(model)
     mujoco.mj_resetData(model, planning_data)

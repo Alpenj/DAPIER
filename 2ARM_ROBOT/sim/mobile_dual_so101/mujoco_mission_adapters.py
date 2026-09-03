@@ -76,18 +76,24 @@ def _object_id(
     return object_id
 
 
-def _reuse_calibrated_gripper_cameras(spec: mujoco.MjSpec) -> None:
+def _reuse_source_gripper_cameras(spec: mujoco.MjSpec) -> None:
     """Expose the source MJCF wrist cameras as the two gripper RGB roles.
 
-    The pinned SO-101 MJCF already contains a camera calibrated for the real
-    InnoMaker 130-degree wrist camera. Adding another provisional camera per
-    arm produced five MuJoCo cameras for a three-camera mission contract.
+    Upstream SO-101 snapshots have used three names for the same source camera.
+    Keep its pose and FOV; only normalize the mission-facing name.
     """
 
     for side in ("left", "right"):
-        camera = spec.camera(f"{side}_wrist_cam")
+        camera = next(
+            (
+                spec.camera(f"{side}_{source_name}")
+                for source_name in ("wrist_cam", "wrist_camera_sensor", "wrist")
+                if spec.camera(f"{side}_{source_name}") is not None
+            ),
+            None,
+        )
         if camera is None:
-            raise RuntimeError(f"calibrated {side} wrist camera is missing")
+            raise RuntimeError(f"source {side} wrist camera is missing")
         camera.name = f"{side}_gripper_camera"
 
 
@@ -105,7 +111,7 @@ def build_mobile_shoe_mission_model(
     )
     base_root = spec.body("tb3_base_footprint")
     base_root.add_freejoint(name=MOBILE_BASE_FREE_JOINT)
-    _reuse_calibrated_gripper_cameras(spec)
+    _reuse_source_gripper_cameras(spec)
     _add_primitive_shoe(
         spec,
         position_m=resolved.shoe_position_m,

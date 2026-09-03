@@ -46,7 +46,7 @@ Integration owner와 final verifier는 이 기록을 작성하는 내가 맡는�
 |---|---|---|---|---|---|
 | G0 | PR #40 고정과 후속 worktree 격리 | 없음 | 별도 branch/worktree, 이 원장 | PR head 불변, clean baseline | 완료 |
 | P1 | camera contract와 home clearance를 정렬 | G0 | 원인·수정·회귀 test | 전체 suite 통과 | 완료 |
-| P2 | 왼팔 동적 contact·파지·꺼내기와 금지 충돌 제거 | P1 | trajectory, contact/collision assertion | seed acceptance와 collision 0 | 예정 |
+| P2 | 왼팔 동적 contact·파지·꺼내기와 금지 충돌 제거 | P1 | trajectory, contact/collision assertion | 양지 contact·weld 없는 lift·collision 0 | 진행 중 |
 | P3 | 양팔 전체 sequence, export, replay, 시각화 | P2 | 정상·실패 run artifact | 동일 seed 재현 | 예정 |
 | T1 | 물리·센서·지연·모터·FSR tuning | P3 | sweep matrix와 parameter revision | baseline 대비 강건성 표 | 예정 |
 | I1 | SLAM 도착·복귀를 포함한 E2E integration | T1 | 통합 state trace와 recovery | 반복 E2E acceptance | 예정 |
@@ -170,3 +170,142 @@ python -m unittest discover -s 2ARM_ROBOT/sim/mobile_dual_so101/test -v
 
 P2에서 오른팔이 뚜껑을 유지하는 동안 왼팔의 approach·contact·grasp·extract를 동적 물리로
 검증한다. headless 사전 검증 뒤 사용자에게 관찰 항목을 알리고 MuJoCo viewer를 연다.
+
+## P2 · 오른팔 뚜껑 개방과 왼팔 파지 판정 수정 · 진행 중
+
+### 확인하려던 가설
+
+기존 실패는 IK 전체가 틀린 것이 아니라 왼 gripper frame과 실제 finger collision pad의 오프셋,
+박스 안에서 한 번에 인출하려던 경로, 뚜껑 파지 후 중복된 접촉 제약 때문이라고 예상했다. 정적 IK
+수렴이 아니라 실제 MuJoCo contact, 회전된 물체의 최저점, 최종 접촉, actuator 추종을 함께 판정했다.
+
+### 실패 재현과 원인
+
+수정 전 headless run은 오른팔 날개 접촉 2건과 뚜껑 101.01도 유지까지 진행했지만 왼팔–신발
+접촉이 0건이었다. 왼 gripperframe은 목표 근처에 있었지만 static finger pad가 신발 상면보다 약
+7 mm 높았다. contact 목표 z를 0.090 m에서 0.082 m로 내리자 접촉점 2개가 생겼다.
+하지만 두 접촉점은 서로 다른 손가락이 아니라 모두 고정측 left_gripper mesh에 있었다.
+
+처음에는 중심 z에서 고정된 신발 반높이만 빼서 박스 밖으로 나왔다고 판정했다. 직육면체가 기울면
+이 계산은 틀린다. geom 회전행렬의 절댓값과 half-size로 world AABB를 계산해 가장 낮은 모서리와
+박스 상단의 실제 간격을 사용하도록 바꿨다.
+
+오른팔은 임의 gripperframe 목표 하나로 뚜껑을 당기면서 약 0.97 rad 추종 오차와 actuator
+포화를 만들었다. 접촉 검출용 날개–그리퍼 collision과 접촉 뒤 활성화한 equality가 같은 면을
+동시에 구속한 것도 원인이었다. 접촉을 확인한 뒤 해당 날개의 collision을 equality로 넘기고,
+힌지 30도·60도·95도의 실제 contact-site 원호를 순서대로 따라가도록 변경했다.
+
+왼팔은 낮은 위치에서 곧바로 높은 목표로 이동하면 wrist–lid 충돌이 났다. 다음 waypoint로
+수직 여유를 먼저 만든 뒤 박스 밖으로 이동했다.
+
+1. (0.20, 0.10, 0.14) m
+2. (0.20, 0.12, 0.20) m
+3. (0.20, 0.12, 0.26) m
+4. (0.18, 0.16, 0.32) m
+5. extract (0.16, 0.22, 0.32) m
+
+### 사람이 확인한 배치 결정
+
+초기 배치는 힌지가 로봇 가까운 쪽이라 열린 뚜껑이 양팔 작업공간을 가렸다. 사용자와 viewer에서
+확인한 뒤 박스를 -90도로 돌려 힌지를 몸에서 먼 쪽에 놓고, 오른팔 바로 앞에 오는
+box_lid_left_dust_flap을 들어 올리도록 단순화했다. 이 방향의 새 viewer에서 사용자가 의도한
+개방 방향임을 직접 확인했다. 시각 확인 전에는 완료로 기록하지 않았다.
+
+### 변경한 코드와 이유
+
+- position IK에 선택적 site 이름을 받아 gripper 중심 대신 실제 lid contact site를 풀 수 있게 했다.
+- 오른팔 개방을 contact-site 기준 30도·60도·95도 waypoint로 나눴다.
+- contact가 확인된 날개 collision은 equality handoff 뒤 비활성화해 중복 구속을 제거했다.
+- 왼 contact 높이를 조정했지만 현재는 고정측만 닿으므로 lift·extract를 실행하지 않는다.
+- contact 직후 shoe를 붙이던 weld equality를 scene과 실행 코드에서 제거했다.
+- shoe contact를 고정측과 이동측으로 나눠 둘 다 닿지 않으면 실패하도록 했다.
+- 회전된 shoe geom의 world AABB 최저점을 clearance에 사용했다.
+- 최종 shoe–box/lid contact 수와 final joint tracking error를 acceptance에 포함했다.
+- actuator peak force ratio와 관절별 saturation fraction을 report에 추가했다.
+- viewer 모드는 10 ms timestep에 맞춰 재생해 동작을 눈으로 따라갈 수 있게 했다.
+
+### 실행 검증
+
+Headless 명령: python 2ARM_ROBOT/sim/mobile_dual_so101/box_shoe_physics_demo.py
+
+- 오른팔 날개 contact: 2
+- 왼팔 고정측 shoe contact: 2
+- 왼팔 이동측 shoe contact: 0
+- 최종 뚜껑 각도: 94.9135도
+- shoe grasp weld: 없음
+- 회전 반영 shoe bottom clearance: -0.10434 m
+- 최종 shoe–box/lid contact: 4
+- 금지 arm–box/lid collision: 0
+- final tracking error: 0.01838 rad
+- runtime arm qpos write: 0
+- 결과: left_bilateral_contact_failed, success=false, hardware_execution=false
+
+전체 명령: python -m unittest discover -s 2ARM_ROBOT/sim/mobile_dual_so101/test -v
+
+- 이전 전체 결과는 152/152 통과였지만 잘못된 grasp 성공 조건을 포함했으므로 현재 기준으로
+  재검증하기 전 완료 근거로 사용하지 않는다.
+- 새 회귀 테스트는 같은 고정측 접촉점 두 개가 생겨도 양지 파지나 성공으로 판정하지 않는지 확인한다.
+
+MuJoCo viewer는 headless 성공 뒤 관찰 항목을 먼저 공유하고 열었다. 사용자가 뚜껑이 몸에서
+멀어지는 방향으로 열리고 오른팔 앞 날개를 드는 배치가 맞다고 확인했다. 이 확인은 박스 방향과
+뚜껑 개방에만 해당하며 신발 파지 성공 확인은 아니다.
+
+### 배운 점
+
+position IK residual이나 contact point 개수만으로 파지 성공을 판단할 수 없다. 고정측과 이동측의
+접촉을 분리하고, attachment constraint 없이 그리퍼를 닫아 마찰로 들어 올린 뒤 상대 slip까지
+확인해야 한다. 또한 한 개의 큰 Cartesian 목표보다 충돌 의미가 분명한 짧은 waypoint가
+디버깅과 시각 검증에 유리했다.
+
+전체 pose 보존 IK 초안도 시험했지만 5-DoF SO-101에 6-DoF 자세를 과구속하고 현재 파지에서는
+도달성이 나빠 채택하지 않고 제거했다. 이번 단계에는 contact-site 위치 IK가 더 작은 해법이었다.
+
+### 아직 확인하지 못한 것
+
+- 양지 contact와 friction-only lift는 아직 성공하지 않았다.
+- actuator는 peak force ratio 1.0에 도달했다.
+- 전방 RGB-D와 gripper RGB 관측을 grasp target에 연결하지 않았다.
+- 실제 판지 날개 변형, servo current/temperature, backlash, FSR 접촉값은 미검증이다.
+
+### 다음에 확인할 것
+
+P2에서 기존 ShoePoseEstimate와 camera contract를 재사용해 RGB-D 관측 pose를 grasp target으로
+연결한다. 양지 contact와 friction-only lift가 headless에서 통과한 뒤 사용자에게 관찰 항목을
+먼저 알리고 viewer 검증을 진행한다. 그 전에는 P3로 넘어가지 않는다.
+
+## HW 준비 · 장치 역할 고정과 Astra S Color 진단 · 진행 중
+
+### 직접 확인한 연결
+
+- 외장 허브 물리 1번: 왼쪽 wrist RGB
+- 외장 허브 물리 2번: 오른쪽 wrist RGB
+- 외장 허브 물리 3번: 왼팔 SO-101 controller
+- 외장 허브 물리 4번: 오른팔 SO-101 controller
+- 작업공간 RGB-D: Orbbec Astra S (`2bc5:0402`)
+
+현재 노트북에서는 `/dev/dapier/left_arm`, `right_arm`, `left_wrist_rgb`,
+`right_wrist_rgb`, `workspace_rgbd` 별칭으로 접근한다. 팔 controller는 장치 serial로,
+serial을 제공하지 않는 동일 모델 wrist camera 두 대는 외장 허브 downstream path로 역할을
+고정했다. 따라서 `/dev/ttyACM*`, `/dev/video*` 번호가 바뀌거나 허브 전체를 다른 host USB
+포트에 연결해도 역할을 유지한다. 단, 동일 wrist camera 두 개의 개별 허브 플러그를 서로
+바꾸면 passive udev만으로 좌우를 식별할 수 없으므로 시작 점검에서 경고해야 한다.
+
+실제 controller serial은 공개 저장소에 기록하지 않고 개인 규칙 파일에만 보관한다.
+`scripts/install_hardware_aliases.sh`는 그 파일을 대상 PC 또는 Raspberry Pi 4의 udev에
+설치하고, 연결되지 않은 장치는 실패 대신 경고로 표시한다.
+
+### Astra S에서 직접 재현한 결과
+
+- Orbbec Viewer/SDK v1.10.37: Depth 1프레임 수신 성공
+- 같은 SDK의 Color: `OB_SENSOR_COLOR Match openni video mode failed`
+- 공식 `color_viewer` 샘플: 같은 오류 재현
+- 공식 OpenNI2 2.3.0.86: 현재 Ubuntu 24.04, kernel 7.0 환경에서 `device.open()` USB timeout
+- USB 장치 권한: `0666`, 권한 부족 아님
+- `usbcore.usbfs_memory_mb`: 16에서 공식 권장값 128로 임시 변경했지만 timeout 동일
+- 양쪽 wrist RGB: 320x240, YUYV, 15 FPS 화면 확인
+
+따라서 아직 Astra S Color를 성공으로 기록하지 않는다. 최신 SDK UI 설정 문제가 아니라
+legacy OpenNI 장치와 현재 OS/driver 조합의 호환 문제로 분리했다. 다음 검증은 다른 노트북에서
+동작한 OS·SDK 버전과의 비교, USB descriptor/firmware 비교, 필요하면 지원 커널 환경에서의
+OpenNI2 단독 실행 순서로 진행한다. 펌웨어 변경은 복구 이미지와 정확한 모델 일치가 확인되기
+전에는 하지 않는다.

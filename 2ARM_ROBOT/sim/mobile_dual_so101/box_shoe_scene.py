@@ -30,7 +30,6 @@ BOX_BODY_NAME = "box_fixture"
 BOX_LID_BODY_NAME = "box_lid"
 BOX_LID_JOINT_NAME = "box_lid_hinge"
 RIGHT_LID_GRASP_EQUALITY_NAME = "right_lid_grasp_latch"
-LEFT_SHOE_GRASP_EQUALITY_NAME = "left_shoe_grasp_latch"
 RIGHT_LID_GRASP_SITE_NAME = "right_lid_grasp_site"
 LID_GRASP_SITE_NAME = "lid_grasp_site"
 BOX_GEOM_NAMES = (
@@ -49,7 +48,7 @@ BOX_GEOM_NAMES = (
 @dataclass(frozen=True)
 class BoxShoeSceneConfig:
     box_center_xy_m: tuple[float, float] = (0.20, 0.0)
-    box_yaw_deg: float = 90.0
+    box_yaw_deg: float = -90.0
     box_outer_size_m: tuple[float, float, float] = (0.282, 0.210, 0.105)
     cardboard_thickness_m: float = 0.0015
     cardboard_density_kg_m3: float = 280.0
@@ -204,7 +203,7 @@ def _add_box(spec: mujoco.MjSpec, config: BoxShoeSceneConfig) -> None:
         **flexible_visual_common,
     )
     for side, sign in (("left", 1.0), ("right", -1.0)):
-        wing_common = lid_common if side == "right" else flexible_visual_common
+        wing_common = lid_common if side == "left" else flexible_visual_common
         lid.add_geom(
             name=f"box_lid_{side}_dust_flap",
             pos=[
@@ -250,17 +249,6 @@ def _add_cuboid_shoe(spec: mujoco.MjSpec, config: BoxShoeSceneConfig) -> None:
         contype=3,
         conaffinity=3,
         rgba=[0.18, 0.32, 0.75, 1.0],
-    )
-    spec.add_equality(
-        name=LEFT_SHOE_GRASP_EQUALITY_NAME,
-        type=mujoco.mjtEq.mjEQ_WELD,
-        objtype=mujoco.mjtObj.mjOBJ_BODY,
-        name1="left_gripper",
-        name2=SHOE_BODY_NAME,
-        active=False,
-        data=[
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.05
-        ],
     )
 
 
@@ -315,7 +303,9 @@ def box_shoe_scene_contract(model: mujoco.MjModel) -> dict[str, object]:
         "cardboard_thickness_m": BoxShoeSceneConfig().cardboard_thickness_m,
         "flap_dimensions_status": "PROVISIONAL_FROM_TWO_PHOTOS",
         "lid_passive_hinge": True,
-        "contact_gated_grasp_latches": True,
+        "right_lid_contact_gated_latch": True,
+        "shoe_grasp_weld_present": False,
+        "shoe_grasp_requires_contact_friction": True,
         "lid_range_rad": tuple(float(value) for value in model.jnt_range[lid_joint]),
         "robot_actuator_count": model.nu,
         "expected_robot_actuator_count": len(ACTION_NAMES),
@@ -331,7 +321,6 @@ __all__ = [
     "BOX_GEOM_NAMES",
     "BOX_LID_BODY_NAME",
     "BOX_LID_JOINT_NAME",
-    "LEFT_SHOE_GRASP_EQUALITY_NAME",
     "LID_GRASP_SITE_NAME",
     "RIGHT_LID_GRASP_EQUALITY_NAME",
     "RIGHT_LID_GRASP_SITE_NAME",
