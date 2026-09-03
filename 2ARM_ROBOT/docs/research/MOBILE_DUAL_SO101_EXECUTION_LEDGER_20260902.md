@@ -522,7 +522,9 @@ MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계�
 모터를 움직이지 않고 스트림 단계에서 중단한다.
 
 실행 후 raw log는 추가 의존성 없는 정적 HTML로 변환해 goal/observed, load/current/velocity와
-명령 주기 p50/p95를 팀원이 브라우저에서 바로 확인할 수 있게 한다.
+명령 주기 p50/p95를 팀원이 브라우저에서 바로 확인할 수 있게 한다. 양팔의 종료 후
+torque/status/moving/temperature/voltage도 같은 화면에 표시하며, 구형 로그에 값이 없으면
+성공처럼 보이지 않도록 `not recorded`로 표시한다.
 
 ```bash
 python 2ARM_ROBOT/scripts/dual_so101_trace_report \

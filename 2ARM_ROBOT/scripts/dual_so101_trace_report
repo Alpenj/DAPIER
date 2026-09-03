@@ -13,6 +13,13 @@ import statistics
 
 SIDES = ("left", "right")
 METRICS = ("goal", "observed", "present_load_raw", "present_current_raw", "present_velocity_raw")
+POST_HEALTH_METRICS = (
+    "Torque_Enable",
+    "Status",
+    "Moving",
+    "Present_Temperature",
+    "Present_Voltage",
+)
 
 
 def _trace(record: dict[str, object]) -> list[dict[str, object]]:
@@ -67,6 +74,36 @@ def _chart(title: str, times: list[float], series: dict[str, list[float]]) -> st
     )
 
 
+def _post_health_rows(record: dict[str, object]) -> str:
+    arms = record.get("arms")
+    rows = []
+    for side in SIDES:
+        health = None
+        if isinstance(arms, dict) and isinstance(arms.get(side), dict):
+            health = arms[side].get("health_after_torque_off")
+        if health is None:
+            summaries = ["not recorded"] * len(POST_HEALTH_METRICS)
+        elif not isinstance(health, dict):
+            raise ValueError(f"arms.{side}.health_after_torque_off is invalid")
+        else:
+            summaries = []
+            for metric in POST_HEALTH_METRICS:
+                values = health.get(metric)
+                if not isinstance(values, dict) or not values:
+                    raise ValueError(f"arms.{side}.health_after_torque_off.{metric} is invalid")
+                parsed = [float(value) for value in values.values()]
+                if not all(math.isfinite(value) for value in parsed):
+                    raise ValueError(f"arms.{side}.health_after_torque_off.{metric} is invalid")
+                low, high = min(parsed), max(parsed)
+                summaries.append(f"{low:g}" if low == high else f"{low:g}–{high:g}")
+        rows.append(
+            f"<tr><td>{side}</td>"
+            + "".join(f"<td>{escape(value)}</td>" for value in summaries)
+            + "</tr>"
+        )
+    return "".join(rows)
+
+
 def build_report(record: dict[str, object]) -> str:
     trace = _trace(record)
     origin = float(trace[0]["monotonic_s"])
@@ -102,6 +139,8 @@ def build_report(record: dict[str, object]) -> str:
 <p class="warn">이 보고서는 계측 trace 시각화이며 실물 동작 승인 또는 commissioning 완료 증거가 아닙니다.</p>
 <p>samples={len(trace)}, duration={times[-1]:.3f}s, interval p50={p50_ms:.2f}ms, p95={p95_ms:.2f}ms, error={error}</p>
 <table><tr><th>arm</th><th>max tracking error</th><th>peak |load| raw</th><th>peak |current| raw</th><th>peak |velocity| raw</th></tr>{''.join(rows)}</table>
+<h2>Post-motion torque-off health</h2>
+<table><tr><th>arm</th><th>torque</th><th>status</th><th>moving</th><th>temperature °C</th><th>voltage raw</th></tr>{_post_health_rows(record)}</table>
 {''.join(charts)}
 </html>
 """
