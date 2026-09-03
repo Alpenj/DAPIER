@@ -8,7 +8,7 @@
 | 파일 | 내용 | SHA-256 |
 |---|---|---|
 | `dual_arm_read_only_summary_20260820.json` | USB 고유 시리얼을 제거한 양팔 STS3215 설정/telemetry 요약 | 아래 검증 명령으로 계산 |
-| `dual_so101_symmetric_smoke_20260903.json` | 동일 SO-101 좌·우 팔의 비식별 ±3도 왕복 동작·상태 요약 | `05fa735d47a7106285721ae3da70c5cc3014e5990da7a1709ec916e3454cff32` |
+| `dual_so101_symmetric_smoke_20260903.json` | 동일 SO-101 좌·우 팔의 비식별 ±3도 과거 로그 요약(사용자 확인 아님) | `d15fbe5726846a732edbb56f711f293677ccf22247b8f896c1f6d3046c53306f` |
 | `dual_so101_sim_real_comparison_20260903.json` | 과거 ±3도 trace의 실측 주기로 재생한 MuJoCo 비교 | `6a2a23238bc834c5b5ad3477c9fdb5a0a8e0db4d23f976a7e2259ddafeed1f00` |
 | `turtlebot3_stationary_baseline_report_20260820.json` | 30초 stationary odom 통계와 원본 samples hash | `51f358c1e37a5f413e9ff99bab4c45ce0e2db517a6aae5bed438e3ece589ad4c` |
 | `turtlebot3_stationary_odom_samples_20260820.jsonl` | 603개 stationary odom samples | `ebfd65966836533f36da3f757b27443651570558bcaa0b059c0a6a0cf31b037f` |

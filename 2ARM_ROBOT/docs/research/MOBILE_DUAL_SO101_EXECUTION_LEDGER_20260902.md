@@ -391,7 +391,7 @@ FPS/drop/USB reset, H201 depth stream, Astra front-SLAM 성능은 실물 commiss
 박스 물리 데모의 왼쪽 이동 finger contact 0 문제도 그대로이므로 신발 파지 성공이나 실물
 전체 동작 성공으로 확대 해석하지 않는다.
 
-## HW-1 · 동일 SO-101 양팔 저속 왕복 검증 · 완료
+## HW-1 · 동일 SO-101 양팔 저속 왕복 · 과거 로그 존재, 사용자 확인 commissioning 미완료
 
 ### 잘못 판단했던 부분과 정정
 
@@ -420,7 +420,7 @@ FPS/drop/USB reset, H201 depth stream, Astra front-SLAM 성능은 실물 commiss
 - 전압 raw: 121~124
 - 읽기 전후 위치 변화 없음
 
-### 실행과 측정
+### 과거 로그에서 확인된 실행과 측정
 
 `dual_so101_smoke`에서 두 팔의 현재 6축 위치를 먼저 goal로 넣고 토크를 켠 뒤, shoulder-pan만
 왼쪽 +3도, 오른쪽 -3도로 30 step 동안 보간했다. 같은 속도로 원위치 명령을 보냈고 매
@@ -448,8 +448,9 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 
 ### 이번 결과의 범위
 
-이번 검증으로 좌우 식별, 각 팔 보정 적용, 동일 명령 경로, 저속 양팔 응답, 상태 수집, 종료 후
-토크 해제까지 확인했다. MuJoCo의 전체 박스 동작을 실물에서 실행한 것은 아니다. 현재 simulation의
+과거 로그에는 좌우 식별, 각 팔 보정 적용, 동일 명령 경로, 저속 양팔 응답, 상태 수집, 종료 후
+토크 해제가 기록돼 있다. 다만 사용자가 화면으로 보며 확인한 commissioning은 아니므로 내일 같은
+범위를 다시 실행해 검증해야 한다. MuJoCo의 전체 박스 동작을 실물에서 실행한 것은 아니다. 현재 simulation의
 왼 그리퍼는 이동측 finger contact가 0이라 파지 성공 gate를 통과하지 못했으므로 박스 개방·신발
 추출 명령은 실물에 보내지 않는다. 다음 실물 단계는 MuJoCo 양지 contact와 friction-only lift가
 성공한 뒤 검증된 joint waypoint를 같은 3도 제한 실행기에 넣는 것이다.
