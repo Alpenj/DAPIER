@@ -89,6 +89,8 @@ def validate_motion_request(
         raise ValueError(f"motion requires --confirm {MOTION_CONFIRMATION}")
     if left_calibration is None or right_calibration is None:
         raise ValueError("motion requires explicit left and right calibration files")
+    if left_calibration.resolve() == right_calibration.resolve():
+        raise ValueError("left and right calibration files must be distinct")
     if not operator_present:
         raise ValueError("motion requires --operator-present")
 

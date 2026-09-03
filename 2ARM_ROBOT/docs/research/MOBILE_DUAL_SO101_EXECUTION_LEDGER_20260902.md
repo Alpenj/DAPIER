@@ -566,3 +566,9 @@ bilateral 또는 opposing-contact 실패를 확인한다. 법선 내적 판정�
 양팔 `Torque_Enable=0` 사후 read-back이 한 raw record에 함께 남는다. 전체 MuJoCo 헤드리스
 회귀는 166/166 통과했고 `hardware_execution=false`였으며, 전원이 내려간 실물 장치에는
 접근하지 않았다.
+
+추가 점검에서 좌우 calibration 인자를 모두 요구하면서도 같은 파일을 양쪽에 중복 지정하는
+실수는 차단하지 못하는 것을 확인했다. 공통 motion request validator에서 두 calibration의
+해석된 경로가 같으면 serial connect 전에 거부하도록 보강했다. 복사된 잘못된 파일까지 자동으로
+좌우 판별할 수는 없으므로, 실제 controller와 calibration 대응은 내일 read-only 확인이 여전히
+필수다.

@@ -87,6 +87,14 @@ class DualSO101SmokeTest(unittest.TestCase):
                 Path("right.json"),
                 False,
             )
+        with self.assertRaisesRegex(ValueError, "must be distinct"):
+            SMOKE["validate_motion_request"](
+                3.0,
+                SMOKE["MOTION_CONFIRMATION"],
+                Path("same.json"),
+                Path("same.json"),
+                True,
+            )
         SMOKE["validate_motion_request"](
             3.0,
             SMOKE["MOTION_CONFIRMATION"],
