@@ -600,3 +600,8 @@ udev stable alias 설치도 시스템 변경 경로라 별도 승인 대상으�
 `install_hardware_aliases.sh`는 `VISIBLE_INSTALL_DAPIER_UDEV_RULES`가 없으면 local rules를
 읽거나 `sudo`를 호출하기 전에 종료한다. 설치를 다시 해야 한다면 내일 모든 stream을 열기 전에
 한 번만 수행하고, 이후 좌우 alias와 실제 장비 대응을 다시 확인한다.
+
+SO-101 ±3도 motion은 exact token과 사용자 입회 표시가 있어도 stdin/stdout이 interactive TTY가
+아니면 bus를 생성하기 전에 거부한다. 이로써 CI·background shell·파이프에서 토큰만 복사해
+자동 실행하는 경로를 막았다. 무동작 read-only health에는 motion TTY 조건을 적용하지 않지만
+별도 read-only token과 사용자 입회 조건은 그대로 유지한다.

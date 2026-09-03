@@ -183,6 +183,26 @@ class DualSO101SmokeTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "after motion"):
             SMOKE["disable_torque_and_verify"]({"left": stuck, "right": FakeBus()})
 
+    def test_motion_requires_interactive_tty_before_bus_load(self):
+        argv = [
+            str(SCRIPT),
+            "--left-calibration", "left.json",
+            "--right-calibration", "right.json",
+            "--move-deg", "1",
+            "--confirm", SMOKE["MOTION_CONFIRMATION"],
+            "--operator-present",
+        ]
+        with (
+            mock.patch.object(SMOKE["os"], "isatty", return_value=False),
+            mock.patch.dict(
+                SMOKE["main"].__globals__,
+                {"load_bus": mock.Mock(side_effect=AssertionError)},
+            ),
+            mock.patch("sys.argv", argv),
+        ):
+            with self.assertRaisesRegex(SystemExit, "interactive TTY"):
+                SMOKE["main"]()
+
     def test_full_motion_path_writes_complete_witnessed_record(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -208,6 +228,7 @@ class DualSO101SmokeTest(unittest.TestCase):
             ]
             with (
                 mock.patch.dict(SMOKE["main"].__globals__, {"load_bus": fake_load_bus}),
+                mock.patch.object(SMOKE["os"], "isatty", return_value=True),
                 mock.patch.object(SMOKE["time"], "sleep"),
                 mock.patch("sys.argv", argv),
                 mock.patch("builtins.print"),

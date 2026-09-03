@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -237,6 +238,8 @@ def main() -> int:
         validate_arm_ports(args.left_port, args.right_port)
     except ValueError as error:
         raise SystemExit(str(error)) from error
+    if args.move_deg and not (os.isatty(0) and os.isatty(1)):
+        raise SystemExit("motion requires an interactive TTY")
 
     buses = {
         "left": load_bus(args.left_port, args.left_calibration),
