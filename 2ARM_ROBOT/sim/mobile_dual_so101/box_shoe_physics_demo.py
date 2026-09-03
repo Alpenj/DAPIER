@@ -39,9 +39,10 @@ RIGHT_CONTACT_TARGET_M = (0.18, -0.17, 0.15)
 RIGHT_OPEN_WAYPOINT_ANGLES_DEG = (30.0, 60.0, 95.0)
 LEFT_PREGRASP_TARGET_M = (0.20, 0.08, 0.20)
 LEFT_CONTACT_TARGET_M = (0.20, 0.08, 0.082)
-LEFT_WRIST_ROLL_SEED_RAD = -1.57
-LEFT_GRIPPER_OPEN_RAD = 0.2
+LEFT_WRIST_ROLL_SEED_RAD = 1.3
+LEFT_GRIPPER_OPEN_RAD = 1.2
 LEFT_GRIPPER_CLOSED_RAD = -0.1745
+MAX_OPPOSING_CONTACT_NORMAL_DOT = -0.5
 LEFT_LIFT_TARGETS_M = (
     (0.20, 0.10, 0.14),
     (0.20, 0.12, 0.20),
@@ -81,6 +82,8 @@ class DemoReport:
     left_static_finger_contact_count: int
     left_moving_finger_contact_count: int
     bilateral_finger_contact_verified: bool
+    finger_contact_normal_dot: float | None
+    opposing_finger_contact_verified: bool
     shoe_grasp_weld_present: bool
     friction_lift_verified: bool
     grasp_relative_translation_drift_m: float | None
@@ -186,6 +189,28 @@ def _shoe_finger_contacts(
         elif _is_descendant(model, other_body, moving_body):
             moving_contacts.append(contact)
     return fixed_contacts, moving_contacts
+
+
+def _finger_contact_normal_dot(
+    model: mujoco.MjModel,
+    fixed_contacts: list[mujoco.MjContact],
+    moving_contacts: list[mujoco.MjContact],
+) -> float | None:
+    """Return the most opposing pair of normals, both oriented away from the shoe."""
+
+    if not fixed_contacts or not moving_contacts:
+        return None
+    shoe_geom = _object_id(model, mujoco.mjtObj.mjOBJ_GEOM, SHOE_GEOM_NAME)
+
+    def shoe_outward(contact: mujoco.MjContact) -> np.ndarray:
+        normal = np.asarray(contact.frame[:3], dtype=np.float64)
+        return normal if int(contact.geom1) == shoe_geom else -normal
+
+    return min(
+        float(np.dot(shoe_outward(fixed), shoe_outward(moving)))
+        for fixed in fixed_contacts
+        for moving in moving_contacts
+    )
 
 
 def _configure_connect_sites_at_contact(
@@ -359,7 +384,7 @@ class BoxShoePhysicsDemo:
         start_action: np.ndarray,
         *,
         viewer: mujoco.viewer.Handle | None,
-    ) -> tuple[np.ndarray, int, int]:
+    ) -> tuple[np.ndarray, int, int, float | None]:
         goal_action = start_action.copy()
         goal_action[5] = LEFT_GRIPPER_CLOSED_RAD
         peak_fixed = 0
@@ -379,14 +404,16 @@ class BoxShoePhysicsDemo:
                 time.sleep(self.config.physics_timestep_s)
         self._hold(goal_action, viewer)
         fixed, moving = _shoe_finger_contacts(self.model, self.data)
+        normal_dot = _finger_contact_normal_dot(self.model, fixed, moving)
         self._emit(
             "left_gripper_closed",
             fixed_contacts=len(fixed),
             moving_contacts=len(moving),
             peak_fixed_contacts=peak_fixed,
             peak_moving_contacts=peak_moving,
+            finger_contact_normal_dot=normal_dot,
         )
-        return goal_action, len(fixed), len(moving)
+        return goal_action, len(fixed), len(moving), normal_dot
 
     def run(self, viewer: mujoco.viewer.Handle | None = None) -> DemoReport:
         right_start = list(HUMANOID_HOME_ACTION)
@@ -515,7 +542,7 @@ class BoxShoePhysicsDemo:
             phase="left_shoe_approach",
         )
         self._hold(left_contact_action, viewer)
-        closed_action, fixed_contacts, moving_contacts = (
+        closed_action, fixed_contacts, moving_contacts, contact_normal_dot = (
             self._close_left_gripper(
                 left_contact_action,
                 viewer=viewer,
@@ -529,12 +556,27 @@ class BoxShoePhysicsDemo:
                 shoe_initial,
                 fixed_contact_count=fixed_contacts,
                 moving_contact_count=moving_contacts,
+                contact_normal_dot=contact_normal_dot,
+            )
+        if (
+            contact_normal_dot is None
+            or contact_normal_dot > MAX_OPPOSING_CONTACT_NORMAL_DOT
+        ):
+            return self._report(
+                "left_opposing_contact_failed",
+                len(right_contacts),
+                fixed_contacts + moving_contacts,
+                shoe_initial,
+                fixed_contact_count=fixed_contacts,
+                moving_contact_count=moving_contacts,
+                contact_normal_dot=contact_normal_dot,
             )
         grasp_reference = _shoe_pose_in_left_gripper(self.model, self.data)
         self._emit(
-            "left_bilateral_contact",
+            "left_opposing_contact",
             fixed_contacts=fixed_contacts,
             moving_contacts=moving_contacts,
+            finger_contact_normal_dot=contact_normal_dot,
             shoe_grasp_weld_present=False,
         )
 
@@ -567,6 +609,9 @@ class BoxShoePhysicsDemo:
         final_fixed_contacts, final_moving_contacts = _shoe_finger_contacts(
             self.model, self.data
         )
+        final_contact_normal_dot = _finger_contact_normal_dot(
+            self.model, final_fixed_contacts, final_moving_contacts
+        )
         return self._report(
             "completed",
             len(right_contacts),
@@ -574,6 +619,7 @@ class BoxShoePhysicsDemo:
             shoe_initial,
             fixed_contact_count=len(final_fixed_contacts),
             moving_contact_count=len(final_moving_contacts),
+            contact_normal_dot=final_contact_normal_dot,
             grasp_reference=grasp_reference,
         )
 
@@ -586,6 +632,7 @@ class BoxShoePhysicsDemo:
         *,
         fixed_contact_count: int = 0,
         moving_contact_count: int = 0,
+        contact_normal_dot: float | None = None,
         grasp_reference: tuple[np.ndarray, np.ndarray] | None = None,
     ) -> DemoReport:
         lid_joint = _object_id(
@@ -634,6 +681,11 @@ class BoxShoePhysicsDemo:
             and np.all(np.isfinite(self.data.qacc))
         )
         bilateral = fixed_contact_count > 0 and moving_contact_count > 0
+        opposing = (
+            bilateral
+            and contact_normal_dot is not None
+            and contact_normal_dot <= MAX_OPPOSING_CONTACT_NORMAL_DOT
+        )
         shoe_grasp_weld_present = (
             mujoco.mj_name2id(
                 self.model,
@@ -655,7 +707,7 @@ class BoxShoePhysicsDemo:
                 grasp_reference[1], final_relative_rotation
             )
         friction_lift = (
-            bilateral
+            opposing
             and not shoe_grasp_weld_present
             and clear
             and translation_drift is not None
@@ -683,6 +735,8 @@ class BoxShoePhysicsDemo:
             left_static_finger_contact_count=fixed_contact_count,
             left_moving_finger_contact_count=moving_contact_count,
             bilateral_finger_contact_verified=bilateral,
+            finger_contact_normal_dot=contact_normal_dot,
+            opposing_finger_contact_verified=opposing,
             shoe_grasp_weld_present=shoe_grasp_weld_present,
             friction_lift_verified=friction_lift,
             grasp_relative_translation_drift_m=translation_drift,

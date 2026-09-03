@@ -475,11 +475,17 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 함께 풀기 때문에 5-DoF SO-101을 full 6D pose로 과구속하지 않는다. 짧은 이동 단위 테스트에서
 위치 residual 0.5 mm 미만, 접근축 오차 2도 미만으로 통과했고 runtime/hardware write는 없다.
 
-현재 full physics 결과는 여전히 `left_bilateral_contact_failed`,
+이 단계의 full physics 결과는 `left_bilateral_contact_failed`,
 `success=false`, `hardware_execution=false`이다. 다음 단계에서는 실제 모터의
 가용 torque/current와 arm mount 하중을 읽기 전용으로 측정한 뒤 actuator model을 보정하거나,
 그 힘 범위 안에서 양팔이 동시에 도달하는 docking 상대 위치를 다시 정한다. 실물 전체 sequence는
 이 gate가 통과하기 전까지 실행하지 않는다.
+
+후속 자세 sweep에서는 gripper open `1.2 rad`, wrist-roll seed `1.3 rad`에서 fixed/moving
+접촉이 각각 1건 생겼다. 하지만 두 접촉 법선의 내적이 약 `0.0`으로 서로 직교해 협지 접촉이
+아니었고 첫 lift에서 물체가 남았다. 접촉 개수만 보는 gate를 강화해 법선 내적 `<= -0.5`인
+반대 방향 접촉을 추가로 요구한다. 현재 결과는 `left_opposing_contact_failed`,
+`success=false`, `hardware_execution=false`다.
 
 `dual_so101_smoke`에는 다음 실측을 위해 health snapshot과 shoulder-pan trace의
 `Present_Load`, `Present_Current` raw 기록을 추가했다. fake bus 단위 테스트와 전체
