@@ -3,6 +3,7 @@ set -euo pipefail
 
 openni_root="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-v2.3.0.86}"
 bin_dir="${openni_root}/samples/bin"
+opencv_lib_dir="${openni_root}/samples/samples/ThirdParty/OpenCV420/Linux/lib"
 mode="${1:-viewer}"
 
 case "${mode}" in
@@ -18,6 +19,10 @@ for file in "${required[@]}"; do
     exit 1
   fi
 done
+if [[ "${mode}" != poll && ! -e "${opencv_lib_dir}/libpng12.so.0" ]]; then
+  echo "missing OpenNI2 viewer dependency: ${opencv_lib_dir}/libpng12.so.0" >&2
+  exit 1
+fi
 
 if [[ "${mode}" == check ]]; then
   printf 'OpenNI2 runtime ready: %s\n' "${bin_dir}"
@@ -29,7 +34,7 @@ if [[ ! -e /dev/dapier/workspace_rgbd ]]; then
 fi
 
 export OPENNI2_REDIST="${bin_dir}"
-export LD_LIBRARY_PATH="${bin_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export LD_LIBRARY_PATH="${bin_dir}:${opencv_lib_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 if [[ "${mode}" == poll ]]; then
   exec "${bin_dir}/ColorReaderPoll"
