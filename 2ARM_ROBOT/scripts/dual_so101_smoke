@@ -44,6 +44,8 @@ def health(bus: FeetechMotorsBus) -> dict[str, dict[str, float]]:
         for name in (
             "Torque_Enable",
             "Operating_Mode",
+            "Present_Load",
+            "Present_Current",
             "Present_Temperature",
             "Present_Voltage",
             "Status",
@@ -70,11 +72,25 @@ def interpolate(
             side: bus.sync_read("Present_Position", ["shoulder_pan"], num_retry=2)["shoulder_pan"]
             for side, bus in buses.items()
         }
+        load = {
+            side: bus.sync_read(
+                "Present_Load", ["shoulder_pan"], normalize=False, num_retry=2
+            )["shoulder_pan"]
+            for side, bus in buses.items()
+        }
+        current = {
+            side: bus.sync_read(
+                "Present_Current", ["shoulder_pan"], normalize=False, num_retry=2
+            )["shoulder_pan"]
+            for side, bus in buses.items()
+        }
         trace.append(
             {
                 "timestamp": datetime.now().astimezone().isoformat(),
                 "goal": {side: goal["shoulder_pan"] for side, goal in goals.items()},
                 "observed": observed,
+                "present_load_raw": load,
+                "present_current_raw": current,
             }
         )
 

@@ -471,3 +471,7 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 가용 torque/current와 arm mount 하중을 읽기 전용으로 측정한 뒤 actuator model을 보정하거나,
 그 힘 범위 안에서 양팔이 동시에 도달하는 docking 상대 위치를 다시 정한다. 실물 전체 sequence는
 이 gate가 통과하기 전까지 실행하지 않는다.
+
+`dual_so101_smoke`에는 다음 실측을 위해 health snapshot과 shoulder-pan trace의
+`Present_Load`, `Present_Current` raw 기록을 추가했다. fake bus 단위 테스트와 전체
+155개 회귀는 통과했지만, 이번 단계에서는 실물 serial port를 열지 않았으므로 실제 값은 아직 없다.
