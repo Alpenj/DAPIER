@@ -19,11 +19,38 @@ MOTORS = {
     "gripper": (6, "RANGE_0_100"),
 }
 MOTION_CONFIRMATION = "VISIBLE_DUAL_SO101_3DEG"
+HEALTH_REGISTERS = (
+    "Torque_Enable",
+    "Operating_Mode",
+    "Acceleration",
+    "Goal_Time",
+    "Goal_Velocity",
+    "Torque_Limit",
+    "Present_Load",
+    "Present_Current",
+    "Present_Temperature",
+    "Present_Voltage",
+    "Status",
+    "Moving",
+    "Maximum_Velocity_Limit",
+    "Maximum_Acceleration",
+)
+REQUIRED_CONTROL_TABLE_REGISTERS = frozenset(
+    (*HEALTH_REGISTERS, "Present_Position", "Present_Velocity", "Goal_Position")
+)
+
+
+def validate_control_table(control_table: dict[str, object]) -> None:
+    missing = sorted(REQUIRED_CONTROL_TABLE_REGISTERS - control_table.keys())
+    if missing:
+        raise RuntimeError(f"STS3215 control table is missing: {missing}")
 
 
 def load_bus(port: str, calibration_path: Path | None):
     from lerobot.motors import Motor, MotorCalibration, MotorNormMode
-    from lerobot.motors.feetech import FeetechMotorsBus
+    from lerobot.motors.feetech import FeetechMotorsBus, MODEL_CONTROL_TABLE
+
+    validate_control_table(MODEL_CONTROL_TABLE["sts3215"])
 
     calibration = None
     if calibration_path is not None:
@@ -96,22 +123,7 @@ def validate_motion_health(snapshots: dict[str, dict[str, dict[str, float]]]) ->
 def health(bus) -> dict[str, dict[str, float]]:
     return {
         name: bus.sync_read(name, normalize=False, num_retry=2)
-        for name in (
-            "Torque_Enable",
-            "Operating_Mode",
-            "Acceleration",
-            "Goal_Time",
-            "Goal_Velocity",
-            "Torque_Limit",
-            "Present_Load",
-            "Present_Current",
-            "Present_Temperature",
-            "Present_Voltage",
-            "Status",
-            "Moving",
-            "Maximum_Velocity_Limit",
-            "Maximum_Acceleration",
-        )
+        for name in HEALTH_REGISTERS
     }
 
 

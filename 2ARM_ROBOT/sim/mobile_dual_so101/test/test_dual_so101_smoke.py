@@ -59,6 +59,13 @@ class DualSO101SmokeTest(unittest.TestCase):
             Path("right.json"),
         )
 
+    def test_control_table_is_checked_before_hardware_connect(self):
+        table = {name: object() for name in SMOKE["REQUIRED_CONTROL_TABLE_REGISTERS"]}
+        SMOKE["validate_control_table"](table)
+        table.pop("Present_Velocity")
+        with self.assertRaisesRegex(RuntimeError, "Present_Velocity"):
+            SMOKE["validate_control_table"](table)
+
     def test_trace_records_position_load_and_current(self):
         trace = []
         buses = {"left": FakeBus(), "right": FakeBus()}

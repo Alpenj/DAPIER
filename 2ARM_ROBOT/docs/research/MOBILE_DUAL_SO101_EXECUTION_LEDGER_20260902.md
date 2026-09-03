@@ -529,3 +529,7 @@ python 2ARM_ROBOT/scripts/dual_so101_trace_report \
   /tmp/dapier-dual-so101-smoke.json \
   --output /tmp/dapier-dual-so101-smoke.html
 ```
+
+장치 없이 현재 설치된 LeRobot `0.6.0`의 STS3215 control table을 대조해 위 health/profile
+register가 모두 존재함을 확인했다. 실행기는 같은 필수 register 목록을 serial connect 전에
+검사하므로 다른 노트북이나 Pi4의 LeRobot 버전이 맞지 않으면 모터를 열기 전에 실패한다.
