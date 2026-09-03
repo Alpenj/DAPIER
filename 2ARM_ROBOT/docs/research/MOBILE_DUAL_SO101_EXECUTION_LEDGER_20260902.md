@@ -431,12 +431,14 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke
 python 2ARM_ROBOT/scripts/dual_so101_smoke \
   --left-calibration /path/to/verified-left-so101.json \
   --right-calibration /path/to/verified-right-so101.json \
-  --move-deg 3 --confirm VISIBLE_DUAL_SO101_3DEG
+  --move-deg 3 --operator-present \
+  --confirm VISIBLE_DUAL_SO101_3DEG
 ```
 
 첫 명령은 calibration 없이 raw tick과 health만 읽는다. 동작 명령에는 controller serial과
 좌우 실물 대응을 확인한 per-arm calibration 두 개를 명시해야 한다. LeRobot cache의
-`leader`/`follower` 디렉터리 이름만으로 좌우 역할을 추론하지 않는다.
+`leader`/`follower` 디렉터리 이름만으로 좌우 역할을 추론하지 않는다. 동작에는 사용자가
+현장 화면과 E-stop을 확인했다는 `--operator-present` 선언도 필요하다.
 
 | 팔 | 명령 | 실측 최대 excursion | 왕복 직후 잔류 오차 | 동작 중 최대 온도 | status |
 |---|---:|---:|---:|---:|---:|
@@ -547,6 +549,11 @@ register가 모두 존재함을 확인했다. 실행기는 같은 필수 registe
 `health_after_torque_off`를 저장한다. 한 모터라도 0이 아니면 실행은 실패하며, `finally`의
 disconnect가 토크 해제를 다시 시도한다. fake bus 실패 시험과 전체 163개 회귀가 통과했고
 실물 장치에는 접근하지 않았다.
+
+공개 재시험 로그에는 `user_witnessed`, `hardware_execution`, `motion_completed`, 시작·종료 시각과
+좌우 calibration SHA-256도 남긴다. 이름·controller serial·calibration 원문은 저장하지 않는다.
+동작 요청은 기존 exact token과 두 calibration 외에도 `--operator-present`가 필요하다. HTML에도
+세 boolean을 표시하고 누락된 과거 로그는 `not recorded`로 보인다.
 
 첫 CI에서는 같은 파지 자세가 로컬에서 fixed/moving `1/1`, GitHub runner에서 `1/0`으로
 끝나며 특정 실패 단계 문자열을 요구하던 통합시험이 실패했다. 두 결과 모두 파지 실패이고

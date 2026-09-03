@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import time
@@ -76,6 +77,7 @@ def validate_motion_request(
     confirm: str,
     left_calibration: Path | None,
     right_calibration: Path | None,
+    operator_present: bool,
 ) -> None:
     if not math.isfinite(move_deg):
         raise ValueError("--move-deg must be finite")
@@ -87,6 +89,12 @@ def validate_motion_request(
         raise ValueError(f"motion requires --confirm {MOTION_CONFIRMATION}")
     if left_calibration is None or right_calibration is None:
         raise ValueError("motion requires explicit left and right calibration files")
+    if not operator_present:
+        raise ValueError("motion requires --operator-present")
+
+
+def calibration_sha256(path: Path | None) -> str | None:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path is not None else None
 
 
 def validate_arm_ports(left_port: str, right_port: str) -> None:
@@ -205,6 +213,7 @@ def main() -> int:
     )
     parser.add_argument("--move-deg", type=float, default=0.0)
     parser.add_argument("--confirm", default="")
+    parser.add_argument("--operator-present", action="store_true")
     parser.add_argument("--log", type=Path, default=Path("/tmp/dapier-dual-so101-smoke.json"))
     args = parser.parse_args()
     try:
@@ -213,6 +222,7 @@ def main() -> int:
             args.confirm,
             args.left_calibration,
             args.right_calibration,
+            args.operator_present,
         )
     except ValueError as error:
         raise SystemExit(str(error)) from error
@@ -225,7 +235,20 @@ def main() -> int:
         "left": load_bus(args.left_port, args.left_calibration),
         "right": load_bus(args.right_port, args.right_calibration),
     }
-    record: dict[str, object] = {"motion_requested_deg": args.move_deg, "arms": {}, "trace": []}
+    record: dict[str, object] = {
+        "schema_version": "dapier.dual-so101-smoke.v0.2",
+        "started_at": datetime.now().astimezone().isoformat(),
+        "motion_requested_deg": args.move_deg,
+        "user_witnessed": args.operator_present,
+        "hardware_execution": False,
+        "motion_completed": False,
+        "calibration_sha256": {
+            "left": calibration_sha256(args.left_calibration),
+            "right": calibration_sha256(args.right_calibration),
+        },
+        "arms": {},
+        "trace": [],
+    }
     failure: BaseException | None = None
     try:
         for bus in buses.values():
@@ -242,6 +265,7 @@ def main() -> int:
 
         if args.move_deg:
             validate_motion_health(snapshots)
+            record["hardware_execution"] = True
             for side, bus in buses.items():
                 bus.sync_write("Goal_Position", starts[side])
                 bus.enable_torque()
@@ -262,6 +286,7 @@ def main() -> int:
             stopped = disable_torque_and_verify(buses)
             for side in buses:
                 record["arms"][side]["health_after_torque_off"] = stopped[side]
+            record["motion_completed"] = True
         else:
             for side, bus in buses.items():
                 record["arms"][side]["health_before_disconnect"] = health(bus)
@@ -278,6 +303,7 @@ def main() -> int:
                     disconnect_errors.append(f"{type(exc).__name__}: {exc}")
         if disconnect_errors:
             record["disconnect_errors"] = disconnect_errors
+        record["finished_at"] = datetime.now().astimezone().isoformat()
         args.log.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     if failure is not None:

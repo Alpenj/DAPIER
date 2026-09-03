@@ -1,5 +1,6 @@
 from pathlib import Path
 import runpy
+import tempfile
 from unittest import mock
 import unittest
 
@@ -52,20 +53,38 @@ class DualSO101SmokeTest(unittest.TestCase):
 
     def test_motion_requires_explicit_per_arm_calibration(self):
         with self.assertRaisesRegex(ValueError, "finite"):
-            SMOKE["validate_motion_request"](float("nan"), "", None, None)
+            SMOKE["validate_motion_request"](float("nan"), "", None, None, False)
         with self.assertRaisesRegex(ValueError, "explicit left and right"):
             SMOKE["validate_motion_request"](
                 3.0,
                 SMOKE["MOTION_CONFIRMATION"],
                 None,
                 None,
+                True,
+            )
+        with self.assertRaisesRegex(ValueError, "operator-present"):
+            SMOKE["validate_motion_request"](
+                3.0,
+                SMOKE["MOTION_CONFIRMATION"],
+                Path("left.json"),
+                Path("right.json"),
+                False,
             )
         SMOKE["validate_motion_request"](
             3.0,
             SMOKE["MOTION_CONFIRMATION"],
             Path("left.json"),
             Path("right.json"),
+            True,
         )
+
+        with tempfile.TemporaryDirectory() as directory:
+            calibration = Path(directory) / "calibration.json"
+            calibration.write_bytes(b"calibration")
+            self.assertEqual(
+                SMOKE["calibration_sha256"](calibration),
+                "e152337e4e85aa3e81482f0ce329aec7bfad531413fe53fef84f1f0d4165caee",
+            )
 
     def test_control_table_is_checked_before_hardware_connect(self):
         table = {name: object() for name in SMOKE["REQUIRED_CONTROL_TABLE_REGISTERS"]}

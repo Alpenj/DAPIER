@@ -104,6 +104,15 @@ def _post_health_rows(record: dict[str, object]) -> str:
     return "".join(rows)
 
 
+def _boolean_field(record: dict[str, object], name: str) -> str:
+    if name not in record:
+        return "not recorded"
+    value = record[name]
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be boolean")
+    return str(value).lower()
+
+
 def build_report(record: dict[str, object]) -> str:
     trace = _trace(record)
     origin = float(trace[0]["monotonic_s"])
@@ -138,6 +147,7 @@ def build_report(record: dict[str, object]) -> str:
 <h1>DAPIER dual SO-101 trace</h1>
 <p class="warn">이 보고서는 계측 trace 시각화이며 실물 동작 승인 또는 commissioning 완료 증거가 아닙니다.</p>
 <p>samples={len(trace)}, duration={times[-1]:.3f}s, interval p50={p50_ms:.2f}ms, p95={p95_ms:.2f}ms, error={error}</p>
+<p>user_witnessed={_boolean_field(record, 'user_witnessed')}, hardware_execution={_boolean_field(record, 'hardware_execution')}, motion_completed={_boolean_field(record, 'motion_completed')}</p>
 <table><tr><th>arm</th><th>max tracking error</th><th>peak |load| raw</th><th>peak |current| raw</th><th>peak |velocity| raw</th></tr>{''.join(rows)}</table>
 <h2>Post-motion torque-off health</h2>
 <table><tr><th>arm</th><th>torque</th><th>status</th><th>moving</th><th>temperature °C</th><th>voltage raw</th></tr>{_post_health_rows(record)}</table>

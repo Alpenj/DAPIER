@@ -30,6 +30,9 @@ class DualSO101TraceReportTest(unittest.TestCase):
         }
         record = {
             "trace": trace,
+            "user_witnessed": True,
+            "hardware_execution": True,
+            "motion_completed": True,
             "arms": {
                 side: {"health_after_torque_off": health}
                 for side in ("left", "right")
@@ -40,8 +43,13 @@ class DualSO101TraceReportTest(unittest.TestCase):
         self.assertIn("left shoulder_pan position", html)
         self.assertIn("Post-motion torque-off health", html)
         self.assertIn("30–35", html)
+        self.assertIn("user_witnessed=true", html)
         self.assertIn("commissioning 완료 증거가 아닙니다", html)
         self.assertIn("not recorded", REPORT["build_report"]({"trace": trace}))
+        record["motion_completed"] = "yes"
+        with self.assertRaisesRegex(ValueError, "motion_completed"):
+            REPORT["build_report"](record)
+        record["motion_completed"] = True
         record["arms"]["left"]["health_after_torque_off"] = {}
         with self.assertRaisesRegex(ValueError, "health_after_torque_off"):
             REPORT["build_report"](record)
