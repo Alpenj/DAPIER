@@ -1,12 +1,14 @@
 ﻿# WikiDocs 20199 기반 JDcobot200 URDF·MuJoCo 실습 가이드
 
+> Legacy 학습 문서: JDcobot200/300 경로는 현행 실물에 사용하지 않는다. 현행 모델은 SO-101 양팔 `sim/mobile_dual_so101`, 장비 역할 정본은 [`../config/hardware_roles.json`](../config/hardware_roles.json)이다.
+
 확인일: 2026-08-24
 
 대상: WikiDocs 「jdCobot200 5축 로봇암 사용 매뉴얼」과 이 책이 직접 연결한 `JD-edu/jdcobot200_imitation_learning` 공개 저장소
 
 ## 목적과 경계
 
-이 문서는 JDcobot200의 URDF 생성·MuJoCo 변환·그리퍼 연동 흐름을 **학습용 참조**로 정리한다. DAPIER 실물은 JDcobot300 양팔이므로, 200의 링크 길이·질량·관성·관절 제한·서보 게인·메시를 정답으로 복사하지 않는다. 특히 이 문서에는 외부 URDF, MJCF, STL, 코드의 전문을 포함하지 않으며 원문 링크와 검증 절차만 제공한다.
+이 문서는 JDcobot200의 URDF 생성·MuJoCo 변환·그리퍼 연동 흐름을 **과거 학습용 참조**로 정리한다. 현재 DAPIER 실물은 SO-101 양팔이므로 200/300의 링크 길이·질량·관성·관절 제한·서보 게인·메시를 사용하지 않는다. 특히 이 문서에는 외부 URDF, MJCF, STL, 코드의 전문을 포함하지 않으며 원문 링크와 검증 절차만 제공한다.
 
 ## 200 전용 페이지·소스 지도
 
@@ -36,7 +38,7 @@
 
 2026-08-24에 `JD-edu/jdcobot200_imitation_learning`의 공개 루트 목록과 `LICENSE` 경로를 확인했다. 저장소 루트 목록에 라이선스 파일이 표시되지 않았고 `LICENSE` URL도 404였다. 따라서 **라이선스가 확인되지 않았다**. 공개 저장소라는 사실만으로 URDF/MJCF/STL/코드의 복사·수정·배포 권한이 생기지 않는다. 재사용이 필요하면 저작권자에게 서면 허가를 받고, 허가 범위와 원본 commit을 별도 기록한다.
 
-## URDF → MJCF → 그리퍼 작업 흐름
+## 당시 URDF → MJCF → 그리퍼 작업 흐름 (미채택)
 
 ### 1. 300 CAD에서 URDF 생성
 

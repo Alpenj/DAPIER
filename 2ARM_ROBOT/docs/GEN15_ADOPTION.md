@@ -1,5 +1,7 @@
 # GEN-1.5 참고 내용의 DAPIER 반영 결정
 
+> 2026-09-03 장비 갱신: 본문의 과거 장비명은 당시 조사 가정이며, 현행 실물은 SO-101 양팔과 [`../config/hardware_roles.json`](../config/hardware_roles.json)의 카메라 역할을 따른다.
+
 이 문서는 GEN-1.5 조사 결과를 프로젝트 요구사항과 혼동하지 않기 위한
 결정 기록이다. GEN-1.5 자체 모델을 사용하거나 재현한다는 계획이 아니다.
 
@@ -16,7 +18,7 @@
 
 - GEN-1.5 checkpoint/API/weight adapter
 - 30초 context window와 100Hz action을 프로젝트 요구사항으로 고정
-- 사람 손 영상에서 JDcobot 관절 행동을 직접 생성
+- 사람 손 영상에서 SO-101 관절 행동을 직접 생성
 - simulation demonstration의 실기체 zero-shot 실행
 - 1~10 gradient step proprietary adaptation 재현
 - GEN-1.5의 59%/83%와 DAPIER 신발 정리 성능의 직접 비교

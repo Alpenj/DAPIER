@@ -1,6 +1,7 @@
 ﻿# DAPIER 관점: Generalist GEN-1.5의 양팔 신발 정리 적용 조사
 
 > 확인일: 2026-08-20 (KST)
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../config/hardware_roles.json`](../config/hardware_roles.json)을 따른다.
 > 조사 대상: [Generalist AI — *GEN-1.5: Embodied Foundation Models are One-Shot Learners*](https://generalistai.com/blog/gen-1.5) 및 이 페이지가 직접 연결한 Generalist 1차 블로그·공식 매체 asset
 > 작성 원칙: **[사실]**은 바로 뒤의 Generalist 공식 URL에 명시되거나 그 페이지가 로드하는 공개 asset에서 확인한 내용이다. **[추론/권고]**는 DAPIER의 하드웨어·기간·예산 제약에 적용해 도출한 판단이다. Generalist의 성능·일반화 주장은 논문 동료심사나 제3자 재현이 아니라 회사 발표 자체 보고임을 전제로 읽는다.
 

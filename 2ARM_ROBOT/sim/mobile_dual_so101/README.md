@@ -1,6 +1,6 @@
 # Waffle Pi + SO-101 양팔 MuJoCo 모델
 
-JDcobot200 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 기준 모델이다. 팔 하나는
+현행 기준 모델이며 JDcobot200 legacy 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 모델이다. 팔 하나는
 `shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`
 6개 actuator를 가지며, 좌우를 합친 action은 12차원이다.
 
