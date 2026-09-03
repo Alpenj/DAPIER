@@ -41,6 +41,7 @@ class IKResult:
     converged: bool
     iterations: int
     residual_m_by_side: dict[str, float]
+    tool_axis_error_rad_by_side: dict[str, float]
     planning_qpos_writes: int
     runtime_qpos_writes: int = 0
     hardware_execution: bool = False
@@ -163,20 +164,33 @@ def solve_bimanual_position_ik(
     targets_m: Mapping[str, Sequence[float]],
     *,
     site_names: Mapping[str, str] | None = None,
+    tool_axis_targets: Mapping[str, Sequence[float]] | None = None,
+    tool_axis_weight_m: float = 0.05,
+    tool_axis_tolerance_rad: float = math.radians(2.0),
     damping: float = 0.02,
     tolerance_m: float = 5e-4,
     max_iterations: int = 100,
     max_joint_step_rad: float = 0.05,
 ) -> IKResult:
-    """Solve one or both arm-site XYZ targets using bounded DLS IK."""
+    """Solve arm-site XYZ and optional local-X direction using bounded DLS IK."""
 
     if not targets_m or any(side not in ("left", "right") for side in targets_m):
         raise ValueError("targets_m must contain left and/or right")
     if site_names is not None and set(site_names) != set(targets_m):
         raise ValueError("site_names must contain the same sides as targets_m")
-    scalars = (damping, tolerance_m, max_joint_step_rad)
+    if tool_axis_targets is not None and not set(tool_axis_targets).issubset(
+        targets_m
+    ):
+        raise ValueError("tool_axis_targets sides must also have position targets")
+    scalars = (
+        damping,
+        tolerance_m,
+        max_joint_step_rad,
+        tool_axis_weight_m,
+        tool_axis_tolerance_rad,
+    )
     if not all(math.isfinite(value) and value > 0.0 for value in scalars):
-        raise ValueError("IK damping, tolerance, and step must be positive")
+        raise ValueError("IK scalar parameters must be finite and positive")
     if max_iterations <= 0:
         raise ValueError("max_iterations must be positive")
 
@@ -190,6 +204,21 @@ def solve_bimanual_position_ik(
         raise ValueError("each IK target must contain XYZ")
     if any(not np.all(np.isfinite(target)) for target in targets.values()):
         raise ValueError("IK targets must be finite")
+    axis_targets = {
+        side: np.asarray(target, dtype=np.float64)
+        for side, target in (tool_axis_targets or {}).items()
+    }
+    if any(target.shape != (3,) for target in axis_targets.values()):
+        raise ValueError("each tool axis target must contain XYZ")
+    if any(
+        not np.all(np.isfinite(target)) or np.linalg.norm(target) <= 1e-12
+        for target in axis_targets.values()
+    ):
+        raise ValueError("tool axis targets must be finite non-zero vectors")
+    axis_targets = {
+        side: target / np.linalg.norm(target)
+        for side, target in axis_targets.items()
+    }
 
     actuator_offsets = {"left": 0, "right": 6}
     actuator_ids = np.asarray(
@@ -220,6 +249,7 @@ def solve_bimanual_position_ik(
     converged = False
     iterations = 0
     residuals: dict[str, float] = {}
+    axis_errors: dict[str, float] = {}
 
     for iteration in range(max_iterations + 1):
         _set_planning_action(model, planning_data, action, qpos_addresses)
@@ -232,7 +262,20 @@ def solve_bimanual_position_ik(
             side: float(np.linalg.norm(error))
             for side, error in zip(sides, errors, strict=True)
         }
-        if max(residuals.values()) <= tolerance_m:
+        current_axes = {
+            side: planning_data.site_xmat[site_ids[side]].reshape(3, 3)[:, 0]
+            for side in axis_targets
+        }
+        axis_errors = {
+            side: math.acos(
+                float(np.clip(np.dot(current_axes[side], target), -1.0, 1.0))
+            )
+            for side, target in axis_targets.items()
+        }
+        if max(residuals.values()) <= tolerance_m and (
+            not axis_errors
+            or max(axis_errors.values()) <= tool_axis_tolerance_rad
+        ):
             converged = True
             iterations = iteration
             break
@@ -240,19 +283,30 @@ def solve_bimanual_position_ik(
             iterations = iteration
             break
 
-        jacobian = np.zeros((3 * len(sides), len(actuator_ids)), dtype=np.float64)
+        jacobian_rows = []
+        residual_rows = []
         for side_index, side in enumerate(sides):
             position_jacobian = np.zeros((3, model.nv), dtype=np.float64)
+            rotation_jacobian = np.zeros((3, model.nv), dtype=np.float64)
             mujoco.mj_jacSite(
                 model,
                 planning_data,
                 position_jacobian,
-                None,
+                rotation_jacobian,
                 site_ids[side],
             )
-            row = slice(3 * side_index, 3 * side_index + 3)
-            jacobian[row, :] = position_jacobian[:, selected_dofs]
-        residual = np.concatenate(errors)
+            jacobian_rows.append(position_jacobian[:, selected_dofs])
+            residual_rows.append(errors[side_index])
+            if side in axis_targets:
+                jacobian_rows.append(
+                    tool_axis_weight_m * rotation_jacobian[:, selected_dofs]
+                )
+                residual_rows.append(
+                    tool_axis_weight_m
+                    * np.cross(current_axes[side], axis_targets[side])
+                )
+        jacobian = np.vstack(jacobian_rows)
+        residual = np.concatenate(residual_rows)
         regularized = jacobian @ jacobian.T + damping**2 * np.eye(len(residual))
         joint_delta = jacobian.T @ np.linalg.solve(regularized, residual)
         action[actuator_ids] += np.clip(
@@ -267,6 +321,7 @@ def solve_bimanual_position_ik(
         converged=converged,
         iterations=iterations,
         residual_m_by_side=residuals,
+        tool_axis_error_rad_by_side=axis_errors,
         planning_qpos_writes=planning_writes,
     )
 

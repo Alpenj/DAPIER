@@ -87,6 +87,8 @@ planning `MjData`에서만 qpos를 갱신한다. 실행은 시작 자세 초기�
 (septic) trajectory의 actuator target만 `data.ctrl`에 넣고 `mj_step`으로 질량, 관성,
 중력, damping, actuator force와 접촉을 계산한다. trajectory는 시작/끝의 속도,
 가속도와 jerk가 모두 0이며 설정한 target limit에 맞춰 duration을 늘린다.
+5-DoF 팔을 6D pose로 과구속하지 않도록 필요할 때만 gripper local-X 접근축을
+`tool_axis_targets`로 추가해 위치 3축과 접근 방향 2축을 함께 푼다.
 
 실행 보고서는 target과 actual의 velocity/acceleration/jerk를 따로 기록하고, actual
 limit, torque saturation, 지지다각형, 금지 접촉과 finite state를 모두 통과해야만

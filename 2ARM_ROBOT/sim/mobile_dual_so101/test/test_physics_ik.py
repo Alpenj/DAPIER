@@ -70,6 +70,20 @@ class PhysicsIKTest(unittest.TestCase):
         self.assertEqual(result.runtime_qpos_writes, 0)
         self.assertFalse(result.hardware_execution)
 
+    def test_ik_can_hold_a_downward_tool_axis(self) -> None:
+        target = self.home_positions["left"] + np.asarray([0.005, 0.0, -0.005])
+        result = solve_bimanual_position_ik(
+            self.model,
+            HUMANOID_HOME_ACTION,
+            {"left": target},
+            tool_axis_targets={"left": (0.0, 0.0, -1.0)},
+            max_iterations=250,
+        )
+
+        self.assertTrue(result.converged, result)
+        self.assertLess(result.residual_m_by_side["left"], 5e-4)
+        self.assertLess(result.tool_axis_error_rad_by_side["left"], np.deg2rad(2.0))
+
     def test_septic_trajectory_has_zero_endpoint_velocity_acceleration_jerk(
         self,
     ) -> None:

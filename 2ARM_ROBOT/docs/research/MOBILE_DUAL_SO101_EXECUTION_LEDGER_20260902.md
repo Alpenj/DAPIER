@@ -445,3 +445,29 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 왼 그리퍼는 이동측 finger contact가 0이라 파지 성공 gate를 통과하지 못했으므로 박스 개방·신발
 추출 명령은 실물에 보내지 않는다. 다음 실물 단계는 MuJoCo 양지 contact와 friction-only lift가
 성공한 뒤 검증된 joint waypoint를 같은 3도 제한 실행기에 넣는 것이다.
+
+## SIM P2 재현 · 파지축과 actuator 포화 분리 · 계속 실패
+
+2026-09-03에 실패를 위치·자세·그리퍼 개방·동역학 순서로 다시 분리했다.
+
+- 기존 `0.2 rad` open 자세의 손가락 안쪽 간격은 mesh 기준 약 29 mm라 폭 80 mm
+  cuboid를 감쌀 수 없었다. `1.2 rad`에서는 양측 mesh contact가 생겼지만 두 접점이
+  물체 모서리나 윗면에 생겨 lift 시작 직후 분리됐다.
+- 기존 IK target인 `gripperframe`은 두 손가락 중앙이 아니라 고정 손가락 끝이다.
+  object center에 그대로 맞추는 좌표 정의도 잘못됐다.
+- 접촉 전 목표를 두 손가락 중앙으로 보정하는 실험에서는 낮은 작업점이 현재 관절 범위에서
+  도달하지 못했다.
+- 시간을 3초에서 10초로 늘려도 개선되지 않았고 final tracking error가 오히려
+  `0.371 rad`까지 증가했다. shoulder actuator가 force limit에 오래 머물러 단순 속도
+  문제가 아니라 현재 gravity/actuator model 또는 docking 작업점 문제로 판정했다.
+- 실제 force limit을 넘도록 actuator 힘을 키우거나 weld를 추가해 성공을 만들지는 않았다.
+
+공통 DLS solver에는 선택적인 local-X 접근축 제약만 추가했다. 위치 3축과 접근 방향 2축을
+함께 풀기 때문에 5-DoF SO-101을 full 6D pose로 과구속하지 않는다. 짧은 이동 단위 테스트에서
+위치 residual 0.5 mm 미만, 접근축 오차 2도 미만으로 통과했고 runtime/hardware write는 없다.
+
+현재 full physics 결과는 여전히 `left_bilateral_contact_failed`,
+`success=false`, `hardware_execution=false`이다. 다음 단계에서는 실제 모터의
+가용 torque/current와 arm mount 하중을 읽기 전용으로 측정한 뒤 actuator model을 보정하거나,
+그 힘 범위 안에서 양팔이 동시에 도달하는 docking 상대 위치를 다시 정한다. 실물 전체 sequence는
+이 gate가 통과하기 전까지 실행하지 않는다.
