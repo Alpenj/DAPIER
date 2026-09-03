@@ -127,6 +127,22 @@ def health(bus) -> dict[str, dict[str, float]]:
     }
 
 
+def disable_torque_and_verify(
+    buses: dict[str, object],
+) -> dict[str, dict[str, dict[str, float]]]:
+    for bus in buses.values():
+        bus.disable_torque(num_retry=5)
+    snapshots = {side: health(bus) for side, bus in buses.items()}
+    values = [
+        value
+        for snapshot in snapshots.values()
+        for value in snapshot["Torque_Enable"].values()
+    ]
+    if set(values) != {0}:
+        raise RuntimeError(f"Torque_Enable must be 0 after motion, got {values}")
+    return snapshots
+
+
 def interpolate(
     buses: dict[str, object],
     starts: dict[str, dict[str, float]],
@@ -242,7 +258,13 @@ def main() -> int:
             record["arms"][side]["after"] = bus.sync_read(
                 "Present_Position", normalize=normalized, num_retry=2
             )
-            record["arms"][side]["health_before_disconnect"] = health(bus)
+        if args.move_deg:
+            stopped = disable_torque_and_verify(buses)
+            for side in buses:
+                record["arms"][side]["health_after_torque_off"] = stopped[side]
+        else:
+            for side, bus in buses.items():
+                record["arms"][side]["health_before_disconnect"] = health(bus)
     except BaseException as exc:
         record["error"] = f"{type(exc).__name__}: {exc}"
         failure = exc

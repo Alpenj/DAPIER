@@ -533,3 +533,9 @@ python 2ARM_ROBOT/scripts/dual_so101_trace_report \
 장치 없이 현재 설치된 LeRobot `0.6.0`의 STS3215 control table을 대조해 위 health/profile
 register가 모두 존재함을 확인했다. 실행기는 같은 필수 register 목록을 serial connect 전에
 검사하므로 다른 노트북이나 Pi4의 LeRobot 버전이 맞지 않으면 모터를 열기 전에 실패한다.
+
+종료 기록도 보강했다. 기존 `health_before_disconnect`는 토크 해제 전 값이라 종료 안전을 직접
+증명하지 못했다. 동작 후 양팔 토크를 명시적으로 해제하고 `Torque_Enable=0`을 read-back한
+`health_after_torque_off`를 저장한다. 한 모터라도 0이 아니면 실행은 실패하며, `finally`의
+disconnect가 토크 해제를 다시 시도한다. fake bus 실패 시험과 전체 163개 회귀가 통과했고
+실물 장치에는 접근하지 않았다.

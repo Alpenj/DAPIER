@@ -9,6 +9,12 @@ SMOKE = runpy.run_path(str(SCRIPT))
 
 
 class FakeBus:
+    def __init__(self):
+        self.torque = 1
+
+    def disable_torque(self, **_kwargs):
+        self.torque = 0
+
     def sync_write(self, register, values):
         self.goal = values
 
@@ -19,6 +25,8 @@ class FakeBus:
             "Present_Current": 3,
             "Present_Velocity": 4,
         }
+        if register == "Torque_Enable":
+            return {"shoulder_pan": self.torque}
         return {"shoulder_pan": values.get(register, 0)}
 
 
@@ -98,6 +106,21 @@ class DualSO101SmokeTest(unittest.TestCase):
                 "Maximum_Acceleration",
             },
         )
+
+    def test_torque_off_is_read_back_after_motion(self):
+        buses = {"left": FakeBus(), "right": FakeBus()}
+        snapshots = SMOKE["disable_torque_and_verify"](buses)
+        self.assertEqual(
+            {
+                side: snapshot["Torque_Enable"]["shoulder_pan"]
+                for side, snapshot in snapshots.items()
+            },
+            {"left": 0, "right": 0},
+        )
+        stuck = FakeBus()
+        stuck.disable_torque = mock.Mock()
+        with self.assertRaisesRegex(RuntimeError, "after motion"):
+            SMOKE["disable_torque_and_verify"]({"left": stuck, "right": FakeBus()})
 
 
 if __name__ == "__main__":
