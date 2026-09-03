@@ -293,7 +293,9 @@ serial을 제공하지 않는 동일 모델 wrist camera 두 대는 외장 허�
 
 실제 controller serial은 공개 저장소에 기록하지 않고 개인 규칙 파일에만 보관한다.
 `scripts/install_hardware_aliases.sh`는 그 파일을 대상 PC 또는 Raspberry Pi 4의 udev에
-설치하고, 연결되지 않은 장치는 실패 대신 경고로 표시한다.
+설치하고, 연결되지 않은 장치는 실패 대신 경고로 표시한다. 이 작업은 `sudo udevadm trigger`로
+장치 상태를 바꾸므로 사용자가 현장에 있을 때 `--confirm VISIBLE_INSTALL_DAPIER_UDEV_RULES`를
+명시해야 하며, 실행 중인 camera·serial stream보다 먼저 수행한다.
 
 ### 권장 USB 배선
 
@@ -593,3 +595,8 @@ MuJoCo 헤드리스 회귀가 통과했으며 실제 ROS graph와 장치에는 �
 확인하므로 무승인 offline 검사로 유지한다. 실제 장치를 여는 `poll`과 `viewer`는
 `VISIBLE_ASTRA_READONLY_STREAM`과 `--operator-present`가 모두 없으면 `/dev` 확인과 stream
 open 전에 종료한다. 잘못된 토큰 테스트는 실제 카메라를 열지 않는다.
+
+udev stable alias 설치도 시스템 변경 경로라 별도 승인 대상으로 고정했다.
+`install_hardware_aliases.sh`는 `VISIBLE_INSTALL_DAPIER_UDEV_RULES`가 없으면 local rules를
+읽거나 `sudo`를 호출하기 전에 종료한다. 설치를 다시 해야 한다면 내일 모든 stream을 열기 전에
+한 번만 수행하고, 이후 좌우 alias와 실제 장비 대응을 다시 확인한다.

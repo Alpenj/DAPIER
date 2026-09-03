@@ -1,7 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-rules_file="${1:-${HOME}/.config/dapier/99-dapier-hardware.rules}"
+readonly CONFIRMATION="VISIBLE_INSTALL_DAPIER_UDEV_RULES"
+
+usage() {
+  echo "Usage: $0 [RULES_FILE] --confirm $CONFIRMATION" >&2
+}
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -eq 2 && "${1:-}" == "--confirm" && "${2:-}" == "$CONFIRMATION" ]]; then
+  rules_file="${HOME}/.config/dapier/99-dapier-hardware.rules"
+elif [[ $# -eq 3 && "${2:-}" == "--confirm" && "${3:-}" == "$CONFIRMATION" ]]; then
+  rules_file="$1"
+else
+  usage
+  exit 2
+fi
 if [[ ! -f "${rules_file}" ]]; then
   echo "missing local hardware rules: ${rules_file}" >&2
   exit 1

@@ -87,6 +87,14 @@ class HardwareRolesTest(unittest.TestCase):
             2,
         )
 
+    def test_udev_install_requires_exact_confirmation(self):
+        script = ROOT / "scripts/install_hardware_aliases.sh"
+        self.assertEqual(subprocess.run(["bash", script, "--help"], check=False).returncode, 0)
+        self.assertEqual(
+            subprocess.run(["bash", script, "--confirm", "WRONG"], check=False).returncode,
+            2,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
