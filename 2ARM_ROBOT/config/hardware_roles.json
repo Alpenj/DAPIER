@@ -66,7 +66,7 @@
     "visual_slam_compute_host": "select after Raspberry Pi 4 and laptop latency/load measurement"
   },
   "notes": [
-    "Both arms are identical SO-101 followers for runtime commands; legacy LeRobot cache folder names do not define leader/follower hardware roles.",
+    "Both arms are identical SO-101 arms for runtime commands; legacy LeRobot cache folder names do not define hardware roles.",
     "Wrist camera left/right identity depends on fixed downstream hub ports because the cameras expose no unique serial.",
     "No controller serial, password, calibration payload or personal device path is stored here."
   ]

@@ -23,6 +23,25 @@ class FakeBus:
 
 
 class DualSO101SmokeTest(unittest.TestCase):
+    def test_duplicate_arm_ports_and_active_torque_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "same device"):
+            SMOKE["validate_arm_ports"]("/dev/ttyACM0", "/dev/ttyACM0")
+        snapshot = {
+            register: {"shoulder_pan": 0}
+            for register in (
+                "Torque_Enable",
+                "Moving",
+                "Status",
+                "Operating_Mode",
+                "Present_Temperature",
+            )
+        }
+        SMOKE["validate_motion_health"]({"left": snapshot, "right": snapshot})
+        bad = {side: {key: dict(value) for key, value in snapshot.items()} for side in ("left", "right")}
+        bad["right"]["Torque_Enable"]["shoulder_pan"] = 1
+        with self.assertRaisesRegex(RuntimeError, "Torque_Enable"):
+            SMOKE["validate_motion_health"](bad)
+
     def test_motion_requires_explicit_per_arm_calibration(self):
         with self.assertRaisesRegex(ValueError, "finite"):
             SMOKE["validate_motion_request"](float("nan"), "", None, None)
