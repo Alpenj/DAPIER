@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-openni_root="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-v2.3.0.86}"
-bin_dir="${openni_root}/samples/bin"
-opencv_lib_dir="${openni_root}/samples/samples/ThirdParty/OpenCV420/Linux/lib"
+bin_dir="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-ros2-v1.0.2}"
+compat_lib_dir="${bin_dir}/compat"
 mode="${1:-viewer}"
 
 case "${mode}" in
-  check) required=(ColorReaderPoll SimpleViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so) ;;
-  poll) required=(ColorReaderPoll libOpenNI2.so OpenNI2/Drivers/liborbbec.so) ;;
-  viewer) required=(SimpleViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so) ;;
+  check)
+    required=(ColorReaderPoll NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
+    executables=(ColorReaderPoll NiViewer)
+    ;;
+  poll)
+    required=(ColorReaderPoll libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
+    executables=(ColorReaderPoll)
+    ;;
+  viewer)
+    required=(NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
+    executables=(NiViewer)
+    ;;
   *) echo "usage: $0 [check|poll|viewer]" >&2; exit 2 ;;
 esac
 
@@ -19,10 +27,12 @@ for file in "${required[@]}"; do
     exit 1
   fi
 done
-if [[ "${mode}" != poll && ! -e "${opencv_lib_dir}/libpng12.so.0" ]]; then
-  echo "missing OpenNI2 viewer dependency: ${opencv_lib_dir}/libpng12.so.0" >&2
-  exit 1
-fi
+for executable in "${executables[@]}"; do
+  if [[ ! -x "${bin_dir}/${executable}" ]]; then
+    echo "OpenNI2 runtime file is not executable: ${bin_dir}/${executable}" >&2
+    exit 1
+  fi
+done
 
 if [[ "${mode}" == check ]]; then
   printf 'OpenNI2 runtime ready: %s\n' "${bin_dir}"
@@ -34,9 +44,9 @@ if [[ ! -e /dev/dapier/workspace_rgbd ]]; then
 fi
 
 export OPENNI2_REDIST="${bin_dir}"
-export LD_LIBRARY_PATH="${bin_dir}:${opencv_lib_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export LD_LIBRARY_PATH="${bin_dir}:${compat_lib_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 if [[ "${mode}" == poll ]]; then
   exec "${bin_dir}/ColorReaderPoll"
 fi
-exec "${bin_dir}/SimpleViewer" 0 0
+exec "${bin_dir}/NiViewer"

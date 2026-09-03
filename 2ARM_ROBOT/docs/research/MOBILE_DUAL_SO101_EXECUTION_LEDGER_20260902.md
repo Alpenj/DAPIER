@@ -273,7 +273,7 @@ P2에서 기존 ShoePoseEstimate와 camera contract를 재사용해 RGB-D 관측
 연결한다. 양지 contact와 friction-only lift가 headless에서 통과한 뒤 사용자에게 관찰 항목을
 먼저 알리고 viewer 검증을 진행한다. 그 전에는 P3로 넘어가지 않는다.
 
-## HW 준비 · 장치 역할 고정과 Astra S Color 진단 · 진행 중
+## HW 준비 · 장치 역할 고정과 Astra S Color 진단 · Color 복구 완료 · 동시 부하 검증 대기
 
 ### 직접 확인한 연결
 
@@ -305,28 +305,52 @@ serial을 제공하지 않는 동일 모델 wrist camera 두 대는 외장 허�
 
 - Orbbec Viewer/SDK v1.10.37: Depth 1프레임 수신 성공
 - 같은 SDK의 Color: `OB_SENSOR_COLOR Match openni video mode failed`
-- 공식 `color_viewer` 샘플: 같은 오류 재현
-- 공식 OpenNI2 2.3.0.86: 현재 Ubuntu 24.04, kernel 7.0 환경에서 `device.open()` USB timeout
-- USB 장치 권한: `0666`, 권한 부족 아님
-- `usbcore.usbfs_memory_mb`: 16에서 공식 권장값 128로 임시 변경했지만 timeout 동일
-- kernel journal 재검토 결과 당시 Astra는 timeout 뒤에도 USB에 남아 있었고, 이후 여러 USB 장치와
-  함께 물리적으로 분리됐다. timeout이 장치를 끊었다는 이전 추정은 폐기한다.
+- 공식 OpenNI2 2.3.0.86 beta6: `device.open()` 단계에서 `USB transfer timeout`
+- beta6의 `UsbInterface`를 BULK(2)와 ISO(1)로 각각 시험했지만 같은 timeout
+- USB 장치 권한은 `0666`이고 `usbcore.usbfs_memory_mb=128`에서도 결과가 같아 권한과
+  usbfs buffer를 원인에서 제외
+- 공식 `OpenNI_SDK_ROS2_v1.0.2_20220809_b32e47_linux.tar.gz`의 x64 redist:
+  배포물 SHA-256: `05dda4507620e91408249b1c139b0ba25d4ed3cb8a402905a10fda719dbaaf44`
+  같은 Astra와 같은 Bus 001에서 Depth 및 Color stream open 성공
+- `ldd`로 해당 redist의 `libOpenNI2.so`가 실제 로드됨을 확인
+- 공식 `ColorReaderPoll`을 이 redist에 링크해 약 33.8 ms 간격, 약 29.6 FPS의 연속 RGB888
+  프레임과 변화하는 RGB 값을 확인
+- 같은 redist의 `NiViewer` GUI 실행 성공
 - 양쪽 wrist RGB: 320x240, YUYV, 15 FPS 화면 확인
 
-따라서 아직 Astra S Color를 성공으로 기록하지 않는다. 최신 SDK UI 설정 문제가 아니라
-legacy OpenNI 장치와 현재 OS/driver 조합의 호환 문제로 분리했다. 다음 검증은 다른 노트북에서
-동작한 OS·SDK 버전과의 비교, USB descriptor/firmware 비교, 필요하면 지원 커널 환경에서의
-OpenNI2 단독 실행 순서로 진행한다. 펌웨어 변경은 복구 이미지와 정확한 모델 일치가 확인되기
-전에는 하지 않는다.
+원인은 Astra 하드웨어나 현재 USB 포트 자체가 아니라 OpenNI 런타임/driver 조합이었다.
+현재 Ubuntu에서는 공식 ROS2 OpenNI v1.0.2 redist를 사용하고, 최신 Orbbec SDK와 beta6
+OpenNI 조합을 이 장치의 실행 경로에서 제외한다. firmware는 변경하지 않았다.
+같은 공식 tar에는 `arm`과 `arm64` redist도 포함되지만, 이번 실기 증거는 x64 노트북에만 해당한다.
+Raspberry Pi 4에서는 OS 아키텍처에 맞는 redist로 별도 FPS·온도·USB 동시 부하 검증을 수행한다.
 
-### 2026-09-03 공식 OpenNI2 배포본 재검증
+### USB root hub와 동시 스트림 판단
 
-- 현재 설치본의 `libOpenNI2.so`와 `liborbbec.so` SHA-256은 공식 2.3.0.86 Linux x64 ZIP과 일치했다.
-- 공식 샘플을 그대로 실행하면 Ubuntu의 OpenNI2 2.2.0을 선택하므로 패키지의 `samples/bin`을
-  `LD_LIBRARY_PATH`와 `OPENNI2_REDIST`에 명시해야 한다.
-- 공식 Color 원시 프레임 샘플은 `ColorReaderPoll`, Astra non-UVC RGB-D 표시 샘플은
-  `SimpleViewer 0 0`임을 소스에서 확인했다.
-- `SimpleViewer`가 요구하는 `libpng12.so.0`은 같은 공식 배포본의 ThirdParty OpenCV 디렉터리로
-  고정했으며 `ldd`에서 누락 의존성이 없음을 확인했다.
-- `scripts/run_astra_openni2_color check|poll|viewer`가 위 경로 고정과 장치 별칭 확인을 담당한다.
-- 장비를 다른 팀원이 사용 중이어서 이 실행기의 실물 Color 프레임 검증은 대기 중이다.
+현재 외장 허브와 Astra는 모두 Bus 001의 같은 480M root hub를 공유한다. 두 wrist RGB의
+320x240 YUYV 15 FPS payload는 합계 약 36.9 Mbit/s다. Astra를 640x480 30 FPS,
+16-bit depth와 16-bit on-wire color로 가정하면 약 294.9 Mbit/s가 추가된다. 합계 약
+331.8 Mbit/s는 프로토콜 overhead와 예약 대역폭을 제외한 USB 2.0 안정 실효 범위에 가까우므로
+Color+Depth+wrist 두 대를 동시에 켤 때 frame drop, stream start 실패, USB reset 가능성이 있다.
+
+실제로 Astra 연결 직후 같은 root 아래 wrist camera 한 대가 reset되고 다른 한 대가 재열거된
+kernel 기록도 있었다. 이는 streaming 대역폭 초과의 직접 증거는 아니지만 전원 또는 bus transient
+위험의 증거다. 반면 다른 영상 스트림을 끈 상태에서 Astra Color가 같은 Bus 001에서 29.6 FPS로
+열렸으므로 기존 Color open 실패를 대역폭 문제로 판정하지 않는다.
+
+최종 실기 배선은 Astra를 `lsusb -t`에서 Bus 003, 005 또는 007처럼 별도의 480M root 아래로
+분리한다. 단순히 다른 허브를 쓰는 것으로 충분하지 않고 root hub가 실제로 달라야 한다. 분리 뒤
+Color+Depth+wrist 두 대를 동시에 실행해 FPS, frame drop, kernel reset을 측정한 결과를 최종
+commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은 영상에 비해 작아서 대역폭
+병목의 주원인이 아니다.
+
+### 고정한 실행 경로
+
+- 로컬 런타임: `~/.local/opt/orbbec-openni2-ros2-v1.0.2`
+- 장치 별칭: `/dev/dapier/workspace_rgbd`
+- 준비 확인: `2ARM_ROBOT/scripts/run_astra_openni2_color check`
+- Color 원시 프레임: `2ARM_ROBOT/scripts/run_astra_openni2_color poll`
+- Color/Depth GUI: `2ARM_ROBOT/scripts/run_astra_openni2_color viewer`
+
+실행 스크립트는 `OPENNI2_REDIST`와 `LD_LIBRARY_PATH`를 검증된 redist로 고정한다.
+Ubuntu 24.04의 FreeGLUT SONAME 차이는 설치된 `libglut.so.3.12`를 로컬 `compat`
+경로에서만 연결해 해결했으며 시스템 라이브러리나 firmware는 수정하지 않았다.
