@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 import unittest
 
@@ -53,6 +54,17 @@ class HardwareRolesTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("DAPIER_ENABLE_LEGACY_JDCOBOT", legacy)
+
+    def test_usb_snapshot_requires_exact_readonly_confirmation(self):
+        script = ROOT / "scripts/capture_usb_snapshot"
+        self.assertEqual(subprocess.run([script, "--help"], check=False).returncode, 0)
+        self.assertEqual(
+            subprocess.run(
+                [script, ROOT / "output/usb_snapshots/test", "--confirm", "WRONG"],
+                check=False,
+            ).returncode,
+            2,
+        )
 
 
 if __name__ == "__main__":

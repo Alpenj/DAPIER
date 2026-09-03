@@ -521,6 +521,12 @@ MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계�
 양팔 ±3도 왕복, 사후 health와 USB reset 확인 순서로 진행한다. 카메라 동시 실행이 불안정하면
 모터를 움직이지 않고 스트림 단계에서 중단한다.
 
+전후 USB 근거는 `scripts/capture_usb_snapshot`으로 수집한다. 사용자가 현장에 있을 때
+`VISIBLE_USB_SNAPSHOT_READONLY` 확인을 받아야 실행되며, Git에서 제외된 `output/` 아래 새
+디렉터리만 허용한다. `lsusb`, topology, V4L2 목록과 reset·disconnect·timeout 관련 kernel
+event를 저장하지만 stream과 serial port는 열지 않는다. raw 결과는 커밋하지 않고 전후 차이의
+비식별 요약만 남긴다.
+
 실행 후 raw log는 추가 의존성 없는 정적 HTML로 변환해 goal/observed, load/current/velocity와
 명령 주기 p50/p95를 팀원이 브라우저에서 바로 확인할 수 있게 한다. 양팔의 종료 후
 torque/status/moving/temperature/voltage도 같은 화면에 표시하며, 구형 로그에 값이 없으면

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly CONFIRMATION="VISIBLE_USB_SNAPSHOT_READONLY"
+
+usage() {
+  echo "Usage: $0 OUTPUT_DIRECTORY --confirm $CONFIRMATION" >&2
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -ne 3 || "$2" != "--confirm" || "$3" != "$CONFIRMATION" ]]; then
+  usage
+  exit 2
+fi
+
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+output_root="$(realpath -m -- "$script_dir/../output")"
+snapshot_dir="$(realpath -m -- "$1")"
+case "$snapshot_dir/" in
+  "$output_root/"*) ;;
+  *) echo "ERROR: snapshot must be under $output_root" >&2; exit 1 ;;
+esac
+if [[ -e "$snapshot_dir" ]]; then
+  echo "ERROR: refusing to overwrite $snapshot_dir" >&2
+  exit 1
+fi
+for command_name in date lsusb v4l2-ctl journalctl awk sed; do
+  command -v "$command_name" >/dev/null || {
+    echo "ERROR: missing command: $command_name" >&2
+    exit 1
+  }
+done
+
+mkdir -p -- "$snapshot_dir"
+date --utc --iso-8601=seconds > "$snapshot_dir/captured_at_utc.txt"
+lsusb > "$snapshot_dir/lsusb.txt"
+lsusb -t > "$snapshot_dir/lsusb-tree.txt"
+v4l2-ctl --list-devices > "$snapshot_dir/v4l2-devices.txt" 2>&1 || true
+
+kernel_status="available"
+if ! journalctl -k -b --no-pager 2>"$snapshot_dir/kernel-access.txt" \
+  | awk 'BEGIN {IGNORECASE=1} /usb/ && /reset|disconnect|error|fail|timeout|over-current|stall/' \
+  | sed -E 's/(Serial(Number)?[=:]?[[:space:]]*)[^[:space:]]+/\1REDACTED/g' \
+  > "$snapshot_dir/kernel-usb-events.txt"; then
+  kernel_status="unavailable"
+fi
+
+{
+  printf 'kernel_log=%s\n' "$kernel_status"
+  printf 'motion_commands_sent=false\n'
+  printf 'device_streams_opened=false\n'
+  printf 'hardware_execution=false\n'
+} > "$snapshot_dir/summary.txt"
+
+echo "USB snapshot: $snapshot_dir"

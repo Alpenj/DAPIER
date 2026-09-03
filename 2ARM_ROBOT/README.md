@@ -9,9 +9,10 @@ SO-101 두 팔과 TurtleBot3 Waffle Pi를 결합해 박스가 있는 위치까�
 로컬 노트북은 perception·IL policy·LLM과 Visual SLAM 배치 비교를 담당한다. LLM은 Pi에서
 실행하지 않는다.
 
-MuJoCo 양팔·카메라·접촉 모델과 과거 ±3도 실측 로그 비교는 준비됐지만, 왼쪽 moving finger
-접촉이 없어 박스-신발 전체 물리 성공은 아직 아니다. 과거 팔 로그도 사용자가 화면으로 확인한
-commissioning은 아니므로 다음 실물 시험은 카메라를 먼저 띄운 뒤 별도 승인으로 진행한다.
+MuJoCo 양팔·카메라·접촉 모델과 과거 ±3도 실측 로그 비교는 준비됐지만, 왼쪽 손가락 접촉은
+CPU에 따라 양측 또는 한쪽 경계에 있고 양측일 때도 법선이 직교해 협지가 아니다. 따라서
+박스-신발 전체 물리 성공은 아직 아니다. 과거 팔 로그도 사용자가 화면으로 확인한 commissioning은
+아니므로 다음 실물 시험은 카메라를 먼저 띄운 뒤 별도 승인으로 진행한다.
 
 ## 현재 구성
 
@@ -29,6 +30,7 @@ commissioning은 아니므로 다음 실물 시험은 카메라를 먼저 띄운
 ├── docs/                         # 요구사항, 팀 결정, 조사 참고자료
 ├── scripts/
 │   ├── dual_so101_smoke          # 승인형 양팔 저속 계측
+│   ├── capture_usb_snapshot      # 승인형 read-only USB 전후 기록
 │   └── run_astra_openni2_color  # 전면 Astra S 검증 runtime
 └── README.md
 ```
@@ -103,6 +105,26 @@ header만 수집한다. 어떤 motion command도 publish하지 않으며 출력 
 
 현재 장비 node가 하나도 실행되지 않았다면 exit 2와 `NO_CANDIDATE_TOPICS`를
 반환한다. snapshot을 확인한 뒤에만 mock topic mapping을 실제 이름으로 교체한다.
+
+사용자가 현장에 있고 read-only 확인을 승인한 뒤, 카메라 실행 전과 양팔 시험 후 USB 상태를
+각각 새 디렉터리에 기록한다. 결과는 Git에서 제외되는 `output/` 아래에만 생성된다.
+
+```bash
+2ARM_ROBOT/scripts/capture_usb_snapshot \
+  2ARM_ROBOT/output/usb_snapshots/before \
+  --confirm VISIBLE_USB_SNAPSHOT_READONLY
+
+2ARM_ROBOT/scripts/capture_usb_snapshot \
+  2ARM_ROBOT/output/usb_snapshots/after \
+  --confirm VISIBLE_USB_SNAPSHOT_READONLY
+
+diff -u 2ARM_ROBOT/output/usb_snapshots/{before,after}/lsusb-tree.txt
+diff -u 2ARM_ROBOT/output/usb_snapshots/{before,after}/kernel-usb-events.txt
+```
+
+이 도구는 USB/V4L2 목록과 reset·disconnect·timeout 관련 kernel event만 읽고 장치 stream이나
+serial port를 열지 않는다. 전체 snapshot 디렉터리는 그대로 Git에 올리지 않고 비식별 요약만
+commissioning 근거로 정리한다.
 
 수동 실행 시:
 
