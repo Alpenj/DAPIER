@@ -9,21 +9,20 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from lerobot.motors import Motor, MotorCalibration, MotorNormMode
-from lerobot.motors.feetech import FeetechMotorsBus
-
-
 MOTORS = {
-    "shoulder_pan": (1, MotorNormMode.DEGREES),
-    "shoulder_lift": (2, MotorNormMode.DEGREES),
-    "elbow_flex": (3, MotorNormMode.DEGREES),
-    "wrist_flex": (4, MotorNormMode.DEGREES),
-    "wrist_roll": (5, MotorNormMode.DEGREES),
-    "gripper": (6, MotorNormMode.RANGE_0_100),
+    "shoulder_pan": (1, "DEGREES"),
+    "shoulder_lift": (2, "DEGREES"),
+    "elbow_flex": (3, "DEGREES"),
+    "wrist_flex": (4, "DEGREES"),
+    "wrist_roll": (5, "DEGREES"),
+    "gripper": (6, "RANGE_0_100"),
 }
 
 
-def load_bus(port: str, calibration_path: Path) -> FeetechMotorsBus:
+def load_bus(port: str, calibration_path: Path):
+    from lerobot.motors import Motor, MotorCalibration, MotorNormMode
+    from lerobot.motors.feetech import FeetechMotorsBus
+
     raw = json.loads(calibration_path.read_text(encoding="utf-8"))
     if set(raw) != set(MOTORS):
         raise ValueError(f"unexpected calibration keys in {calibration_path}")
@@ -33,12 +32,15 @@ def load_bus(port: str, calibration_path: Path) -> FeetechMotorsBus:
             raise ValueError(f"{name}: expected motor {expected_id}, got {calibration[name].id}")
     return FeetechMotorsBus(
         port=port,
-        motors={name: Motor(id_, "sts3215", mode) for name, (id_, mode) in MOTORS.items()},
+        motors={
+            name: Motor(id_, "sts3215", getattr(MotorNormMode, mode))
+            for name, (id_, mode) in MOTORS.items()
+        },
         calibration=calibration,
     )
 
 
-def health(bus: FeetechMotorsBus) -> dict[str, dict[str, float]]:
+def health(bus) -> dict[str, dict[str, float]]:
     return {
         name: bus.sync_read(name, normalize=False, num_retry=2)
         for name in (
@@ -55,7 +57,7 @@ def health(bus: FeetechMotorsBus) -> dict[str, dict[str, float]]:
 
 
 def interpolate(
-    buses: dict[str, FeetechMotorsBus],
+    buses: dict[str, object],
     starts: dict[str, dict[str, float]],
     left_delta: float,
     steps: int,
