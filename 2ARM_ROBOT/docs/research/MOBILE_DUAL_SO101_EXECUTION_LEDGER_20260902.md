@@ -427,7 +427,9 @@ FPS/drop/USB reset, H201 depth stream, Astra front-SLAM 성능은 실물 commiss
 step마다 두 shoulder-pan 실측값을 기록했다. 종료 경로에서는 양쪽 토크를 해제했다.
 
 ```bash
-python 2ARM_ROBOT/scripts/dual_so101_smoke
+python 2ARM_ROBOT/scripts/dual_so101_smoke \
+  --operator-present \
+  --confirm VISIBLE_DUAL_SO101_READONLY
 python 2ARM_ROBOT/scripts/dual_so101_smoke \
   --left-calibration /path/to/verified-left-so101.json \
   --right-calibration /path/to/verified-right-so101.json \
@@ -435,7 +437,7 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
   --confirm VISIBLE_DUAL_SO101_3DEG
 ```
 
-첫 명령은 calibration 없이 raw tick과 health만 읽는다. 동작 명령에는 controller serial과
+첫 명령은 사용자 입회 승인 뒤 calibration 없이 raw tick과 health만 읽는다. 동작 명령에는 controller serial과
 좌우 실물 대응을 확인한 per-arm calibration 두 개를 명시해야 한다. LeRobot cache의
 `leader`/`follower` 디렉터리 이름만으로 좌우 역할을 추론하지 않는다. 동작에는 사용자가
 현장 화면과 E-stop을 확인했다는 `--operator-present` 선언도 필요하다.
@@ -579,3 +581,8 @@ ROS graph 접속은 실물 접근이므로, `VISIBLE_ROS2_SNAPSHOT_READONLY` exa
 `ros2`를 호출하기 전에 종료한다. raw 결과는 Git에서 제외된 `2ARM_ROBOT/output/` 아래 새
 경로에만 저장하고 기존 경로는 덮어쓰지 않는다. 잘못된 토큰 거부 3개 집중시험과 전체 167개
 MuJoCo 헤드리스 회귀가 통과했으며 실제 ROS graph와 장치에는 접근하지 않았다.
+
+같은 원칙을 `dual_so101_smoke`의 무동작 health 모드에도 적용했다. `--move-deg 0`은 모터를
+쓰지 않지만 serial을 여는 실물 접근이므로, `VISIBLE_DUAL_SO101_READONLY`와
+`--operator-present`가 모두 없으면 bus 생성·connect 전에 거부한다. calibration 없는 raw tick
+읽기라는 기능은 유지하며, 이 토큰이 ±3도 동작 승인을 대신하지는 않는다.

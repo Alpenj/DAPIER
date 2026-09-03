@@ -20,6 +20,7 @@ MOTORS = {
     "gripper": (6, "RANGE_0_100"),
 }
 MOTION_CONFIRMATION = "VISIBLE_DUAL_SO101_3DEG"
+READONLY_CONFIRMATION = "VISIBLE_DUAL_SO101_READONLY"
 HEALTH_REGISTERS = (
     "Torque_Enable",
     "Operating_Mode",
@@ -84,6 +85,10 @@ def validate_motion_request(
     if abs(move_deg) > 3.0:
         raise ValueError("--move-deg is limited to 3 degrees")
     if not move_deg:
+        if confirm != READONLY_CONFIRMATION:
+            raise ValueError(f"read-only access requires --confirm {READONLY_CONFIRMATION}")
+        if not operator_present:
+            raise ValueError("read-only access requires --operator-present")
         return
     if confirm != MOTION_CONFIRMATION:
         raise ValueError(f"motion requires --confirm {MOTION_CONFIRMATION}")

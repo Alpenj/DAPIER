@@ -71,6 +71,23 @@ class DualSO101SmokeTest(unittest.TestCase):
     def test_motion_requires_explicit_per_arm_calibration(self):
         with self.assertRaisesRegex(ValueError, "finite"):
             SMOKE["validate_motion_request"](float("nan"), "", None, None, False)
+        with self.assertRaisesRegex(ValueError, "VISIBLE_DUAL_SO101_READONLY"):
+            SMOKE["validate_motion_request"](0.0, "", None, None, False)
+        with self.assertRaisesRegex(ValueError, "operator-present"):
+            SMOKE["validate_motion_request"](
+                0.0,
+                SMOKE["READONLY_CONFIRMATION"],
+                None,
+                None,
+                False,
+            )
+        SMOKE["validate_motion_request"](
+            0.0,
+            SMOKE["READONLY_CONFIRMATION"],
+            None,
+            None,
+            True,
+        )
         with self.assertRaisesRegex(ValueError, "explicit left and right"):
             SMOKE["validate_motion_request"](
                 3.0,
