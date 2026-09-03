@@ -560,3 +560,9 @@ disconnect가 토크 해제를 다시 시도한다. fake bus 실패 시험과 �
 실행 gate는 닫힌 상태다. CPU별 접촉 경계 차이에 특정 개수를 고정하지 않고, 통합시험은
 bilateral 또는 opposing-contact 실패를 확인한다. 법선 내적 판정은 반대 방향 `-1`, 직교 `0`,
 누락 `None`을 직접 넣는 결정적 단위시험으로 분리했다. 전체 164개 회귀가 통과했다.
+
+실물 실행 전 마지막으로 fake bus를 통해 `dual_so101_smoke`의 실제 `main()` 전체 경로도
+검증했다. 좌우 독립 calibration hash, 사용자 입회 표시, 동작 시작·완료 표시, 60개 trace와
+양팔 `Torque_Enable=0` 사후 read-back이 한 raw record에 함께 남는다. 전체 MuJoCo 헤드리스
+회귀는 166/166 통과했고 `hardware_execution=false`였으며, 전원이 내려간 실물 장치에는
+접근하지 않았다.

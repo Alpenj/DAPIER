@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import runpy
 import tempfile
@@ -10,7 +11,23 @@ SMOKE = runpy.run_path(str(SCRIPT))
 
 
 class FakeBus:
-    def __init__(self):
+    def __init__(self, torque=1):
+        self.torque = torque
+        self.connected = False
+
+    @property
+    def is_connected(self):
+        return self.connected
+
+    def connect(self):
+        self.connected = True
+
+    def disconnect(self, disable_torque=True):
+        if disable_torque:
+            self.torque = 0
+        self.connected = False
+
+    def enable_torque(self):
         self.torque = 1
 
     def disable_torque(self, **_kwargs):
@@ -140,6 +157,56 @@ class DualSO101SmokeTest(unittest.TestCase):
         stuck.disable_torque = mock.Mock()
         with self.assertRaisesRegex(RuntimeError, "after motion"):
             SMOKE["disable_torque_and_verify"]({"left": stuck, "right": FakeBus()})
+
+    def test_full_motion_path_writes_complete_witnessed_record(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            left_calibration = root / "left.json"
+            right_calibration = root / "right.json"
+            log = root / "smoke.json"
+            left_calibration.write_text("left", encoding="utf-8")
+            right_calibration.write_text("right", encoding="utf-8")
+
+            def fake_load_bus(_port, _calibration):
+                return FakeBus(torque=0)
+
+            argv = [
+                str(SCRIPT),
+                "--left-port", "left",
+                "--right-port", "right",
+                "--left-calibration", str(left_calibration),
+                "--right-calibration", str(right_calibration),
+                "--move-deg", "1",
+                "--confirm", SMOKE["MOTION_CONFIRMATION"],
+                "--operator-present",
+                "--log", str(log),
+            ]
+            with (
+                mock.patch.dict(SMOKE["main"].__globals__, {"load_bus": fake_load_bus}),
+                mock.patch.object(SMOKE["time"], "sleep"),
+                mock.patch("sys.argv", argv),
+                mock.patch("builtins.print"),
+            ):
+                self.assertEqual(SMOKE["main"](), 0)
+
+            record = json.loads(log.read_text(encoding="utf-8"))
+            self.assertEqual(record["schema_version"], "dapier.dual-so101-smoke.v0.2")
+            self.assertTrue(record["user_witnessed"])
+            self.assertTrue(record["hardware_execution"])
+            self.assertTrue(record["motion_completed"])
+            self.assertEqual(len(record["trace"]), 60)
+            self.assertEqual(
+                {
+                    side: record["arms"][side]["health_after_torque_off"]["Torque_Enable"]["shoulder_pan"]
+                    for side in ("left", "right")
+                },
+                {"left": 0, "right": 0},
+            )
+            self.assertEqual(
+                {len(value) for value in record["calibration_sha256"].values()},
+                {64},
+            )
+            self.assertIn("finished_at", record)
 
 
 if __name__ == "__main__":
