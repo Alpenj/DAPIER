@@ -309,3 +309,13 @@ legacy OpenNI 장치와 현재 OS/driver 조합의 호환 문제로 분리했다
 동작한 OS·SDK 버전과의 비교, USB descriptor/firmware 비교, 필요하면 지원 커널 환경에서의
 OpenNI2 단독 실행 순서로 진행한다. 펌웨어 변경은 복구 이미지와 정확한 모델 일치가 확인되기
 전에는 하지 않는다.
+
+### 2026-09-03 공식 OpenNI2 배포본 재검증
+
+- 현재 설치본의 `libOpenNI2.so`와 `liborbbec.so` SHA-256은 공식 2.3.0.86 Linux x64 ZIP과 일치했다.
+- 공식 샘플을 그대로 실행하면 Ubuntu의 OpenNI2 2.2.0을 선택하므로 패키지의 `samples/bin`을
+  `LD_LIBRARY_PATH`와 `OPENNI2_REDIST`에 명시해야 한다.
+- 공식 Color 원시 프레임 샘플은 `ColorReaderPoll`, Astra non-UVC RGB-D 표시 샘플은
+  `SimpleViewer 0 0`임을 소스에서 확인했다.
+- `scripts/run_astra_openni2_color check|poll|viewer`가 위 경로 고정과 장치 별칭 확인을 담당한다.
+- 장비를 다른 팀원이 사용 중이어서 이 실행기의 실물 Color 프레임 검증은 대기 중이다.

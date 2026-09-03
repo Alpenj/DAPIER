@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+openni_root="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-v2.3.0.86}"
+bin_dir="${openni_root}/samples/bin"
+mode="${1:-viewer}"
+
+case "${mode}" in
+  check) required=(ColorReaderPoll SimpleViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so) ;;
+  poll) required=(ColorReaderPoll libOpenNI2.so OpenNI2/Drivers/liborbbec.so) ;;
+  viewer) required=(SimpleViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so) ;;
+  *) echo "usage: $0 [check|poll|viewer]" >&2; exit 2 ;;
+esac
+
+for file in "${required[@]}"; do
+  if [[ ! -e "${bin_dir}/${file}" ]]; then
+    echo "missing OpenNI2 runtime file: ${bin_dir}/${file}" >&2
+    exit 1
+  fi
+done
+
+if [[ "${mode}" == check ]]; then
+  printf 'OpenNI2 runtime ready: %s\n' "${bin_dir}"
+  exit 0
+fi
+if [[ ! -e /dev/dapier/workspace_rgbd ]]; then
+  echo "Astra S is not connected: /dev/dapier/workspace_rgbd" >&2
+  exit 3
+fi
+
+export OPENNI2_REDIST="${bin_dir}"
+export LD_LIBRARY_PATH="${bin_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+if [[ "${mode}" == poll ]]; then
+  exec "${bin_dir}/ColorReaderPoll"
+fi
+exec "${bin_dir}/SimpleViewer" 0 0
