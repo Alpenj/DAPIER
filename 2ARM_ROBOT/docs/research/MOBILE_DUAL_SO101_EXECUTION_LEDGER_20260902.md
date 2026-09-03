@@ -514,3 +514,12 @@ MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계�
 `lsusb -t`와 kernel USB 기준점 기록, 정확한 승인,
 양팔 ±3도 왕복, 사후 health와 USB reset 확인 순서로 진행한다. 카메라 동시 실행이 불안정하면
 모터를 움직이지 않고 스트림 단계에서 중단한다.
+
+실행 후 raw log는 추가 의존성 없는 정적 HTML로 변환해 goal/observed, load/current/velocity와
+명령 주기 p50/p95를 팀원이 브라우저에서 바로 확인할 수 있게 한다.
+
+```bash
+python 2ARM_ROBOT/scripts/dual_so101_trace_report \
+  /tmp/dapier-dual-so101-smoke.json \
+  --output /tmp/dapier-dual-so101-smoke.html
+```
