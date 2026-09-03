@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 from dataclasses import dataclass
 import hashlib
 import json
@@ -15,9 +16,10 @@ import tempfile
 from typing import Callable, Mapping, Sequence
 
 import mujoco
-import numpy as np
 
 from mobile_dual_so101 import actuator_targets_from_qpos
+from mission_modules.camera import CameraRole
+from mujoco_mission_adapters import MuJoCoMultiCameraAdapter, build_mobile_shoe_mission_model
 from shoe_task import ShoeTaskEnv, ground_truth_observation, task_metrics
 from sim_policy import actuator_targets_to_policy_action
 
@@ -38,6 +40,20 @@ from shoe_sorting_data.contract import (  # noqa: E402
 
 
 ActionSource = Callable[[int, Mapping[str, object]], Sequence[float]]
+CAMERA_PREFIXES = {
+    CameraRole.FRONT_RGBD: "front",
+    CameraRole.WORKSPACE_RGBD: "workspace",
+    CameraRole.LEFT_GRIPPER_RGB: "left_gripper",
+    CameraRole.RIGHT_GRIPPER_RGB: "right_gripper",
+}
+CAMERA_STREAMS = (
+    "front_rgb",
+    "front_depth",
+    "workspace_rgb",
+    "workspace_depth",
+    "left_gripper_rgb",
+    "right_gripper_rgb",
+)
 
 
 @dataclass(frozen=True)
@@ -100,24 +116,6 @@ def _write_samples(path: Path, samples: Sequence[Mapping[str, object]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _render_rgbd(
-    renderer: mujoco.Renderer,
-    data: mujoco.MjData,
-) -> tuple[np.ndarray, np.ndarray]:
-    renderer.disable_depth_rendering()
-    renderer.update_scene(data, camera="workspace_depth_camera")
-    rgb = np.asarray(renderer.render(), dtype=np.uint8).copy()
-    renderer.enable_depth_rendering()
-    renderer.update_scene(data, camera="workspace_depth_camera")
-    depth = np.asarray(renderer.render(), dtype=np.float32).copy()
-    renderer.disable_depth_rendering()
-    if rgb.ndim != 3 or rgb.shape[2] != 3 or depth.shape != rgb.shape[:2]:
-        raise RuntimeError("MuJoCo RGB-D render shape is inconsistent")
-    if not np.isfinite(depth).all():
-        raise RuntimeError("MuJoCo depth render contains non-finite values")
-    return rgb, depth
-
-
 def record_sim_episode(
     output_dir: str | Path,
     config: SimEpisodeConfig,
@@ -135,7 +133,7 @@ def record_sim_episode(
         tempfile.mkdtemp(prefix=f".{target.name}.staging-", dir=target.parent)
     )
 
-    env = ShoeTaskEnv()
+    env = ShoeTaskEnv(model=build_mobile_shoe_mission_model())
     observation, reset_info = env.reset(seed=config.seed)
     if reset_info.get("hardware_execution") is not False:
         raise RuntimeError("simulation episode unexpectedly reported hardware execution")
@@ -152,11 +150,12 @@ def record_sim_episode(
     source = action_source or (lambda _index, _observation: initial_targets)
     samples: list[dict[str, object]] = []
 
-    with mujoco.Renderer(
+    with closing(MuJoCoMultiCameraAdapter(
         env.model,
+        env.data,
         height=config.height,
         width=config.width,
-    ) as renderer:
+    )) as camera:
         for index in range(config.sample_count):
             requested = tuple(float(value) for value in source(index, observation))
             if len(requested) != env.model.nu or not all(
@@ -173,35 +172,64 @@ def record_sim_episode(
                         f"action source target {actuator_id} is outside actuator range"
                     )
             timestamp_ns = round(float(env.data.time) * 1_000_000_000)
-            rgb, depth = _render_rgbd(renderer, env.data)
+            frame_set = camera.capture()
             frame_metrics = task_metrics(env.model, env.data)
-            rgb_payload = write_camera_payload(
-                root,
-                "workspace_rgb",
-                index,
-                CameraFramePayload(
-                    width=config.width,
-                    height=config.height,
-                    encoding="rgb8",
-                    is_bigendian=0,
-                    step=config.width * 3,
-                    data=rgb.tobytes(order="C"),
-                ),
-            )
-            depth_bytes = depth.astype("<f4", copy=False).tobytes(order="C")
-            depth_payload = write_camera_payload(
-                root,
-                "workspace_depth",
-                index,
-                CameraFramePayload(
-                    width=config.width,
-                    height=config.height,
-                    encoding="32FC1",
-                    is_bigendian=0,
-                    step=config.width * 4,
-                    data=depth_bytes,
-                ),
-            )
+            camera_records: dict[str, object] = {}
+            camera_timestamps: dict[str, int] = {}
+            camera_receipts: dict[str, int] = {}
+            for frame in frame_set.frames:
+                prefix = CAMERA_PREFIXES[frame.role]
+                rgb_stream = f"{prefix}_rgb"
+                rgb_payload = write_camera_payload(
+                    root,
+                    rgb_stream,
+                    index,
+                    CameraFramePayload(
+                        width=frame.width,
+                        height=frame.height,
+                        encoding="rgb8",
+                        is_bigendian=0,
+                        step=frame.width * 3,
+                        data=frame.rgb,
+                    ),
+                )
+                camera_records[rgb_stream] = {
+                    "timestamp_ns": frame.rgb_timestamp_ns,
+                    "received_monotonic_ns": frame.received_monotonic_ns,
+                    "frame_id": frame.frame_id,
+                    "valid": frame.valid,
+                    "optical_frame": frame.optical_frame,
+                    "calibration_id": frame.calibration_id,
+                    "payload": rgb_payload,
+                }
+                camera_timestamps[rgb_stream] = frame.rgb_timestamp_ns
+                camera_receipts[rgb_stream] = frame.received_monotonic_ns
+                if frame.depth_m_le_f32 is not None:
+                    depth_stream = f"{prefix}_depth"
+                    depth_payload = write_camera_payload(
+                        root,
+                        depth_stream,
+                        index,
+                        CameraFramePayload(
+                            width=frame.width,
+                            height=frame.height,
+                            encoding="32FC1",
+                            is_bigendian=0,
+                            step=frame.width * 4,
+                            data=frame.depth_m_le_f32,
+                        ),
+                    )
+                    camera_records[depth_stream] = {
+                        "timestamp_ns": frame.depth_timestamp_ns,
+                        "received_monotonic_ns": frame.received_monotonic_ns,
+                        "frame_id": frame.frame_id,
+                        "valid": frame.valid,
+                        "optical_frame": frame.optical_frame,
+                        "calibration_id": frame.calibration_id,
+                        "payload": depth_payload,
+                    }
+                    camera_timestamps[depth_stream] = int(frame.depth_timestamp_ns)
+                    camera_receipts[depth_stream] = frame.received_monotonic_ns
             stream_times = {
                 name: timestamp_ns
                 for name in (
@@ -211,10 +239,11 @@ def record_sim_episode(
                     "right_joint_action",
                     "base_velocity",
                     "base_command",
-                    "workspace_rgb",
-                    "workspace_depth",
                 )
             }
+            stream_times.update(camera_timestamps)
+            stream_receipts = dict(stream_times)
+            stream_receipts.update(camera_receipts)
             policy_action = actuator_targets_to_policy_action(env.model, requested)
             samples.append(
                 {
@@ -223,26 +252,11 @@ def record_sim_episode(
                         "anchor_timestamp_ns": timestamp_ns,
                         "sync_delta_ns": 0,
                         "stream_timestamps_ns": stream_times,
-                        "stream_received_monotonic_ns": dict(stream_times),
+                        "stream_received_monotonic_ns": stream_receipts,
                     },
                     "state": _state_streams(observation),
                     "action": _split_policy_action(policy_action),
-                    "cameras": {
-                        "workspace_rgb": {
-                            "timestamp_ns": timestamp_ns,
-                            "received_monotonic_ns": timestamp_ns,
-                            "frame_id": index,
-                            "valid": True,
-                            "payload": rgb_payload,
-                        },
-                        "workspace_depth": {
-                            "timestamp_ns": timestamp_ns,
-                            "received_monotonic_ns": timestamp_ns,
-                            "frame_id": index,
-                            "valid": True,
-                            "payload": depth_payload,
-                        },
-                    },
+                    "cameras": camera_records,
                     "simulation": {
                         "hardware_execution": False,
                         "task_success": bool(frame_metrics["success"]),
@@ -278,6 +292,7 @@ def record_sim_episode(
         recording_span_id=f"mujoco_span_{config.seed}",
         attempt_id=f"mujoco_attempt_{config.seed}",
         camera_payload_mode="required",
+        camera_streams=CAMERA_STREAMS,
     )
     manifest["robot"] = {
         "platform": "SO101_dual_arm_on_turtlebot3_waffle_pi",

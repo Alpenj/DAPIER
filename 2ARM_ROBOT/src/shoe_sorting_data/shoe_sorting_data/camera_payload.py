@@ -24,8 +24,12 @@ _BYTES_PER_PIXEL = {
     "32fc1": 4,
 }
 _STREAM_ENCODINGS = {
+    "front_rgb": {"rgb8", "bgr8", "rgba8", "bgra8", "mono8", "8uc1"},
+    "front_depth": {"mono16", "16uc1", "16sc1", "32fc1"},
     "workspace_rgb": {"rgb8", "bgr8", "rgba8", "bgra8", "mono8", "8uc1"},
     "workspace_depth": {"mono16", "16uc1", "16sc1", "32fc1"},
+    "left_gripper_rgb": {"rgb8", "bgr8", "rgba8", "bgra8", "mono8", "8uc1"},
+    "right_gripper_rgb": {"rgb8", "bgr8", "rgba8", "bgra8", "mono8", "8uc1"},
 }
 
 

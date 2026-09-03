@@ -45,7 +45,7 @@ UNSAFE_BIMANUAL_TARGET = (
 
 
 class SimEpisodeTest(unittest.TestCase):
-    def test_records_synchronized_rgbd_and_12_axis_executed_action(self) -> None:
+    def test_records_four_synchronized_cameras_and_12_axis_executed_action(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "episode"
             manifest_path = record_sim_episode(
@@ -65,6 +65,7 @@ class SimEpisodeTest(unittest.TestCase):
             )
             self.assertEqual(manifest["recording"]["sample_count"], 3)
             self.assertEqual(manifest["recording"]["expected_period_ns"], 50_000_000)
+            self.assertEqual(tuple(manifest["recording"]["camera_streams"]), sim_episode.CAMERA_STREAMS)
             self.assertEqual(manifest["outcome"]["status"], "recorded")
             self.assertFalse(manifest["outcome"]["success"])
             self.assertEqual(manifest["provenance"]["data_origin"], "synthetic")
@@ -84,6 +85,12 @@ class SimEpisodeTest(unittest.TestCase):
                 self.assertEqual(len(sample["action"]["right_arm"]), 5)
                 self.assertEqual(len(sample["action"]["left_gripper"]), 1)
                 self.assertFalse(sample["simulation"]["hardware_execution"])
+                self.assertEqual(set(sample["cameras"]), set(sim_episode.CAMERA_STREAMS))
+                front = read_camera_payload(
+                    output,
+                    "front_rgb",
+                    sample["cameras"]["front_rgb"]["payload"],
+                )
                 rgb = read_camera_payload(
                     output,
                     "workspace_rgb",
@@ -94,8 +101,15 @@ class SimEpisodeTest(unittest.TestCase):
                     "workspace_depth",
                     sample["cameras"]["workspace_depth"]["payload"],
                 )
+                left = read_camera_payload(
+                    output,
+                    "left_gripper_rgb",
+                    sample["cameras"]["left_gripper_rgb"]["payload"],
+                )
+                self.assertEqual((front.width, front.height, front.encoding), (16, 12, "rgb8"))
                 self.assertEqual((rgb.width, rgb.height, rgb.encoding), (16, 12, "rgb8"))
                 self.assertEqual((depth.width, depth.height, depth.encoding), (16, 12, "32FC1"))
+                self.assertEqual((left.width, left.height, left.encoding), (16, 12, "rgb8"))
                 self.assertEqual(sample["cameras"]["workspace_rgb"]["frame_id"], index)
                 self.assertTrue(sample["simulation"]["collision_guard"]["safe"])
 
@@ -188,8 +202,8 @@ class SimEpisodeTest(unittest.TestCase):
                 height=12,
             )
             with patch.object(
-                sim_episode,
-                "_render_rgbd",
+                sim_episode.MuJoCoMultiCameraAdapter,
+                "capture",
                 side_effect=RuntimeError("render interrupted"),
             ):
                 with self.assertRaisesRegex(RuntimeError, "render interrupted"):

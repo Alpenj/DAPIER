@@ -333,7 +333,7 @@ domain randomization과 실물 실행도 아직 검증하지 않았다.
 
 ### MuJoCo episode와 action-chunk 경계
 
-`sim_episode.py`는 workspace H201의 RGB와 metric depth, 좌우 SO-101 state,
+`sim_episode.py`는 전면 Astra S와 top-view H201의 RGB/metric depth, 좌우 wrist RGB, 좌우 SO-101 state,
 실제로 `data.ctrl`에 전달한 12축 target, simulation timestamp를 20 Hz의 같은 frame으로
 기록한다. 팔 action은 radian이고 gripper action은 dataset 경계에서 0~1로 정규화한다.
 원본 actuator 단위와 policy 단위의 양방향 변환은 round-trip test로 고정했다.
@@ -346,7 +346,7 @@ domain randomization과 실물 실행도 아직 검증하지 않았다.
 현재 기본 action source는 home target을 유지하는 contract fixture다. 신발 task가 실제로
 성공하지 않으면 manifest를 `accepted`로 거짓 표기하지 않고 `recorded`로 남긴다. 따라서
 이 명령만 실행해 만든 hold episode는 RGB-D writer 검증에는 쓰지만 ACT train set에는
-포함하지 않는다. 실물 leader/follower recorder도 같은 12축 순서와 unit을 사용하되
+포함하지 않는다. 실물 좌/우 SO-101 recorder도 같은 12축 순서와 unit을 사용하되
 serial 연결은 별도 human hardware gate 뒤의 후속 작업이다.
 
 `sim_policy.py`는 policy가 반환한 H-step action chunk와 MuJoCo actuator 사이의 경계다.

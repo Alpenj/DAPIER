@@ -2,7 +2,7 @@
 
 > 계약 버전: `dapier.ros2-image-payload.v0.1`
 > episode 버전: `dapier.shoe-episode.v0.3`
-> 상태: 4카메라 역할 확정, lossless raw 합성 fixture 완료, 실물 multi-camera recorder 미완료
+> 상태: 4카메라 역할 확정, MuJoCo 4카메라 lossless episode 완료, 실물 multi-camera recorder 미완료
 
 ## 왜 이 단계가 먼저인가
 
@@ -25,17 +25,21 @@ LeRobot Dataset이나 ACT가 실행되더라도 원본 RGB/Depth의 encoding, by
 | `left_gripper_rgb` | 왼쪽 SO-101 RGB | 왼손 접근·파지 |
 | `right_gripper_rgb` | 오른쪽 SO-101 RGB | 오른손 뚜껑 접근·접촉 |
 
-현재 `shoe_sorting_data` Phase 0 raw writer 예시는 `workspace_rgb/depth` 두 stream만 저장한다.
-MuJoCo runtime의 4역할 camera contract와 동기 frame set은 구현됐지만, 네 실물 stream을 같은
-episode clock으로 기록하는 adapter는 아직 완료되지 않았다.
+기존 `shoe_sorting_data` Phase 0 실물 writer 예시는 호환성을 위해 `workspace_rgb/depth` 두 stream을
+유지한다. MuJoCo `sim_episode.py`는 네 카메라 역할을 같은 episode clock으로 저장한다. 네 실물
+카메라를 같은 clock으로 기록하는 adapter는 아직 완료되지 않았다.
 
 ```text
 episode_000001/
 ├── episode_manifest.json
 ├── samples.jsonl
 └── raw/
+    ├── front_rgb/frame_000000.raw
+    ├── front_depth/frame_000000.raw
     ├── workspace_rgb/frame_000000.raw
-    └── workspace_depth/frame_000000.raw
+    ├── workspace_depth/frame_000000.raw
+    ├── left_gripper_rgb/frame_000000.raw
+    └── right_gripper_rgb/frame_000000.raw
 ```
 
 ## frame payload metadata
@@ -60,6 +64,8 @@ episode_000001/
 
 | stream | 허용 encoding | 현재 의미 |
 |---|---|---|
+| `front_rgb`, `left_gripper_rgb`, `right_gripper_rgb` | `rgb8`, `bgr8`, `rgba8`, `bgra8`, `mono8`, `8UC1` | 전면·손목 색상 payload |
+| `front_depth` | `mono16`, `16UC1`, `16SC1`, `32FC1` | 전면 SLAM depth payload |
 | `workspace_rgb` | `rgb8`, `bgr8`, `rgba8`, `bgra8`, `mono8`, `8UC1` | 색상·채널 순서를 metadata로 보존 |
 | `workspace_depth` | `mono16`, `16UC1`, `16SC1`, `32FC1` | 원본 정수/실수 depth 값을 변환 없이 보존 |
 
@@ -70,8 +76,8 @@ episode_000001/
 required payload sample은 다음을 함께 저장한다.
 
 - control tick 기준 `anchor_timestamp_ns`
-- 8개 stream의 header timestamp
-- 8개 stream의 receive monotonic timestamp
+- 현재 12개 stream(관절/명령/베이스 6 + 카메라 6)의 header timestamp
+- 현재 12개 stream의 receive monotonic timestamp
 - 한 sample에서 `max(header)-min(header)`인 `sync_delta_ns`
 - manifest의 sync tolerance
 
@@ -155,6 +161,7 @@ ros2 run shoe_sorting_data shoe_episode validate \
 - 합성 RGB8/16UC1 raw round-trip
 - 누락·변조·경로 탈출·unit/geometry·overwrite 차단
 - Windows/Ubuntu pure Python 검증
+- MuJoCo 전면/workspace RGB-D와 좌우 wrist RGB의 synchronized raw episode 저장
 
 미완료:
 

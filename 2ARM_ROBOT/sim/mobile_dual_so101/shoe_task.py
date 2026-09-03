@@ -357,10 +357,15 @@ def task_reachability(
 class ShoeTaskEnv:
     """Small Gym-style API without adding a Gym dependency."""
 
-    def __init__(self, config: ShoeTaskConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: ShoeTaskConfig | None = None,
+        *,
+        model: mujoco.MjModel | None = None,
+    ) -> None:
         self.config = config or ShoeTaskConfig()
         self.config.validate()
-        self.model = build_shoe_task_model(self.config)
+        self.model = model or build_shoe_task_model(self.config)
         self.data = mujoco.MjData(self.model)
 
     def reset(self, *, seed: int | None = None) -> tuple[dict[str, object], dict[str, object]]:
