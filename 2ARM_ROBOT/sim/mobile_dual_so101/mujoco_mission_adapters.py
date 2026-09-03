@@ -77,10 +77,10 @@ def _object_id(
 
 
 def _reuse_source_gripper_cameras(spec: mujoco.MjSpec) -> None:
-    """Expose the source MJCF wrist cameras as the two gripper RGB roles.
+    """Expose or add the two gripper RGB cameras.
 
     Upstream SO-101 snapshots have used three names for the same source camera.
-    Keep its pose and FOV; only normalize the mission-facing name.
+    Reuse it when present; pinned camera-free assets get the mission camera.
     """
 
     for side in ("left", "right"):
@@ -93,8 +93,17 @@ def _reuse_source_gripper_cameras(spec: mujoco.MjSpec) -> None:
             None,
         )
         if camera is None:
-            raise RuntimeError(f"source {side} wrist camera is missing")
-        camera.name = f"{side}_gripper_camera"
+            gripper = spec.body(f"{side}_gripper")
+            if gripper is None:
+                raise RuntimeError(f"source {side} gripper body is missing")
+            gripper.add_camera(
+                name=f"{side}_gripper_camera",
+                pos=[0.035, -0.055, -0.020],
+                quat=[0.932104, 0.263547, 0.239075, -0.067597],
+                fovy=75.0,
+            )
+        else:
+            camera.name = f"{side}_gripper_camera"
 
 
 def build_mobile_shoe_mission_model(
