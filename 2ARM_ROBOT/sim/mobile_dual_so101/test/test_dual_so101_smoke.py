@@ -17,6 +17,7 @@ class FakeBus:
             "Present_Position": 1.0,
             "Present_Load": 2,
             "Present_Current": 3,
+            "Present_Velocity": 4,
         }
         return {"shoulder_pan": values.get(register, 0)}
 
@@ -33,17 +34,25 @@ class DualSO101SmokeTest(unittest.TestCase):
         self.assertEqual(trace[0]["observed"], {"left": 1.0, "right": 1.0})
         self.assertEqual(trace[0]["present_load_raw"], {"left": 2, "right": 2})
         self.assertEqual(trace[0]["present_current_raw"], {"left": 3, "right": 3})
+        self.assertEqual(trace[0]["present_velocity_raw"], {"left": 4, "right": 4})
+        self.assertIn("monotonic_s", trace[0])
         self.assertEqual(
             set(SMOKE["health"](FakeBus())),
             {
                 "Torque_Enable",
                 "Operating_Mode",
+                "Acceleration",
+                "Goal_Time",
+                "Goal_Velocity",
+                "Torque_Limit",
                 "Present_Load",
                 "Present_Current",
                 "Present_Temperature",
                 "Present_Voltage",
                 "Status",
                 "Moving",
+                "Maximum_Velocity_Limit",
+                "Maximum_Acceleration",
             },
         )
 

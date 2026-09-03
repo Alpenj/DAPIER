@@ -14,6 +14,17 @@
     "returned_to_start": true,
     "torque_disabled_after_run": true
   },
+  "timing": {
+    "source": "wall-clock trace intervals; monotonic time was not recorded",
+    "samples": 60,
+    "steps_each_way": 30,
+    "cycle_period_s": {
+      "p50": 0.0512005090713501,
+      "p95": 0.0513918399810791,
+      "max": 0.051448822021484375
+    },
+    "inter_leg_sample_gap_s": 0.5529811382293701
+  },
   "preflight": {
     "operating_mode_all": 0,
     "status_all": 0,

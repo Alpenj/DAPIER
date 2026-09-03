@@ -34,17 +34,25 @@ SCHEMA_VERSION = "dapier.dual-so101-sim-real-comparison.v1"
 class LinearStepTrajectory:
     start_rad: np.ndarray
     goal_rad: np.ndarray
-    duration_s: float
+    steps: int
     limits: MotionLimits
-    update_period_s: float = 0.05
+    update_period_s: float
+
+    @property
+    def duration_s(self) -> float:
+        return (self.steps - 1) * self.update_period_s
 
     def sample(self, time_s: float):
-        updates = round(self.duration_s / self.update_period_s)
-        update = min(updates, max(1, math.ceil(time_s / self.update_period_s)))
-        target = self.start_rad + update / updates * (
+        update = min(
+            self.steps,
+            max(1, math.floor(time_s / self.update_period_s) + 1),
+        )
+        target = self.start_rad + update / self.steps * (
             self.goal_rad - self.start_rad
         )
-        velocity = (self.goal_rad - self.start_rad) / self.duration_s
+        velocity = (self.goal_rad - self.start_rad) / (
+            self.steps * self.update_period_s
+        )
         zeros = np.zeros_like(target)
         return target, velocity, zeros, zeros
 
@@ -66,16 +74,20 @@ def run_comparison(hardware_summary: Path) -> dict[str, object]:
     peak[0] += math.radians(float(requested["left"]))
     peak[6] += math.radians(float(requested["right"]))
     limits = MotionLimits()
-    duration = float(hardware["motion"]["duration_each_way_seconds"])
+    timing = hardware["timing"]
+    steps = int(timing["steps_each_way"])
+    update_period = float(timing["cycle_period_s"]["p50"])
+    if steps <= 1 or not math.isfinite(update_period) or update_period <= 0.0:
+        raise ValueError("invalid measured control timing")
 
-    outbound = LinearStepTrajectory(start, peak, duration, limits)
+    outbound = LinearStepTrajectory(start, peak, steps, limits, update_period)
     outbound_data, outbound_report = execute_physics_trajectory(
         model, outbound, pre_settle_time_s=0.0, settle_time_s=0.50
     )
     joint_ids = model.actuator_trnid[:, 0].astype(np.int32)
     qpos_addresses = model.jnt_qposadr[joint_ids].astype(np.int32)
     peak_qpos = outbound_data.qpos[qpos_addresses].copy()
-    inbound = LinearStepTrajectory(peak, start, duration, limits)
+    inbound = LinearStepTrajectory(peak, start, steps, limits, update_period)
     final_data, inbound_report = execute_physics_trajectory(
         model,
         inbound,
@@ -104,8 +116,12 @@ def run_comparison(hardware_summary: Path) -> dict[str, object]:
     return {
         "schema_version": SCHEMA_VERSION,
         "source_hardware_record": hardware_summary.name,
-        "sequence": "30 x 50 ms linear targets: left +3 deg / right -3 deg, then return",
-        "control_update_period_s": 0.05,
+        "sequence": (
+            f"{steps} linear targets at measured median "
+            f"{update_period * 1000:.2f} ms: left +3 deg / right -3 deg, then return"
+        ),
+        "steps_each_way": steps,
+        "control_update_period_s": update_period,
         "simulated": simulated,
         "measured": {
             side: {

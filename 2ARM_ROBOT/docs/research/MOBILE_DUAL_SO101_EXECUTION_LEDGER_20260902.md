@@ -422,7 +422,7 @@ FPS/drop/USB reset, H201 depth stream, Astra front-SLAM 성능은 실물 commiss
 ### 실행과 측정
 
 `dual_so101_smoke`에서 두 팔의 현재 6축 위치를 먼저 goal로 넣고 토크를 켠 뒤, shoulder-pan만
-왼쪽 +3도, 오른쪽 -3도로 30 step/1.5초 동안 보간했다. 같은 속도로 원위치 명령을 보냈고 매
+왼쪽 +3도, 오른쪽 -3도로 30 step 동안 보간했다. 같은 속도로 원위치 명령을 보냈고 매
 step마다 두 shoulder-pan 실측값을 기록했다. 종료 경로에서는 양쪽 토크를 해제했다.
 
 ```bash
@@ -480,8 +480,9 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 
 ## SIM-HW 비교 · 양팔 ±3도 왕복 · 위치 응답 근접, dynamics gate 실패
 
-2026-09-03 실물 smoke의 상대 이동을 MuJoCo에서 같은 20 Hz 명령으로 직접 재생했다.
-30개의 50 ms 선형 목표로 왼쪽 shoulder-pan은 +3도, 오른쪽은 -3도 이동한 뒤 같은 방식으로
+2026-09-03 실물 smoke의 상대 이동을 MuJoCo에서 약 20 Hz 명령으로 직접 재생했다.
+기존 trace의 wall-clock 간격 중앙값은 51.20 ms(p95 51.39 ms, 최대 51.45 ms)였다. 이 실측
+주기로 30개 선형 목표를 보내 왼쪽 shoulder-pan은 +3도, 오른쪽은 -3도 이동한 뒤 같은 방식으로
 복귀했다. 새 실물 접근은 하지 않았고 기존 비식별 evidence만 입력으로 사용했다.
 
 | 팔 | MuJoCo excursion | 실측 excursion | 절대 차이 | MuJoCo 잔류 | 실측 잔류 |
@@ -489,8 +490,13 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 | 왼쪽 | +3.000도 | +2.549도 | 0.450도 | +0.0005도 | +0.264도 |
 | 오른쪽 | -2.999도 | -2.725도 | 0.274도 | +0.0005도 | -0.352도 |
 
-두 구간 모두 finite state이고 금지 contact는 0이었다. 하지만 50 ms마다 바뀌는 step target 때문에
+두 구간 모두 finite state이고 금지 contact는 0이었다. 하지만 약 51.20 ms마다 바뀌는 step target 때문에
 actual acceleration과 finite-difference jerk 제한을 넘었고 `strict_dynamics_gate_passed=false`이다.
 최대 actuator force ratio도 outbound 0.520, inbound 0.520으로 기록됐다. 따라서 이 비교는 작은
 상대 위치 응답이 비슷하다는 증거일 뿐, 전체 양팔 동작 또는 실물 실행 승인 근거가 아니다.
 재현 결과는 `docs/evidence/dual_so101_sim_real_comparison_20260903.json`에 저장했다.
+
+1.5~8초와 septic 보간을 별도로 sweep해도 20 Hz 목표의 불연속 때문에 acceleration·jerk gate는
+모두 실패했다. 단순 감속으로 해결하지 않고, 다음 공개 실물 시험에서 STS3215의 `Acceleration`,
+`Goal_Time`, `Goal_Velocity`, 속도·가속도 상한과 `Present_Velocity`를 읽어 내부 프로파일을
+MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계측만 하고 변경하지 않는다.

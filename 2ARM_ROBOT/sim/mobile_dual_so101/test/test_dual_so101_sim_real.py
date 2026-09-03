@@ -25,7 +25,8 @@ class DualSO101SimRealTest(unittest.TestCase):
             report["known_gate_failure"],
             "20 Hz step command and finite-difference actual jerk",
         )
-        self.assertEqual(report["control_update_period_s"], 0.05)
+        self.assertEqual(report["steps_each_way"], 30)
+        self.assertAlmostEqual(report["control_update_period_s"], 0.0512005090713501)
         for side in ("left", "right"):
             self.assertLess(
                 report["absolute_error_degrees"][side]["excursion_degrees"], 0.5

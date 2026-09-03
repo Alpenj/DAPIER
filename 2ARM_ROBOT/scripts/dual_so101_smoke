@@ -46,12 +46,18 @@ def health(bus) -> dict[str, dict[str, float]]:
         for name in (
             "Torque_Enable",
             "Operating_Mode",
+            "Acceleration",
+            "Goal_Time",
+            "Goal_Velocity",
+            "Torque_Limit",
             "Present_Load",
             "Present_Current",
             "Present_Temperature",
             "Present_Voltage",
             "Status",
             "Moving",
+            "Maximum_Velocity_Limit",
+            "Maximum_Acceleration",
         )
     }
 
@@ -69,6 +75,7 @@ def interpolate(
             goals[side] = dict(starts[side])
             goals[side]["shoulder_pan"] += sign * left_delta * index / steps
             buses[side].sync_write("Goal_Position", goals[side])
+        command_monotonic_s = time.monotonic()
         time.sleep(0.05)
         observed = {
             side: bus.sync_read("Present_Position", ["shoulder_pan"], num_retry=2)["shoulder_pan"]
@@ -86,13 +93,21 @@ def interpolate(
             )["shoulder_pan"]
             for side, bus in buses.items()
         }
+        velocity = {
+            side: bus.sync_read(
+                "Present_Velocity", ["shoulder_pan"], normalize=False, num_retry=2
+            )["shoulder_pan"]
+            for side, bus in buses.items()
+        }
         trace.append(
             {
                 "timestamp": datetime.now().astimezone().isoformat(),
+                "monotonic_s": command_monotonic_s,
                 "goal": {side: goal["shoulder_pan"] for side, goal in goals.items()},
                 "observed": observed,
                 "present_load_raw": load,
                 "present_current_raw": current,
+                "present_velocity_raw": velocity,
             }
         )
 
