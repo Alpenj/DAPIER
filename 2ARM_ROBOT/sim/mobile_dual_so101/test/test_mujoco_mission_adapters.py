@@ -33,7 +33,7 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
         self.data = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
 
-    def test_mobile_model_is_separate_and_has_three_cameras(self) -> None:
+    def test_mobile_model_is_separate_and_has_four_cameras(self) -> None:
         free_joint_id = mujoco.mj_name2id(
             self.model,
             mujoco.mjtObj.mjOBJ_JOINT,
@@ -44,7 +44,7 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
             self.model.jnt_type[free_joint_id],
             mujoco.mjtJoint.mjJNT_FREE,
         )
-        self.assertEqual(self.model.ncam, 3)
+        self.assertEqual(self.model.ncam, 4)
         for camera_name in CAMERA_NAMES.values():
             camera_id = mujoco.mj_name2id(
                 self.model,
@@ -52,7 +52,10 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
                 camera_name,
             )
             self.assertGreaterEqual(camera_id, 0)
-            if camera_name != CAMERA_NAMES[CameraRole.FRONT_RGBD]:
+            if camera_name not in {
+                CAMERA_NAMES[CameraRole.FRONT_RGBD],
+                CAMERA_NAMES[CameraRole.WORKSPACE_RGBD],
+            }:
                 self.assertGreater(float(self.model.cam_fovy[camera_id]), 0.0)
         for side in ("left", "right"):
             for source_name in ("wrist_cam", "wrist_camera_sensor", "wrist"):
@@ -111,7 +114,7 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
         self.assertTrue(status.stationary())
         self.assertIsNone(status.active_goal)
 
-    def test_three_camera_payloads_are_rendered_and_synchronized(self) -> None:
+    def test_four_camera_payloads_are_rendered_and_synchronized(self) -> None:
         adapter = MuJoCoMultiCameraAdapter(
             self.model,
             self.data,
@@ -141,6 +144,10 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
             )
             self.assertEqual(
                 len(frames.frame(CameraRole.FRONT_RGBD).depth_m_le_f32),
+                32 * 24 * 4,
+            )
+            self.assertEqual(
+                len(frames.frame(CameraRole.WORKSPACE_RGBD).depth_m_le_f32),
                 32 * 24 * 4,
             )
             health = adapter.read_health()

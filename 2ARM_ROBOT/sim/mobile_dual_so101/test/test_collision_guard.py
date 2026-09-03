@@ -105,7 +105,8 @@ class CollisionGuardTest(unittest.TestCase):
         self.assertTrue(
             {
                 "tb3_base_link_collision",
-                "depth_camera_collision",
+                "workspace_depth_camera_collision",
+                "front_slam_depth_camera_collision",
                 "semi_support_column_collision",
                 "tower_camera_mast_collision",
                 "tower_camera_interface_plate_collision",
@@ -123,7 +124,7 @@ class CollisionGuardTest(unittest.TestCase):
         camera_id = mujoco.mj_name2id(
             tower_model,
             mujoco.mjtObj.mjOBJ_GEOM,
-            "depth_camera_collision",
+            "workspace_depth_camera_collision",
         )
         camera_pairs = tuple(pair for pair in pairs if camera_id in pair)
         camera_data = mujoco.MjData(tower_model)

@@ -38,6 +38,17 @@ def front_frame() -> CameraFrame:
     )
 
 
+def workspace_frame() -> CameraFrame:
+    return CameraFrame(
+        **{
+            **front_frame().__dict__,
+            "role": CameraRole.WORKSPACE_RGBD,
+            "optical_frame": "workspace_optical",
+            "calibration_id": "workspace-v1",
+        }
+    )
+
+
 def gripper_frame(role: CameraRole) -> CameraFrame:
     return CameraFrame(
         role=role,
@@ -110,6 +121,7 @@ class PerceptionContractTest(unittest.TestCase):
             sequence=0,
             frames=(
                 front_frame(),
+                workspace_frame(),
                 gripper_frame(CameraRole.LEFT_GRIPPER_RGB),
                 gripper_frame(CameraRole.RIGHT_GRIPPER_RGB),
             ),
@@ -121,7 +133,11 @@ class PerceptionContractTest(unittest.TestCase):
         )
         disabled = MultiCameraFrameSet(
             sequence=0,
-            frames=(front_frame(), gripper_frame(CameraRole.LEFT_GRIPPER_RGB)),
+            frames=(
+                front_frame(),
+                workspace_frame(),
+                gripper_frame(CameraRole.LEFT_GRIPPER_RGB),
+            ),
             disabled_roles=(CameraRole.RIGHT_GRIPPER_RGB,),
         )
         with self.assertRaisesRegex(ValueError, "disabled or missing"):
@@ -135,7 +151,7 @@ class PerceptionContractTest(unittest.TestCase):
         estimate = ShoePoseEstimate(
             pose_map=Pose3D(0.5, 0.0, 0.02, 1.0, 0.0, 0.0, 0.0),
             confidence=1.0,
-            source_role=CameraRole.FRONT_RGBD,
+            source_role=CameraRole.WORKSPACE_RGBD,
             source_frame_id=5,
             observation_age_ms=10.0,
             map_id="map-v1",

@@ -23,7 +23,7 @@ from mission_modules.camera import (
 def camera_frame(role: CameraRole, timestamp_ns: int) -> CameraFrame:
     modality = (
         CameraModality.RGBD
-        if role == CameraRole.FRONT_RGBD
+        if role in (CameraRole.FRONT_RGBD, CameraRole.WORKSPACE_RGBD)
         else CameraModality.RGB
     )
     return CameraFrame(
@@ -45,6 +45,7 @@ def camera_frame(role: CameraRole, timestamp_ns: int) -> CameraFrame:
 def frame_set(*, disable_right: bool = False) -> MultiCameraFrameSet:
     frames = [
         camera_frame(CameraRole.FRONT_RGBD, 1_000_000),
+        camera_frame(CameraRole.WORKSPACE_RGBD, 1_100_000),
         camera_frame(CameraRole.LEFT_GRIPPER_RGB, 1_200_000),
     ]
     disabled = ()
@@ -84,11 +85,15 @@ class FakeCameraRig:
 
 
 class CameraContractTest(unittest.TestCase):
-    def test_front_rgbd_and_two_gripper_rgb_frames_are_synchronized(self) -> None:
+    def test_two_rgbd_and_two_gripper_rgb_frames_are_synchronized(self) -> None:
         samples = frame_set()
         samples.validate()
         self.assertEqual(
             samples.frame(CameraRole.FRONT_RGBD).modality,
+            CameraModality.RGBD,
+        )
+        self.assertEqual(
+            samples.frame(CameraRole.WORKSPACE_RGBD).modality,
             CameraModality.RGBD,
         )
         self.assertEqual(
@@ -134,6 +139,7 @@ class CameraContractTest(unittest.TestCase):
                 sequence=0,
                 frames=(
                     wrong_front,
+                    camera_frame(CameraRole.WORKSPACE_RGBD, 1_000_000),
                     camera_frame(CameraRole.LEFT_GRIPPER_RGB, 1_000_000),
                     camera_frame(CameraRole.RIGHT_GRIPPER_RGB, 1_000_000),
                 ),
@@ -143,6 +149,7 @@ class CameraContractTest(unittest.TestCase):
         health = CameraRigHealth(
             (
                 stream_health(CameraRole.FRONT_RGBD),
+                stream_health(CameraRole.WORKSPACE_RGBD),
                 stream_health(CameraRole.LEFT_GRIPPER_RGB),
                 stream_health(CameraRole.RIGHT_GRIPPER_RGB, enabled=False),
             )
@@ -171,7 +178,7 @@ class CameraContractTest(unittest.TestCase):
         port = FakeCameraRig()
         self.assertIsInstance(port, CameraPort)
         self.assertTrue(port.simulation_only)
-        self.assertEqual(len(port.capture().frames), 3)
+        self.assertEqual(len(port.capture().frames), 4)
 
         tree = ast.parse(
             (PROJECT_DIR / "mission_modules" / "camera.py").read_text(

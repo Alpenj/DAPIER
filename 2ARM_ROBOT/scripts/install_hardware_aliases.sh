@@ -11,7 +11,7 @@ sudo install -m 0644 "${rules_file}" /etc/udev/rules.d/99-dapier-hardware.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-for role in left_arm right_arm left_wrist_rgb right_wrist_rgb workspace_rgbd; do
+for role in left_arm right_arm left_wrist_rgb right_wrist_rgb workspace_rgbd front_slam_rgbd; do
   path="/dev/dapier/${role}"
   if [[ -e "${path}" ]]; then
     printf '%-18s -> %s\n' "${role}" "$(readlink -f "${path}")"

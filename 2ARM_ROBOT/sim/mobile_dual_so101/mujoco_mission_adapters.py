@@ -35,11 +35,13 @@ from shoe_task import ShoeTaskConfig, _add_primitive_shoe
 MOBILE_BASE_FREE_JOINT = "mobile_base_free"
 LEFT_WHEEL_JOINT = "tb3_wheel_left_joint"
 RIGHT_WHEEL_JOINT = "tb3_wheel_right_joint"
-FRONT_CAMERA = "front_depth_camera"
+FRONT_CAMERA = "front_slam_depth_camera"
+WORKSPACE_CAMERA = "workspace_depth_camera"
 LEFT_GRIPPER_CAMERA = "left_gripper_camera"
 RIGHT_GRIPPER_CAMERA = "right_gripper_camera"
 CAMERA_NAMES = {
     CameraRole.FRONT_RGBD: FRONT_CAMERA,
+    CameraRole.WORKSPACE_RGBD: WORKSPACE_CAMERA,
     CameraRole.LEFT_GRIPPER_RGB: LEFT_GRIPPER_CAMERA,
     CameraRole.RIGHT_GRIPPER_RGB: RIGHT_GRIPPER_CAMERA,
 }
@@ -366,14 +368,15 @@ class MuJoCoMultiCameraAdapter:
         for role in CameraRole:
             camera_name = CAMERA_NAMES[role]
             rgb = self._render_rgb(camera_name)
-            if role == CameraRole.FRONT_RGBD:
+            if role in (CameraRole.FRONT_RGBD, CameraRole.WORKSPACE_RGBD):
                 depth = self._render_depth(camera_name)
+                prefix = "front_slam" if role == CameraRole.FRONT_RGBD else "workspace"
                 frame = CameraFrame(
                     role=role,
                     modality=CameraModality.RGBD,
                     frame_id=self._sequence,
-                    optical_frame="front_depth_optical_frame",
-                    calibration_id="mujoco-front-rgbd-v1",
+                    optical_frame=f"{prefix}_depth_optical_frame",
+                    calibration_id=f"mujoco-{prefix}-rgbd-v1",
                     width=self.width,
                     height=self.height,
                     rgb_timestamp_ns=sim_timestamp_ns,

@@ -57,6 +57,10 @@ class SimTeleopControllerTest(unittest.TestCase):
             step_rad=math.radians(2.0),
             min_key_interval_s=0.05,
         )
+        first_joint_id = int(self.model.actuator_trnid[0, 0])
+        self.first_actuated_qpos_address = int(
+            self.model.jnt_qposadr[first_joint_id]
+        )
 
     def test_initial_status_is_simulation_only_and_deterministic(self) -> None:
         status = self.controller.status()
@@ -313,7 +317,7 @@ class SimTeleopControllerTest(unittest.TestCase):
         data = mujoco.MjData(self.model)
         apply_control_as_pose(self.model, data, HUMANOID_HOME_ACTION)
         self.controller.handle_key(KEY_STOP, now_ns=1)
-        data.qpos[0] += 0.01
+        data.qpos[self.first_actuated_qpos_address] += 0.01
         mujoco.mj_forward(self.model, data)
 
         stopped = synchronize_stop_hold(
@@ -324,7 +328,7 @@ class SimTeleopControllerTest(unittest.TestCase):
         )
         self.assertTrue(stopped)
         latched = self.controller.targets
-        data.qpos[0] += 0.02
+        data.qpos[self.first_actuated_qpos_address] += 0.02
         mujoco.mj_forward(self.model, data)
 
         stopped = synchronize_stop_hold(
@@ -373,7 +377,11 @@ class SimTeleopControllerTest(unittest.TestCase):
         apply_teleop_targets(self.model, data, control_targets)
         self.assertEqual(tuple(data.qpos), tuple(before))
         mujoco.mj_step(self.model, data)
-        self.assertNotEqual(float(data.qpos[0]), float(before[0]))
+        qpos_address = self.first_actuated_qpos_address
+        self.assertNotEqual(
+            float(data.qpos[qpos_address]),
+            float(before[qpos_address]),
+        )
         self.assertTrue(all(math.isfinite(float(value)) for value in data.qpos))
 
     def test_main_teleop_flag_calls_sim_runner_with_bounded_settings(self) -> None:

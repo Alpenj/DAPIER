@@ -112,10 +112,21 @@ def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
     all_arm_geoms = (*left, *right)
     pairs = list(bimanual_geom_pairs(model))
 
-    camera_id = _geom_id_if_present(model, "depth_camera_collision")
-    if camera_id is None:
-        raise RuntimeError("front depth camera collision geometry is missing")
-    pairs.extend((arm_id, camera_id) for arm_id in all_arm_geoms)
+    camera_ids = tuple(
+        camera_id
+        for name in (
+            "workspace_depth_camera_collision",
+            "front_slam_depth_camera_collision",
+        )
+        if (camera_id := _geom_id_if_present(model, name)) is not None
+    )
+    if not camera_ids:
+        raise RuntimeError("RGB-D camera collision geometry is missing")
+    pairs.extend(
+        (arm_id, camera_id)
+        for arm_id in all_arm_geoms
+        for camera_id in camera_ids
+    )
 
     # The requested interference risk is the moving gripper against the Waffle
     # body. Protect wheels and casters too, since folded poses can reach down.

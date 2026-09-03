@@ -10,11 +10,11 @@ command, hardware dispatch 경로가 없다.
 실물 계획에 맞춰 TurtleBot3 LiDAR는 기본적으로 제거한다. 원본 형상과 비교할 때만
 `--include-lidar`를 사용한다.
 
-원본 Waffle Pi의 작은 `camera_link`도 제거했다. 전면 중앙에는 AADJA1300GX가
-Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외형
-(165 x 48 x 40 mm), 질량 310 g을 둔다. 정확한 외형과 optical origin을 실측하지
-않았으므로 현재 카메라 형상은 확정 CAD가 아니다. 광학 중심은 base 기준
-`(0.120, 0, 0.200) m`, 아래쪽 10도로 배치했다.
+원본 Waffle Pi의 작은 `camera_link`는 제거했다. HP-ASC-H201은 top-view 작업공간
+RGB-D, 기존 Astra S는 정면 Visual SLAM RGB-D로 역할을 분리한다. H201의 USB PID
+`0x0173`은 eYs3D 공식 코드의 HYPATIA2이고 제품 매핑은 R77이다. 공식 R77 URDF의
+collision 크기 25.5 x 90 x 25 mm, 질량 96 g, collision origin x=-8.05 mm를 사용한다.
+URDF에 FOV가 없어 H201 렌더 FOV는 실측 전 임시값이다.
 
 ## 선택형 중앙 STEP 지지대 layout
 
@@ -39,11 +39,12 @@ plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 �
 - 사진의 SO-101 teardrop hole: `base_so101_v2.stl`의 반지름 8.5 mm 홀 중심축
 - SO-101 arm frame: `(-64, +/-93.4, 387.686186) mm`; mesh/XML/holder 회전을
   역산해 teardrop hole 중심을 holder 최상단에 맞춤
-- depth camera body center: 전용 mast 위 `(-64, 0, 550) mm`
-- camera down tilt: 27도
+- H201 top-view body center: 전용 mast 위 `(-64, 0, 550) mm`, 아래 27도
+- Astra S front-SLAM body center: TurtleBot3 전면 상판
+  `(55, 0, 115.5) mm`, 정면 수평
 - 중심 광선의 바닥 교차점: 로봇 전방 약 1.035 m
 - 수직 FOV의 바닥 교차 범위: 약 0.421~7.362 m
-- 중앙 지지대 가정 질량: 1.50 kg; camera 가정 질량은 별도 0.31 kg
+- 중앙 지지대 가정 질량: 1.50 kg; H201 0.096 kg와 Astra S 0.310 kg은 별도
 
     ~/DAPIER/so101_imitation_learning/.venv/bin/python \
       mobile_dual_so101.py --mount-layout tower \
@@ -54,12 +55,15 @@ plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 �
 tower layout에서는 stock SO-101의 `base_so101_v2`만 제외한다. base motor holder,
 Waveshare mounting plate, base servo, `shoulder_pan`과 이후 관절 체인은 그대로 유지한다.
 MuJoCo 뷰어의 Reset도 기록된 home action으로 돌아가도록 qpos와 position target을 함께 복원한다.
-카메라는 팔 위치를 바꾸지 않고
+H201은 팔 위치를 바꾸지 않고
 중앙의 24 x 30 mm 전용 mast와 50 x 60 x 6 mm 경사 interface plate 위 Z=550 mm로
-올린다. 실제 카메라 모델이 확인되기 전까지 중앙 체결 위치는 측정 필요 datum이며,
-최종 볼트 규격·hole pattern·optical origin과 STEP 실제 재료/질량은 확정값이 아니다.
+올린다. R77 모델과 URDF hole frame은 확인했지만 실제 중앙 체결 위치는 측정 필요 datum이며,
+최종 볼트 규격·hole 사용 방식·mounted extrinsic과 STEP 실제 재료/질량은 확정값이 아니다.
+Astra S는 실물 사진과 공식 Waffle Pi camera optical X=76 mm를 기준으로 TurtleBot3 전면
+상판에 직접 둔다. 외형 바닥은 상판 Z=91.5 mm에 맞고 좌우 Y=0으로 정렬한다. 실물 체결 후
+정확한 optical extrinsic을 다시 잰다.
 
-현재 home 자세의 camera-arm 최소 간격은 약 136 mm다. 하지만 전체 joint range의
+현재 두 RGB-D를 포함한 home 자세의 보호 형상 최소 간격은 약 37.6 mm다. 하지만 전체 joint range의
 무작위 10,000자세에서는 18개가 30 mm clearance를 위반했으므로 unrestricted motion은
 허용하지 않는다. camera, mast와 plate는 collision guard의 keep-out 대상으로 유지한다.
 
@@ -327,7 +331,7 @@ domain randomization과 실물 실행도 아직 검증하지 않았다.
 
 ### MuJoCo episode와 action-chunk 경계
 
-`sim_episode.py`는 front depth camera의 RGB와 metric depth, 좌우 follower state,
+`sim_episode.py`는 workspace H201의 RGB와 metric depth, 좌우 SO-101 state,
 실제로 `data.ctrl`에 전달한 12축 target, simulation timestamp를 20 Hz의 같은 frame으로
 기록한다. 팔 action은 radian이고 gripper action은 dataset 경계에서 0~1로 정규화한다.
 원본 actuator 단위와 policy 단위의 양방향 변환은 round-trip test로 고정했다.

@@ -16,12 +16,14 @@ except ModuleNotFoundError as error:
 
 from mobile_dual_so101 import (
     ACTION_NAMES,
-    DEPTH_CAMERA_DOWN_TILT_RAD,
-    DEPTH_CAMERA_MASS_KG,
     DEFAULT_ARM_MOUNT_X_M,
     HUMANOID_HOME_ACTION,
     PRINTED_MOUNT_ESTIMATED_MASS_KG,
     WAFFLE_TOP_LOCAL_Z_M,
+    WORKSPACE_DEPTH_CAMERA_COLLISION_ORIGIN_M,
+    WORKSPACE_DEPTH_CAMERA_DOWN_TILT_RAD,
+    WORKSPACE_DEPTH_CAMERA_MASS_KG,
+    WORKSPACE_DEPTH_CAMERA_SIZE_M,
     _restore_home_pose_after_reset,
     apply_control_as_pose,
     build_model,
@@ -131,7 +133,7 @@ class MobileDualSO101Test(unittest.TestCase):
             )
             self.assertAlmostEqual(deck_bottom, WAFFLE_TOP_LOCAL_Z_M)
 
-    def test_original_camera_is_replaced_by_front_depth_camera(self) -> None:
+    def test_original_camera_is_replaced_by_r77_depth_camera(self) -> None:
         self.assertEqual(
             mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_BODY, "tb3_camera_link"
@@ -139,31 +141,51 @@ class MobileDualSO101Test(unittest.TestCase):
             -1,
         )
         camera_body_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "depth_camera_body"
+            self.model,
+            mujoco.mjtObj.mjOBJ_BODY,
+            "workspace_depth_camera_body",
         )
         camera_geom_id = mujoco.mj_name2id(
             self.model,
             mujoco.mjtObj.mjOBJ_GEOM,
-            "depth_camera_collision",
+            "workspace_depth_camera_collision",
         )
         camera_id = mujoco.mj_name2id(
             self.model,
             mujoco.mjtObj.mjOBJ_CAMERA,
-            "front_depth_camera",
+            "workspace_depth_camera",
         )
         self.assertGreaterEqual(camera_body_id, 0)
         self.assertGreaterEqual(camera_geom_id, 0)
         self.assertGreaterEqual(camera_id, 0)
         self.assertAlmostEqual(
-            float(self.model.body_mass[camera_body_id]), DEPTH_CAMERA_MASS_KG
+            float(self.model.body_mass[camera_body_id]),
+            WORKSPACE_DEPTH_CAMERA_MASS_KG,
         )
+        for actual, expected in zip(
+            self.model.geom_size[camera_geom_id],
+            (value / 2.0 for value in WORKSPACE_DEPTH_CAMERA_SIZE_M),
+            strict=True,
+        ):
+            self.assertAlmostEqual(float(actual), expected)
+        for actual, expected in zip(
+            self.model.geom_pos[camera_geom_id],
+            WORKSPACE_DEPTH_CAMERA_COLLISION_ORIGIN_M,
+            strict=True,
+        ):
+            self.assertAlmostEqual(float(actual), expected)
+        for value in self.model.cam_pos[camera_id]:
+            self.assertAlmostEqual(float(value), 0.0)
         self.assertEqual(int(self.model.geom_contype[camera_geom_id]), 1)
 
         data = mujoco.MjData(self.model)
         apply_control_as_pose(self.model, data, HUMANOID_HOME_ACTION)
         view = -data.cam_xmat[camera_id].reshape(3, 3)[:, 2]
         down_tilt = math.atan2(-float(view[2]), float(view[0]))
-        self.assertAlmostEqual(down_tilt, DEPTH_CAMERA_DOWN_TILT_RAD)
+        self.assertAlmostEqual(
+            down_tilt,
+            WORKSPACE_DEPTH_CAMERA_DOWN_TILT_RAD,
+        )
 
     def test_lidar_is_removed_by_default_but_available_for_comparison(self) -> None:
         self.assertEqual(

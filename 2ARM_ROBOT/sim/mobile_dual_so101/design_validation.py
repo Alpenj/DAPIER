@@ -24,16 +24,16 @@ from collision_guard import (  # noqa: E402
     protected_geom_pairs,
 )
 from mobile_dual_so101 import (  # noqa: E402
-    DEPTH_CAMERA_DOWN_TILT_RAD,
-    DEPTH_CAMERA_HORIZONTAL_FOV_DEG,
-    DEPTH_CAMERA_MASS_KG,
-    DEPTH_CAMERA_VERTICAL_FOV_DEG,
     DEFAULT_MOUNT_LAYOUT,
     HUMANOID_HOME_ACTION,
     MOUNT_LAYOUTS,
     PRINTED_MOUNT_ESTIMATED_MASS_KG,
     TOWER_CAMERA_DOWN_TILT_RAD,
     TOWER_MOUNT_ESTIMATED_MASS_KG,
+    WORKSPACE_DEPTH_CAMERA_DOWN_TILT_RAD,
+    WORKSPACE_DEPTH_CAMERA_HORIZONTAL_FOV_DEG,
+    WORKSPACE_DEPTH_CAMERA_MASS_KG,
+    WORKSPACE_DEPTH_CAMERA_VERTICAL_FOV_DEG,
     apply_control_as_pose,
     build_model,
 )
@@ -270,10 +270,10 @@ def validate_design(
             below_clearance += 1
 
     camera_id = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_CAMERA, "front_depth_camera"
+        model, mujoco.mjtObj.mjOBJ_CAMERA, "workspace_depth_camera"
     )
     camera_body_id = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_BODY, "depth_camera_body"
+        model, mujoco.mjtObj.mjOBJ_BODY, "workspace_depth_camera_body"
     )
     apply_control_as_pose(model, data, HUMANOID_HOME_ACTION)
     home_mass, home_com = _weighted_com(data.xipos[body_ids], body_masses)
@@ -308,7 +308,7 @@ def validate_design(
                 if mount_layout == "tower"
                 else PRINTED_MOUNT_ESTIMATED_MASS_KG
             ),
-            "depth_camera_mass_kg": DEPTH_CAMERA_MASS_KG,
+            "workspace_depth_camera_mass_kg": WORKSPACE_DEPTH_CAMERA_MASS_KG,
             "dynamic_factor": DYNAMIC_FACTOR,
             "unmodeled": [
                 "actual print anisotropy and creep",
@@ -323,16 +323,16 @@ def validate_design(
             "center_of_mass_m": home_com.tolist(),
             "original_waffle_margin_m": original_home_margin,
         },
-        "depth_camera": {
+        "workspace_depth_camera": {
             "center_m": model.body_pos[camera_body_id].tolist(),
             "configured_down_tilt_deg": math.degrees(
                 TOWER_CAMERA_DOWN_TILT_RAD
                 if mount_layout == "tower"
-                else DEPTH_CAMERA_DOWN_TILT_RAD
+                else WORKSPACE_DEPTH_CAMERA_DOWN_TILT_RAD
             ),
             "measured_model_down_tilt_deg": camera_pitch_deg,
-            "horizontal_fov_deg": DEPTH_CAMERA_HORIZONTAL_FOV_DEG,
-            "vertical_fov_deg": DEPTH_CAMERA_VERTICAL_FOV_DEG,
+            "horizontal_fov_deg": WORKSPACE_DEPTH_CAMERA_HORIZONTAL_FOV_DEG,
+            "vertical_fov_deg": WORKSPACE_DEPTH_CAMERA_VERTICAL_FOV_DEG,
         },
         "worst_stability": worst,
         "maximum_mount_moment": {

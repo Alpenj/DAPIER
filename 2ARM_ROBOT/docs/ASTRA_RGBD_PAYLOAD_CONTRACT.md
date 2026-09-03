@@ -1,4 +1,4 @@
-﻿# Astra Pro RGB/Depth 픽셀 payload 저장 계약
+﻿# 전면 Astra + 작업공간 H201 RGB/Depth 픽셀 payload 저장 계약
 
 > 계약 버전: `dapier.ros2-image-payload.v0.1`
 > episode 버전: `dapier.shoe-episode.v0.3`
@@ -15,6 +15,15 @@ LeRobot Dataset이나 ACT가 실행되더라도 원본 RGB/Depth의 encoding, by
 3. raw 파일은 절대 overwrite하지 않는다.
 4. 파생 LeRobot artifact는 별도 output에 만들고 raw SHA-256을 참조한다.
 5. `accepted + finalized + integrity_verified` episode만 exporter가 읽는다.
+
+카메라 역할은 다음처럼 고정한다.
+
+| 역할 | 장치 | 소비자 |
+|---|---|---|
+| `front_rgbd` | Orbbec Astra S | TurtleBot3 Visual SLAM·map localization |
+| `workspace_rgbd` | HP-ASC-H201 / eYs3D R77 | 박스·신발 top-view 인식과 재관측 |
+| `left_gripper_rgb` | 왼쪽 SO-101 RGB | 왼손 접근·파지 |
+| `right_gripper_rgb` | 오른쪽 SO-101 RGB | 오른손 뚜껑 접근·접촉 |
 
 ```text
 episode_000001/
@@ -50,7 +59,7 @@ episode_000001/
 | `workspace_rgb` | `rgb8`, `bgr8`, `rgba8`, `bgra8`, `mono8`, `8UC1` | 색상·채널 순서를 metadata로 보존 |
 | `workspace_depth` | `mono16`, `16UC1`, `16SC1`, `32FC1` | 원본 정수/실수 depth 값을 변환 없이 보존 |
 
-`16UC1=mm`라고 코드에서 가정하지 않는다. 실제 depth unit은 Astra driver 설정과 거리 실측 후 calibration/provenance snapshot에서 확정한다.
+`16UC1=mm`라고 코드에서 가정하지 않는다. 실제 depth unit은 각 카메라 driver 설정과 거리 실측 후 calibration/provenance snapshot에서 확정한다.
 
 ## timing 계약
 
@@ -145,7 +154,7 @@ ros2 run shoe_sorting_data shoe_episode validate \
 
 미완료:
 
-- Astra Pro 실제 encoding/resolution/depth unit 확인
+- Astra S와 H201 각각의 실제 encoding/resolution/depth unit 확인
 - 실제 `CameraInfo`와 calibration snapshot
 - 장시간 기록의 p50/p95 sync delta와 dropped topic count
 - native LeRobot Dataset v3 변환

@@ -355,6 +355,40 @@ commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은
 Ubuntu 24.04의 FreeGLUT SONAME 차이는 설치된 `libglut.so.3.12`를 로컬 `compat`
 경로에서만 연결해 해결했으며 시스템 라이브러리나 firmware는 수정하지 않았다.
 
+## HW 준비 보강 · H201 top-view + Astra front-SLAM 분리 · 모델/계약 완료
+
+2026-09-03 팀 변경으로 HP-ASC-H201을 작업공간 top-view RGB-D로, 기존 Astra S를
+TurtleBot3 정면 Visual SLAM RGB-D로 사용한다. 이전 단일 `workspace_rgbd=Astra` 기록은
+당시 연결 상태의 이력이고, 이후 실행 역할은 다음 두 별칭으로 분리한다.
+
+- `/dev/dapier/workspace_rgbd`: H201, 장치 고유 serial로 식별
+- `/dev/dapier/front_slam_rgbd`: Astra S, 현재는 한 대만 사용하므로 VID:PID로 식별
+
+고유 serial은 개인 udev 파일에만 두고 저장소에는 역할명만 둔다. 로컬 규칙은 작성했지만
+시스템 설치는 sudo 인증이 없어 아직 적용하지 못했다. H201은 최근 `lsusb`에서
+`3438:0173`과 UVC capture node 2개를 확인했고 RGB 계열 raw frame capture도 확인했다.
+SDK 기반 depth unit, CameraInfo, 장시간 stream 안정성은 아직 확인하지 않았다. eYs3D 공식
+코드에서 PID `0x0173`은 HYPATIA2이고 R77 제품으로 연결되지만, 현행 R77 mode YAML의 PID는
+`0x0180`이라 공식 ROS 2 driver가 이 장치를 그대로 여는지는 실물 시험 전 단정하지 않는다.
+
+MuJoCo tower에는 H201을 `(-0.064, 0, 0.550) m`, 아래 27도로 유지했다. 공식 R77 URDF의
+25.5 x 90 x 25 mm collision, x=-8.05 mm origin, 0.096 kg을 사용했다. 처음에는 Astra를
+기둥과 H201 frame의 높이 사이로 잘못 해석했으나, 사용자가 제공한 실물 정면·상단 사진으로
+정정했다. Astra S는 공식 Waffle Pi camera optical X=76 mm를 기준으로 TurtleBot3 전면
+상판에 바닥이 닿고 좌우 중앙이 되도록 외형 중심 `(0.055, 0, 0.1155) m`에 배치했다.
+Astra envelope는 기존에 사용하던 40 x 165 x 48 mm, 0.310 kg이고 정면 수평이다.
+
+camera_io 계약도 `front_rgbd`, `workspace_rgbd`, 좌·우 `gripper_rgb`의 4개 역할로
+확장했다. SLAM 입력은 Astra, 박스·신발 데이터는 H201, 근접 접촉은 손목 RGB가 담당한다.
+두 RGB-D collision 모두 공통 양팔 keep-out gate에 포함했고 home 최소 보호 간격은
+37.62 mm로 30 mm gate를 통과했다. 전체 MuJoCo 회귀 153개가 통과했고
+`hardware_execution=false`를 유지했다.
+
+이번 변경은 센서 배치·렌더·payload 경계 검증이다. 실제 optical extrinsic, 동시 네 카메라
+FPS/drop/USB reset, H201 depth stream, Astra front-SLAM 성능은 실물 commissioning에 남는다.
+박스 물리 데모의 왼쪽 이동 finger contact 0 문제도 그대로이므로 신발 파지 성공이나 실물
+전체 동작 성공으로 확대 해석하지 않는다.
+
 ## HW-1 · 동일 SO-101 양팔 저속 왕복 검증 · 완료
 
 ### 잘못 판단했던 부분과 정정

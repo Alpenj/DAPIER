@@ -1,4 +1,4 @@
-"""Multi-camera acquisition contract for front RGB-D and gripper RGB cameras."""
+"""Acquisition contract for front/workspace RGB-D and gripper RGB cameras."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Protocol, runtime_checkable
 
 class CameraRole(str, Enum):
     FRONT_RGBD = "front_rgbd"
+    WORKSPACE_RGBD = "workspace_rgbd"
     LEFT_GRIPPER_RGB = "left_gripper_rgb"
     RIGHT_GRIPPER_RGB = "right_gripper_rgb"
 
@@ -110,9 +111,10 @@ class MultiCameraFrameSet:
             raise ValueError(f"camera roles must be active or explicitly disabled: {missing}")
         for frame in self.frames:
             frame.validate()
-        front = self.frame(CameraRole.FRONT_RGBD)
-        if front is not None and front.modality != CameraModality.RGBD:
-            raise ValueError("front_rgbd role requires RGB-D modality")
+        for role in (CameraRole.FRONT_RGBD, CameraRole.WORKSPACE_RGBD):
+            rgbd = self.frame(role)
+            if rgbd is not None and rgbd.modality != CameraModality.RGBD:
+                raise ValueError(f"{role.value} role requires RGB-D modality")
         for role in (
             CameraRole.LEFT_GRIPPER_RGB,
             CameraRole.RIGHT_GRIPPER_RGB,

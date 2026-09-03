@@ -33,3 +33,6 @@ sha256sum docs/evidence/*
   확인했다. 이 결과는 제한된 joint smoke이며 박스 개방·신발 파지 성공 근거로 사용하지 않는다.
 - 2026-08-20 요약의 RGB-D 근거는 USB 인식까지다. 이후 Astra stream 복구 결과는 별도 실행
   원장에 기록했으며 intrinsics/extrinsics 실측은 여전히 남아 있다.
+- 2026-09-03 센서 역할은 Astra S=`front_rgbd`(Visual SLAM),
+  HP-ASC-H201=`workspace_rgbd`(top-view)로 분리했다. H201의 USB 인식과 UVC frame
+  capture는 확인했지만 SDK depth unit·intrinsics·동시 4카메라 부하는 아직 실측 근거가 아니다.

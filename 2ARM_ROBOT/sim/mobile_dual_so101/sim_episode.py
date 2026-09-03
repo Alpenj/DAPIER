@@ -105,10 +105,10 @@ def _render_rgbd(
     data: mujoco.MjData,
 ) -> tuple[np.ndarray, np.ndarray]:
     renderer.disable_depth_rendering()
-    renderer.update_scene(data, camera="front_depth_camera")
+    renderer.update_scene(data, camera="workspace_depth_camera")
     rgb = np.asarray(renderer.render(), dtype=np.uint8).copy()
     renderer.enable_depth_rendering()
-    renderer.update_scene(data, camera="front_depth_camera")
+    renderer.update_scene(data, camera="workspace_depth_camera")
     depth = np.asarray(renderer.render(), dtype=np.float32).copy()
     renderer.disable_depth_rendering()
     if rgb.ndim != 3 or rgb.shape[2] != 3 or depth.shape != rgb.shape[:2]:

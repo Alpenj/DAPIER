@@ -69,12 +69,31 @@ HUMANOID_HOLDER_PITCH_RAD = math.pi / 2.0
 HUMANOID_LEFT_HOLDER_TWIST_RAD = -math.pi / 2.0
 HUMANOID_RIGHT_HOLDER_TWIST_RAD = math.pi / 2.0
 WAFFLE_TOP_LOCAL_Z_M = WAFFLE_TOP_MOUNT_PLANE_Z_M
-DEPTH_CAMERA_SIZE_M = (0.040, 0.165, 0.048)  # depth, width, height
-DEPTH_CAMERA_MASS_KG = 0.310
-DEPTH_CAMERA_CENTER_M = (0.120, 0.0, 0.200)
-DEPTH_CAMERA_DOWN_TILT_RAD = math.radians(10.0)
-DEPTH_CAMERA_HORIZONTAL_FOV_DEG = 58.4
-DEPTH_CAMERA_VERTICAL_FOV_DEG = 45.5
+WORKSPACE_DEPTH_CAMERA_MODEL = "eYs3D R77 (HYPATIA2 / HP-ASC-H201)"
+WORKSPACE_DEPTH_CAMERA_URDF_SOURCE = (
+    "https://github.com/eYs3D/eys3d-ros2/blob/ros2-master/"
+    "eys3d_camera/urdf/eys3d_R77.urdf.xacro"
+)
+WORKSPACE_DEPTH_CAMERA_SIZE_M = (0.0255, 0.090, 0.025)  # URDF x, y, z
+WORKSPACE_DEPTH_CAMERA_COLLISION_ORIGIN_M = (-0.00805, 0.0, 0.0)
+WORKSPACE_DEPTH_CAMERA_MASS_KG = 0.096
+WORKSPACE_DEPTH_CAMERA_CENTER_M = (0.120, 0.0, 0.200)
+WORKSPACE_DEPTH_CAMERA_DOWN_TILT_RAD = math.radians(10.0)
+# The R77 URDF does not specify FOV. Keep the previous render-only values
+# until mounted CameraInfo/intrinsics are measured; do not use them as truth.
+WORKSPACE_DEPTH_CAMERA_HORIZONTAL_FOV_DEG = 58.4
+WORKSPACE_DEPTH_CAMERA_VERTICAL_FOV_DEG = 45.5
+FRONT_SLAM_CAMERA_MODEL = "Orbbec Astra S"
+FRONT_SLAM_CAMERA_SIZE_M = (0.040, 0.165, 0.048)  # depth, width, height
+FRONT_SLAM_CAMERA_MASS_KG = 0.310
+FRONT_SLAM_CAMERA_VERTICAL_FOV_DEG = 45.5
+# The stock camera optical frame is X=0.076 m and centered at Y=0. The Astra
+# enclosure sits on the Waffle top plate with its front optical face there.
+FRONT_SLAM_CAMERA_CENTER_M = (
+    0.076 - FRONT_SLAM_CAMERA_SIZE_M[0] / 2.0 - 0.001,
+    0.0,
+    WAFFLE_TOP_LOCAL_Z_M + FRONT_SLAM_CAMERA_SIZE_M[2] / 2.0,
+)
 PRINTED_MOUNT_ESTIMATED_MASS_KG = 0.90
 SO101_BASE_LARGE_HOLE_MESH_SHA256 = (
     "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d"
@@ -233,18 +252,17 @@ def _validate_source_contract(arm_spec: mujoco.MjSpec, source: Path) -> None:
         )
 
 
-def _add_depth_camera(
+def _add_workspace_depth_camera(
     base_link: mujoco.MjsBody,
     *,
-    center_m: Sequence[float] = DEPTH_CAMERA_CENTER_M,
-    down_tilt_rad: float = DEPTH_CAMERA_DOWN_TILT_RAD,
+    center_m: Sequence[float] = WORKSPACE_DEPTH_CAMERA_CENTER_M,
+    down_tilt_rad: float = WORKSPACE_DEPTH_CAMERA_DOWN_TILT_RAD,
 ) -> None:
-    """Add a conservative Astra-series front RGB-D mass and optical camera.
+    """Place the R77 envelope at the former Astra mounting datum.
 
-    AADJA1300GX was observed as an Orbbec Astra-family USB device, but its
-    exact enclosure and optical origin have not yet been measured. The
-    official Astra-series 165 x 48 x 40 mm, 310 g envelope is therefore used
-    as a deliberately conservative placeholder.
+    Size, mass, and collision offset come from the official eYs3D R77 URDF.
+    The camera link is the depth start point, so the MuJoCo camera is located
+    at the body origin while the enclosure collision is offset behind it.
     """
 
     if len(center_m) != 3 or not all(
@@ -259,16 +277,17 @@ def _add_depth_camera(
 
     tilt = down_tilt_rad
     camera_body = base_link.add_body(
-        name="depth_camera_body",
+        name="workspace_depth_camera_body",
         pos=list(center_m),
         quat=[math.cos(tilt / 2.0), 0.0, math.sin(tilt / 2.0), 0.0],
     )
-    depth, width, height = DEPTH_CAMERA_SIZE_M
+    depth, width, height = WORKSPACE_DEPTH_CAMERA_SIZE_M
     camera_body.add_geom(
-        name="depth_camera_collision",
+        name="workspace_depth_camera_collision",
         type=mujoco.mjtGeom.mjGEOM_BOX,
+        pos=list(WORKSPACE_DEPTH_CAMERA_COLLISION_ORIGIN_M),
         size=[depth / 2.0, width / 2.0, height / 2.0],
-        mass=DEPTH_CAMERA_MASS_KG,
+        mass=WORKSPACE_DEPTH_CAMERA_MASS_KG,
         contype=1,
         conaffinity=1,
         rgba=[0.04, 0.05, 0.06, 1.0],
@@ -276,17 +295,51 @@ def _add_depth_camera(
     # MuJoCo cameras look along local -Z with local +Y as image-up. This
     # quaternion maps that optical convention to the enclosure's local +X.
     camera_body.add_camera(
-        name="front_depth_camera",
-        pos=[depth / 2.0 + 0.001, 0.0, 0.0],
+        name="workspace_depth_camera",
+        pos=[0.0, 0.0, 0.0],
         quat=[-0.5, -0.5, 0.5, 0.5],
-        fovy=DEPTH_CAMERA_VERTICAL_FOV_DEG,
+        fovy=WORKSPACE_DEPTH_CAMERA_VERTICAL_FOV_DEG,
     )
     camera_body.add_site(
-        name="front_depth_optical_frame",
+        name="workspace_depth_optical_frame",
+        type=mujoco.mjtGeom.mjGEOM_SPHERE,
+        pos=[0.0, 0.0, 0.0],
+        size=[0.004, 0.004, 0.004],
+        rgba=[0.1, 0.8, 1.0, 1.0],
+    )
+
+
+def _add_front_slam_depth_camera(
+    base_link: mujoco.MjsBody,
+) -> None:
+    """Add the centered, forward-looking Astra S on the Waffle front plate."""
+
+    camera_body = base_link.add_body(
+        name="front_slam_depth_camera_body",
+        pos=list(FRONT_SLAM_CAMERA_CENTER_M),
+    )
+    depth, width, height = FRONT_SLAM_CAMERA_SIZE_M
+    camera_body.add_geom(
+        name="front_slam_depth_camera_collision",
+        type=mujoco.mjtGeom.mjGEOM_BOX,
+        size=[depth / 2.0, width / 2.0, height / 2.0],
+        mass=FRONT_SLAM_CAMERA_MASS_KG,
+        contype=1,
+        conaffinity=1,
+        rgba=[0.08, 0.09, 0.10, 1.0],
+    )
+    camera_body.add_camera(
+        name="front_slam_depth_camera",
+        pos=[depth / 2.0 + 0.001, 0.0, 0.0],
+        quat=[-0.5, -0.5, 0.5, 0.5],
+        fovy=FRONT_SLAM_CAMERA_VERTICAL_FOV_DEG,
+    )
+    camera_body.add_site(
+        name="front_slam_depth_optical_frame",
         type=mujoco.mjtGeom.mjGEOM_SPHERE,
         pos=[depth / 2.0 + 0.001, 0.0, 0.0],
         size=[0.004, 0.004, 0.004],
-        rgba=[0.1, 0.8, 1.0, 1.0],
+        rgba=[0.2, 0.9, 0.6, 1.0],
     )
 
 
@@ -393,14 +446,20 @@ def _add_printed_mount_structure(
     )
 
     # Two short pads attach the RGB-D enclosure to the front torso wall.
-    camera_x, _, camera_z = DEPTH_CAMERA_CENTER_M
+    camera_x, _, camera_z = WORKSPACE_DEPTH_CAMERA_CENTER_M
     bracket_x = (
         arm_mount_x_m
         + 0.060
-        + (camera_x - DEPTH_CAMERA_SIZE_M[0] / 2.0 - (arm_mount_x_m + 0.060))
+        + (
+            camera_x
+            - WORKSPACE_DEPTH_CAMERA_SIZE_M[0] / 2.0
+            - (arm_mount_x_m + 0.060)
+        )
         / 2.0
     )
-    bracket_half_x = camera_x - DEPTH_CAMERA_SIZE_M[0] / 2.0 - bracket_x
+    bracket_half_x = (
+        camera_x - WORKSPACE_DEPTH_CAMERA_SIZE_M[0] / 2.0 - bracket_x
+    )
     for side, y in (("left", 0.060), ("right", -0.060)):
         mount_body.add_geom(
             name=f"depth_camera_mount_pad_{side}",
@@ -582,7 +641,7 @@ def _add_tower_mount_structure(
     )
     local_down_x = -math.sin(TOWER_CAMERA_DOWN_TILT_RAD)
     local_down_z = -math.cos(TOWER_CAMERA_DOWN_TILT_RAD)
-    camera_half_height = DEPTH_CAMERA_SIZE_M[2] / 2.0
+    camera_half_height = WORKSPACE_DEPTH_CAMERA_SIZE_M[2] / 2.0
     plate_offset = camera_half_height + plate_thickness / 2.0
     plate_center = [
         camera_x + local_down_x * plate_offset,
@@ -748,7 +807,7 @@ def build_spec(
             arm_mount_separation_m=arm_mount_separation_m,
             camera_center_m=camera_center_m,
         )
-        _add_depth_camera(
+        _add_workspace_depth_camera(
             base_link,
             center_m=camera_center_m,
             down_tilt_rad=TOWER_CAMERA_DOWN_TILT_RAD,
@@ -760,7 +819,8 @@ def build_spec(
             arm_mount_x_m=arm_mount_x_m,
             arm_mount_separation_m=arm_mount_separation_m,
         )
-        _add_depth_camera(base_link)
+        _add_workspace_depth_camera(base_link)
+    _add_front_slam_depth_camera(base_link)
     half_separation = arm_mount_separation_m / 2.0
     mounts = (
         (
@@ -970,15 +1030,22 @@ def validate_model(
         "original_rgb_camera_present": mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, "tb3_camera_link"
         ) >= 0,
-        "front_depth_camera_present": mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_CAMERA, "front_depth_camera"
+        "workspace_depth_camera_present": mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_CAMERA, "workspace_depth_camera"
+        ) >= 0,
+        "front_slam_camera_present": mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_CAMERA, "front_slam_depth_camera"
         ) >= 0,
         "mount_layout": mount_layout,
         "mount_estimated_mass_kg": mount_mass,
         "printed_mount_estimated_mass_kg": (
             None if tower_layout else PRINTED_MOUNT_ESTIMATED_MASS_KG
         ),
-        "depth_camera_assumed_mass_kg": DEPTH_CAMERA_MASS_KG,
+        "workspace_depth_camera_model": WORKSPACE_DEPTH_CAMERA_MODEL,
+        "workspace_depth_camera_urdf_source": WORKSPACE_DEPTH_CAMERA_URDF_SOURCE,
+        "workspace_depth_camera_mass_kg": WORKSPACE_DEPTH_CAMERA_MASS_KG,
+        "front_slam_camera_model": FRONT_SLAM_CAMERA_MODEL,
+        "front_slam_camera_mass_kg": FRONT_SLAM_CAMERA_MASS_KG,
         "waffle_top_mount_plane_z_m": WAFFLE_TOP_LOCAL_Z_M,
         "waffle_collision_proxy_top_z_m": WAFFLE_BASE_COLLISION_PROXY_TOP_Z_M,
         "wheel_actuators_present": False,

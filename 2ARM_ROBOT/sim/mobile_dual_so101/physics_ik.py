@@ -359,7 +359,7 @@ def _forbidden_contact_count(model: mujoco.MjModel, data: mujoco.MjData) -> int:
         arm_structure = any(
             name.startswith(("left_", "right_")) for name in body_names
         ) and any(
-            name == "depth_camera_collision" or name.startswith("tower_")
+            name.endswith("_depth_camera_collision") or name.startswith("tower_")
             for name in geom_names
         )
         if left_right or arm_structure:
