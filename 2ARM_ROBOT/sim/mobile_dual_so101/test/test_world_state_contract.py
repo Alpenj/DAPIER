@@ -147,6 +147,40 @@ class WorldStateContractTest(unittest.TestCase):
                 max_snapshot_age_ms=500.0,
             )
         )
+        stale_manipulator = replace(
+            state,
+            manipulator=replace(state.manipulator, observation_age_ms=201.0),
+        )
+        self.assertFalse(
+            stale_manipulator.fresh(
+                now_monotonic_ns=1_100_000_000,
+                max_snapshot_age_ms=200.0,
+            )
+        )
+
+    def test_component_age_includes_elapsed_snapshot_age_at_boundary(self) -> None:
+        state = snapshot()
+        at_limit = replace(
+            state,
+            manipulator=replace(state.manipulator, observation_age_ms=100.0),
+        )
+        over_limit = replace(
+            state,
+            manipulator=replace(state.manipulator, observation_age_ms=100.001),
+        )
+
+        self.assertTrue(
+            at_limit.fresh(
+                now_monotonic_ns=1_100_000_000,
+                max_snapshot_age_ms=200.0,
+            )
+        )
+        self.assertFalse(
+            over_limit.fresh(
+                now_monotonic_ns=1_100_000_000,
+                max_snapshot_age_ms=200.0,
+            )
+        )
 
     def test_tactile_summary_contains_fsr_alerts_not_raw_samples(self) -> None:
         left = TactileChannelStatus(

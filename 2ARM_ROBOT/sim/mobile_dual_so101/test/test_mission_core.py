@@ -77,6 +77,14 @@ class MissionCoreTest(unittest.TestCase):
         transitions.append(
             controller.dispatch(
                 self.event(
+                    MissionEventType.TRANSPORT_HOLD_RESULT,
+                    transport_hold_ok=True,
+                )
+            )
+        )
+        transitions.append(
+            controller.dispatch(
+                self.event(
                     MissionEventType.NAVIGATION_RESULT,
                     location=MissionLocation.A,
                     transport_hold_ok=True,
@@ -103,6 +111,7 @@ class MissionCoreTest(unittest.TestCase):
                 MissionPhase.LOCALIZING_SHOE,
                 MissionPhase.PICKING_AT_B,
                 MissionPhase.VERIFYING_GRASP,
+                MissionPhase.LATCHING_TRANSPORT_HOLD,
                 MissionPhase.NAVIGATING_TO_A,
                 MissionPhase.PLACING_AT_A,
                 MissionPhase.VERIFYING_PLACE,
@@ -111,11 +120,9 @@ class MissionCoreTest(unittest.TestCase):
         )
         self.assertEqual(
             transitions[4].commands,
-            (
-                MissionCommand.LATCH_TRANSPORT_HOLD,
-                MissionCommand.NAVIGATE_TO_A,
-            ),
+            (MissionCommand.LATCH_TRANSPORT_HOLD,),
         )
+        self.assertEqual(transitions[5].commands, (MissionCommand.NAVIGATE_TO_A,))
         self.assertTrue(
             all(not transition.hardware_execution for transition in transitions)
         )
@@ -135,7 +142,7 @@ class MissionCoreTest(unittest.TestCase):
                 observation_age_ms=101.0,
             )
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertEqual(transition.commands, (MissionCommand.SAFE_STOP,))
 
         duplicate = MissionController()
@@ -148,8 +155,40 @@ class MissionCoreTest(unittest.TestCase):
                 location=MissionLocation.B,
             )
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("sequence", transition.reason)
+
+    def test_safe_stop_requires_actuator_and_base_confirmation(self) -> None:
+        controller = MissionController()
+        requested = controller.dispatch(
+            self.event(
+                MissionEventType.FAULT,
+                success=False,
+                failure_code="watchdog",
+            )
+        )
+        self.assertEqual(requested.phase, MissionPhase.SAFE_STOP_REQUESTED)
+        self.assertEqual(requested.commands, (MissionCommand.SAFE_STOP,))
+
+        dropped = controller.dispatch(
+            self.event(
+                MissionEventType.SAFE_STOP_RESULT,
+                success=False,
+                failure_code="command_dropped",
+            )
+        )
+        self.assertEqual(dropped.phase, MissionPhase.SAFE_STOP_REQUESTED)
+        self.assertEqual(dropped.commands, (MissionCommand.SAFE_STOP,))
+
+        confirmed = controller.dispatch(
+            self.event(
+                MissionEventType.SAFE_STOP_RESULT,
+                actuators_stopped=True,
+                base_stationary=True,
+            )
+        )
+        self.assertEqual(confirmed.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(confirmed.commands, ())
 
     def test_base_arm_interlock_and_unexpected_event_fail_closed(self) -> None:
         moving = MissionController()
@@ -167,14 +206,14 @@ class MissionCoreTest(unittest.TestCase):
                 base_stationary=False,
             )
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("stationary", transition.reason)
 
         unexpected = MissionController()
         transition = unexpected.dispatch(
             self.event(MissionEventType.PICK_RESULT)
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("unexpected", transition.reason)
 
     def test_transport_hold_loss_during_return_fails_closed(self) -> None:
@@ -188,6 +227,12 @@ class MissionCoreTest(unittest.TestCase):
                 carry_pose_clear=True,
             )
         )
+        controller.dispatch(
+            self.event(
+                MissionEventType.TRANSPORT_HOLD_RESULT,
+                transport_hold_ok=True,
+            )
+        )
         transition = controller.dispatch(
             self.event(
                 MissionEventType.NAVIGATION_RESULT,
@@ -195,8 +240,68 @@ class MissionCoreTest(unittest.TestCase):
                 transport_hold_ok=False,
             )
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("transport hold", transition.reason)
+
+    def test_navigation_waits_for_healthy_transport_hold_ack(self) -> None:
+        def request_hold(controller: MissionController):
+            self.advance_to_grasp_verification(controller)
+            return controller.dispatch(
+                self.event(
+                    MissionEventType.GRASP_RESULT,
+                    object_lifted=True,
+                    gripper_holding=True,
+                    carry_pose_clear=True,
+                )
+            )
+
+        acknowledged = MissionController()
+        requested = request_hold(acknowledged)
+        self.assertEqual(requested.phase, MissionPhase.LATCHING_TRANSPORT_HOLD)
+        self.assertEqual(
+            requested.commands,
+            (MissionCommand.LATCH_TRANSPORT_HOLD,),
+        )
+        navigating = acknowledged.dispatch(
+            self.event(
+                MissionEventType.TRANSPORT_HOLD_RESULT,
+                transport_hold_ok=True,
+            )
+        )
+        self.assertEqual(navigating.phase, MissionPhase.NAVIGATING_TO_A)
+        self.assertEqual(navigating.commands, (MissionCommand.NAVIGATE_TO_A,))
+
+        no_ack = MissionController()
+        request_hold(no_ack)
+        rejected = no_ack.dispatch(
+            self.event(
+                MissionEventType.NAVIGATION_RESULT,
+                location=MissionLocation.A,
+            )
+        )
+        self.assertEqual(rejected.phase, MissionPhase.SAFE_STOP_REQUESTED)
+        self.assertNotIn(MissionCommand.NAVIGATE_TO_A, rejected.commands)
+
+        unhealthy = MissionController()
+        request_hold(unhealthy)
+        rejected = unhealthy.dispatch(
+            self.event(
+                MissionEventType.TRANSPORT_HOLD_RESULT,
+                transport_hold_ok=False,
+            )
+        )
+        self.assertEqual(rejected.phase, MissionPhase.SAFE_STOP_REQUESTED)
+        self.assertNotIn(MissionCommand.NAVIGATE_TO_A, rejected.commands)
+
+        commands = [
+            command
+            for transition in acknowledged.history
+            for command in transition.commands
+        ]
+        self.assertLess(
+            commands.index(MissionCommand.LATCH_TRANSPORT_HOLD),
+            commands.index(MissionCommand.NAVIGATE_TO_A),
+        )
 
     def test_navigation_retry_requires_settled_base(self) -> None:
         controller = MissionController()
@@ -211,7 +316,7 @@ class MissionCoreTest(unittest.TestCase):
                 failure_code="network_timeout",
             )
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("did not settle", transition.reason)
 
     def test_recovery_budget_is_bounded_and_reported(self) -> None:
@@ -255,7 +360,7 @@ class MissionCoreTest(unittest.TestCase):
                 failure_code="grasp_missed",
             )
         )
-        self.assertEqual(exhausted.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(exhausted.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertEqual(exhausted.retry_count, 3)
         self.assertIn("budget exhausted", exhausted.reason)
 
@@ -283,7 +388,7 @@ class MissionCoreTest(unittest.TestCase):
                 failure_code="network_timeout",
             )
         )
-        self.assertEqual(fault.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(fault.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("network_timeout", fault.reason)
 
     def test_invalid_event_and_terminal_state_contract(self) -> None:
@@ -304,6 +409,11 @@ class MissionCoreTest(unittest.TestCase):
                 observation_seq=0,
                 observation_age_ms=10.0,
             ).validate()
+        for field in ("success", "recoverable", "base_stationary", "carry_pose_clear"):
+            with self.subTest(field=field), self.assertRaisesRegex(
+                ValueError, "flags must be booleans"
+            ):
+                self.event(MissionEventType.START, **{field: 1}).validate()
 
         stopped = MissionController()
         stopped.dispatch(
@@ -311,6 +421,12 @@ class MissionCoreTest(unittest.TestCase):
                 MissionEventType.FAULT,
                 success=False,
                 failure_code="watchdog",
+            )
+        )
+        stopped.dispatch(
+            self.event(
+                MissionEventType.SAFE_STOP_RESULT,
+                actuators_stopped=True,
             )
         )
         terminal = stopped.dispatch(self.event(MissionEventType.START))

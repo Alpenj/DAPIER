@@ -76,6 +76,15 @@ class TactileMissionIntegrationTest(unittest.TestCase):
                 tactile_contact=True,
             )
         )
+        self.assertEqual(transition.phase, MissionPhase.LATCHING_TRANSPORT_HOLD)
+        transition = controller.dispatch(
+            self.event(
+                MissionEventType.TRANSPORT_HOLD_RESULT,
+                transport_hold_ok=True,
+                tactile_available=True,
+                tactile_contact=True,
+            )
+        )
         self.assertEqual(transition.phase, MissionPhase.NAVIGATING_TO_A)
         self.assertTrue(controller.carrying)
 
@@ -92,6 +101,14 @@ class TactileMissionIntegrationTest(unittest.TestCase):
                 tactile_contact=True,
             )
         )
+        controller.dispatch(
+            self.event(
+                MissionEventType.TRANSPORT_HOLD_RESULT,
+                transport_hold_ok=True,
+                tactile_available=True,
+                tactile_contact=True,
+            )
+        )
         transition = controller.dispatch(
             self.event(
                 MissionEventType.NAVIGATION_RESULT,
@@ -101,7 +118,7 @@ class TactileMissionIntegrationTest(unittest.TestCase):
                 tactile_slip=True,
             )
         )
-        self.assertEqual(transition.phase, MissionPhase.SAFE_STOPPED)
+        self.assertEqual(transition.phase, MissionPhase.SAFE_STOP_REQUESTED)
         self.assertIn("transport hold", transition.reason)
 
     def test_tactile_measurement_without_available_sensor_is_invalid(self) -> None:

@@ -77,23 +77,29 @@ def _object_id(
 
 
 def _add_gripper_cameras(spec: mujoco.MjSpec) -> None:
-    # Provisional optical pose: local +X look direction, small +Z clearance.
-    optical_quaternion = [-0.5, -0.5, 0.5, 0.5]
+    """Normalize source wrist cameras or add the pinned asset's missing pair."""
+
     for side in ("left", "right"):
-        gripper = spec.body(f"{side}_gripper")
-        gripper.add_camera(
-            name=f"{side}_gripper_camera",
-            pos=[0.045, 0.0, 0.018],
-            quat=optical_quaternion,
-            fovy=65.0,
+        camera = next(
+            (
+                spec.camera(f"{side}_{source_name}")
+                for source_name in ("wrist_cam", "wrist_camera_sensor", "wrist")
+                if spec.camera(f"{side}_{source_name}") is not None
+            ),
+            None,
         )
-        gripper.add_site(
-            name=f"{side}_gripper_camera_optical_frame",
-            type=mujoco.mjtGeom.mjGEOM_SPHERE,
-            pos=[0.045, 0.0, 0.018],
-            size=[0.002, 0.002, 0.002],
-            rgba=[0.9, 0.3, 0.1, 0.8],
-        )
+        if camera is None:
+            gripper = spec.body(f"{side}_gripper")
+            if gripper is None:
+                raise RuntimeError(f"source {side} gripper body is missing")
+            gripper.add_camera(
+                name=f"{side}_gripper_camera",
+                pos=[0.045, 0.0, 0.018],
+                quat=[-0.5, -0.5, 0.5, 0.5],
+                fovy=65.0,
+            )
+        else:
+            camera.name = f"{side}_gripper_camera"
 
 
 def build_mobile_shoe_mission_model(
@@ -349,9 +355,9 @@ class MuJoCoMultiCameraAdapter:
 
     def capture(self) -> MultiCameraFrameSet:
         sim_timestamp_ns = max(0, int(round(float(self.data.time) * 1e9)))
-        received_ns = self._clock_ns()
-        if isinstance(received_ns, bool) or not isinstance(received_ns, int):
-            raise ValueError("camera clock must return an integer nanosecond value")
+        received_ns = self._clock_now_ns()
+        if self._last_received_ns is not None and received_ns < self._last_received_ns:
+            raise RuntimeError("camera monotonic clock regressed")
         frames: list[CameraFrame] = []
         for role in CameraRole:
             camera_name = CAMERA_NAMES[role]
@@ -378,7 +384,7 @@ class MuJoCoMultiCameraAdapter:
                     role=role,
                     modality=CameraModality.RGB,
                     frame_id=self._sequence,
-                    optical_frame=f"{side}_gripper_camera_optical_frame",
+                    optical_frame=camera_name,
                     calibration_id=f"mujoco-{side}-gripper-rgb-v1",
                     width=self.width,
                     height=self.height,
@@ -398,7 +404,10 @@ class MuJoCoMultiCameraAdapter:
         return frame_set
 
     def read_health(self) -> CameraRigHealth:
-        now_ns = self._clock_ns()
+        now_ns = self._clock_now_ns()
+        clock_regressed = (
+            self._last_received_ns is not None and now_ns < self._last_received_ns
+        )
         last_age_ms = (
             1_000_000_000.0
             if self._last_received_ns is None
@@ -408,12 +417,16 @@ class MuJoCoMultiCameraAdapter:
             CameraStreamHealth(
                 role=role,
                 enabled=True,
-                online=self._last_received_ns is not None,
+                online=self._last_received_ns is not None and not clock_regressed,
                 calibration_loaded=True,
                 dropped_frames=0,
                 last_frame_age_ms=last_age_ms,
                 time_sync_error_ms=0.0,
-                error_code="" if self._last_received_ns is not None else "no_frame_yet",
+                error_code=(
+                    "clock_regressed"
+                    if clock_regressed
+                    else "" if self._last_received_ns is not None else "no_frame_yet"
+                ),
             )
             for role in CameraRole
         )
@@ -423,6 +436,12 @@ class MuJoCoMultiCameraAdapter:
 
     def close(self) -> None:
         self._renderer.close()
+
+    def _clock_now_ns(self) -> int:
+        value = self._clock_ns()
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError("camera clock must return non-negative integer nanoseconds")
+        return value
 
     def _render_rgb(self, camera_name: str) -> np.ndarray:
         self._renderer.disable_depth_rendering()

@@ -101,6 +101,13 @@ class ManipulatorContractTest(unittest.TestCase):
                 max_observation_age_ms=100.0
             )
         )
+        self.assertFalse(
+            status(collision_free=False).verified_carry(
+                max_observation_age_ms=100.0
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "finite and positive"):
+            status().verified_carry(max_observation_age_ms=float("inf"))
 
     def test_contract_imports_no_runtime_backend(self) -> None:
         tree = ast.parse(

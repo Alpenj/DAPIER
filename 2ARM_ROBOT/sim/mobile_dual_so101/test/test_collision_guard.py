@@ -89,6 +89,73 @@ class CollisionGuardTest(unittest.TestCase):
             second_body.startswith("left_"),
         )
 
+    def test_every_moving_arm_geom_is_protected_from_every_base_geom(self) -> None:
+        pairs = set(protected_geom_pairs(self.model))
+        body_names = tuple(
+            self.model.body(int(self.model.geom_bodyid[geom_id])).name
+            for geom_id in range(self.model.ngeom)
+        )
+        arm_geoms = tuple(
+            geom_id
+            for geom_id, body_name in enumerate(body_names)
+            if self.model.geom_contype[geom_id]
+            and body_name.startswith(("left_", "right_"))
+        )
+        base_geoms = tuple(
+            geom_id
+            for geom_id, body_name in enumerate(body_names)
+            if self.model.geom_contype[geom_id] and body_name.startswith("tb3_")
+        )
+        arm_body_names = {body_names[geom_id] for geom_id in arm_geoms}
+        for side in ("left", "right"):
+            for link in (
+                "shoulder",
+                "upper_arm",
+                "lower_arm",
+                "wrist",
+                "gripper",
+                "moving_jaw_so101_v1",
+            ):
+                self.assertIn(f"{side}_{link}", arm_body_names)
+        self.assertEqual(len(arm_geoms), 26)
+        self.assertEqual(len(base_geoms), 5)
+        self.assertFalse(
+            {
+                (arm_geom, base_geom)
+                for arm_geom in arm_geoms
+                for base_geom in base_geoms
+            }
+            - pairs
+        )
+
+    def test_same_arm_non_adjacent_pairs_are_protected(self) -> None:
+        body_pairs = {
+            frozenset(
+                self.model.body(int(self.model.geom_bodyid[geom_id])).name
+                for geom_id in pair
+            )
+            for pair in protected_geom_pairs(self.model)
+        }
+        omitted_body_pairs = (
+            ("left_shoulder", "left_wrist"),
+            ("left_upper_arm", "left_gripper"),
+            ("left_lower_arm", "left_moving_jaw_so101_v1"),
+            ("right_shoulder", "right_wrist"),
+            ("right_upper_arm", "right_gripper"),
+            ("right_lower_arm", "right_moving_jaw_so101_v1"),
+        )
+        for pair in omitted_body_pairs:
+            self.assertIn(frozenset(pair), body_pairs)
+        for side in ("left", "right"):
+            self.assertIn(
+                frozenset((f"{side}_shoulder", f"{side}_gripper")),
+                body_pairs,
+            )
+            self.assertNotIn(
+                frozenset((f"{side}_shoulder", f"{side}_upper_arm")),
+                body_pairs,
+            )
+
     def test_step_support_home_protects_base_column_and_bare_camera(self) -> None:
         tower_model, _ = build_model(
             arm_mount_height_m=TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M,

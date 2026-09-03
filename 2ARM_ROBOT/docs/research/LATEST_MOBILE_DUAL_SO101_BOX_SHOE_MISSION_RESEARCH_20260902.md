@@ -4,7 +4,7 @@
 - 작업 브랜치: `pro/mujoco-shoe-mission-01`
 - 검토 PR: [#40](https://github.com/Alpenj/DAPIER/pull/40) — Draft, merge 금지
 - 선행 PR: [#39](https://github.com/Alpenj/DAPIER/pull/39) — merge 완료
-- 일정 원본: [DAPIER 회의록 Excel](https://onedrive.live.com/:x:/g/personal/ed17c70026b6da7b/IQBhTYnxx6CjTI5XsmttGkJ_ASp5nQ8XzK_0wZVx0keWBSs)
+- 일정 원본: 비공개 일정 기록
 
 ## 1. 목표 미션
 
@@ -182,14 +182,14 @@ episode 단위로 나누며 같은 run의 frame이 train/validation에 동시에
 | 09-10 | prototype 내부 동결 | 151/151 + E2E acceptance evidence |
 | 09-11 | 완충일 | 실기 연결·회귀·문서 보완만 수행 |
 
-## 9. 전형주 담당 실행안
+## 9. 시뮬레이션 담당 실행안
 
-전형주의 1차 책임은 `시뮬레이션이 실행된다`가 아니라 `시뮬레이션에서 검증한 동작·데이터·실패 조건을
+시뮬레이션 담당자의 1차 책임은 `시뮬레이션이 실행된다`가 아니라 `시뮬레이션에서 검증한 동작·데이터·실패 조건을
 실기 담당자가 재사용할 수 있다`까지다.
 
 ### 책임 범위
 
-| 책임 | 전형주가 할 일 | 완료 산출물 |
+| 책임 | 시뮬레이션 담당자가 할 일 | 완료 산출물 |
 |---|---|---|
 | MuJoCo scene | 실측 박스, lid/wing hinge, cuboid shoe, dual SO-101, camera/tactile site 유지 | versioned scene config와 headless load test |
 | 양팔 task | right open/hold + left approach/grasp/extract 동시 제약 | deterministic mission script와 state/event trace |
@@ -248,13 +248,13 @@ episode 단위로 나누며 같은 run의 frame이 train/validation에 동시에
 
 ### 팀원 인수인계 계약
 
-| 상대 | 전형주가 받을 것 | 전형주가 줄 것 |
+| 상대 | 시뮬레이션 담당자가 받을 것 | 시뮬레이션 담당자가 줄 것 |
 |---|---|---|
-| SLAM 담당 서장우·신예담 | `arrived_B`, base pose/covariance, stationary flag, relocalization failure | manipulation-ready pose tolerance, stop/settle 시간, base placement 실패 범위 |
-| 실기 담당 조태진 | joint zero/range, motor current/temp/error, camera serial/intrinsics/extrinsics, FSR raw sample | 동일 이름의 sim schema, expected trajectory, 안전 limit 후보, 실기 비교 plot |
+| SLAM 담당자 | `arrived_B`, base pose/covariance, stationary flag, relocalization failure | manipulation-ready pose tolerance, stop/settle 시간, base placement 실패 범위 |
+| 실기 담당자 | joint zero/range, motor current/temp/error, camera serial/intrinsics/extrinsics, FSR raw sample | 동일 이름의 sim schema, expected trajectory, 안전 limit 후보, 실기 비교 plot |
 | 전체 팀 | 요구 변경, 성공 기준, 현장 실패 영상/로그 | PR, 재현 명령, run artifact, 10분 브리핑, Notion 결정 기록 |
 
-### 전형주가 하지 말아야 할 것
+### 시뮬레이션 담당자가 하지 말아야 할 것
 
 - 시각적으로 자연스러워 보인다는 이유만으로 contact/lift assertion 없이 완료 처리
 - IK residual만으로 경로 성공을 주장

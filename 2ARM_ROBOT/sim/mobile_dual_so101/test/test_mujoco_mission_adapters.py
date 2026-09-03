@@ -20,6 +20,7 @@ from mujoco_mission_adapters import (
     MOBILE_BASE_FREE_JOINT,
     MuJoCoMobilityAdapter,
     MuJoCoMultiCameraAdapter,
+    _add_gripper_cameras,
     build_mobile_shoe_mission_model,
 )
 
@@ -54,7 +55,29 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
                 ),
                 0,
             )
+        self.assertNotIn(
+            "left_gripper_camera_optical_frame",
+            {self.model.site(site_id).name for site_id in range(self.model.nsite)},
+        )
         self.assertEqual(self.model.nu, 12)
+
+    def test_existing_source_wrist_cameras_are_reused(self) -> None:
+        spec = mujoco.MjSpec()
+        for side in ("left", "right"):
+            body = spec.worldbody.add_body(name=f"{side}_gripper")
+            body.add_camera(name=f"{side}_wrist_cam")
+        _add_gripper_cameras(spec)
+        model = spec.compile()
+        self.assertEqual(model.ncam, 2)
+        for side in ("left", "right"):
+            self.assertGreaterEqual(
+                mujoco.mj_name2id(
+                    model,
+                    mujoco.mjtObj.mjOBJ_CAMERA,
+                    f"{side}_gripper_camera",
+                ),
+                0,
+            )
 
     def test_differential_drive_reaches_translation_and_yaw_goals(self) -> None:
         adapter = MuJoCoMobilityAdapter(self.model, self.data)
@@ -133,6 +156,18 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
                 len(frames.frame(CameraRole.FRONT_RGBD).depth_m_le_f32),
                 32 * 24 * 4,
             )
+            self.assertEqual(
+                frames.frame(CameraRole.FRONT_RGBD).optical_frame,
+                "front_depth_optical_frame",
+            )
+            for role in (
+                CameraRole.LEFT_GRIPPER_RGB,
+                CameraRole.RIGHT_GRIPPER_RGB,
+            ):
+                self.assertEqual(
+                    frames.frame(role).optical_frame,
+                    CAMERA_NAMES[role],
+                )
             health = adapter.read_health()
             self.assertTrue(
                 health.operational(
@@ -141,6 +176,33 @@ class MuJoCoMissionAdapterTest(unittest.TestCase):
                     max_time_sync_error_ms=1.0,
                 )
             )
+        finally:
+            adapter.close()
+
+    def test_camera_clock_regression_fails_health_closed(self) -> None:
+        clock_values = iter((2_000_000_000, 1_999_999_999, 1_999_999_998))
+        adapter = MuJoCoMultiCameraAdapter(
+            self.model,
+            self.data,
+            width=32,
+            height=24,
+            clock_ns=lambda: next(clock_values),
+        )
+        try:
+            adapter.capture()
+            health = adapter.read_health()
+            self.assertFalse(
+                health.operational(
+                    frozenset(CameraRole),
+                    max_frame_age_ms=1.0,
+                    max_time_sync_error_ms=1.0,
+                )
+            )
+            self.assertTrue(
+                all(stream.error_code == "clock_regressed" for stream in health.streams)
+            )
+            with self.assertRaisesRegex(RuntimeError, "clock regressed"):
+                adapter.capture()
         finally:
             adapter.close()
 

@@ -55,6 +55,24 @@ class TransportContractTest(unittest.TestCase):
         self.assertEqual(mismatch.status, AckStatus.OUT_OF_ORDER)
         self.assertTrue(mismatch.requires_safe_state)
 
+    def test_untyped_transport_input_returns_invalid_safe_ack(self) -> None:
+        gate = CommandSequenceGate()
+        malformed = (
+            None,
+            command(sequence="1"),
+            command(request_id=1),
+            command(ttl_ms=True),
+            command(payload_digest=1),
+        )
+        for envelope in malformed:
+            with self.subTest(envelope=envelope):
+                ack = gate.inspect(envelope, now_monotonic_ns=1_010_000_000)
+                self.assertEqual(ack.status, AckStatus.INVALID)
+                self.assertTrue(ack.requires_safe_state)
+        invalid_clock = gate.inspect(command(), now_monotonic_ns=True)
+        self.assertEqual(invalid_clock.status, AckStatus.INVALID)
+        self.assertTrue(invalid_clock.requires_safe_state)
+
     def test_expired_and_out_of_order_commands_require_safe_state(self) -> None:
         gate = CommandSequenceGate()
         expired = gate.inspect(command(), now_monotonic_ns=1_101_000_000)

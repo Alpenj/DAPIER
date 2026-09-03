@@ -163,9 +163,15 @@ class ManipulatorStatus:
         )
 
     def verified_carry(self, *, max_observation_age_ms: float) -> bool:
+        if (
+            not math.isfinite(max_observation_age_ms)
+            or max_observation_age_ms <= 0
+        ):
+            raise ValueError("max_observation_age_ms must be finite and positive")
         self.validate()
         return (
             self.trajectory_complete
+            and self.collision_free
             and self.object_lifted
             and (self.left.gripper_holding or self.right.gripper_holding)
             and self.carry_pose_clear

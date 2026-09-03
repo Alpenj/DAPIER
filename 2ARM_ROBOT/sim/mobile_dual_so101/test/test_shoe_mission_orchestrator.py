@@ -51,6 +51,7 @@ class ShoeMissionOrchestratorTest(unittest.TestCase):
                 "localizing_shoe",
                 "picking_at_b",
                 "verifying_grasp",
+                "latching_transport_hold",
                 "navigating_to_a",
                 "placing_at_a",
                 "verifying_place",
@@ -62,6 +63,7 @@ class ShoeMissionOrchestratorTest(unittest.TestCase):
         self.assertLess(abs(yaw_rad), 0.04)
 
     def test_ik_and_collision_plan_are_accepted(self) -> None:
+        self.assertEqual(self.scenario.required_clearance_m, 0.030)
         self.assertTrue(self.report.ik_converged)
         self.assertLessEqual(
             self.report.ik_residual_m,

@@ -34,6 +34,15 @@ class GraspCandidateAssessment:
     def validate(self) -> None:
         if not isinstance(self.mode, GraspMode):
             raise ValueError("mode must be a GraspMode")
+        if not all(
+            isinstance(value, bool)
+            for value in (self.ik_converged, self.collision_path_safe)
+        ):
+            raise ValueError("candidate flags must be booleans")
+        if isinstance(self.tactile_channels, bool) or not isinstance(
+            self.tactile_channels, int
+        ):
+            raise ValueError("tactile_channels must be an integer")
         finite_nonnegative = (
             self.ik_residual_m,
             self.minimum_clearance_m,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import sys
 import unittest
@@ -89,6 +90,18 @@ class GraspPlannerTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "requires 2"):
             invalid.validate()
+
+    def test_candidate_flags_and_channel_count_require_exact_types(self) -> None:
+        valid = candidate(GraspMode.SINGLE_LEFT)
+        valid.validate()
+        for field, value in (
+            ("ik_converged", 1),
+            ("collision_path_safe", 1),
+            ("tactile_channels", True),
+        ):
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):
+                    replace(valid, **{field: value}).validate()
 
 
 if __name__ == "__main__":
