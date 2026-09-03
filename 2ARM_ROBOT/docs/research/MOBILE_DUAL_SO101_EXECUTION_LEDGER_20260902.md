@@ -374,8 +374,9 @@ SDK 기반 depth unit, CameraInfo, 장시간 stream 안정성은 아직 확인�
 MuJoCo tower에는 H201을 `(-0.064, 0, 0.550) m`, 아래 27도로 유지했다. 공식 R77 URDF의
 25.5 x 90 x 25 mm collision, x=-8.05 mm origin, 0.096 kg을 사용했다. 처음에는 Astra를
 기둥과 H201 frame의 높이 사이로 잘못 해석했으나, 사용자가 제공한 실물 정면·상단 사진으로
-정정했다. Astra S는 공식 Waffle Pi camera optical X=76 mm를 기준으로 TurtleBot3 전면
-상판에 바닥이 닿고 좌우 중앙이 되도록 외형 중심 `(0.055, 0, 0.1155) m`에 배치했다.
+정정했다. Astra S는 공식 Waffle Pi camera RGB optical frame `(0.076, 0, 0.093) m`을
+기준으로 TurtleBot3 전면 카메라 고정 프레임에 붙이고 좌우 중앙이 되도록 배치했다.
+Astra 외형 중심은 `(0.055, 0, 0.093) m`이다.
 Astra envelope는 기존에 사용하던 40 x 165 x 48 mm, 0.310 kg이고 정면 수평이다.
 
 camera_io 계약도 `front_rgbd`, `workspace_rgbd`, 좌·우 `gripper_rgb`의 4개 역할로
@@ -475,3 +476,21 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 `dual_so101_smoke`에는 다음 실측을 위해 health snapshot과 shoulder-pan trace의
 `Present_Load`, `Present_Current` raw 기록을 추가했다. fake bus 단위 테스트와 전체
 155개 회귀는 통과했지만, 이번 단계에서는 실물 serial port를 열지 않았으므로 실제 값은 아직 없다.
+
+
+## SIM-HW 비교 · 양팔 ±3도 왕복 · 위치 응답 근접, dynamics gate 실패
+
+2026-09-03 실물 smoke의 상대 이동을 MuJoCo에서 같은 20 Hz 명령으로 직접 재생했다.
+30개의 50 ms 선형 목표로 왼쪽 shoulder-pan은 +3도, 오른쪽은 -3도 이동한 뒤 같은 방식으로
+복귀했다. 새 실물 접근은 하지 않았고 기존 비식별 evidence만 입력으로 사용했다.
+
+| 팔 | MuJoCo excursion | 실측 excursion | 절대 차이 | MuJoCo 잔류 | 실측 잔류 |
+|---|---:|---:|---:|---:|---:|
+| 왼쪽 | +3.000도 | +2.549도 | 0.450도 | +0.0005도 | +0.264도 |
+| 오른쪽 | -2.999도 | -2.725도 | 0.274도 | +0.0005도 | -0.352도 |
+
+두 구간 모두 finite state이고 금지 contact는 0이었다. 하지만 50 ms마다 바뀌는 step target 때문에
+actual acceleration과 finite-difference jerk 제한을 넘었고 `strict_dynamics_gate_passed=false`이다.
+최대 actuator force ratio도 outbound 0.520, inbound 0.520으로 기록됐다. 따라서 이 비교는 작은
+상대 위치 응답이 비슷하다는 증거일 뿐, 전체 양팔 동작 또는 실물 실행 승인 근거가 아니다.
+재현 결과는 `docs/evidence/dual_so101_sim_real_comparison_20260903.json`에 저장했다.

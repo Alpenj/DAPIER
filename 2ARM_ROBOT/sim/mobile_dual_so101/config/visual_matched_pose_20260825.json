@@ -21,11 +21,12 @@
   },
   "tower_front_slam_depth_camera": {
     "identity_status": "Orbbec Astra S",
-    "mount_datum_m": [0.055, 0.0, 0.1155],
+    "optical_center_m": [0.076, 0.0, 0.093],
+    "body_center_m": [0.055, 0.0, 0.093],
     "collision_size_m": [0.040, 0.165, 0.048],
     "mass_kg": 0.310,
     "view": "forward level",
-    "placement": "centered on TurtleBot3 front top plate; enclosure bottom at plate Z=0.0915 m"
+    "placement": "centered on the TurtleBot3 front camera bracket"
   },
   "action_order": [
     "left_shoulder_pan",

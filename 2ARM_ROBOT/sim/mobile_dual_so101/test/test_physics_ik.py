@@ -178,6 +178,28 @@ class PhysicsIKTest(unittest.TestCase):
         self.assertEqual(report.forbidden_contact_count, 0)
         self.assertFalse(report.hardware_execution)
 
+    def test_physics_trajectory_can_continue_from_previous_leg(self) -> None:
+        peak = np.asarray(HUMANOID_HOME_ACTION, dtype=float)
+        peak[0] += 0.02
+        outbound = plan_septic_joint_trajectory(
+            self.model, HUMANOID_HOME_ACTION, peak
+        )
+        data, _ = execute_physics_trajectory(self.model, outbound)
+        inbound = plan_septic_joint_trajectory(
+            self.model, peak, HUMANOID_HOME_ACTION
+        )
+
+        final_data, report = execute_physics_trajectory(
+            self.model,
+            inbound,
+            initial_data=data,
+            pre_settle_time_s=0.0,
+        )
+
+        self.assertIs(final_data, data)
+        self.assertEqual(report.runtime_qpos_writes, 0)
+        self.assertLess(report.final_tracking_error_rad, 0.001)
+
     def test_invalid_motion_contract_fails_closed(self) -> None:
         with self.assertRaisesRegex(ValueError, "finite and positive"):
             MotionLimits(max_velocity_rad_s=0.0).validate()

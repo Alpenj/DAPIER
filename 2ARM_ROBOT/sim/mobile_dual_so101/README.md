@@ -40,8 +40,8 @@ plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 �
 - SO-101 arm frame: `(-64, +/-93.4, 387.686186) mm`; mesh/XML/holder 회전을
   역산해 teardrop hole 중심을 holder 최상단에 맞춤
 - H201 top-view body center: 전용 mast 위 `(-64, 0, 550) mm`, 아래 27도
-- Astra S front-SLAM body center: TurtleBot3 전면 상판
-  `(55, 0, 115.5) mm`, 정면 수평
+- Astra S front-SLAM optical center: TurtleBot3 전면 카메라 고정 프레임
+  `(76, 0, 93) mm`; body center `(55, 0, 93) mm`, 정면 수평
 - 중심 광선의 바닥 교차점: 로봇 전방 약 1.035 m
 - 수직 FOV의 바닥 교차 범위: 약 0.421~7.362 m
 - 중앙 지지대 가정 질량: 1.50 kg; H201 0.096 kg와 Astra S 0.310 kg은 별도
@@ -59,9 +59,9 @@ H201은 팔 위치를 바꾸지 않고
 중앙의 24 x 30 mm 전용 mast와 50 x 60 x 6 mm 경사 interface plate 위 Z=550 mm로
 올린다. R77 모델과 URDF hole frame은 확인했지만 실제 중앙 체결 위치는 측정 필요 datum이며,
 최종 볼트 규격·hole 사용 방식·mounted extrinsic과 STEP 실제 재료/질량은 확정값이 아니다.
-Astra S는 실물 사진과 공식 Waffle Pi camera optical X=76 mm를 기준으로 TurtleBot3 전면
-상판에 직접 둔다. 외형 바닥은 상판 Z=91.5 mm에 맞고 좌우 Y=0으로 정렬한다. 실물 체결 후
-정확한 optical extrinsic을 다시 잰다.
+Astra S는 실물 사진처럼 TurtleBot3 전면 카메라 고정 프레임에 붙인다. 공식 Waffle Pi의
+camera RGB optical frame `(76, 0, 93) mm`에 Astra 전면 광학 중심을 맞추고 좌우 Y=0으로
+정렬한다. 실물 체결 후 정확한 optical extrinsic을 다시 잰다.
 
 현재 두 RGB-D를 포함한 home 자세의 보호 형상 최소 간격은 약 37.6 mm다. 하지만 전체 joint range의
 무작위 10,000자세에서는 18개가 30 mm clearance를 위반했으므로 unrestricted motion은

@@ -25,6 +25,7 @@ from mobile_dual_so101 import (
     ASSEMBLED_SUPPORT_UPPER_SOURCE_STL,
     ASSEMBLED_SUPPORT_UPPER_STL,
     FRONT_SLAM_CAMERA_CENTER_M,
+    FRONT_SLAM_CAMERA_OPTICAL_CENTER_M,
     FRONT_SLAM_CAMERA_MASS_KG,
     FRONT_SLAM_CAMERA_SIZE_M,
     HUMANOID_HOME_ACTION,
@@ -391,7 +392,7 @@ class TowerLayoutTest(unittest.TestCase):
             np.asarray(TOWER_CAMERA_INTERFACE_PLATE_SIZE_M) / 2.0,
         )
 
-    def test_astra_is_centered_on_turtlebot_front_plate(self) -> None:
+    def test_astra_is_centered_on_turtlebot_front_camera_bracket(self) -> None:
         astra_body = mujoco.mj_name2id(
             self.model,
             mujoco.mjtObj.mjOBJ_BODY,
@@ -402,12 +403,15 @@ class TowerLayoutTest(unittest.TestCase):
             self.model.body_pos[astra_body],
             FRONT_SLAM_CAMERA_CENTER_M,
         )
-        self.assertAlmostEqual(
-            float(
-                self.model.body_pos[astra_body, 2]
-                - self.model.geom_size[astra_geom, 2]
-            ),
-            WAFFLE_TOP_LOCAL_Z_M,
+        optical_site = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_SITE,
+            "front_slam_depth_optical_frame",
+        )
+        np.testing.assert_allclose(
+            self.model.body_pos[astra_body]
+            + self.model.site_pos[optical_site],
+            FRONT_SLAM_CAMERA_OPTICAL_CENTER_M,
         )
         np.testing.assert_allclose(
             self.model.geom_size[astra_geom],

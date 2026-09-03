@@ -17,7 +17,8 @@ MuJoCo의 회색/파란색 mount geom은 구조를 이해하기 위한 collision
 - top-view RGB-D: eYs3D R77 공식 URDF 기준 25.5 x 90 x 25 mm, 0.096 kg,
   tower 중앙 (-0.064, 0, 0.550) m, 아래 27도
 - front Visual-SLAM RGB-D: Astra S 40 x 165 x 48 mm, 0.310 kg,
-  TurtleBot3 전면 상판 (0.055, 0, 0.1155) m, 정면 수평
+  TurtleBot3 전면 카메라 고정 프레임, optical center (0.076, 0, 0.093) m,
+  body center (0.055, 0, 0.093) m, 정면 수평
 - 출력 구조 가정 질량: 0.90 kg
 - Waffle 상판 local Z: 0.094 m
 - 8 mm deck 하단 local Z: 0.094 m (의도한 접촉, 공중 간격 없음)

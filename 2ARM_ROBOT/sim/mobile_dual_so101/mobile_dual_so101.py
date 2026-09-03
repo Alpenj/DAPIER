@@ -87,12 +87,15 @@ FRONT_SLAM_CAMERA_MODEL = "Orbbec Astra S"
 FRONT_SLAM_CAMERA_SIZE_M = (0.040, 0.165, 0.048)  # depth, width, height
 FRONT_SLAM_CAMERA_MASS_KG = 0.310
 FRONT_SLAM_CAMERA_VERTICAL_FOV_DEG = 45.5
-# The stock camera optical frame is X=0.076 m and centered at Y=0. The Astra
-# enclosure sits on the Waffle top plate with its front optical face there.
+# Keep the Astra attached to the TurtleBot3 front camera bracket. The stock
+# camera RGB optical frame is (0.076, 0, 0.093) m in base_link coordinates.
+FRONT_SLAM_CAMERA_OPTICAL_CENTER_M = (0.076, 0.0, 0.093)
 FRONT_SLAM_CAMERA_CENTER_M = (
-    0.076 - FRONT_SLAM_CAMERA_SIZE_M[0] / 2.0 - 0.001,
-    0.0,
-    WAFFLE_TOP_LOCAL_Z_M + FRONT_SLAM_CAMERA_SIZE_M[2] / 2.0,
+    FRONT_SLAM_CAMERA_OPTICAL_CENTER_M[0]
+    - FRONT_SLAM_CAMERA_SIZE_M[0] / 2.0
+    - 0.001,
+    FRONT_SLAM_CAMERA_OPTICAL_CENTER_M[1],
+    FRONT_SLAM_CAMERA_OPTICAL_CENTER_M[2],
 )
 PRINTED_MOUNT_ESTIMATED_MASS_KG = 0.90
 SO101_BASE_LARGE_HOLE_MESH_SHA256 = (
@@ -312,7 +315,7 @@ def _add_workspace_depth_camera(
 def _add_front_slam_depth_camera(
     base_link: mujoco.MjsBody,
 ) -> None:
-    """Add the centered, forward-looking Astra S on the Waffle front plate."""
+    """Attach the centered, forward-looking Astra S to the Waffle bracket."""
 
     camera_body = base_link.add_body(
         name="front_slam_depth_camera_body",

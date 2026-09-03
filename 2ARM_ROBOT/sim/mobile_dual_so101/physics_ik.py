@@ -442,6 +442,7 @@ def execute_physics_trajectory(
     model: mujoco.MjModel,
     trajectory: SepticJointTrajectory,
     *,
+    initial_data: mujoco.MjData | None = None,
     pre_settle_time_s: float = 0.50,
     settle_time_s: float = 0.25,
     required_clearance_m: float = 0.030,
@@ -463,8 +464,19 @@ def execute_physics_trajectory(
             f"clearance={collision.minimum_clearance_m:.6f} m"
         )
 
-    data = initialize_physics_state(model, trajectory.start_rad)
     _, qpos_addresses, dof_addresses = _actuated_addresses(model)
+    data = initial_data or initialize_physics_state(model, trajectory.start_rad)
+    if initial_data is not None:
+        if (
+            data.qpos.shape != (model.nq,)
+            or data.qvel.shape != (model.nv,)
+            or data.ctrl.shape != (model.nu,)
+        ):
+            raise ValueError("initial_data dimensions do not match model")
+        if not np.all(np.isfinite(data.qpos)):
+            raise ValueError("initial_data contains non-finite qpos")
+        if np.max(np.abs(data.qpos[qpos_addresses] - trajectory.start_rad)) > 0.10:
+            raise ValueError("initial_data is not near trajectory start")
     timestep = float(model.opt.timestep)
     pre_settle_steps = math.ceil(pre_settle_time_s / timestep)
     motion_steps = max(1, math.ceil(trajectory.duration_s / timestep))
