@@ -107,6 +107,10 @@ ROS2를 제거했다고 주장하려면 TF, replay, visualization, discovery/QoS
 5. 오른팔은 뚜껑 open/hold, 왼팔은 shoe grasp/extract를 수행한다.
 6. tactile contact·slip과 motor current를 사용해 파지 상태를 닫힌고리로 보정한다.
 
+현재 IK는 MuJoCo 양팔 경로에서 실행·검증 중이고, IL은 ACT 데이터·checkpoint·safety dry-run 경계까지 구현됐다.
+실제 RGB-D 관측을 받은 학습 policy의 제한된 목표/보정 proposal을 양팔 IK와 충돌 검사에 연결한 뒤에만
+`IL + IK 통합 완료`로 판정한다.
+
 IK는 도달 가능한 joint 해를 제공하지만 충돌 없는 시간 경로와 접촉 성공을 보장하지 않는다. 따라서
 IK만 단독 사용하지 않고 collision checking, trajectory optimization, contact feedback을 묶는다.
 
@@ -262,14 +266,14 @@ episode 단위로 나누며 같은 run의 frame이 train/validation에 동시에
 | 실기 담당 조태진 | joint zero/range, motor current/temp/error, camera serial/intrinsics/extrinsics, FSR raw sample | 동일 이름의 sim schema, expected trajectory, 안전 limit 후보, 실기 비교 plot |
 | 전체 팀 | 요구 변경, 성공 기준, 현장 실패 영상/로그 | PR, 재현 명령, run artifact, 10분 브리핑, Notion 결정 기록 |
 
-### 전형주가 하지 말아야 할 것
+### 검증 및 기록 원칙
 
-- 시각적으로 자연스러워 보인다는 이유만으로 contact/lift assertion 없이 완료 처리
-- IK residual만으로 경로 성공을 주장
-- 실기 측정 없이 friction/backlash/latency를 고정 상수로 확정
-- 실패하는 WIP를 숨기거나 완성 브랜치로 merge
-- sim/real raw data를 같은 폴더에서 덮어쓰기
-- LLM 제안을 Raspberry Pi에서 직접 motor command로 실행
+- contact/lift assertion과 재현 로그를 기준으로 완료를 판정한다.
+- IK residual뿐 아니라 충돌, 동적 궤적, 실제 접촉을 함께 검증한다.
+- friction, backlash, latency는 실측값과 calibration revision으로 관리한다.
+- 진행 중인 실패와 미검증 범위를 PR과 단계별 기록에 명시한다.
+- sim/real raw data를 분리 보존하고 derived artifact가 원본 hash를 참조하게 한다.
+- LLM은 로컬에서 고수준 skill만 제안하며 최종 motor 명령은 독립 safety gate를 통과시킨다.
 
 ## 10. 바로 다음 작업 순서
 
