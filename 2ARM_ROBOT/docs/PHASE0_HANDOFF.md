@@ -1,12 +1,17 @@
 # Phase 0 개발 인수인계
 
+> **역사 자료:** 2026-08 초기 JDcobot/Astra 단일 카메라 가정의 인수인계다. 현재 장비는
+> SO-101 양팔, H201 top-view, TurtleBot3 전면 Astra S, 좌우 wrist RGB이며
+> `../config/hardware_roles.json`을 정본으로 사용한다. 이 문서의 hardware 명령은 현재 실물에
+> 적용하지 않는다.
+
 ## 목표
 
 ACT 학습 데이터의 형태와 품질 판정을 고정하고, 실측 하드웨어 프로필을 실제 recorder에
 연결한다. Ubuntu ROS 2 교육 PC에서는 먼저 이 문서의 검증 명령을 통과시킨 뒤 recorder
 adapter 개발을 이어간다.
 
-## 확정 장비와 제약
+## 당시 장비 가정과 제약
 
 | 항목 | 현재 값 |
 |---|---|

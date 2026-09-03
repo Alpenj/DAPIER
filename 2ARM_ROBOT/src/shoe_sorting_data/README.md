@@ -1,5 +1,9 @@
 ﻿# Shoe Sorting Data Phase 0
 
+> **Legacy Phase 0:** 이 패키지의 JDcobot platform 문자열과 driver adapter는 현재 SO-101
+> 하드웨어 정본이 아니다. active simulation은 `sim/mobile_dual_so101`이며, 여기서는 generic
+> episode·payload·quality 유틸만 선택 재사용한다.
+
 JDcobot200 양팔, TurtleBot3 Waffle Pi, Orbbec Astra 계열 카메라용
 DYNA-lite 데이터 기반입니다. 이 패키지는 ACT 학습 코드를 넣기 전에
 episode의 관측·행동 순서와 품질 기준부터 고정합니다.

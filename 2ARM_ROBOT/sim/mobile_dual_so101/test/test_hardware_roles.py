@@ -49,6 +49,11 @@ class HardwareRolesTest(unittest.TestCase):
         self.assertIn(devices["front_rgbd"]["stable_alias"], astra)
         self.assertNotIn(devices["workspace_rgbd"]["stable_alias"], astra)
 
+        legacy = (ROOT / "scripts/run_mujoco_hardware_teleop.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("DAPIER_ENABLE_LEGACY_JDCOBOT", legacy)
+
 
 if __name__ == "__main__":
     unittest.main()

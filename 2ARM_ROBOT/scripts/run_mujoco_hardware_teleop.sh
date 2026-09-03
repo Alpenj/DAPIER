@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${DAPIER_ENABLE_LEGACY_JDCOBOT:-0}" != "1" ]]; then
+  echo "BLOCKED: this entrypoint is for the legacy JDcobot prototype, not the current SO-101 hardware." >&2
+  exit 2
+fi
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPOSITORY_ROOT="$(cd "${PROJECT_ROOT}/.." && pwd)"
 MUJOCO_PYTHON="${REPOSITORY_ROOT}/so101_imitation_learning/.venv/bin/python"

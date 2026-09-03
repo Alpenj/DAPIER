@@ -1,5 +1,8 @@
 # Waffle Pi + JDcobot200 양팔 MuJoCo 조합 모델
 
+> **Legacy reference:** 현재 조합은 Waffle Pi + SO-101 두 팔이며
+> `sim/mobile_dual_so101`을 사용한다. 이 폴더는 초기 JDcobot 회귀용이다.
+
 공식 TurtleBot3 Waffle Pi base_link 아래에 DAPIER JDcobot200 좌우 팔을 장착한 stationary
 manipulation 기준 모델이다.
 

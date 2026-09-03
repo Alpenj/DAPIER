@@ -2,7 +2,7 @@
 
 > 계약 버전: `dapier.ros2-image-payload.v0.1`
 > episode 버전: `dapier.shoe-episode.v0.3`
-> 상태: 실물 연결 전 lossless raw 계약과 합성 fixture 검증 완료
+> 상태: 4카메라 역할 확정, lossless raw 합성 fixture 완료, 실물 multi-camera recorder 미완료
 
 ## 왜 이 단계가 먼저인가
 
@@ -24,6 +24,10 @@ LeRobot Dataset이나 ACT가 실행되더라도 원본 RGB/Depth의 encoding, by
 | `workspace_rgbd` | HP-ASC-H201 / eYs3D R77 | 박스·신발 top-view 인식과 재관측 |
 | `left_gripper_rgb` | 왼쪽 SO-101 RGB | 왼손 접근·파지 |
 | `right_gripper_rgb` | 오른쪽 SO-101 RGB | 오른손 뚜껑 접근·접촉 |
+
+현재 `shoe_sorting_data` Phase 0 raw writer 예시는 `workspace_rgb/depth` 두 stream만 저장한다.
+MuJoCo runtime의 4역할 camera contract와 동기 frame set은 구현됐지만, 네 실물 stream을 같은
+episode clock으로 기록하는 adapter는 아직 완료되지 않았다.
 
 ```text
 episode_000001/
@@ -140,7 +144,7 @@ ros2 run shoe_sorting_data shoe_episode validate \
 ### 보류
 
 - depth를 8-bit RGB MP4로 저장
-- Astra 검증 전 wrist/multi-camera 추가
+- 실측 bandwidth 없이 4카메라를 최고 해상도·FPS로 고정
 - ACT manipulation 입력에 SLAM map을 즉시 결합
 - embodiment가 다른 대규모 외부 데이터로 곧바로 pretrain
 
@@ -157,4 +161,5 @@ ros2 run shoe_sorting_data shoe_episode validate \
 - Astra S와 H201 각각의 실제 encoding/resolution/depth unit 확인
 - 실제 `CameraInfo`와 calibration snapshot
 - 장시간 기록의 p50/p95 sync delta와 dropped topic count
+- `front_rgbd`, `workspace_rgbd`, 좌우 `gripper_rgb`를 같은 monotonic clock으로 저장하는 실물 adapter
 - native LeRobot Dataset v3 변환
