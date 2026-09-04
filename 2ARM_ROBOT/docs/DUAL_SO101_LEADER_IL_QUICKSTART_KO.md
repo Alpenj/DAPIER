@@ -31,6 +31,8 @@ cd /home/dapier-jhj/DAPIER-vision-relative-manipulation-02
 
 이 파일은 Git에서 제외된다.
 네 팔의 현재 `/dev/serial/by-id/...` 경로를 follower/leader 항목에 넣는다.
+물리 장비에도 같은 역할과 serial 끝 4자리를 `LF-xxxx`, `RF-xxxx`, `LL-xxxx`,
+`RL-xxxx` 형식으로 표시한다. USB hub 포트나 `ttyACM*` 번호는 장치 정본으로 쓰지 않는다.
 
 ## 2. leader 좌·우 식별
 
@@ -52,6 +54,10 @@ cd /home/dapier-jhj/DAPIER-vision-relative-manipulation-02
 
 네 serial과 세 camera가 `OK`여야 한다. 기존 단일팔
 `so101_follower_main.json`/`so101_leader_main.json`은 새 양팔 ID로 간주하지 않는다.
+연결할 때마다 calibration을 다시 하지 않는다. `teleop`과 `record`는 네 side-specific
+calibration 중 하나라도 없으면 LeRobot의 자동 calibration을 시작하지 않고 즉시 중단한다.
+저장 파일을 복구할 수 없거나 기구 조립·모터 교체·영점 변경이 있었을 때만 명시적으로
+`calibrate-leaders` 또는 `calibrate-followers`를 실행한다.
 
 ## 4. 양쪽 leader calibration
 

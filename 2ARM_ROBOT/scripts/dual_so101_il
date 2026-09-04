@@ -38,6 +38,21 @@ require_ports() {
   }
 }
 
+require_calibrations() {
+  local file missing=0
+  for file in \
+    "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_left.json" \
+    "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_right.json" \
+    "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_left.json" \
+    "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_right.json"; do
+    [[ -f "$file" ]] || { echo "missing calibration: $file" >&2; missing=1; }
+  done
+  [[ $missing -eq 0 ]] || {
+    echo "refusing to auto-calibrate during teleop/record; recover the saved file or run calibration explicitly" >&2
+    exit 9
+  }
+}
+
 camera_args() {
   LEFT_CAMERA_JSON=$(printf '{"wrist":{"type":"opencv","index_or_path":"%s","width":320,"height":240,"fps":30,"fourcc":"YUYV"}}' "$LEFT_WRIST_CAMERA")
   RIGHT_CAMERA_JSON=$(printf '{"wrist":{"type":"opencv","index_or_path":"%s","width":320,"height":240,"fps":30,"fourcc":"YUYV"}}' "$RIGHT_WRIST_CAMERA")
@@ -134,7 +149,7 @@ case ${1:-} in
       "--robot.id=$FOLLOWER_ID"
     ;;
   teleop)
-    load_profile; require_ports; camera_args; base_args
+    load_profile; require_ports; require_calibrations; camera_args; base_args
     confirm VISIBLE_DUAL_SO101_LEADER_TELEOP
     "$venv/bin/lerobot-teleoperate" "${ROBOT_ARGS[@]}" \
       "--robot.left_arm_config.cameras=$LEFT_CAMERA_JSON" \
@@ -143,7 +158,7 @@ case ${1:-} in
       "${TELEOP_ARGS[@]}" --fps="$DATASET_FPS" --display_data=true
     ;;
   record)
-    load_profile; require_ports; camera_args; base_args
+    load_profile; require_ports; require_calibrations; camera_args; base_args
     confirm VISIBLE_RECORD_DUAL_SO101_DEMONSTRATIONS
     resume=(); [[ -d "$DATASET_ROOT/meta" ]] && resume=(--resume=true)
     "$venv/bin/lerobot-record" "${ROBOT_ARGS[@]}" \
