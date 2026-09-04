@@ -149,4 +149,5 @@ temperature, voltage, status, torque를 다시 읽는다. 다음 중 하나가 �
 
 - MuJoCo IK 수렴과 5 mm collision guard: SIM PASS
 - 고정 joint delta, septic profile, calibration range, exact confirmation: MOCK PASS
-- 실물 오른팔 pre-grasp: exact confirmation 후 현장 실행 대기
+- 실물 실행: profile의 `right` endpoint가 실제 왼팔을 움직여 역할 매핑 실패.
+  torque-off와 원위치 복귀는 확인했지만 오른팔 성공으로 판정하지 않는다.

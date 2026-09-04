@@ -77,3 +77,7 @@ def test_motion_leg_uses_only_bounded_mujoco_joint_goals(
 
 def test_reviewed_trajectory_stays_inside_explicit_limits() -> None:
     MODULE["validate_trajectory_limits"]()
+
+
+def test_physical_execution_stays_blocked_after_role_mismatch() -> None:
+    assert MODULE["PHYSICAL_ROLE_MAPPING_VERIFIED"] is False

@@ -17,6 +17,9 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 SMOKE = runpy.run_path(str(ROOT / "2ARM_ROBOT/scripts/dual_so101_smoke"))
 CONFIRMATION = "VISIBLE_RIGHT_SO101_MUJOCO_BOX_PREGRASP"
+# Invalidated after the endpoint labelled right physically moved the left arm.
+# Set only after a witnessed role-remapping check and a new confirmation token.
+PHYSICAL_ROLE_MAPPING_VERIFIED = False
 MOVING_JOINTS = (
     "shoulder_pan",
     "shoulder_lift",
@@ -175,6 +178,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         _require_request(args.confirm, args.operator_present)
+        if not PHYSICAL_ROLE_MAPPING_VERIFIED:
+            raise RuntimeError("physical left/right role mapping is unverified")
         profile = SMOKE["load_trusted_profile"](args.profile)
         validate_trajectory_limits()
         ports = {side: item["port"] for side, item in profile.items()}
