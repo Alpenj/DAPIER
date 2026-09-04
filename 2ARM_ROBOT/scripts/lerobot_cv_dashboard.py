@@ -24,6 +24,7 @@ CAMERAS = (
 WINDOW = "DAPIER cameras: LEFT | H201 | RIGHT"
 HEADER = struct.Struct("<IIIIQ")
 MAGIC = 0x48323031
+STATUS = "STARTING"
 
 
 class H201DepthCamera:
@@ -162,11 +163,33 @@ def _panel(frame: np.ndarray | None, label: str) -> np.ndarray:
 
 
 def compose_dashboard(observation: dict) -> np.ndarray:
-    return np.hstack([_panel(observation.get(key), label) for key, label in CAMERAS])
+    images = np.hstack([_panel(observation.get(key), label) for key, label in CAMERAS])
+    footer = np.full((64, images.shape[1], 3), 24, dtype=np.uint8)
+    cv2.putText(footer, f"STATUS: {STATUS}", (12, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (80, 230, 120), 2)
+    cv2.putText(
+        footer,
+        "RIGHT: finish/save episode   LEFT: redo episode   ESC: save/stop",
+        (12, 51),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (235, 235, 235),
+        1,
+    )
+    return np.vstack((images, footer))
+
+
+def _status_for_message(message: str) -> str:
+    if message.startswith("Recording episode "):
+        return f"RECORDING EPISODE {int(message.rsplit(' ', 1)[1]) + 1} (auto-save)"
+    return {
+        "Reset the environment": "RESETTING ENVIRONMENT",
+        "Re-record episode": "DISCARDING AND RE-RECORDING EPISODE",
+        "Stop recording": "FINALIZING / SAVING",
+    }.get(message, message.upper())
 
 
 def init_visualization(*_args, **_kwargs) -> None:
-    cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
+    cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL | cv2.WINDOW_GUI_NORMAL)
 
 
 def log_visualization_data(_mode, *, observation: dict, **_kwargs) -> None:
@@ -182,7 +205,9 @@ def shutdown_visualization(*_args, **_kwargs) -> None:
 def main() -> int:
     if sys.argv[1:] == ["--self-test"]:
         frame = np.zeros((240, 320, 3), dtype=np.uint8)
-        assert compose_dashboard({key: frame for key, _ in CAMERAS}).shape == (240, 960, 3)
+        assert compose_dashboard({key: frame for key, _ in CAMERAS}).shape == (304, 960, 3)
+        assert _status_for_message("Recording episode 0") == "RECORDING EPISODE 1 (auto-save)"
+        assert _status_for_message("Stop recording") == "FINALIZING / SAVING"
         return 0
 
     if len(sys.argv) < 2 or sys.argv[1] not in {"teleop", "record"}:
@@ -204,6 +229,14 @@ def main() -> int:
         return robot
 
     target.make_robot_from_config = make_robot_with_h201
+    original_log_say = target.log_say
+
+    def log_say_with_status(message, *args, **kwargs):
+        global STATUS
+        STATUS = _status_for_message(message)
+        return original_log_say(message, *args, **kwargs)
+
+    target.log_say = log_say_with_status
     target.init_visualization = init_visualization
     target.log_visualization_data = log_visualization_data
     target.shutdown_visualization = shutdown_visualization
