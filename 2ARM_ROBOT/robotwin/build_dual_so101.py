@@ -126,6 +126,18 @@ def build(source_urdf: Path, mesh_source: Path, output: Path) -> Path:
                 f"{MOUNT_X_M} {y} {MOUNT_Z_M}",
             )
         )
+        # SAPIEN exposes a joint frame while CuRobo targets a link frame. The
+        # official gripper-frame joint has a pi rotation, so add a zero-offset
+        # adapter whose joint and child-link frames are identical.
+        robot.append(ET.Element("link", {"name": f"{side}_ee_link"}))
+        robot.append(
+            _fixed_joint(
+                f"{side}_ee_joint",
+                f"{side}_gripper_frame_link",
+                f"{side}_ee_link",
+                "0 0 0",
+            )
+        )
         robot.append(
             _box_link(
                 f"{side}_camera",
@@ -168,7 +180,14 @@ def validate_with_sapien(urdf: Path) -> None:
     if len(active) != len(expected) or set(active) != set(expected):
         raise RuntimeError(f"unexpected active joints: {active!r}")
     links = {link.name for link in robot.get_links()}
-    required = {"left_camera", "right_camera", "h201_link", "dapier_base_link"}
+    required = {
+        "left_camera",
+        "right_camera",
+        "left_ee_link",
+        "right_ee_link",
+        "h201_link",
+        "dapier_base_link",
+    }
     if not required <= links:
         raise RuntimeError(f"missing links: {sorted(required - links)}")
     print(f"PASS: {len(active)} joints, {len(links)} links, {urdf}")

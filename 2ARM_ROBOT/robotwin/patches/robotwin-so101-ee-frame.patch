@@ -1,0 +1,35 @@
+diff --git a/envs/robot/robot.py b/envs/robot/robot.py
+index 9dfc08f..766aca3 100644
+--- a/envs/robot/robot.py
++++ b/envs/robot/robot.py
+@@ -49,6 +49,7 @@ class Robot:
+         self.left_planner_type = left_embodiment_args.get("planner", "mplib_RRT")
+         self.left_move_group = left_embodiment_args["move_group"][0]
+         self.left_ee_name = left_embodiment_args["ee_joints"][0]
++        self.left_ee_pose_from_child_link = left_embodiment_args.get("ee_pose_from_child_link", False)
+         self.left_arm_joints_name = left_embodiment_args["arm_joints_name"][0]
+         self.left_gripper_name = left_embodiment_args["gripper_name"][0]
+         self.left_gripper_bias = left_embodiment_args["gripper_bias"]
+@@ -76,6 +77,7 @@ class Robot:
+         self.right_planner_type = right_embodiment_args.get("planner", "mplib_RRT")
+         self.right_move_group = right_embodiment_args["move_group"][1]
+         self.right_ee_name = right_embodiment_args["ee_joints"][1]
++        self.right_ee_pose_from_child_link = right_embodiment_args.get("ee_pose_from_child_link", False)
+         self.right_arm_joints_name = right_embodiment_args["arm_joints_name"][1]
+         self.right_gripper_name = right_embodiment_args["gripper_name"][1]
+         self.right_gripper_bias = right_embodiment_args["gripper_bias"]
+@@ -592,7 +594,13 @@ class Robot:
+         gripper_bias = (self.left_gripper_bias if arm_tag == "left" else self.right_gripper_bias)
+         global_trans_matrix = (self.left_global_trans_matrix if arm_tag == "left" else self.right_global_trans_matrix)
+         delta_matrix = (self.left_delta_matrix if arm_tag == "left" else self.right_delta_matrix)
+-        ee_pose = (self.left_ee.global_pose if arm_tag == "left" else self.right_ee.global_pose)
++        ee_joint = self.left_ee if arm_tag == "left" else self.right_ee
++        pose_from_child = (
++            self.left_ee_pose_from_child_link
++            if arm_tag == "left"
++            else self.right_ee_pose_from_child_link
++        )
++        ee_pose = ee_joint.child_link.entity_pose if pose_from_child else ee_joint.global_pose
+         endpose_arr = np.eye(4)
+         endpose_arr[:3, :3] = (t3d.quaternions.quat2mat(ee_pose.q) @ global_trans_matrix @ delta_matrix)
+         dis = gripper_bias

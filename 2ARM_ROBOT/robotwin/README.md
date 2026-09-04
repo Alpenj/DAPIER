@@ -44,6 +44,21 @@ python3 test_contract.py
 12개와 필수 camera/base link를 확인한다. CuRobo planning과 demonstration 생성은 별도
 완료 조건이며 이 검사를 통과했다는 이유로 완료 처리하지 않는다.
 
+RTX 50 계열(`sm_120`)에서는 RoboTwin이 사용하는 CuRobo v0.7.8의 fused LBFGS가
+SO-101 5축 IK에서 illegal memory access를 낸다. 설치기는 이 조합에만 CUDA graph와
+fused IK kernel을 끄고 CuRobo의 PyTorch LBFGS/gradient-descent 경로를 사용하는
+`patches/robotwin-blackwell-so101.patch`를 공식 checkout에 멱등 적용한다. RTX 5050에서
+좌·우 각각 5 mm Cartesian 계획(625 waypoint)을 직접 통과시켰으며, 이 검사는 실물
+모터 명령을 전송하지 않는다.
+
+SO-101의 `gripper_frame_joint`는 180도 회전된 joint frame이고 CuRobo는 child-link
+frame을 목표로 삼는다. RoboTwin 기본 코드는 SAPIEN joint pose를 읽기 때문에 위치는
+같아도 자세가 180도 어긋났고, 현재 자세를 그대로 넣은 계획조차 실패했다. 생성 URDF에
+zero-offset `left/right_ee_link`를 두고 `ee_pose_from_child_link` 패치를 적용한 뒤 현재
+자세 재계획이 31 waypoint로 성공했다. 현재 자세에서 약 10 mm씩 내리는 Cartesian
+접근은 5개 chunk까지 성공하고 여섯 번째에서 실패했다. 따라서 frame 변환은 해결됐지만
+전체 handover episode와 큰 이동용 5축 waypoint 생성은 아직 완료가 아니다.
+
 RoboTwin이 생성한 HDF5는 바로 실물 dataset이라고 부르지 않는다. 다음 변환이 5+1+5+1
 관절 순서, gripper 정규화, 좌/H201/우 카메라 shape와 frame 수를 검사한 뒤 DAPIER
 canonical episode를 원자적으로 생성한다.
@@ -83,15 +98,19 @@ MuJoCo와 RoboTwin은 서로 다른 좌표계·동역학을 쓰더라도 아래 
 오차 측정 → 제한된 저속 rollout` 순서다. 실제 두 팔이 같은 task를 반복 성공하기 전에는
 sim-to-real 완료라고 기록하지 않는다.
 
-현재 완료는 1단계의 generator와 SAPIEN load smoke뿐이다. Planner 이후는 실제 실행
-결과를 commit과 함께 갱신한다.
+현재 1단계는 완료했고, 2단계는 좌·우 5 mm 계획과 EE frame 정합까지 통과했다. 큰
+pre-grasp 이동과 3단계 전체 episode는 미완료다. 실패 seed를 성공으로 기록하지 않는다.
 
 `overlay/`는 공식 checkout에 복사되는 최소 파일만 보관한다. ALOHA용 원본
-`handover_block`의 740 mm 테이블과 큰 작업 범위를 그대로 쓰지 않고, DAPIER task는
-바닥 기준 surface, 40×40×120 mm 시험 물체, 로봇 앞 40~80 mm 좌우 범위로 줄였다.
+`handover_block`의 큰 작업 범위를 그대로 쓰지 않고, DAPIER task는 40×40×120 mm
+시험 물체와 로봇 앞 40~80 mm 좌우 범위로 줄였다. RoboTwin world에서는 표면이
+Z=740 mm지만 robot root도 Z=740 mm에 두므로 로봇 기준으로는 실물의 바닥 Z=0과 같다.
 CuRobo는 한 팔을 계획할 때 중앙 몸체·H201 mast·반대 팔 collision sphere를 함께
 읽고 반대 팔은 compact home에 lock한다. sphere 근사는 실제 planning을 통과한 뒤에도
 mesh collision과 MuJoCo contact로 교차검증해야 한다.
+RoboTwin grasp frame의 `X=approach, Z=up`은 SO-101 URDF EE의
+`Z=approach, Y=up`과 다르므로 `delta_matrix`가 두 frame을 변환한다. 이를 identity로
+두면 위치가 맞아도 5축 팔에 불가능한 orientation을 요구한다.
 
 ```bash
 ~/RoboTwin/venv/bin/python install_runtime.py \

@@ -63,6 +63,10 @@ def main() -> None:
             "left_mount_fixed": "-0.064 0.08 0.1095",
             "right_mount_fixed": "-0.064 -0.08 0.1095",
         }
+        fixed = {joint.get("name") for joint in robot.findall("joint")}
+        assert {"left_ee_joint", "right_ee_joint"} <= fixed
+        links = {link.get("name") for link in robot.findall("link")}
+        assert {"left_ee_link", "right_ee_link"} <= links
         assert (root / "out/meshes/link.stl").is_file()
     print("PASS: DAPIER RoboTwin 12-axis and mount contract")
 

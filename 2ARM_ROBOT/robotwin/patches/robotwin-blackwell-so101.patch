@@ -1,0 +1,42 @@
+diff --git a/envs/robot/planner.py b/envs/robot/planner.py
+index 21ae432..74524f6 100644
+--- a/envs/robot/planner.py
++++ b/envs/robot/planner.py
+@@ -47,6 +47,10 @@ try:
+             self.robot_origion_pose = robot_origion_pose
+             self.active_joints_name = active_joints_name
+             self.all_joints = all_joints
++            self.blackwell_so101_fallback = (
++                torch.cuda.get_device_capability()[0] >= 12
++                and len(active_joints_name) == 5
++            )
+ 
+             # translate from baselink to arm's base
+             with open(self.yml_path, "r") as f:
+@@ -76,9 +80,13 @@ try:
+                 world_config,
+                 interpolation_dt=1 / 250,
+                 num_trajopt_seeds=1,
++                use_cuda_graph=not self.blackwell_so101_fallback,
++                use_gradient_descent=self.blackwell_so101_fallback,
+             )
+ 
+             self.motion_gen = MotionGen(motion_gen_config)
++            if self.blackwell_so101_fallback:
++                self.motion_gen.ik_solver.solver.newton_optimizer.use_cuda_kernel = False
+             self.motion_gen.warmup()
+             motion_gen_config = MotionGenConfig.load_from_robot_config(
+                 self.yml_path,
+@@ -86,8 +94,12 @@ try:
+                 interpolation_dt=1 / 250,
+                 num_trajopt_seeds=1,
+                 num_graph_seeds=1,
++                use_cuda_graph=not self.blackwell_so101_fallback,
++                use_gradient_descent=self.blackwell_so101_fallback,
+             )
+             self.motion_gen_batch = MotionGen(motion_gen_config)
++            if self.blackwell_so101_fallback:
++                self.motion_gen_batch.ik_solver.solver.newton_optimizer.use_cuda_kernel = False
+             self.motion_gen_batch.warmup(batch=CONFIGS.ROTATE_NUM)
+ 
+         def plan_path(

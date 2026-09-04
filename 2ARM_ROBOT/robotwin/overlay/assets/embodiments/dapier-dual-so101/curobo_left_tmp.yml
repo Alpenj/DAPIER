@@ -4,7 +4,7 @@ robot_cfg:
     urdf_path: ${ASSETS_PATH}/assets/embodiments/dapier-dual-so101/urdf/dapier_dual_so101.urdf
     asset_root_path: null
     base_link: dapier_base_link
-    ee_link: left_gripper_frame_link
+    ee_link: left_ee_link
     collision_link_names: &collision_links
       [dapier_base_link, h201_mast_link, h201_link,
        left_base_link, left_shoulder_link, left_upper_arm_link, left_lower_arm_link,

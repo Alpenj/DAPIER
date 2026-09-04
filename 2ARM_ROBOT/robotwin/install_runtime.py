@@ -20,9 +20,23 @@ def _merge_yaml(path: Path, values: dict) -> None:
     path.write_text(yaml.safe_dump(current, sort_keys=False), encoding="utf-8")
 
 
+def _apply_patch(repo: Path, patch: Path) -> None:
+    check = subprocess.run(
+        ["git", "apply", "--reverse", "--check", patch],
+        cwd=repo,
+        check=False,
+    )
+    if check.returncode == 0:
+        return
+    subprocess.run(["git", "apply", "--check", patch], cwd=repo, check=True)
+    subprocess.run(["git", "apply", patch], cwd=repo, check=True)
+
+
 def install(robotwin: Path, source_urdf: Path, mesh_source: Path) -> None:
     here = Path(__file__).resolve().parent
     overlay = here / "overlay"
+    for patch in sorted((here / "patches").glob("*.patch")):
+        _apply_patch(robotwin, patch)
     asset = robotwin / "assets/embodiments/dapier-dual-so101"
     urdf = build(source_urdf, mesh_source, asset)
     for source in overlay.rglob("*"):
