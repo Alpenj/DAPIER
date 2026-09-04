@@ -59,6 +59,12 @@ calibration 중 하나라도 없으면 LeRobot의 자동 calibration을 시작�
 저장 파일을 복구할 수 없거나 기구 조립·모터 교체·영점 변경이 있었을 때만 명시적으로
 `calibrate-leaders` 또는 `calibrate-followers`를 실행한다.
 
+calibration 정본은 지워질 수 있는 `~/.cache`가 아니라 로컬 프로필의
+`CALIBRATION_DIR`(기본값 `~/.config/dapier/lerobot-calibration`)에 보관한다. 2026-09-04에는
+두 follower EEPROM에 이미 저장된 offset·관절 범위를 LeRobot 공식 decoder로 읽어
+side-specific JSON을 복구했고, 양쪽 모두 JSON과 EEPROM의 완전 일치를 확인했다. 이 복구는
+토크·목표 위치·EEPROM을 쓰거나 팔을 다시 움직여 범위를 측정하지 않았다.
+
 ## 4. 양쪽 leader calibration
 
 ```bash

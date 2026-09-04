@@ -41,10 +41,10 @@ require_ports() {
 require_calibrations() {
   local file missing=0
   for file in \
-    "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_left.json" \
-    "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_right.json" \
-    "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_left.json" \
-    "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_right.json"; do
+    "$CALIBRATION_DIR/${FOLLOWER_ID}_left.json" \
+    "$CALIBRATION_DIR/${FOLLOWER_ID}_right.json" \
+    "$CALIBRATION_DIR/${LEADER_ID}_left.json" \
+    "$CALIBRATION_DIR/${LEADER_ID}_right.json"; do
     [[ -f "$file" ]] || { echo "missing calibration: $file" >&2; missing=1; }
   done
   [[ $missing -eq 0 ]] || {
@@ -65,6 +65,7 @@ base_args() {
     "--robot.left_arm_config.port=$LEFT_FOLLOWER_PORT"
     "--robot.right_arm_config.port=$RIGHT_FOLLOWER_PORT"
     "--robot.id=$FOLLOWER_ID"
+    "--robot.calibration_dir=$CALIBRATION_DIR"
     --robot.left_arm_config.max_relative_target=5
     --robot.right_arm_config.max_relative_target=5
   )
@@ -73,6 +74,7 @@ base_args() {
     "--teleop.left_arm_config.port=$LEFT_LEADER_PORT"
     "--teleop.right_arm_config.port=$RIGHT_LEADER_PORT"
     "--teleop.id=$LEADER_ID"
+    "--teleop.calibration_dir=$CALIBRATION_DIR"
   )
 }
 
@@ -124,10 +126,10 @@ case ${1:-} in
       printf '%-22s %-7s %s\n' "$name" "$state" "$value"
     done
     for file in \
-      "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_left.json" \
-      "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_right.json" \
-      "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_left.json" \
-      "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_right.json"; do
+      "$CALIBRATION_DIR/${FOLLOWER_ID}_left.json" \
+      "$CALIBRATION_DIR/${FOLLOWER_ID}_right.json" \
+      "$CALIBRATION_DIR/${LEADER_ID}_left.json" \
+      "$CALIBRATION_DIR/${LEADER_ID}_right.json"; do
       [[ -f "$file" ]] && state=OK || state=MISSING
       printf 'calibration %-7s %s\n' "$state" "$file"
     done
@@ -138,6 +140,7 @@ case ${1:-} in
       --teleop.type=bi_so_leader \
       "--teleop.left_arm_config.port=$LEFT_LEADER_PORT" \
       "--teleop.right_arm_config.port=$RIGHT_LEADER_PORT" \
+      "--teleop.calibration_dir=$CALIBRATION_DIR" \
       "--teleop.id=$LEADER_ID"
     ;;
   calibrate-followers)
@@ -146,6 +149,7 @@ case ${1:-} in
       --robot.type=bi_so_follower \
       "--robot.left_arm_config.port=$LEFT_FOLLOWER_PORT" \
       "--robot.right_arm_config.port=$RIGHT_FOLLOWER_PORT" \
+      "--robot.calibration_dir=$CALIBRATION_DIR" \
       "--robot.id=$FOLLOWER_ID"
     ;;
   teleop)

@@ -67,7 +67,8 @@ def _little_u16(payload: bytes, offset: int) -> int:
 
 
 def _sign_magnitude(raw: int, sign_bit: int) -> int:
-    return -(raw & ~sign_bit) if raw & sign_bit else raw
+    magnitude = raw & (sign_bit - 1)
+    return -magnitude if raw & sign_bit else magnitude
 
 
 def decode_telemetry(payload: bytes) -> dict[str, object]:
@@ -107,9 +108,10 @@ def decode_angle_limits(payload: bytes) -> dict[str, int]:
 def decode_calibration(payload: bytes) -> dict[str, int]:
     if len(payload) != CALIBRATION_SIZE:
         raise ValueError(f"expected {CALIBRATION_SIZE} calibration bytes, received {len(payload)}")
+    raw_offset = _little_u16(payload, 0)
     return {
-        "position_offset_raw": _little_u16(payload, 0),
-        "position_offset_tick": int.from_bytes(payload[0:2], "little", signed=True),
+        "position_offset_raw": raw_offset,
+        "position_offset_tick": _sign_magnitude(raw_offset, 1 << 11),
         "operating_mode_raw": payload[2],
     }
 
