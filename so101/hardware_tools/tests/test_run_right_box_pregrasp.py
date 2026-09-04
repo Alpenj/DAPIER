@@ -79,5 +79,9 @@ def test_reviewed_trajectory_stays_inside_explicit_limits() -> None:
     MODULE["validate_trajectory_limits"]()
 
 
-def test_physical_execution_stays_blocked_after_role_mismatch() -> None:
-    assert MODULE["PHYSICAL_ROLE_MAPPING_VERIFIED"] is False
+def test_physical_execution_uses_the_witnessed_corrected_role_mapping() -> None:
+    assert MODULE["PHYSICAL_ROLE_MAPPING_VERIFIED"] is True
+
+
+def test_stale_box_top_target_cannot_reach_hardware() -> None:
+    assert MODULE["PHYSICAL_TARGET_MAPPING_VERIFIED"] is False
