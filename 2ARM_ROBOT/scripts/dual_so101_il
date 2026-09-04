@@ -75,7 +75,7 @@ identify_leaders() {
   echo "Move ONLY the physical LEFT leader continuously after confirmation. Followers will not be commanded."
   confirm VISIBLE_DUAL_SO101_LEADERS_READONLY
   temporary=$(mktemp -d /tmp/dapier-leader-map.XXXXXX)
-  trap 'rm -rf -- "$temporary"' EXIT
+  trap "rm -rf -- '$temporary'" EXIT
   for path in "${candidates[@]}"; do
     "$python" "$repo_root/so101/hardware_tools/read_only/read_motor_positions.py" \
       --role leader --port "$path" --id leader_mapping_probe \
