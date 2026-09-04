@@ -63,8 +63,13 @@ base_args() {
 
 identify_leaders() {
   local candidates=() path temporary pids=()
+  load_profile
+  for path in "$LEFT_FOLLOWER_PORT" "$RIGHT_FOLLOWER_PORT"; do
+    [[ "$path" == /dev/serial/by-id/* ]] || { echo "assign both follower ports in $profile first" >&2; exit 5; }
+    require_file "$path"
+  done
   while IFS= read -r path; do
-    [[ "$path" == *5B3D048312* || "$path" == *5B3D045865* ]] || candidates+=("$path")
+    [[ "$path" == "$LEFT_FOLLOWER_PORT" || "$path" == "$RIGHT_FOLLOWER_PORT" ]] || candidates+=("$path")
   done < <(find /dev/serial/by-id -maxdepth 1 -type l -name 'usb-1a86_USB_Single_Serial_*-if00' | sort)
   [[ ${#candidates[@]} -eq 2 ]] || { echo "expected two unmapped leader controllers, found ${#candidates[@]}" >&2; exit 7; }
   echo "Move ONLY the physical LEFT leader continuously after confirmation. Followers will not be commanded."

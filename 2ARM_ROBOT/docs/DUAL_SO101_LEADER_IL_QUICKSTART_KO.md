@@ -4,11 +4,10 @@
 `bi_so_leader`, `bi_so_follower`, `lerobot-record`, `lerobot-train --policy.type=act`를
 그대로 호출한다. DAPIER가 별도 teleoperation framework를 다시 구현하지 않는다.
 
-## 현재 장치 정본
+## 장치 정본
 
-- left follower: controller serial `5B3D048312`
-- right follower: controller serial `5B3D045865`
-- leader 후보: `5B61032703`, `5B3D047817` — 물리 좌·우 식별 필요
+- left/right follower: 로컬 프로필의 `/dev/serial/by-id/...`
+- left/right leader: `identify-leaders`로 물리 좌·우를 확인한 뒤 로컬 프로필에만 저장
 - left wrist RGB: `/dev/dapier/left_wrist_rgb`, 320×240 YUYV 30 fps
 - top H201 visual observation: `/dev/video6`, 1280×460 YUYV 15 fps
 - right wrist RGB: `/dev/dapier/right_wrist_rgb`, 320×240 YUYV 30 fps
@@ -31,6 +30,7 @@ cd /home/dapier-jhj/DAPIER-vision-relative-manipulation-02
 ```
 
 이 파일은 Git에서 제외된다.
+네 팔의 현재 `/dev/serial/by-id/...` 경로를 follower/leader 항목에 넣는다.
 
 ## 2. leader 좌·우 식별
 
