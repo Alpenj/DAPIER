@@ -44,6 +44,20 @@ python3 test_contract.py
 12개와 필수 camera/base link를 확인한다. CuRobo planning과 demonstration 생성은 별도
 완료 조건이며 이 검사를 통과했다는 이유로 완료 처리하지 않는다.
 
+RoboTwin이 생성한 HDF5는 바로 실물 dataset이라고 부르지 않는다. 다음 변환이 5+1+5+1
+관절 순서, gripper 정규화, 좌/H201/우 카메라 shape와 frame 수를 검사한 뒤 DAPIER
+canonical episode를 원자적으로 생성한다.
+
+```bash
+~/RoboTwin/venv/bin/python convert_episode.py \
+  ~/RoboTwin/data/.../episode_0000000.hdf5 \
+  /tmp/dapier-robotwin-episode-0000000.npz
+```
+
+출력은 `observation_state (T,12)`, `action (T,12)`, 좌·우 RGB
+`(T,3,240,320)`, H201 depth `(T,1,460,640) uint16 mm`다. 다음 단계에서 이
+canonical episode와 실물 LeRobot episode를 같은 ACT 학습 dataset으로 합친다.
+
 ## 단계 게이트
 
 1. **Asset:** 공식 SO-101 URDF/mesh provenance, SAPIEN load, 12축 계약
