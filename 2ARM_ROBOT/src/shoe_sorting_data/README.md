@@ -201,9 +201,12 @@ ros2 run shoe_sorting_data shoe_dapier_act rollout-smoke \
   --output /tmp/dapier_native_act_rollout
 ```
 
-결과가 PASS여도 generic JointTrajectory-shaped envelope만 만들며
-`control_authorized=false`, `published=false`, `executed_action=null`,
-`hardware_execution=NOT_ATTEMPTED`입니다. 실제 JDcobot transport는 포함하지 않습니다.
+결과가 PASS이면 오른팔 단계 mask가 왼쪽 6축을 현재 측정값으로 고정하고, 오른쪽
+5개 관절은 radian→degree, gripper는 `[0,1]`→`[0,100]`으로 변환한 SO-101
+`Goal_Position` envelope를 만듭니다. 기본 smoke에는 motor bus를 넣지 않으므로
+`published=false`, `hardware_execution=NOT_ATTEMPTED`입니다. 테스트에서는 동일
+adapter에 fake bus를 넣어 checkpoint→supervisor→오른팔 6모터 write 경계를 확인합니다.
+실물 bus는 controller identity·calibration·E-stop을 확인한 실행기만 주입할 수 있습니다.
 
 ## JDcobot rollout safety dry-run
 

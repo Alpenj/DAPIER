@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Show the operator camera layout as left wrist | top RGB-D | right wrist."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import time
+
+import cv2
+import numpy as np
+
+
+PANEL_SIZE = (320, 240)
+DISPLAY_PERIOD_S = 1.0 / 10.0
+
+
+def _open(path: str | None, *, h201: bool = False):
+    if not path or not Path(path).exists():
+        return None
+    capture = cv2.VideoCapture(path, cv2.CAP_V4L2)
+    capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"YUYV"))
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640 if h201 else 320)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 460 if h201 else 240)
+    capture.set(cv2.CAP_PROP_FPS, 30)
+    capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    return capture if capture.isOpened() else None
+
+
+def _panel(capture, label: str, path: str | None) -> np.ndarray:
+    ok, frame = capture.read() if capture is not None else (False, None)
+    if ok and frame is not None:
+        if frame.shape[1] > frame.shape[0] * 2:
+            frame = frame[:, : frame.shape[1] // 2]
+        frame = cv2.resize(frame, PANEL_SIZE, interpolation=cv2.INTER_AREA)
+    else:
+        frame = np.full((PANEL_SIZE[1], PANEL_SIZE[0], 3), 30, dtype=np.uint8)
+        cv2.putText(
+            frame,
+            "DISCONNECTED / NO FRAME",
+            (48, 155),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (80, 80, 255),
+            2,
+            cv2.LINE_AA,
+        )
+    cv2.rectangle(frame, (0, 0), (PANEL_SIZE[0], 38), (20, 20, 20), -1)
+    cv2.putText(frame, label, (12, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(
+        frame,
+        path or "waiting for device",
+        (12, PANEL_SIZE[1] - 12),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.45,
+        (220, 220, 220),
+        1,
+        cv2.LINE_AA,
+    )
+    return frame
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--left", default="/dev/dapier/left_wrist_rgb")
+    parser.add_argument("--h201", default="/dev/video6")
+    parser.add_argument("--right", default="/dev/dapier/right_wrist_rgb")
+    args = parser.parse_args()
+    paths = (args.left, args.h201, args.right)
+    captures = (
+        _open(args.left),
+        _open(args.h201, h201=True),
+        _open(args.right),
+    )
+    labels = ("LEFT WRIST RGB", "TOP H201 RGB-D", "RIGHT WRIST RGB")
+    cv2.namedWindow("DAPIER cameras: LEFT | H201 | RIGHT", cv2.WINDOW_NORMAL)
+    try:
+        next_frame = time.monotonic()
+        while True:
+            dashboard = np.hstack(
+                [_panel(capture, label, path) for capture, label, path in zip(captures, labels, paths, strict=True)]
+            )
+            cv2.imshow("DAPIER cameras: LEFT | H201 | RIGHT", dashboard)
+            if cv2.waitKey(1) & 0xFF in (27, ord("q")):
+                break
+            next_frame += DISPLAY_PERIOD_S
+            time.sleep(max(0.0, next_frame - time.monotonic()))
+    finally:
+        for capture in captures:
+            if capture is not None:
+                capture.release()
+        cv2.destroyAllWindows()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

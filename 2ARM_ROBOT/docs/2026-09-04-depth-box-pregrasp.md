@@ -111,6 +111,20 @@ python -m shoe_sorting_data.dapier_native_act train \
   --chunk-size 16 --batch-size 8 --max-steps 100 --device cuda
 ```
 
+checkpoint 출력 경계도 SO-101 기준으로 연결했다. 오른팔 단계에서는 policy가 낸 왼쪽
+6축 값을 실행하지 않고 현재 측정값으로 고정한 뒤 기존 freshness·base 정지·joint limit·
+E-stop·watchdog 검사를 통과시킨다. 오른쪽 arm radian은 LeRobot bus degree로, normalized
+gripper는 0~100으로 바꾼다. fake bus E2E에서 checkpoint 추론부터 오른팔 6모터
+`Goal_Position` 1회 write까지 통과했으며, 좌측 bus write는 없다. 사용한 checkpoint는
+one-step wiring smoke이므로 실물 task 실행 승인의 근거는 아니다.
+
+카메라 확인은 아래 명령으로 `좌 손목 | H201 | 우 손목` 한 창에 표시한다. 미리보기는
+320×240/10fps이고 학습 원본 저장 해상도와 분리한다.
+
+```bash
+2ARM_ROBOT/scripts/show_camera_dashboard
+```
+
 ## 아직 확인하지 못한 부분
 
 - 실제 H201의 intrinsics, depth scale과 invalid code
