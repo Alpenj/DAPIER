@@ -279,6 +279,9 @@ def create_box_shoe_scene_data(model: mujoco.MjModel) -> mujoco.MjData:
 
 def box_shoe_scene_contract(model: mujoco.MjModel) -> dict[str, object]:
     object_ids = {
+        "box_body": mujoco.mj_name2id(
+            model, mujoco.mjtObj.mjOBJ_BODY, BOX_BODY_NAME
+        ),
         "shoe_body": mujoco.mj_name2id(
             model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME
         ),
@@ -292,15 +295,29 @@ def box_shoe_scene_contract(model: mujoco.MjModel) -> dict[str, object]:
     if min(object_ids.values()) < 0:
         raise RuntimeError(f"box-shoe scene contract object missing: {object_ids}")
     lid_joint = object_ids["lid_hinge"]
+    floor = model.geom("box_floor")
+    wall = model.geom("box_wall_left")
+    thickness_m = float(2.0 * floor.size[2])
+    box_outer_size_m = (
+        float(2.0 * floor.size[0]),
+        float(2.0 * floor.size[1]),
+        float(thickness_m + 2.0 * wall.size[2]),
+    )
+    w, x, y, z = (
+        float(value) for value in model.body_quat[object_ids["box_body"]]
+    )
+    box_yaw_deg = math.degrees(
+        math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "shoe_representation": SHOE_REPRESENTATION,
         "shoe_single_cuboid": True,
         "shoe_proxy_dimensions_status": "PROVISIONAL_UNTIL_SHOE_MEASUREMENT",
         "box_primitive_geometry": True,
-        "box_outer_size_m": BoxShoeSceneConfig().box_outer_size_m,
-        "box_yaw_deg": BoxShoeSceneConfig().box_yaw_deg,
-        "cardboard_thickness_m": BoxShoeSceneConfig().cardboard_thickness_m,
+        "box_outer_size_m": box_outer_size_m,
+        "box_yaw_deg": box_yaw_deg,
+        "cardboard_thickness_m": thickness_m,
         "flap_dimensions_status": "PROVISIONAL_FROM_TWO_PHOTOS",
         "lid_passive_hinge": True,
         "right_lid_contact_gated_latch": True,

@@ -11,6 +11,7 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 from typing import Callable, Mapping, Sequence
@@ -102,6 +103,20 @@ def _state_streams(observation: Mapping[str, object]) -> dict[str, list[float]]:
     }
 
 
+def _continuous_carry_success(
+    frame_carry_supported: Sequence[bool], terminal_success: bool
+) -> bool:
+    first_carry = next(
+        (index for index, carried in enumerate(frame_carry_supported) if carried),
+        None,
+    )
+    return (
+        terminal_success
+        and first_carry is not None
+        and all(frame_carry_supported[first_carry:])
+    )
+
+
 def _write_samples(path: Path, samples: Sequence[Mapping[str, object]]) -> str:
     payload = "".join(
         json.dumps(sample, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -132,6 +147,19 @@ def record_sim_episode(
     root = Path(
         tempfile.mkdtemp(prefix=f".{target.name}.staging-", dir=target.parent)
     )
+    try:
+        return _record_sim_episode(root, target, config, action_source)
+    except BaseException:
+        shutil.rmtree(root, ignore_errors=True)
+        raise
+
+
+def _record_sim_episode(
+    root: Path,
+    target: Path,
+    config: SimEpisodeConfig,
+    action_source: ActionSource | None,
+) -> Path:
 
     env = ShoeTaskEnv(model=build_mobile_shoe_mission_model())
     observation, reset_info = env.reset(seed=config.seed)
@@ -260,6 +288,13 @@ def record_sim_episode(
                     "simulation": {
                         "hardware_execution": False,
                         "task_success": bool(frame_metrics["success"]),
+                        "carry_supported": bool(frame_metrics["carry_supported"]),
+                        "bilateral_gripper_contact": bool(
+                            frame_metrics["bilateral_gripper_contact"]
+                        ),
+                        "shoe_gripper_attachment": bool(
+                            frame_metrics["shoe_gripper_attachment"]
+                        ),
                         "reward": float(frame_metrics["reward"]),
                     },
                 }
@@ -272,7 +307,10 @@ def record_sim_episode(
             observation = ground_truth_observation(env.model, env.data)
 
     digest = _write_samples(root / "samples.jsonl", samples)
-    success = bool(samples[-1]["simulation"]["task_success"])
+    success = _continuous_carry_success(
+        [bool(sample["simulation"]["carry_supported"]) for sample in samples],
+        bool(samples[-1]["simulation"]["task_success"]),
+    )
     manifest = build_manifest(
         episode_id=config.episode_id,
         sample_count=config.sample_count,

@@ -2,7 +2,6 @@
 set -euo pipefail
 
 bin_dir="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-ros2-v1.0.2}"
-compat_lib_dir="${bin_dir}/compat"
 readonly STREAM_CONFIRMATION="VISIBLE_ASTRA_READONLY_STREAM"
 mode="${1:-}"
 
@@ -14,6 +13,8 @@ if [[ "$mode" == "poll" || "$mode" == "viewer" ]]; then
     usage
     exit 2
   fi
+  echo "Astra poll/viewer disabled: OpenNI2 cannot bind the approved camera by a cryptographic or serial identity" >&2
+  exit 3
 fi
 
 case "${mode}" in
@@ -21,14 +22,6 @@ case "${mode}" in
     [[ $# -eq 1 ]] || { usage; exit 2; }
     required=(ColorReaderPoll NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
     executables=(ColorReaderPoll NiViewer)
-    ;;
-  poll)
-    required=(ColorReaderPoll libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
-    executables=(ColorReaderPoll)
-    ;;
-  viewer)
-    required=(NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
-    executables=(NiViewer)
     ;;
   *) usage; exit 2 ;;
 esac
@@ -46,19 +39,4 @@ for executable in "${executables[@]}"; do
   fi
 done
 
-if [[ "${mode}" == check ]]; then
-  printf 'OpenNI2 runtime ready: %s\n' "${bin_dir}"
-  exit 0
-fi
-if [[ ! -e /dev/dapier/front_slam_rgbd ]]; then
-  echo "Astra S is not connected: /dev/dapier/front_slam_rgbd" >&2
-  exit 3
-fi
-
-export OPENNI2_REDIST="${bin_dir}"
-export LD_LIBRARY_PATH="${bin_dir}:${compat_lib_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-
-if [[ "${mode}" == poll ]]; then
-  exec "${bin_dir}/ColorReaderPoll"
-fi
-exec "${bin_dir}/NiViewer"
+printf 'OpenNI2 runtime files present (static-only): %s\n' "${bin_dir}"

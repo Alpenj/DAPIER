@@ -19,6 +19,7 @@ import mujoco
 import numpy as np
 
 from box_shoe_scene import (
+    BOX_BODY_NAME,
     BOX_LID_BODY_NAME,
     BOX_LID_JOINT_NAME,
     LID_GRASP_SITE_NAME,
@@ -43,6 +44,10 @@ LEFT_WRIST_ROLL_SEED_RAD = 1.3
 LEFT_GRIPPER_OPEN_RAD = 1.2
 LEFT_GRIPPER_CLOSED_RAD = -0.1745
 MAX_OPPOSING_CONTACT_NORMAL_DOT = -0.5
+MAX_CONTACT_PENETRATION_M = 0.001
+MAX_GRASP_TRANSLATION_DRIFT_M = 0.03
+MAX_GRASP_ROTATION_DRIFT_RAD = 0.35
+MAX_ACTUATOR_TRACKING_ERROR_RAD = 0.10
 LEFT_LIFT_TARGETS_M = (
     (0.20, 0.10, 0.14),
     (0.20, 0.12, 0.20),
@@ -65,10 +70,22 @@ class DemoConfig:
             0.0 < self.physics_timestep_s <= 0.02
         ):
             raise ValueError("physics_timestep_s must be inside (0, 0.02]")
-        if self.move_steps <= 0 or self.hold_steps < 0:
+        if (
+            isinstance(self.move_steps, bool)
+            or not isinstance(self.move_steps, int)
+            or self.move_steps <= 0
+            or isinstance(self.hold_steps, bool)
+            or not isinstance(self.hold_steps, int)
+            or self.hold_steps < 0
+        ):
             raise ValueError("move_steps must be positive and hold_steps non-negative")
         if not 0.0 < self.minimum_open_angle_deg <= 120.0:
             raise ValueError("minimum_open_angle_deg must be inside (0, 120]")
+        if (
+            not math.isfinite(self.clear_height_margin_m)
+            or self.clear_height_margin_m <= 0.0
+        ):
+            raise ValueError("clear_height_margin_m must be finite and positive")
 
 
 @dataclass(frozen=True)
@@ -86,8 +103,9 @@ class DemoReport:
     opposing_finger_contact_verified: bool
     shoe_grasp_weld_present: bool
     friction_lift_verified: bool
-    grasp_relative_translation_drift_m: float | None
-    grasp_relative_rotation_drift_rad: float | None
+    maximum_grasp_relative_translation_drift_m: float | None
+    maximum_grasp_relative_rotation_drift_rad: float | None
+    maximum_actuator_tracking_error_rad: float
     lid_open_angle_deg: float
     shoe_initial_xyz_m: tuple[float, float, float]
     shoe_final_xyz_m: tuple[float, float, float]
@@ -101,6 +119,7 @@ class DemoReport:
     runtime_arm_qpos_writes: int
     initialization_arm_qpos_writes: int
     unintended_contact_pairs: tuple[tuple[str, str], ...]
+    unintended_contact_phases: tuple[tuple[str, str, str], ...]
     hardware_execution: bool = False
 
     def as_dict(self) -> dict[str, object]:
@@ -169,16 +188,13 @@ def _shoe_finger_contacts(
     """Return shoe contacts on the fixed and moving gripper sides separately."""
 
     shoe_geom = _object_id(model, mujoco.mjtObj.mjOBJ_GEOM, SHOE_GEOM_NAME)
-    fixed_body = _object_id(
-        model, mujoco.mjtObj.mjOBJ_BODY, "left_gripper"
-    )
+    fixed_body = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, "left_gripper")
     moving_body = _object_id(
         model, mujoco.mjtObj.mjOBJ_BODY, "left_moving_jaw_so101_v1"
     )
     fixed_contacts: list[mujoco.MjContact] = []
     moving_contacts: list[mujoco.MjContact] = []
-    for index in range(data.ncon):
-        contact = data.contact[index]
+    for contact in data.contact[: data.ncon]:
         geom_ids = (int(contact.geom1), int(contact.geom2))
         if shoe_geom not in geom_ids:
             continue
@@ -224,6 +240,58 @@ def _most_opposing_normal_dot(
     )
 
 
+def _shoe_pose_in_left_gripper(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+) -> tuple[np.ndarray, np.ndarray]:
+    gripper_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, "left_gripper")
+    shoe_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME)
+    gripper_rotation = data.xmat[gripper_id].reshape(3, 3)
+    shoe_rotation = data.xmat[shoe_id].reshape(3, 3)
+    return (
+        gripper_rotation.T @ (data.xpos[shoe_id] - data.xpos[gripper_id]),
+        gripper_rotation.T @ shoe_rotation,
+    )
+
+
+def _rotation_distance_rad(first: np.ndarray, second: np.ndarray) -> float:
+    relative = first.T @ second
+    cosine = float(np.clip((np.trace(relative) - 1.0) / 2.0, -1.0, 1.0))
+    return math.acos(cosine)
+
+
+def _continuous_lift_evidence_ok(
+    translation_drift_m: float | None,
+    rotation_drift_rad: float | None,
+    actuator_tracking_error_rad: float,
+) -> bool:
+    return (
+        translation_drift_m is not None
+        and rotation_drift_rad is not None
+        and translation_drift_m <= MAX_GRASP_TRANSLATION_DRIFT_M
+        and rotation_drift_rad <= MAX_GRASP_ROTATION_DRIFT_RAD
+        and actuator_tracking_error_rad <= MAX_ACTUATOR_TRACKING_ERROR_RAD
+    )
+
+
+def _classify_unintended_contact(
+    body_names: tuple[str, str],
+    *,
+    distance_m: float,
+    right_lid_hold_active: bool,
+) -> tuple[str, str] | None:
+    pair = tuple(sorted(body_names))
+    if distance_m >= -MAX_CONTACT_PENETRATION_M or len(set(pair)) < 2:
+        return None
+    if not (
+        any(name.startswith(("left_", "right_")) for name in pair)
+        or SHOE_BODY_NAME in pair
+        and (BOX_BODY_NAME in pair or BOX_LID_BODY_NAME in pair)
+    ):
+        return None
+    return pair
+
+
 def _configure_connect_sites_at_contact(
     model: mujoco.MjModel,
     data: mujoco.MjData,
@@ -260,28 +328,6 @@ def _lid_site_target_at_angle(
     return planning_data.site_xpos[lid_site].copy()
 
 
-def _shoe_pose_in_left_gripper(
-    model: mujoco.MjModel,
-    data: mujoco.MjData,
-) -> tuple[np.ndarray, np.ndarray]:
-    gripper_id = _object_id(
-        model, mujoco.mjtObj.mjOBJ_BODY, "left_gripper"
-    )
-    shoe_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME)
-    gripper_rotation = data.xmat[gripper_id].reshape(3, 3)
-    shoe_rotation = data.xmat[shoe_id].reshape(3, 3)
-    return (
-        gripper_rotation.T @ (data.xpos[shoe_id] - data.xpos[gripper_id]),
-        gripper_rotation.T @ shoe_rotation,
-    )
-
-
-def _rotation_distance_rad(first: np.ndarray, second: np.ndarray) -> float:
-    relative = first.T @ second
-    cosine = float(np.clip((np.trace(relative) - 1.0) / 2.0, -1.0, 1.0))
-    return math.acos(cosine)
-
-
 def _quintic_weight(fraction: float) -> float:
     return 10.0 * fraction**3 - 15.0 * fraction**4 + 6.0 * fraction**5
 
@@ -299,9 +345,19 @@ class BoxShoePhysicsDemo:
             self.actuated_joint_ids
         ].astype(np.int32)
         self.unintended_contacts: set[tuple[str, str]] = set()
+        self.unintended_contact_phases: set[tuple[str, str, str]] = set()
+        self._grasp_reference: tuple[np.ndarray, np.ndarray] | None = None
+        self.maximum_grasp_relative_translation_drift_m: float | None = None
+        self.maximum_grasp_relative_rotation_drift_rad: float | None = None
+        self.maximum_actuator_tracking_error_rad = 0.0
         self.maximum_actuator_force_ratio = 0.0
         self.dynamics_sample_count = 0
         self.actuator_saturation_steps = np.zeros(self.model.nu, dtype=np.int64)
+
+    def _start_grasp_tracking(self) -> None:
+        self._grasp_reference = _shoe_pose_in_left_gripper(self.model, self.data)
+        self.maximum_grasp_relative_translation_drift_m = 0.0
+        self.maximum_grasp_relative_rotation_drift_rad = 0.0
 
     def _sample_dynamics(self) -> None:
         force_limit = np.maximum(
@@ -315,6 +371,29 @@ class BoxShoePhysicsDemo:
         )
         self.dynamics_sample_count += 1
         self.actuator_saturation_steps += force_ratio >= 0.999
+        self.maximum_actuator_tracking_error_rad = max(
+            self.maximum_actuator_tracking_error_rad,
+            float(
+                np.max(
+                    np.abs(
+                        self.data.qpos[self.actuated_qpos_addresses] - self.data.ctrl
+                    )
+                )
+            ),
+        )
+        if self._grasp_reference is None:
+            return
+        relative_position, relative_rotation = _shoe_pose_in_left_gripper(
+            self.model, self.data
+        )
+        self.maximum_grasp_relative_translation_drift_m = max(
+            self.maximum_grasp_relative_translation_drift_m or 0.0,
+            float(np.linalg.norm(relative_position - self._grasp_reference[0])),
+        )
+        self.maximum_grasp_relative_rotation_drift_rad = max(
+            self.maximum_grasp_relative_rotation_drift_rad or 0.0,
+            _rotation_distance_rad(self._grasp_reference[1], relative_rotation),
+        )
 
     def _emit(self, phase: str, **fields: object) -> None:
         print(
@@ -331,33 +410,27 @@ class BoxShoePhysicsDemo:
             flush=True,
         )
 
-    def _sample_unintended_contacts(self) -> None:
-        intended_geoms = {RIGHT_WING_GEOM_NAME, SHOE_GEOM_NAME}
+    def _sample_unintended_contacts(self, phase: str) -> None:
+        right_lid_hold = _object_id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_EQUALITY,
+            RIGHT_LID_GRASP_EQUALITY_NAME,
+        )
         for index in range(self.data.ncon):
             contact = self.data.contact[index]
             geom_ids = (int(contact.geom1), int(contact.geom2))
-            geom_names = tuple(_geom_name(self.model, geom_id) for geom_id in geom_ids)
-            if intended_geoms.intersection(geom_names):
-                continue
             body_names = tuple(
                 _body_name(self.model, int(self.model.geom_bodyid[geom_id]))
                 for geom_id in geom_ids
             )
-            right_holds_lid = (
-                BOX_LID_BODY_NAME in body_names
-                and any(name.startswith("right_") for name in body_names)
+            pair = _classify_unintended_contact(
+                body_names,
+                distance_m=float(contact.dist),
+                right_lid_hold_active=bool(self.data.eq_active[right_lid_hold]),
             )
-            if right_holds_lid:
-                continue
-            arm_structure = any(
-                name.startswith(("left_", "right_")) for name in body_names
-            )
-            box_structure = any(
-                name == BOX_LID_BODY_NAME or name == "box_fixture"
-                for name in body_names
-            )
-            if arm_structure and box_structure and float(contact.dist) < -0.001:
-                self.unintended_contacts.add(tuple(sorted(body_names)))
+            if pair is not None:
+                self.unintended_contacts.add(pair)
+                self.unintended_contact_phases.add((phase, *pair))
 
     def _move(
         self,
@@ -374,18 +447,24 @@ class BoxShoePhysicsDemo:
             )
             mujoco.mj_step(self.model, self.data)
             self._sample_dynamics()
-            if index % 10 == 0:
-                self._sample_unintended_contacts()
+            self._sample_unintended_contacts(phase)
             if viewer is not None:
                 viewer.sync()
                 time.sleep(self.config.physics_timestep_s)
         self._emit(phase)
 
-    def _hold(self, action: np.ndarray, viewer: mujoco.viewer.Handle | None) -> None:
+    def _hold(
+        self,
+        action: np.ndarray,
+        viewer: mujoco.viewer.Handle | None,
+        *,
+        phase: str,
+    ) -> None:
         for _ in range(self.config.hold_steps):
             self.data.ctrl[:] = action
             mujoco.mj_step(self.model, self.data)
             self._sample_dynamics()
+            self._sample_unintended_contacts(phase)
             if viewer is not None:
                 viewer.sync()
                 time.sleep(self.config.physics_timestep_s)
@@ -407,13 +486,14 @@ class BoxShoePhysicsDemo:
             )
             mujoco.mj_step(self.model, self.data)
             self._sample_dynamics()
+            self._sample_unintended_contacts("left_gripper_close")
             fixed, moving = _shoe_finger_contacts(self.model, self.data)
             peak_fixed = max(peak_fixed, len(fixed))
             peak_moving = max(peak_moving, len(moving))
             if viewer is not None:
                 viewer.sync()
                 time.sleep(self.config.physics_timestep_s)
-        self._hold(goal_action, viewer)
+        self._hold(goal_action, viewer, phase="left_gripper_close")
         fixed, moving = _shoe_finger_contacts(self.model, self.data)
         normal_dot = _finger_contact_normal_dot(self.model, fixed, moving)
         self._emit(
@@ -466,12 +546,8 @@ class BoxShoePhysicsDemo:
             RIGHT_LID_GRASP_EQUALITY_NAME,
         )
         self.data.eq_active[right_equality] = 1
-        wing_geom = _object_id(
-            self.model, mujoco.mjtObj.mjOBJ_GEOM, RIGHT_WING_GEOM_NAME
-        )
-        self.model.geom_contype[wing_geom] = 0
-        self.model.geom_conaffinity[wing_geom] = 0
         mujoco.mj_forward(self.model, self.data)
+        self._sample_unintended_contacts("right_wing_contact")
         self._emit("right_wing_contact", contacts=len(right_contacts))
 
         right_open_action = right_contact_action
@@ -501,7 +577,7 @@ class BoxShoePhysicsDemo:
                 phase=f"right_open_{angle_deg:g}deg",
             )
             right_open_action = next_right_action
-        self._hold(right_open_action, viewer)
+        self._hold(right_open_action, viewer, phase="right_lid_hold")
         lid_joint = _object_id(
             self.model, mujoco.mjtObj.mjOBJ_JOINT, BOX_LID_JOINT_NAME
         )
@@ -535,7 +611,7 @@ class BoxShoePhysicsDemo:
             viewer=viewer,
             phase="left_shoe_pregrasp",
         )
-        self._hold(left_pregrasp_action, viewer)
+        self._hold(left_pregrasp_action, viewer, phase="left_shoe_pregrasp")
 
         left_contact_ik = solve_bimanual_position_ik(
             self.model,
@@ -552,7 +628,7 @@ class BoxShoePhysicsDemo:
             viewer=viewer,
             phase="left_shoe_approach",
         )
-        self._hold(left_contact_action, viewer)
+        self._hold(left_contact_action, viewer, phase="left_shoe_approach")
         closed_action, fixed_contacts, moving_contacts, contact_normal_dot = (
             self._close_left_gripper(
                 left_contact_action,
@@ -582,7 +658,7 @@ class BoxShoePhysicsDemo:
                 moving_contact_count=moving_contacts,
                 contact_normal_dot=contact_normal_dot,
             )
-        grasp_reference = _shoe_pose_in_left_gripper(self.model, self.data)
+        self._start_grasp_tracking()
         self._emit(
             "left_opposing_contact",
             fixed_contacts=fixed_contacts,
@@ -614,7 +690,7 @@ class BoxShoePhysicsDemo:
                 viewer=viewer,
                 phase=phase,
             )
-            self._hold(goal_action, viewer)
+            self._hold(goal_action, viewer, phase=phase)
             current_action = goal_action
 
         final_fixed_contacts, final_moving_contacts = _shoe_finger_contacts(
@@ -631,7 +707,6 @@ class BoxShoePhysicsDemo:
             fixed_contact_count=len(final_fixed_contacts),
             moving_contact_count=len(final_moving_contacts),
             contact_normal_dot=final_contact_normal_dot,
-            grasp_reference=grasp_reference,
         )
 
     def _report(
@@ -644,7 +719,6 @@ class BoxShoePhysicsDemo:
         fixed_contact_count: int = 0,
         moving_contact_count: int = 0,
         contact_normal_dot: float | None = None,
-        grasp_reference: tuple[np.ndarray, np.ndarray] | None = None,
     ) -> DemoReport:
         lid_joint = _object_id(
             self.model, mujoco.mjtObj.mjOBJ_JOINT, BOX_LID_JOINT_NAME
@@ -705,26 +779,16 @@ class BoxShoePhysicsDemo:
             )
             >= 0
         )
-        translation_drift = None
-        rotation_drift = None
-        if grasp_reference is not None:
-            final_relative_position, final_relative_rotation = (
-                _shoe_pose_in_left_gripper(self.model, self.data)
-            )
-            translation_drift = float(
-                np.linalg.norm(final_relative_position - grasp_reference[0])
-            )
-            rotation_drift = _rotation_distance_rad(
-                grasp_reference[1], final_relative_rotation
-            )
+        continuous_evidence = _continuous_lift_evidence_ok(
+            self.maximum_grasp_relative_translation_drift_m,
+            self.maximum_grasp_relative_rotation_drift_rad,
+            self.maximum_actuator_tracking_error_rad,
+        )
         friction_lift = (
             opposing
             and not shoe_grasp_weld_present
             and clear
-            and translation_drift is not None
-            and rotation_drift is not None
-            and translation_drift <= 0.03
-            and rotation_drift <= 0.35
+            and continuous_evidence
         )
         success = (
             phase == "completed"
@@ -733,7 +797,7 @@ class BoxShoePhysicsDemo:
             and lid_angle_deg >= self.config.minimum_open_angle_deg
             and clear
             and finite
-            and final_tracking_error < 0.10
+            and final_tracking_error <= MAX_ACTUATOR_TRACKING_ERROR_RAD
             and not self.unintended_contacts
         )
         report = DemoReport(
@@ -750,8 +814,15 @@ class BoxShoePhysicsDemo:
             opposing_finger_contact_verified=opposing,
             shoe_grasp_weld_present=shoe_grasp_weld_present,
             friction_lift_verified=friction_lift,
-            grasp_relative_translation_drift_m=translation_drift,
-            grasp_relative_rotation_drift_rad=rotation_drift,
+            maximum_grasp_relative_translation_drift_m=(
+                self.maximum_grasp_relative_translation_drift_m
+            ),
+            maximum_grasp_relative_rotation_drift_rad=(
+                self.maximum_grasp_relative_rotation_drift_rad
+            ),
+            maximum_actuator_tracking_error_rad=(
+                self.maximum_actuator_tracking_error_rad
+            ),
             lid_open_angle_deg=lid_angle_deg,
             shoe_initial_xyz_m=tuple(float(value) for value in shoe_initial),
             shoe_final_xyz_m=tuple(float(value) for value in shoe_final),
@@ -770,6 +841,9 @@ class BoxShoePhysicsDemo:
             runtime_arm_qpos_writes=0,
             initialization_arm_qpos_writes=1,
             unintended_contact_pairs=tuple(sorted(self.unintended_contacts)),
+            unintended_contact_phases=tuple(
+                sorted(self.unintended_contact_phases)
+            ),
         )
         self._emit("report", report=report.as_dict())
         return report

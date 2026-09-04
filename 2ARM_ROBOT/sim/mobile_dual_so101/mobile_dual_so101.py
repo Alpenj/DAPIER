@@ -377,6 +377,14 @@ def _add_printed_mount_structure(
         "contype": 0,
         "conaffinity": 0,
     }
+    hidden_collision = {
+        "type": mujoco.mjtGeom.mjGEOM_BOX,
+        "mass": 0.0,
+        "contype": 1,
+        "conaffinity": 1,
+        "group": 3,
+        "rgba": [0.3, 0.8, 1.0, 0.0],
+    }
     for side, y_sign in (("left", 1.0), ("right", -1.0)):
         deck_y = y_sign * 0.07
         mount_body.add_geom(
@@ -447,6 +455,18 @@ def _add_printed_mount_structure(
         rgba=[0.25, 0.30, 0.36, 1.0],
         **common,
     )
+    mount_body.add_geom(
+        name="printed_mount_deck_collision",
+        pos=[0.0, 0.0, WAFFLE_TOP_LOCAL_Z_M + deck_thickness / 2.0],
+        size=[0.080, 0.140, deck_thickness / 2.0],
+        **hidden_collision,
+    )
+    mount_body.add_geom(
+        name="printed_torso_collision",
+        pos=[arm_mount_x_m, 0.0, deck_top + torso_height / 2.0],
+        size=[0.065, arm_mount_separation_m / 2.0, torso_height / 2.0],
+        **hidden_collision,
+    )
 
     # Two short pads attach the RGB-D enclosure to the front torso wall.
     camera_x, _, camera_z = WORKSPACE_DEPTH_CAMERA_CENTER_M
@@ -472,6 +492,12 @@ def _add_printed_mount_structure(
             rgba=[0.15, 0.35, 0.65, 1.0],
             **common,
         )
+    mount_body.add_geom(
+        name="printed_camera_mount_collision",
+        pos=[bracket_x, 0.0, camera_z],
+        size=[bracket_half_x, 0.072, 0.025],
+        **hidden_collision,
+    )
 
     assigned_mass = (
         2 * 0.10

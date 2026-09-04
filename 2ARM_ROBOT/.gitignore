@@ -1,7 +1,8 @@
 build/
 install/
 log/
-output/
+/output/
+/config/99-dapier-hardware.rules
 .venv/
 **/__pycache__/
 **/.pytest_cache/

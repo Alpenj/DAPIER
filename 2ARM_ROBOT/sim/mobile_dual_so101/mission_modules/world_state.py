@@ -71,10 +71,33 @@ class WorldStateSnapshot:
     ) -> bool:
         if not math.isfinite(max_snapshot_age_ms) or max_snapshot_age_ms <= 0:
             raise ValueError("max_snapshot_age_ms must be finite and positive")
+        component_ages_ms = [
+            self.mobility.observation_age_ms,
+            self.slam.observation_age_ms,
+            self.manipulator.observation_age_ms,
+            self.runtime_health.edge_compute.observation_age_ms,
+            *(
+                stream.last_frame_age_ms
+                for stream in self.camera_health.streams
+                if stream.enabled
+            ),
+        ]
+        if self.shoe_pose is not None:
+            component_ages_ms.append(self.shoe_pose.observation_age_ms)
+        if self.tactile_status is not None:
+            component_ages_ms.extend(
+                channel.observation_age_ms
+                for channel in self.tactile_status.channels
+                if channel.enabled
+            )
+        snapshot_age_ms = self.age_ms(now_monotonic_ns=now_monotonic_ns)
         return (
-            self.age_ms(now_monotonic_ns=now_monotonic_ns)
-            <= max_snapshot_age_ms
+            snapshot_age_ms <= max_snapshot_age_ms
             and self.link_heartbeat.alive(now_monotonic_ns=now_monotonic_ns)
+            and all(
+                snapshot_age_ms + age <= max_snapshot_age_ms
+                for age in component_ages_ms
+            )
         )
 
     def as_supervisor_summary(

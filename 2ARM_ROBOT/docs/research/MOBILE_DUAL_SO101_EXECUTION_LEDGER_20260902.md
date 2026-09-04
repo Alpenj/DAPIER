@@ -6,6 +6,11 @@
 - 고정 기준: PR [#40](https://github.com/Alpenj/DAPIER/pull/40) head `fecc0c7`
 - 실행 범위: MuJoCo-only, offline data, hardware-free test
 
+> **2026-09-04 cycle-6 안전 상태:** 아래 실물 내용은 과거 학습 기록이며 현재 실행 허가가
+> 아니다. 저장소 physical motion과 camera streaming은 local safety integration에서
+> connected-endpoint identity binding, 독립 device-side watchdog, 카메라 serial/cryptographic
+> binding을 확인할 때까지 비활성화한다.
+
 ## 내가 끝내려는 결과
 
 나는 visual SLAM 도착 신호부터 오른팔 박스 열기·유지, 왼팔 신발 proxy 파지·꺼내기,
@@ -346,19 +351,14 @@ Color+Depth+wrist 두 대를 동시에 실행해 FPS, frame drop, kernel reset�
 commissioning 근거로 남긴다. 팔 controller 두 개의 serial 통신량은 영상에 비해 작아서 대역폭
 병목의 주원인이 아니다.
 
-### 현재 전면 Astra 실행 경로
+### 현재 전면 Astra 정적 검사 경로
 
 - 로컬 런타임: `~/.local/opt/orbbec-openni2-ros2-v1.0.2`
-- 장치 별칭: `/dev/dapier/front_slam_rgbd`
 - 준비 확인: `2ARM_ROBOT/scripts/run_astra_openni2_color check`
-- Color 원시 프레임: `2ARM_ROBOT/scripts/run_astra_openni2_color poll --operator-present --confirm VISIBLE_ASTRA_READONLY_STREAM`
-- Color/Depth GUI: `2ARM_ROBOT/scripts/run_astra_openni2_color viewer --operator-present --confirm VISIBLE_ASTRA_READONLY_STREAM`
 
-실행 스크립트는 `OPENNI2_REDIST`와 `LD_LIBRARY_PATH`를 검증된 redist로 고정한다.
-Ubuntu 24.04의 FreeGLUT SONAME 차이는 설치된 `libglut.so.3.12`를 로컬 `compat`
-경로에서만 연결해 해결했으며 시스템 라이브러리나 firmware는 수정하지 않았다. `check`는
-설치 파일만 확인하지만 `poll`과 `viewer`는 실제 카메라를 열기 때문에 사용자 입회와 별도
-read-only stream token 없이는 장치 확인 전에 종료한다.
+`check`는 설치 파일의 존재와 실행 권한만 정적으로 확인한다. OpenNI2가 승인된 Astra를
+고유 serial 또는 cryptographic identity로 bind하지 못하므로 `poll`과 `viewer`는 token이나
+TTY 여부와 관계없이 종료한다. 과거 Color/Depth 진단은 이 경로를 다시 여는 근거가 아니다.
 
 ## HW 준비 보강 · H201 top-view + Astra front-SLAM 분리 · 모델/계약 완료
 
@@ -432,19 +432,49 @@ step마다 두 shoulder-pan 실측값을 기록했다. 종료 경로에서는 �
 
 ```bash
 python 2ARM_ROBOT/scripts/dual_so101_smoke \
+  --profile "$HOME/.config/dapier/dual-so101-profile.json" \
   --operator-present \
   --confirm VISIBLE_DUAL_SO101_READONLY
-python 2ARM_ROBOT/scripts/dual_so101_smoke \
-  --left-calibration /path/to/verified-left-so101.json \
-  --right-calibration /path/to/verified-right-so101.json \
-  --move-deg 3 --operator-present \
-  --confirm VISIBLE_DUAL_SO101_3DEG
 ```
 
-첫 명령은 사용자 입회 승인 뒤 calibration 없이 raw tick과 health만 읽는다. 동작 명령에는 controller serial과
-좌우 실물 대응을 확인한 per-arm calibration 두 개를 명시해야 한다. LeRobot cache의
-`leader`/`follower` 디렉터리 이름만으로 좌우 역할을 추론하지 않는다. 동작에는 사용자가
-현장 화면과 E-stop을 확인했다는 `--operator-present` 선언도 필요하다.
+현재는 위 `--move-deg 0` 읽기 전용 형태만 남아 있다. 비공개 profile은 owner가 만든 mode
+`0600` 파일이며 `schema_version`과
+정확히 `left`/`right` 두 role만 가지며, 각 role은 `port`, `controller_serial`,
+`calibration_path`, `calibration_sha256`만 가진다. serial과 calibration 원문·경로는 공개 로그에
+남기지 않는다. profile 예시는 실제 값으로 사용할 수 없도록 placeholder로만 적는다.
+
+```json
+{
+  "schema_version": "dapier.dual-so101-profile.v1",
+  "arms": {
+    "left": {
+      "port": "/dev/dapier/left_arm",
+      "controller_serial": "<private-left-controller-serial>",
+      "calibration_path": "<private-left-calibration-path>",
+      "calibration_sha256": "<lowercase-sha256>"
+    },
+    "right": {
+      "port": "/dev/dapier/right_arm",
+      "controller_serial": "<private-right-controller-serial>",
+      "calibration_path": "<private-right-calibration-path>",
+      "calibration_sha256": "<lowercase-sha256>"
+    }
+  }
+}
+```
+
+직접 정적 검증해 보니 잘못된 owner/permission, missing/extra field, 중복 port/serial,
+중복 calibration 경로, calibration digest mismatch와 raw position 범위 밖 motor limit은 bus
+생성 전에 닫힌다. nonzero `--move-deg`는 token과 TTY 전에 무조건 거부한다. 읽기 전용도 exact
+token, `--operator-present`, stdin/stdout interactive TTY가 필요하다. LeRobot cache의
+`leader`/`follower` 디렉터리 이름만으로 좌우 역할을 추론하지 않는다.
+
+동작 sample마다 `observed`는 calibration-normalized degree로 기록하고 절대 180도, goal 대비
+tracking error 1도, `Present_Velocity` 100 raw encoder-step/s를 넘으면 중단한다. raw health 범위는
+전압 110~130 count(0.1 V/count), 온도 0~50 count(1°C/count), load -500~500
+count(0.1% maximum torque/count), current 0~300 count(6.5 mA/count)다. current 상한은 이전
+500 count보다 보수적으로 낮췄다. register나 모터 하나라도 빠지거나 값이 non-finite이면
+fail-closed하고 양팔 torque-disable 정리 경로를 시도한다.
 
 | 팔 | 명령 | 실측 최대 excursion | 왕복 직후 잔류 오차 | 동작 중 최대 온도 | status |
 |---|---:|---:|---:|---:|---:|
@@ -457,12 +487,12 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 ### 이번 결과의 범위
 
 과거 로그에는 좌우 식별, 각 팔 보정 적용, 동일 명령 경로, 저속 양팔 응답, 상태 수집, 종료 후
-토크 해제가 기록돼 있다. 다만 사용자가 화면으로 보며 확인한 commissioning은 아니므로 내일 같은
-범위를 다시 실행해 검증해야 한다. MuJoCo의 전체 박스 동작을 실물에서 실행한 것은 아니다. 현재 simulation의
+토크 해제가 기록돼 있다. 다만 사용자가 화면으로 보며 확인한 commissioning은 아니며, cycle-6
+검토 뒤 같은 범위를 다시 실행하는 계획도 중단했다. MuJoCo의 전체 박스 동작을 실물에서 실행한 것은 아니다. 현재 simulation의
 왼 그리퍼는 로컬에서 fixed/moving contact가 1/1, CI에서 1/0으로 경계가 달랐지만 두 환경 모두
 반대 방향 접촉과 friction-only lift가 없어 파지 성공 gate를 통과하지 못했다. 따라서 박스 개방·신발
-추출 명령은 실물에 보내지 않는다. 다음 실물 단계는 MuJoCo opposing contact와 friction-only lift가
-성공한 뒤 검증된 joint waypoint를 제한 실행기에 넣는 것이다.
+추출 명령은 실물에 보내지 않는다. MuJoCo opposing contact와 friction-only lift가 성공해도
+독립 device-side watchdog과 endpoint binding 전에는 joint waypoint를 실물 실행기에 넣지 않는다.
 
 ## SIM P2 재현 · 파지축과 actuator 포화 분리 · 계속 실패
 
@@ -496,9 +526,9 @@ python 2ARM_ROBOT/scripts/dual_so101_smoke \
 반대 방향 접촉을 추가로 요구한다. 현재 결과는 `left_opposing_contact_failed`,
 `success=false`, `hardware_execution=false`다.
 
-`dual_so101_smoke`에는 다음 실측을 위해 health snapshot과 shoulder-pan trace의
-`Present_Load`, `Present_Current` raw 기록을 추가했다. fake bus 단위 테스트와 전체
-155개 회귀는 통과했지만, 이번 단계에서는 실물 serial port를 열지 않았으므로 실제 값은 아직 없다.
+이전 revision의 `dual_so101_smoke`에는 health snapshot과 shoulder-pan trace의
+`Present_Load`, `Present_Current` raw 기록이 있었지만 cycle-6에서 motion trace와 write 경로를
+제거했다. 현재는 read-only health만 남고, 이번 단계에서는 실물 serial port를 열지 않았다.
 
 
 ## SIM-HW 비교 · 양팔 ±3도 왕복 · 위치 응답 근접, dynamics gate 실패
@@ -520,15 +550,9 @@ actual acceleration과 finite-difference jerk 제한을 넘었고 `strict_dynami
 재현 결과는 `docs/evidence/dual_so101_sim_real_comparison_20260903.json`에 저장했다.
 
 1.5~8초와 septic 보간을 별도로 sweep해도 20 Hz 목표의 불연속 때문에 acceleration·jerk gate는
-모두 실패했다. 단순 감속으로 해결하지 않고, 다음 공개 실물 시험에서 STS3215의 `Acceleration`,
-`Goal_Time`, `Goal_Velocity`, 속도·가속도 상한과 `Present_Velocity`를 읽어 내부 프로파일을
-MuJoCo actuator model에 반영할지 판단한다. 해당 레지스터는 계측만 하고 변경하지 않는다.
-
-다음 실물 시험은 왼쪽·오른쪽 wrist RGB, TurtleBot3 전면 Astra viewer, H201 top-view UVC 창을
-먼저 띄워 사용자가 팔과 센서 화면을 직접 볼 수 있게 한다. 이후 무동작 health 읽기,
-`lsusb -t`와 kernel USB 기준점 기록, 정확한 승인,
-양팔 ±3도 왕복, 사후 health와 USB reset 확인 순서로 진행한다. 카메라 동시 실행이 불안정하면
-모터를 움직이지 않고 스트림 단계에서 중단한다.
+모두 실패했다. 당시에는 다음 공개 실물 시험에서 STS3215 내부 profile을 읽어 MuJoCo actuator
+model에 반영하려 했지만, 이 계획은 cycle-6 안전 검토에서 중단했다. Astra viewer와 양팔 ±3도
+왕복은 현재 entrypoint에서 실행할 수 없으며 local safety integration 완료 전에는 재개하지 않는다.
 
 전후 USB 근거는 `scripts/capture_usb_snapshot`으로 수집한다. 사용자가 현장에 있을 때
 `VISIBLE_USB_SNAPSHOT_READONLY` 확인을 받아야 실행되며, Git에서 제외된 `output/` 아래 새
@@ -551,16 +575,13 @@ python 2ARM_ROBOT/scripts/dual_so101_trace_report \
 register가 모두 존재함을 확인했다. 실행기는 같은 필수 register 목록을 serial connect 전에
 검사하므로 다른 노트북이나 Pi4의 LeRobot 버전이 맞지 않으면 모터를 열기 전에 실패한다.
 
-종료 기록도 보강했다. 기존 `health_before_disconnect`는 토크 해제 전 값이라 종료 안전을 직접
-증명하지 못했다. 동작 후 양팔 토크를 명시적으로 해제하고 `Torque_Enable=0`을 read-back한
-`health_after_torque_off`를 저장한다. 한 모터라도 0이 아니면 실행은 실패하며, `finally`의
-disconnect가 토크 해제를 다시 시도한다. fake bus 실패 시험과 전체 163개 회귀가 통과했고
-실물 장치에는 접근하지 않았다.
+cycle-6에서 process timer나 `finally`가 torque 안전을 보장한다는 가정을 제거했다. process가
+멈추면 같은 process의 정리 코드도 실행되지 않을 수 있기 때문이다. 따라서 nonzero motion과
+torque write 경로 자체를 삭제했고, 독립 device-side watchdog을 현장에서 별도로 확인하기
+전에는 되살리지 않는다.
 
-공개 재시험 로그에는 `user_witnessed`, `hardware_execution`, `motion_completed`, 시작·종료 시각과
-좌우 calibration SHA-256도 남긴다. 이름·controller serial·calibration 원문은 저장하지 않는다.
-동작 요청은 기존 exact token과 두 calibration 외에도 `--operator-present`가 필요하다. HTML에도
-세 boolean을 표시하고 누락된 과거 로그는 `not recorded`로 보인다.
+새 read-only 로그는 `O_EXCL`·`O_NOFOLLOW`, mode `0600`으로만 만들며 기존 파일과 symlink를
+거부한다. 공개 필드에는 controller serial, calibration 원문·경로·SHA-256을 저장하지 않는다.
 
 첫 CI에서는 같은 파지 자세가 로컬에서 fixed/moving `1/1`, GitHub runner에서 `1/0`으로
 끝나며 특정 실패 단계 문자열을 요구하던 통합시험이 실패했다. 두 결과 모두 파지 실패이고
@@ -568,40 +589,41 @@ disconnect가 토크 해제를 다시 시도한다. fake bus 실패 시험과 �
 bilateral 또는 opposing-contact 실패를 확인한다. 법선 내적 판정은 반대 방향 `-1`, 직교 `0`,
 누락 `None`을 직접 넣는 결정적 단위시험으로 분리했다. 전체 164개 회귀가 통과했다.
 
-실물 실행 전 마지막으로 fake bus를 통해 `dual_so101_smoke`의 실제 `main()` 전체 경로도
-검증했다. 좌우 독립 calibration hash, 사용자 입회 표시, 동작 시작·완료 표시, 60개 trace와
-양팔 `Torque_Enable=0` 사후 read-back이 한 raw record에 함께 남는다. 전체 MuJoCo 헤드리스
-회귀는 166/166 통과했고 `hardware_execution=false`였으며, 전원이 내려간 실물 장치에는
-접근하지 않았다.
+cycle-6 회귀는 entrypoint source에서 torque enable, goal write, process signal watchdog이
+없음을 정적으로 확인한다. mocked read-only 계약에는 connect 직전·직후 identity 재검증과
+비식별 신규 로그만 남겼다. 이 검증은 실물 안전이나 connected endpoint binding 성공을 뜻하지
+않는다.
 
-추가 점검에서 좌우 calibration 인자를 모두 요구하면서도 같은 파일을 양쪽에 중복 지정하는
-실수는 차단하지 못하는 것을 확인했다. 공통 motion request validator에서 두 calibration의
-해석된 경로가 같으면 serial connect 전에 거부하도록 보강했다. 복사된 잘못된 파일까지 자동으로
-좌우 판별할 수는 없으므로, 실제 controller와 calibration 대응은 내일 read-only 확인이 여전히
-필수다.
+추가 점검에서는 좌우 role/port/controller/calibration을 argv로 각각 넘기지 않고 비공개 profile
+하나에서 함께 읽도록 바꿨다. 두 calibration의 해석된 경로가 같거나 digest가 다르면 serial
+connect 전에 거부한다. 복사된 잘못된 calibration 내용이 올바른 role digest로 등록된 경우까지
+자동 판별할 수는 없으므로, profile을 만들 때 실제 controller와 calibration 대응을 사람이
+확인해야 한다.
 
 기존 ROS 2 snapshot 도구도 실물 안전 경계에 맞춰 다시 점검했다. 읽기 전용이라도 불명확한
 ROS graph 접속은 실물 접근이므로, `VISIBLE_ROS2_SNAPSHOT_READONLY` exact token이 없으면
-`ros2`를 호출하기 전에 종료한다. raw 결과는 Git에서 제외된 `2ARM_ROBOT/output/` 아래 새
+종료하고 stdin/stdout이 interactive TTY가 아니어도 `ros2`를 호출하기 전에 종료한다. raw 결과는 Git에서 제외된 `2ARM_ROBOT/output/` 아래 새
 경로에만 저장하고 기존 경로는 덮어쓰지 않는다. 잘못된 토큰 거부 3개 집중시험과 전체 167개
 MuJoCo 헤드리스 회귀가 통과했으며 실제 ROS graph와 장치에는 접근하지 않았다.
 
 같은 원칙을 `dual_so101_smoke`의 무동작 health 모드에도 적용했다. `--move-deg 0`은 모터를
 쓰지 않지만 serial을 여는 실물 접근이므로, `VISIBLE_DUAL_SO101_READONLY`와
-`--operator-present`가 모두 없으면 bus 생성·connect 전에 거부한다. calibration 없는 raw tick
-읽기라는 기능은 유지하며, 이 토큰이 ±3도 동작 승인을 대신하지는 않는다.
+`--operator-present`, interactive TTY, 검증된 비공개 profile 중 하나라도 없으면 bus
+생성·connect 전에 거부한다. connect 직전과 직후 sysfs identity를 다시 읽지만 API가 열린
+endpoint 자체를 identity에 bind하지 않으므로 read-only 한계로 기록한다.
 
 전면 Astra 실행 경로도 같은 기준으로 분리했다. `check`는 설치된 공식 OpenNI2 runtime 파일만
-확인하므로 무승인 offline 검사로 유지한다. 실제 장치를 여는 `poll`과 `viewer`는
-`VISIBLE_ASTRA_READONLY_STREAM`과 `--operator-present`가 모두 없으면 `/dev` 확인과 stream
-open 전에 종료한다. 잘못된 토큰 테스트는 실제 카메라를 열지 않는다.
+확인하는 offline 정적 검사다. 승인 장치를 serial 또는 cryptographic identity로 bind할 수 없는
+`poll`과 `viewer`는 항상 fail-closed하며 camera streaming을 시작하지 않는다.
 
 udev stable alias 설치도 시스템 변경 경로라 별도 승인 대상으로 고정했다.
-`install_hardware_aliases.sh`는 `VISIBLE_INSTALL_DAPIER_UDEV_RULES`가 없으면 local rules를
-읽거나 `sudo`를 호출하기 전에 종료한다. 설치를 다시 해야 한다면 내일 모든 stream을 열기 전에
-한 번만 수행하고, 이후 좌우 alias와 실제 장비 대응을 다시 확인한다.
+`install_hardware_aliases.sh`는 `VISIBLE_INSTALL_DAPIER_UDEV_RULES`가 없거나 interactive TTY가
+아니면 local rules를 읽거나 `sudo`를 호출하기 전에 종료한다. 입력은 Git에서 제외된 저장소 고정
+경로 `config/99-dapier-hardware.rules`만 허용한다. regular/non-symlink, owner, group/world write
+금지와 staging 전후 digest를 확인한 private mode `0400` 복사본에서만 설치하도록 바꿨다.
 
-SO-101 ±3도 motion은 exact token과 사용자 입회 표시가 있어도 stdin/stdout이 interactive TTY가
-아니면 bus를 생성하기 전에 거부한다. 이로써 CI·background shell·파이프에서 토큰만 복사해
-자동 실행하는 경로를 막았다. 무동작 read-only health에는 motion TTY 조건을 적용하지 않지만
-별도 read-only token과 사용자 입회 조건은 그대로 유지한다.
+SO-101 read-only는 exact token과 사용자 입회 표시가 있어도 stdin/stdout이 interactive TTY가
+아니면 profile이나 bus를 열기 전에 거부한다. physical motion은 token과 무관하게 거부한다.
+ROS 2와 USB snapshot은 mode `0700` private temp에 수집하고 기존 경로·symlink를 재확인한 뒤
+no-clobber rename으로만 최종 경로에 공개한다. raw 출력은 실제로 ignore되는
+`2ARM_ROBOT/output/` 아래에만 둔다.

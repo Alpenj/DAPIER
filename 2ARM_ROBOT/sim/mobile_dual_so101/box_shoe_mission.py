@@ -29,6 +29,7 @@ class BoxShoePhase(str, Enum):
     PLACING_AT_A_LEFT = "placing_at_a_left"
     VERIFYING_PLACE = "verifying_place"
     COMPLETED = "completed"
+    SAFE_STOP_REQUESTED = "safe_stop_requested"
     SAFE_STOPPED = "safe_stopped"
 
 
@@ -45,6 +46,7 @@ class BoxShoeEventType(str, Enum):
     TRANSPORT_POSE_RESULT = "transport_pose_result"
     PLACE_RESULT = "place_result"
     RELEASE_RESULT = "release_result"
+    SAFE_STOP_RESULT = "safe_stop_result"
     FAULT = "fault"
 
 
@@ -94,10 +96,10 @@ class BoxShoeEvent:
     kind: BoxShoeEventType
     observation_seq: int
     observation_age_ms: float
-    success: bool = True
-    base_stationary: bool = True
+    success: bool = False
+    base_stationary: bool = False
     location: str = ""
-    pose_confidence: float = 1.0
+    pose_confidence: float = 0.0
     lid_open_angle_rad: float = 0.0
     lid_held_by_right: bool = False
     lid_safe: bool = False
@@ -112,6 +114,7 @@ class BoxShoeEvent:
     right_tactile_available: bool = False
     left_tactile_contact: bool = False
     right_tactile_contact: bool = False
+    actuators_stopped: bool = False
     failure_code: str = ""
     detail: str = ""
 
@@ -155,6 +158,7 @@ class BoxShoeEvent:
             self.right_tactile_available,
             self.left_tactile_contact,
             self.right_tactile_contact,
+            self.actuators_stopped,
         )
         if not all(isinstance(value, bool) for value in flags):
             raise ValueError("mission status flags must be booleans")
@@ -207,6 +211,7 @@ _EXPECTED = {
     BoxShoePhase.NAVIGATING_TO_A: BoxShoeEventType.NAVIGATION_RESULT,
     BoxShoePhase.PLACING_AT_A_LEFT: BoxShoeEventType.PLACE_RESULT,
     BoxShoePhase.VERIFYING_PLACE: BoxShoeEventType.RELEASE_RESULT,
+    BoxShoePhase.SAFE_STOP_REQUESTED: BoxShoeEventType.SAFE_STOP_RESULT,
 }
 
 _MANIPULATION_EVENTS = frozenset(
@@ -447,6 +452,20 @@ class BoxShoeMissionController:
                 "box task completed with both arms participating",
                 "release or dual-arm participation verification failed",
             )
+        if previous == BoxShoePhase.SAFE_STOP_REQUESTED:
+            if event.success and event.base_stationary and event.actuators_stopped:
+                return self._advance(
+                    event,
+                    BoxShoePhase.SAFE_STOPPED,
+                    (),
+                    "safe stop confirmed by base and actuators",
+                )
+            return self._advance(
+                event,
+                BoxShoePhase.SAFE_STOP_REQUESTED,
+                (BoxShoeCommand.SAFE_STOP,),
+                event.failure_code or "safe stop is not yet confirmed",
+            )
         raise RuntimeError(f"unhandled phase: {previous.value}")
 
     def _right_lid_hold_ok(self, event: BoxShoeEvent) -> bool:
@@ -474,7 +493,7 @@ class BoxShoeMissionController:
     def _stop(self, event: BoxShoeEvent, reason: str) -> BoxShoeTransition:
         return self._advance(
             event,
-            BoxShoePhase.SAFE_STOPPED,
+            BoxShoePhase.SAFE_STOP_REQUESTED,
             (BoxShoeCommand.SAFE_STOP,),
             reason,
         )

@@ -14,6 +14,28 @@ from mission_modules.camera import CameraRole
 
 
 class HardwareRolesTest(unittest.TestCase):
+    def test_physical_and_system_entrypoints_gate_actions_on_interactive_tty(self):
+        scripts = {
+            "capture_ros2_hardware_snapshot.sh": "if ! command -v ros2",
+            "install_hardware_aliases.sh": "sudo install",
+        }
+        for name, action in scripts.items():
+            source = (ROOT / "scripts" / name).read_text(encoding="utf-8")
+            with self.subTest(script=name):
+                gate = "[[ -t 0 && -t 1 ]]"
+                self.assertIn(gate, source)
+                gate_index = source.rindex(gate)
+                self.assertLess(gate_index, source.index(action))
+                self.assertLess(source.index('if [[ "${1:-}" == "-h"'), gate_index)
+
+    def test_astra_poll_and_viewer_are_fail_closed_without_device_access(self):
+        source = (ROOT / "scripts/run_astra_openni2_color").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("poll/viewer disabled", source)
+        self.assertNotIn("/dev/dapier", source)
+        self.assertNotIn("exec ", source)
+
     def test_current_manifest_matches_camera_and_device_entrypoints(self):
         roles = json.loads(
             (ROOT / "config/hardware_roles.json").read_text(encoding="utf-8")
@@ -47,8 +69,9 @@ class HardwareRolesTest(unittest.TestCase):
         astra = (ROOT / "scripts/run_astra_openni2_color").read_text(
             encoding="utf-8"
         )
-        self.assertIn(devices["front_rgbd"]["stable_alias"], astra)
+        self.assertNotIn(devices["front_rgbd"]["stable_alias"], astra)
         self.assertNotIn(devices["workspace_rgbd"]["stable_alias"], astra)
+        self.assertIn("poll/viewer disabled", astra)
 
         legacy = (ROOT / "scripts/run_mujoco_hardware_teleop.sh").read_text(
             encoding="utf-8"

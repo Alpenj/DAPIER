@@ -4,7 +4,12 @@
 - 작업 브랜치: `pro/mujoco-shoe-mission-01`
 - 검토 PR: [#40](https://github.com/Alpenj/DAPIER/pull/40) — Draft, merge 금지
 - 선행 PR: [#39](https://github.com/Alpenj/DAPIER/pull/39) — merge 완료
-- 일정 원본: [DAPIER 회의록 Excel](https://onedrive.live.com/:x:/g/personal/ed17c70026b6da7b/IQBhTYnxx6CjTI5XsmttGkJ_ASp5nQ8XzK_0wZVx0keWBSs)
+- 일정 원본: 비공개 일정 기록
+
+> **2026-09-04 후속 안전 상태:** 이 문서의 과거 실측은 현재 실행 허가가 아니다.
+> 저장소 physical motion과 camera streaming은 connected-endpoint identity binding,
+> 독립 device-side watchdog, 카메라 serial/cryptographic binding을 local safety integration에서
+> 확인할 때까지 비활성 상태다.
 
 ## 1. 목표 미션
 
@@ -24,7 +29,7 @@ MuJoCo에서는 신발을 직육면체 proxy로 먼저 구현한다. 박스 실�
 
 - ROS2-free mission core와 명시적 orchestrator
 - mobility, visual SLAM, object pose, dual-arm manipulation 경계
-- 전방 RGB-D + 좌/우 gripper RGB 카메라 입력 경계
+- workspace RGB-D + 전방 SLAM RGB-D + 좌/우 gripper RGB 카메라 입력 경계
 - 좌/우 SO-101 gripper FSR 입력과 접촉·미끄럼 판단 경계
 - edge command sequence/freshness/ack, health alert, world state
 - Raspberry Pi가 아닌 workstation-side local LLM supervisor
@@ -33,11 +38,12 @@ MuJoCo에서는 신발을 직육면체 proxy로 먼저 구현한다. 박스 실�
 
 ### 테스트 증거
 
-- 박스 미션 단위 테스트: 5/5 통과
-- grasp planner 단위 테스트: 4/4 통과
-- 이전 후속 실행: 전체 suite 152/152 통과, hardware_execution=false
-- 수정된 물리 판정: 오른팔 날개 contact 2, 뚜껑 94.91도, 왼 고정측 contact 2,
-  왼 이동측 contact 0, shoe weld 없음, success=false
+- 박스 미션 단위 테스트: 6/6 통과
+- grasp planner 단위 테스트: 5/5 통과
+- 최신 후속 실행: MuJoCo 단위 테스트 210/210과 model smoke 통과, hardware_execution=false
+- 수정된 물리 판정: 오른팔 날개 contact 2, 뚜껑 95.05도, 왼 고정측 contact 1,
+  왼 이동측 contact 1이지만 contact normal이 opposing 조건을 만족하지 않았다. shoe weld 없음,
+  뚜껑·오른 moving jaw 및 신발·왼 gripper 쌍의 허용치 초과 penetration도 감지돼 success=false
 - MuJoCo viewer에서 사용자가 몸에서 먼 방향으로 열리는 뚜껑 배치를 확인
 
 ### 남은 release gate
@@ -194,14 +200,14 @@ episode 단위로 나누며 같은 run의 frame이 train/validation에 동시에
 | 09-10 | prototype 내부 동결 | 151/151 + E2E acceptance evidence |
 | 09-11 | 완충일 | 실기 연결·회귀·문서 보완만 수행 |
 
-## 9. 전형주 담당 실행안
+## 9. 시뮬레이션 담당 실행안
 
-전형주의 1차 책임은 `시뮬레이션이 실행된다`가 아니라 `시뮬레이션에서 검증한 동작·데이터·실패 조건을
+시뮬레이션 담당자의 1차 책임은 `시뮬레이션이 실행된다`가 아니라 `시뮬레이션에서 검증한 동작·데이터·실패 조건을
 실기 담당자가 재사용할 수 있다`까지다.
 
 ### 책임 범위
 
-| 책임 | 전형주가 할 일 | 완료 산출물 |
+| 책임 | 시뮬레이션 담당자가 할 일 | 완료 산출물 |
 |---|---|---|
 | MuJoCo scene | 실측 박스, lid/wing hinge, cuboid shoe, dual SO-101, camera/tactile site 유지 | versioned scene config와 headless load test |
 | 양팔 task | right open/hold + left approach/grasp/extract 동시 제약 | deterministic mission script와 state/event trace |
@@ -260,10 +266,10 @@ episode 단위로 나누며 같은 run의 frame이 train/validation에 동시에
 
 ### 팀원 인수인계 계약
 
-| 상대 | 전형주가 받을 것 | 전형주가 줄 것 |
+| 상대 | 시뮬레이션 담당자가 받을 것 | 시뮬레이션 담당자가 줄 것 |
 |---|---|---|
-| SLAM 담당 서장우·신예담 | `arrived_B`, base pose/covariance, stationary flag, relocalization failure | manipulation-ready pose tolerance, stop/settle 시간, base placement 실패 범위 |
-| 실기 담당 조태진 | joint zero/range, motor current/temp/error, camera serial/intrinsics/extrinsics, FSR raw sample | 동일 이름의 sim schema, expected trajectory, 안전 limit 후보, 실기 비교 plot |
+| SLAM 담당자 | `arrived_B`, base pose/covariance, stationary flag, relocalization failure | manipulation-ready pose tolerance, stop/settle 시간, base placement 실패 범위 |
+| 실기 담당자 | joint zero/range, motor current/temp/error, camera serial/intrinsics/extrinsics, FSR raw sample | 동일 이름의 sim schema, expected trajectory, 안전 limit 후보, 실기 비교 plot |
 | 전체 팀 | 요구 변경, 성공 기준, 현장 실패 영상/로그 | PR, 재현 명령, run artifact, 10분 브리핑, Notion 결정 기록 |
 
 ### 검증 및 기록 원칙

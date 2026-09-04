@@ -292,6 +292,48 @@ def _shoe_gripper_contacts(model: mujoco.MjModel, data: mujoco.MjData) -> dict[s
     return counts
 
 
+def _shoe_gripper_attachment_active(
+    model: mujoco.MjModel, data: mujoco.MjData
+) -> bool:
+    shoe_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME)
+    gripper_ids = tuple(
+        _object_id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_gripper")
+        for side in ("left", "right")
+    )
+    attachment_types = {
+        mujoco.mjtEq.mjEQ_CONNECT,
+        mujoco.mjtEq.mjEQ_WELD,
+    }
+    for equality_id in range(model.neq):
+        if (
+            not data.eq_active[equality_id]
+            or model.eq_type[equality_id] not in attachment_types
+        ):
+            continue
+        first = int(model.eq_obj1id[equality_id])
+        second = int(model.eq_obj2id[equality_id])
+        object_type = model.eq_objtype[equality_id]
+        if object_type == mujoco.mjtObj.mjOBJ_SITE:
+            if not (0 <= first < model.nsite and 0 <= second < model.nsite):
+                continue
+            first = int(model.site_bodyid[first])
+            second = int(model.site_bodyid[second])
+        elif object_type != mujoco.mjtObj.mjOBJ_BODY:
+            continue
+        if first == shoe_id:
+            other = second
+        elif second == shoe_id:
+            other = first
+        else:
+            continue
+        if any(
+            _body_is_descendant(model, other, gripper_id)
+            for gripper_id in gripper_ids
+        ):
+            return True
+    return False
+
+
 def task_metrics(
     model: mujoco.MjModel,
     data: mujoco.MjData,
@@ -311,7 +353,10 @@ def task_metrics(
     lifted = float(shoe_position[2]) >= success_height_m
     near_gripper = nearest_distance <= success_gripper_distance_m
     contact_counts = _shoe_gripper_contacts(model, data)
-    success = lifted and near_gripper
+    bilateral_contact = all(count > 0 for count in contact_counts.values())
+    attachment_active = _shoe_gripper_attachment_active(model, data)
+    carry_supported = bilateral_contact or attachment_active
+    success = lifted and near_gripper and carry_supported
     lift_progress = min(1.0, max(0.0, float(shoe_position[2]) / success_height_m))
     approach_reward = -min(nearest_distance, 1.0)
     contact_bonus = 0.25 * min(2, max(contact_counts.values()))
@@ -324,6 +369,9 @@ def task_metrics(
         "gripper_distance_m": distances,
         "nearest_gripper_distance_m": nearest_distance,
         "gripper_contact_count": contact_counts,
+        "bilateral_gripper_contact": bilateral_contact,
+        "shoe_gripper_attachment": attachment_active,
+        "carry_supported": carry_supported,
         "reward": reward,
     }
 
@@ -433,7 +481,14 @@ class ShoeTaskEnv:
                 )
             clipped.append(value)
         bounded = tuple(clipped)
-        current = tuple(float(value) for value in self.data.ctrl)
+        current = tuple(actuator_targets_from_qpos(self.model, self.data.qpos))
+        if not all(math.isfinite(value) for value in current) or any(
+            not float(lower) <= value <= float(upper)
+            for value, (lower, upper) in zip(
+                current, self.model.actuator_ctrlrange, strict=True
+            )
+        ):
+            raise ValueError("measured actuator qpos is invalid")
         assessment = check_bimanual_path(
             self.model,
             current,

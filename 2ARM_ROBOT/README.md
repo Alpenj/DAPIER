@@ -9,10 +9,15 @@ SO-101 두 팔과 TurtleBot3 Waffle Pi를 결합해 박스가 있는 위치까�
 로컬 노트북은 perception·IL policy·LLM과 Visual SLAM 배치 비교를 담당한다. LLM은 Pi에서
 실행하지 않는다.
 
+> **2026-09-04 안전 상태:** 이 저장소의 physical motion과 camera streaming은
+> local safety integration이 끝날 때까지 비활성화한다. `dual_so101_smoke`는
+> `--move-deg 0` 읽기 전용만 남기고 torque를 켜지 않으며, Astra `poll`/`viewer`는
+> 항상 fail-closed한다. 과거 실측 기록은 현재 실행 허가나 안전 보장이 아니다.
+
 MuJoCo 양팔·카메라·접촉 모델과 과거 ±3도 실측 로그 비교는 준비됐지만, 왼쪽 손가락 접촉은
 CPU에 따라 양측 또는 한쪽 경계에 있고 양측일 때도 법선이 직교해 협지가 아니다. 따라서
 박스-신발 전체 물리 성공은 아직 아니다. 과거 팔 로그도 사용자가 화면으로 확인한 commissioning은
-아니므로 다음 실물 시험은 카메라를 먼저 띄운 뒤 별도 승인으로 진행한다.
+아니다. 다음 실물 시험 일정은 잡지 않았으며 위 local safety integration 완료 뒤 다시 판단한다.
 
 ## 현재 구성
 
@@ -29,9 +34,9 @@ CPU에 따라 양측 또는 한쪽 경계에 있고 양측일 때도 법선이 �
 │   └── mobile_dual_arm/         # legacy JDcobot 조합 모델
 ├── docs/                         # 요구사항, 팀 결정, 조사 참고자료
 ├── scripts/
-│   ├── dual_so101_smoke          # 승인형 양팔 저속 계측
+│   ├── dual_so101_smoke          # 승인형 양팔 read-only 계측; motion 비활성
 │   ├── capture_usb_snapshot      # 승인형 read-only USB 전후 기록
-│   └── run_astra_openni2_color  # 전면 Astra S 검증 runtime
+│   └── run_astra_openni2_color  # 전면 Astra S 정적 runtime 검사만 허용
 └── README.md
 ```
 
@@ -102,11 +107,15 @@ bash scripts/capture_ros2_hardware_snapshot.sh \
 이 스크립트는 node/topic/type, endpoint QoS, `JointState`, `CameraInfo`, base
 velocity/odometry의 첫 message를 저장한다. `Image`는 픽셀을 저장하지 않고
 header만 수집한다. 사용자가 현장에서 read-only graph 접근을 승인한 exact token이
-없으면 ROS 2를 호출하지 않는다. 어떤 motion command도 publish하지 않으며 Git에서
+없거나 stdin/stdout이 interactive TTY가 아니면 ROS 2를 호출하지 않는다. 어떤 motion command도 publish하지 않으며 Git에서
 제외된 `output/` 아래 새 폴더만 허용하고 기존 경로는 덮어쓰지 않는다.
 
 현재 장비 node가 하나도 실행되지 않았다면 exit 2와 `NO_CANDIDATE_TOPICS`를
 반환한다. snapshot을 확인한 뒤에만 mock topic mapping을 실제 이름으로 교체한다.
+
+비공개 udev 규칙은 저장소의 고정 경로 `config/99-dapier-hardware.rules`에만 두며 이
+파일은 Git에서 제외된다. 설치기는 다른 입력 경로를 받지 않고, 파일 권한과 staging 전후
+digest가 같을 때만 현장 승인 아래 진행한다.
 
 사용자가 현장에 있고 read-only 확인을 승인한 뒤, 카메라 실행 전과 양팔 시험 후 USB 상태를
 각각 새 디렉터리에 기록한다. 결과는 Git에서 제외되는 `output/` 아래에만 생성된다.
@@ -230,5 +239,5 @@ checkpoint/API가 없으므로 GEN-1.5 자체를 실행하지 않으며, local �
 1. MuJoCo에서 오른팔 뚜껑 접촉과 왼팔 양지 파지·friction-only lift gate 통과
 2. H201 top-view와 Astra front-SLAM의 실제 depth·CameraInfo·extrinsic 검증
 3. 좌우 wrist RGB를 포함한 4카메라 동시 FPS/drop/USB reset 측정
-4. 사용자가 보는 화면과 E-stop을 준비한 뒤 양팔 ±3도 공개 실물 시험
+4. connected-endpoint identity binding과 독립 device-side watchdog을 local safety integration에서 검증
 5. 실측 STS3215 내부 profile·velocity·load/current로 MuJoCo actuator 보정

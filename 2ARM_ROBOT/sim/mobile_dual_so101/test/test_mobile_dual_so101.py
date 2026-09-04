@@ -133,6 +133,25 @@ class MobileDualSO101Test(unittest.TestCase):
             )
             self.assertAlmostEqual(deck_bottom, WAFFLE_TOP_LOCAL_Z_M)
 
+    def test_printed_mount_uses_hidden_simple_collision_proxies(self) -> None:
+        for name in (
+            "printed_mount_deck_collision",
+            "printed_torso_collision",
+            "printed_camera_mount_collision",
+        ):
+            geom_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_GEOM, name
+            )
+            self.assertGreaterEqual(geom_id, 0, name)
+            self.assertEqual(
+                int(self.model.geom_type[geom_id]),
+                mujoco.mjtGeom.mjGEOM_BOX,
+            )
+            self.assertEqual(int(self.model.geom_contype[geom_id]), 1)
+            self.assertEqual(int(self.model.geom_conaffinity[geom_id]), 1)
+            self.assertEqual(int(self.model.geom_group[geom_id]), 3)
+            self.assertAlmostEqual(float(self.model.geom_rgba[geom_id, 3]), 0.0)
+
     def test_original_camera_is_replaced_by_r77_depth_camera(self) -> None:
         self.assertEqual(
             mujoco.mj_name2id(

@@ -22,10 +22,12 @@ class MissionPhase(str, Enum):
     LOCALIZING_SHOE = "localizing_shoe"
     PICKING_AT_B = "picking_at_b"
     VERIFYING_GRASP = "verifying_grasp"
+    LATCHING_TRANSPORT_HOLD = "latching_transport_hold"
     NAVIGATING_TO_A = "navigating_to_a"
     PLACING_AT_A = "placing_at_a"
     VERIFYING_PLACE = "verifying_place"
     COMPLETED = "completed"
+    SAFE_STOP_REQUESTED = "safe_stop_requested"
     SAFE_STOPPED = "safe_stopped"
 
 
@@ -40,8 +42,10 @@ class MissionEventType(str, Enum):
     POSE_RESULT = "pose_result"
     PICK_RESULT = "pick_result"
     GRASP_RESULT = "grasp_result"
+    TRANSPORT_HOLD_RESULT = "transport_hold_result"
     PLACE_RESULT = "place_result"
     RELEASE_RESULT = "release_result"
+    SAFE_STOP_RESULT = "safe_stop_result"
     FAULT = "fault"
 
 
@@ -88,17 +92,18 @@ class MissionEvent:
     kind: MissionEventType
     observation_seq: int
     observation_age_ms: float
-    success: bool = True
+    success: bool = False
     recoverable: bool = False
-    base_stationary: bool = True
+    base_stationary: bool = False
     location: MissionLocation | None = None
-    pose_confidence: float = 1.0
+    pose_confidence: float = 0.0
     object_lifted: bool = False
     gripper_holding: bool = False
     carry_pose_clear: bool = False
-    transport_hold_ok: bool = True
+    transport_hold_ok: bool = False
     object_released: bool = False
     at_start_zone: bool = False
+    actuators_stopped: bool = False
     tactile_available: bool = False
     tactile_contact: bool = False
     tactile_slip: bool = False
@@ -131,15 +136,25 @@ class MissionEvent:
             raise ValueError("pose_confidence must be inside [0, 1]")
         if len(self.failure_code) > 100 or len(self.detail) > 500:
             raise ValueError("failure_code or detail is too long")
-        tactile_flags = (
+        flags = (
+            self.success,
+            self.recoverable,
+            self.base_stationary,
+            self.object_lifted,
+            self.gripper_holding,
+            self.carry_pose_clear,
+            self.transport_hold_ok,
+            self.object_released,
+            self.at_start_zone,
+            self.actuators_stopped,
             self.tactile_available,
             self.tactile_contact,
             self.tactile_slip,
             self.tactile_overpressure,
         )
-        if not all(isinstance(value, bool) for value in tactile_flags):
-            raise ValueError("tactile event flags must be booleans")
-        if not self.tactile_available and any(tactile_flags[1:]):
+        if not all(isinstance(value, bool) for value in flags):
+            raise ValueError("mission event flags must be booleans")
+        if not self.tactile_available and any(flags[-3:]):
             raise ValueError("tactile measurements require tactile_available")
         if self.kind == MissionEventType.NAVIGATION_RESULT and self.location is None:
             raise ValueError("navigation_result requires a location")
@@ -182,9 +197,11 @@ _EXPECTED_EVENTS = {
     MissionPhase.LOCALIZING_SHOE: MissionEventType.POSE_RESULT,
     MissionPhase.PICKING_AT_B: MissionEventType.PICK_RESULT,
     MissionPhase.VERIFYING_GRASP: MissionEventType.GRASP_RESULT,
+    MissionPhase.LATCHING_TRANSPORT_HOLD: MissionEventType.TRANSPORT_HOLD_RESULT,
     MissionPhase.NAVIGATING_TO_A: MissionEventType.NAVIGATION_RESULT,
     MissionPhase.PLACING_AT_A: MissionEventType.PLACE_RESULT,
     MissionPhase.VERIFYING_PLACE: MissionEventType.RELEASE_RESULT,
+    MissionPhase.SAFE_STOP_REQUESTED: MissionEventType.SAFE_STOP_RESULT,
 }
 
 _MANIPULATION_EVENTS = frozenset(
@@ -246,6 +263,15 @@ class MissionController:
             )
         if event.kind in _MANIPULATION_EVENTS and not event.base_stationary:
             return self._safe_stop(previous, event, "manipulation requires stationary base")
+        if (
+            event.kind == MissionEventType.TRANSPORT_HOLD_RESULT
+            and not event.base_stationary
+        ):
+            return self._safe_stop(
+                previous,
+                event,
+                "transport hold requires stationary base",
+            )
 
         if previous == MissionPhase.READY_AT_A:
             if not event.base_stationary:
@@ -265,13 +291,34 @@ class MissionController:
             return self._pick_result(event)
         if previous == MissionPhase.VERIFYING_GRASP:
             return self._grasp_result(event)
+        if previous == MissionPhase.LATCHING_TRANSPORT_HOLD:
+            return self._transport_hold_result(event)
         if previous == MissionPhase.NAVIGATING_TO_A:
             return self._navigation_to_a(event)
         if previous == MissionPhase.PLACING_AT_A:
             return self._place_result(event)
         if previous == MissionPhase.VERIFYING_PLACE:
             return self._release_result(event)
+        if previous == MissionPhase.SAFE_STOP_REQUESTED:
+            return self._safe_stop_result(event)
         raise RuntimeError(f"unhandled mission phase: {previous.value}")
+
+    def _safe_stop_result(self, event: MissionEvent) -> MissionTransition:
+        if event.success and event.base_stationary and event.actuators_stopped:
+            return self._advance(
+                self.phase,
+                MissionPhase.SAFE_STOPPED,
+                event,
+                (),
+                "safe stop confirmed by base and actuators",
+            )
+        return self._advance(
+            self.phase,
+            MissionPhase.SAFE_STOP_REQUESTED,
+            event,
+            (MissionCommand.SAFE_STOP,),
+            event.failure_code or "safe stop is not yet confirmed",
+        )
 
     def _navigation_to_b(self, event: MissionEvent) -> MissionTransition:
         if event.location != MissionLocation.B:
@@ -356,13 +403,33 @@ class MissionController:
         self._carrying = True
         return self._advance(
             self.phase,
+            MissionPhase.LATCHING_TRANSPORT_HOLD,
+            event,
+            (MissionCommand.LATCH_TRANSPORT_HOLD,),
+            "grasp and carry pose verified; transport hold requested",
+        )
+
+    def _transport_hold_result(self, event: MissionEvent) -> MissionTransition:
+        tactile_ok = not event.tactile_available or (
+            event.tactile_contact
+            and not event.tactile_slip
+            and not event.tactile_overpressure
+        )
+        if not (
+            event.success
+            and self._carrying
+            and event.transport_hold_ok
+            and tactile_ok
+        ):
+            return self._safe_stop(
+                self.phase, event, "transport hold acknowledgement was unhealthy"
+            )
+        return self._advance(
+            self.phase,
             MissionPhase.NAVIGATING_TO_A,
             event,
-            (
-                MissionCommand.LATCH_TRANSPORT_HOLD,
-                MissionCommand.NAVIGATE_TO_A,
-            ),
-            "grasp and carry pose verified",
+            (MissionCommand.NAVIGATE_TO_A,),
+            "healthy transport hold acknowledged",
         )
 
     def _navigation_to_a(self, event: MissionEvent) -> MissionTransition:
@@ -477,7 +544,7 @@ class MissionController:
     ) -> MissionTransition:
         return self._advance(
             previous,
-            MissionPhase.SAFE_STOPPED,
+            MissionPhase.SAFE_STOP_REQUESTED,
             event,
             (MissionCommand.SAFE_STOP,),
             reason,

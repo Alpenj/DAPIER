@@ -78,12 +78,8 @@ def _object_id(
     return object_id
 
 
-def _reuse_source_gripper_cameras(spec: mujoco.MjSpec) -> None:
-    """Expose or add the two gripper RGB cameras.
-
-    Upstream SO-101 snapshots have used three names for the same source camera.
-    Reuse it when present; pinned camera-free assets get the mission camera.
-    """
+def _add_gripper_cameras(spec: mujoco.MjSpec) -> None:
+    """Normalize source wrist cameras or add the pinned asset's missing pair."""
 
     for side in ("left", "right"):
         camera = next(
@@ -122,7 +118,7 @@ def build_mobile_shoe_mission_model(
     )
     base_root = spec.body("tb3_base_footprint")
     base_root.add_freejoint(name=MOBILE_BASE_FREE_JOINT)
-    _reuse_source_gripper_cameras(spec)
+    _add_gripper_cameras(spec)
     _add_primitive_shoe(
         spec,
         position_m=resolved.shoe_position_m,
@@ -361,9 +357,9 @@ class MuJoCoMultiCameraAdapter:
 
     def capture(self) -> MultiCameraFrameSet:
         sim_timestamp_ns = max(0, int(round(float(self.data.time) * 1e9)))
-        received_ns = self._clock_ns()
-        if isinstance(received_ns, bool) or not isinstance(received_ns, int):
-            raise ValueError("camera clock must return an integer nanosecond value")
+        received_ns = self._clock_now_ns()
+        if self._last_received_ns is not None and received_ns < self._last_received_ns:
+            raise RuntimeError("camera monotonic clock regressed")
         frames: list[CameraFrame] = []
         for role in CameraRole:
             camera_name = CAMERA_NAMES[role]
@@ -391,7 +387,7 @@ class MuJoCoMultiCameraAdapter:
                     role=role,
                     modality=CameraModality.RGB,
                     frame_id=self._sequence,
-                    optical_frame=f"{side}_gripper_camera",
+                    optical_frame=camera_name,
                     calibration_id=f"mujoco-{side}-gripper-rgb-v1",
                     width=self.width,
                     height=self.height,
@@ -411,7 +407,10 @@ class MuJoCoMultiCameraAdapter:
         return frame_set
 
     def read_health(self) -> CameraRigHealth:
-        now_ns = self._clock_ns()
+        now_ns = self._clock_now_ns()
+        clock_regressed = (
+            self._last_received_ns is not None and now_ns < self._last_received_ns
+        )
         last_age_ms = (
             1_000_000_000.0
             if self._last_received_ns is None
@@ -421,12 +420,16 @@ class MuJoCoMultiCameraAdapter:
             CameraStreamHealth(
                 role=role,
                 enabled=True,
-                online=self._last_received_ns is not None,
+                online=self._last_received_ns is not None and not clock_regressed,
                 calibration_loaded=True,
                 dropped_frames=0,
                 last_frame_age_ms=last_age_ms,
                 time_sync_error_ms=0.0,
-                error_code="" if self._last_received_ns is not None else "no_frame_yet",
+                error_code=(
+                    "clock_regressed"
+                    if clock_regressed
+                    else "" if self._last_received_ns is not None else "no_frame_yet"
+                ),
             )
             for role in CameraRole
         )
@@ -436,6 +439,12 @@ class MuJoCoMultiCameraAdapter:
 
     def close(self) -> None:
         self._renderer.close()
+
+    def _clock_now_ns(self) -> int:
+        value = self._clock_ns()
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError("camera clock must return non-negative integer nanoseconds")
+        return value
 
     def _render_rgb(self, camera_name: str) -> np.ndarray:
         self._renderer.disable_depth_rendering()

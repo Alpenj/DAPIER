@@ -29,7 +29,14 @@ class BoxShoePhysicsDemoTest(unittest.TestCase):
         self.assertFalse(report.opposing_finger_contact_verified)
         self.assertFalse(report.shoe_grasp_weld_present)
         self.assertFalse(report.friction_lift_verified)
-        self.assertEqual(report.unintended_contact_pairs, ())
+        self.assertEqual(
+            set(report.unintended_contact_pairs),
+            {
+                ("box_lid", "right_moving_jaw_so101_v1"),
+                ("cuboid_shoe_proxy", "left_gripper"),
+                ("cuboid_shoe_proxy", "left_moving_jaw_so101_v1"),
+            },
+        )
         self.assertEqual(report.runtime_arm_qpos_writes, 0)
         self.assertFalse(report.hardware_execution)
 

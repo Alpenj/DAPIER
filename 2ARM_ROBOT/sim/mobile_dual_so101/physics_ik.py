@@ -22,7 +22,16 @@ import numpy as np
 PROJECT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from collision_guard import check_bimanual_path  # noqa: E402
+from collision_guard import (  # noqa: E402
+    REQUIRED_BASE_COLLISION_GEOM_NAMES,
+    REQUIRED_FLOOR_COLLISION_GEOM_NAMES,
+    REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES,
+    REQUIRED_RGBD_COLLISION_GEOM_NAMES,
+    REQUIRED_TOWER_SUPPORT_COLLISION_GEOM_NAMES,
+    _collision_geoms_for_arm,
+    _same_arm_geom_pairs,
+    check_bimanual_path,
+)
 from mobile_dual_so101 import ACTION_NAMES  # noqa: E402
 
 
@@ -52,12 +61,16 @@ class MotionLimits:
     max_velocity_rad_s: float = 0.50
     max_acceleration_rad_s2: float = 1.50
     max_jerk_rad_s3: float = 8.0
+    max_tracking_error_rad: float = 0.10
+    max_final_tracking_error_rad: float = 0.02
 
     def validate(self) -> None:
         values = (
             self.max_velocity_rad_s,
             self.max_acceleration_rad_s2,
             self.max_jerk_rad_s3,
+            self.max_tracking_error_rad,
+            self.max_final_tracking_error_rad,
         )
         if not all(math.isfinite(value) and value > 0.0 for value in values):
             raise ValueError("motion limits must be finite and positive")
@@ -390,6 +403,20 @@ def _combined_center_of_mass(model: mujoco.MjModel, data: mujoco.MjData) -> np.n
 
 def _forbidden_contact_count(model: mujoco.MjModel, data: mujoco.MjData) -> int:
     result = 0
+    same_arm_pairs = {
+        frozenset(pair)
+        for side in ("left", "right")
+        for pair in _same_arm_geom_pairs(
+            model, _collision_geoms_for_arm(model, side)
+        )
+    }
+    protected_structures = {
+        *REQUIRED_BASE_COLLISION_GEOM_NAMES,
+        *REQUIRED_FLOOR_COLLISION_GEOM_NAMES,
+        *REQUIRED_RGBD_COLLISION_GEOM_NAMES,
+        *REQUIRED_TOWER_SUPPORT_COLLISION_GEOM_NAMES,
+        *REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES,
+    }
     for contact_index in range(data.ncon):
         contact = data.contact[contact_index]
         geom_ids = (int(contact.geom1), int(contact.geom2))
@@ -412,12 +439,11 @@ def _forbidden_contact_count(model: mujoco.MjModel, data: mujoco.MjData) -> int:
             body_names[0].startswith("right_") and body_names[1].startswith("left_")
         )
         arm_structure = any(
-            name.startswith(("left_", "right_")) for name in body_names
-        ) and any(
-            name.endswith("_depth_camera_collision") or name.startswith("tower_")
-            for name in geom_names
+            body_names[index].startswith(("left_", "right_"))
+            and geom_names[1 - index] in protected_structures
+            for index in (0, 1)
         )
-        if left_right or arm_structure:
+        if left_right or frozenset(geom_ids) in same_arm_pairs or arm_structure:
             result += 1
     return result
 
@@ -481,9 +507,6 @@ def execute_physics_trajectory(
     pre_settle_steps = math.ceil(pre_settle_time_s / timestep)
     motion_steps = max(1, math.ceil(trajectory.duration_s / timestep))
     settle_steps = math.ceil(settle_time_s / timestep)
-    for _ in range(pre_settle_steps):
-        data.ctrl[:] = trajectory.start_rad
-        mujoco.mj_step(model, data)
     previous_acceleration = data.qacc[dof_addresses].copy()
     maximum_tracking = 0.0
     maximum_velocity = 0.0
@@ -495,12 +518,20 @@ def execute_physics_trajectory(
     maximum_force_ratio = 0.0
     minimum_support_margin = math.inf
     forbidden_contacts = 0
+    finite_state = True
 
-    for step_index in range(motion_steps + settle_steps):
-        time_s = min((step_index + 1) * timestep, trajectory.duration_s)
-        target, target_velocity, target_acceleration, target_jerk = (
-            trajectory.sample(time_s)
-        )
+    for step_index in range(pre_settle_steps + motion_steps + settle_steps):
+        motion_step = step_index - pre_settle_steps
+        if motion_step < 0:
+            target = trajectory.start_rad
+            target_velocity = target_acceleration = target_jerk = np.zeros(
+                model.nu
+            )
+        else:
+            time_s = min((motion_step + 1) * timestep, trajectory.duration_s)
+            target, target_velocity, target_acceleration, target_jerk = (
+                trajectory.sample(time_s)
+            )
         data.ctrl[:] = target
         mujoco.mj_step(model, data)
 
@@ -540,14 +571,14 @@ def execute_physics_trajectory(
             _signed_support_margin(_combined_center_of_mass(model, data)[:2]),
         )
         forbidden_contacts += _forbidden_contact_count(model, data)
+        finite_state = finite_state and bool(
+            np.all(np.isfinite(data.qpos))
+            and np.all(np.isfinite(data.qvel))
+            and np.all(np.isfinite(data.qacc))
+        )
 
     final_error = float(
         np.max(np.abs(data.qpos[qpos_addresses] - trajectory.goal_rad))
-    )
-    finite_state = bool(
-        np.all(np.isfinite(data.qpos))
-        and np.all(np.isfinite(data.qvel))
-        and np.all(np.isfinite(data.qacc))
     )
     numerical_tolerance = 1e-3
     dynamics_limit_violations = []
@@ -560,6 +591,25 @@ def execute_physics_trajectory(
         dynamics_limit_violations.append("acceleration")
     if maximum_jerk > trajectory.limits.max_jerk_rad_s3 + numerical_tolerance:
         dynamics_limit_violations.append("jerk")
+    if maximum_tracking > trajectory.limits.max_tracking_error_rad:
+        dynamics_limit_violations.append("tracking_error")
+    if final_error > trajectory.limits.max_final_tracking_error_rad:
+        dynamics_limit_violations.append("final_tracking_error")
+    if (
+        maximum_target_velocity
+        > trajectory.limits.max_velocity_rad_s + numerical_tolerance
+    ):
+        dynamics_limit_violations.append("target_velocity")
+    if (
+        maximum_target_acceleration
+        > trajectory.limits.max_acceleration_rad_s2 + numerical_tolerance
+    ):
+        dynamics_limit_violations.append("target_acceleration")
+    if (
+        maximum_target_jerk
+        > trajectory.limits.max_jerk_rad_s3 + numerical_tolerance
+    ):
+        dynamics_limit_violations.append("target_jerk")
     dynamics_limits_satisfied = not dynamics_limit_violations
     simulation_motion_accepted = (
         finite_state

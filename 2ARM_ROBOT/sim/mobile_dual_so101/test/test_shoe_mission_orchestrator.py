@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from pathlib import Path
 import sys
 import unittest
@@ -39,10 +38,10 @@ class ShoeMissionOrchestratorTest(unittest.TestCase):
             places=12,
         )
 
-    def test_a_b_pick_return_place_sequence_completes(self) -> None:
+    def test_pick_path_exact_contact_stops_before_execution(self) -> None:
         report = self.report
-        self.assertTrue(report.completed, report)
-        self.assertEqual(report.final_phase, "completed")
+        self.assertFalse(report.completed, report)
+        self.assertEqual(report.final_phase, "safe_stop_requested")
         phases = [entry["phase"] for entry in report.transition_reports]
         self.assertEqual(
             phases,
@@ -50,28 +49,19 @@ class ShoeMissionOrchestratorTest(unittest.TestCase):
                 "navigating_to_b",
                 "localizing_shoe",
                 "picking_at_b",
-                "verifying_grasp",
-                "navigating_to_a",
-                "placing_at_a",
-                "verifying_place",
-                "completed",
+                "safe_stop_requested",
             ],
         )
-        x_m, y_m, yaw_rad = report.final_base_pose_map
-        self.assertLess(math.hypot(x_m, y_m), 0.025)
-        self.assertLess(abs(yaw_rad), 0.04)
 
-    def test_ik_and_collision_plan_are_accepted(self) -> None:
+    def test_ik_converges_but_exact_contact_path_is_rejected(self) -> None:
+        self.assertEqual(self.scenario.required_clearance_m, 0.030)
         self.assertTrue(self.report.ik_converged)
         self.assertLessEqual(
             self.report.ik_residual_m,
             self.scenario.ik_tolerance_m,
         )
-        self.assertTrue(self.report.collision_path_safe)
-        self.assertGreaterEqual(
-            self.report.minimum_clearance_m,
-            self.scenario.required_clearance_m,
-        )
+        self.assertFalse(self.report.collision_path_safe)
+        self.assertEqual(self.report.minimum_clearance_m, 0.0)
         self.assertGreater(self.report.planned_trajectory_duration_s, 0.0)
 
     def test_report_does_not_claim_contact_physics_or_hardware(self) -> None:

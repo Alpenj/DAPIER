@@ -64,7 +64,7 @@ class ShoeMissionScenario:
     navigation_yaw_tolerance_rad: float = 0.025
     navigation_timeout_s: float = 10.0
     ik_tolerance_m: float = 0.002
-    required_clearance_m: float = 0.010
+    required_clearance_m: float = 0.030
 
     def validate(self) -> None:
         self.start_pose_map.validate()
@@ -140,6 +140,7 @@ def _mission_event(
         "kind": kind,
         "observation_seq": sequence,
         "observation_age_ms": 0.0,
+        "success": True,
         "base_stationary": True,
     }
     values.update(overrides)
@@ -270,6 +271,18 @@ def run_scripted_ik_mission(
                     object_lifted=True,
                     gripper_holding=True,
                     carry_pose_clear=True,
+                    tactile_available=True,
+                    tactile_contact=True,
+                )
+            )
+        )
+        sequence += 1
+        transitions.append(
+            mission.dispatch(
+                _mission_event(
+                    sequence,
+                    MissionEventType.TRANSPORT_HOLD_RESULT,
+                    transport_hold_ok=True,
                     tactile_available=True,
                     tactile_contact=True,
                 )

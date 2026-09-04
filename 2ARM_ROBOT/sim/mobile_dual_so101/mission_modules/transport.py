@@ -40,14 +40,28 @@ class CommandEnvelope:
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{label} must be a non-negative integer")
-        if not self.request_id.strip() or len(self.request_id) > 100:
+        if (
+            not isinstance(self.request_id, str)
+            or not self.request_id.strip()
+            or len(self.request_id) > 100
+        ):
             raise ValueError("request_id must contain 1 to 100 characters")
         if not isinstance(self.kind, EdgeCommandKind):
             raise ValueError("kind must be an EdgeCommandKind")
-        if not math.isfinite(self.ttl_ms) or self.ttl_ms <= 0:
+        if (
+            isinstance(self.ttl_ms, bool)
+            or not isinstance(self.ttl_ms, (int, float))
+            or not math.isfinite(self.ttl_ms)
+            or self.ttl_ms <= 0
+        ):
             raise ValueError("ttl_ms must be finite and positive")
-        if len(self.payload_digest) != 64 or any(
-            character not in "0123456789abcdef" for character in self.payload_digest
+        if (
+            not isinstance(self.payload_digest, str)
+            or len(self.payload_digest) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in self.payload_digest
+            )
         ):
             raise ValueError("payload_digest must be a lowercase SHA-256 hex digest")
 
@@ -77,13 +91,17 @@ class CommandAck:
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{label} must be a non-negative integer")
-        if not self.request_id.strip() or len(self.request_id) > 100:
+        if (
+            not isinstance(self.request_id, str)
+            or not self.request_id.strip()
+            or len(self.request_id) > 100
+        ):
             raise ValueError("request_id must contain 1 to 100 characters")
         if not isinstance(self.status, AckStatus):
             raise ValueError("status must be an AckStatus")
         if not isinstance(self.requires_safe_state, bool):
             raise ValueError("requires_safe_state must be a boolean")
-        if len(self.detail) > 500:
+        if not isinstance(self.detail, str) or len(self.detail) > 500:
             raise ValueError("ack detail is too long")
 
 
@@ -100,22 +118,26 @@ class CommandSequenceGate:
 
     def inspect(
         self,
-        envelope: CommandEnvelope,
+        envelope: object,
         *,
         now_monotonic_ns: int,
     ) -> CommandAck:
+        if (
+            isinstance(now_monotonic_ns, bool)
+            or not isinstance(now_monotonic_ns, int)
+            or now_monotonic_ns < 0
+        ):
+            return self._invalid_ack(0, "now_monotonic_ns is invalid")
+        if not isinstance(envelope, CommandEnvelope):
+            return self._invalid_ack(
+                now_monotonic_ns,
+                "command must be a CommandEnvelope",
+            )
         try:
             envelope.validate()
             age_ms = envelope.age_ms(now_monotonic_ns=now_monotonic_ns)
         except ValueError as error:
-            return CommandAck(
-                sequence=max(getattr(envelope, "sequence", 0), 0),
-                request_id=getattr(envelope, "request_id", "invalid") or "invalid",
-                status=AckStatus.INVALID,
-                received_monotonic_ns=max(now_monotonic_ns, 0),
-                requires_safe_state=True,
-                detail=str(error),
-            )
+            return self._invalid_ack(now_monotonic_ns, str(error))
         if age_ms > envelope.ttl_ms:
             return self._ack(
                 envelope,
@@ -153,6 +175,22 @@ class CommandSequenceGate:
         )
 
     @staticmethod
+    def _invalid_ack(
+        received_monotonic_ns: int,
+        detail: str,
+    ) -> CommandAck:
+        ack = CommandAck(
+            sequence=0,
+            request_id="invalid",
+            status=AckStatus.INVALID,
+            received_monotonic_ns=received_monotonic_ns,
+            requires_safe_state=True,
+            detail=detail,
+        )
+        ack.validate()
+        return ack
+
+    @staticmethod
     def _ack(
         envelope: CommandEnvelope,
         status: AckStatus,
@@ -186,12 +224,21 @@ class LinkHeartbeat:
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{label} must be a non-negative integer")
-        if not math.isfinite(self.timeout_ms) or self.timeout_ms <= 0:
+        if (
+            isinstance(self.timeout_ms, bool)
+            or not isinstance(self.timeout_ms, (int, float))
+            or not math.isfinite(self.timeout_ms)
+            or self.timeout_ms <= 0
+        ):
             raise ValueError("heartbeat timeout_ms must be finite and positive")
 
     def alive(self, *, now_monotonic_ns: int) -> bool:
         self.validate()
-        if now_monotonic_ns < self.received_monotonic_ns:
+        if (
+            isinstance(now_monotonic_ns, bool)
+            or not isinstance(now_monotonic_ns, int)
+            or now_monotonic_ns < self.received_monotonic_ns
+        ):
             raise ValueError("now_monotonic_ns precedes heartbeat receipt")
         age_ms = (now_monotonic_ns - self.received_monotonic_ns) / 1_000_000.0
         return age_ms <= self.timeout_ms
