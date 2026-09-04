@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+sdk_root=${EYS3D_WRAPPER_ROOT:-"$HOME/.local/opt/eys3d_ros/dm_preview/eYs3D_wrapper"}
+install_dir=${DAPIER_LOCAL_LIB_DIR:-"$HOME/.local/lib/dapier"}
+
+if [[ ! -f "$sdk_root/include/EYS3DSystem.h" || ! -e "$sdk_root/lib/eSPDI/libeSPDI_X86_64.so" ]]; then
+  sdk_repo=$(dirname "$(dirname "$(dirname "$sdk_root")")")
+  if [[ ! -d "$sdk_repo/.git" ]]; then
+    git clone --depth 1 https://github.com/eYs3D/eys3d_ros.git "$sdk_repo"
+  fi
+  git -C "$sdk_repo" config submodule.dm_preview/eYs3D_wrapper.url \
+    https://github.com/eYs3D/eys3d_wrapper_prebuilt_linux.git
+  git -C "$sdk_repo" submodule update --init --depth 1 dm_preview/eYs3D_wrapper
+  git -C "$sdk_root" config submodule.eYs3D/cfg.url \
+    https://github.com/eYs3D/eys3d_config.git
+  git -C "$sdk_root" config submodule.lib/eSPDI.url \
+    https://github.com/eYs3D/eSPDI_linux.git
+  git -C "$sdk_root" submodule update --init --recursive --depth 1
+fi
+
+mkdir -p "$install_dir"
+g++ -std=c++17 -O2 \
+  "$repo_root/2ARM_ROBOT/scripts/native/h201_camera_dashboard.cpp" \
+  -I"$sdk_root/include" \
+  -I"$sdk_root/include/DMPreview_utility" \
+  -I"$sdk_root/include/DMPreview_utility/sqlite3" \
+  -I"$sdk_root/include/devices" \
+  -I"$sdk_root/include/devices/controller" \
+  -I"$sdk_root/include/devices/model" \
+  -I"$sdk_root/include/sensors" \
+  -I"$sdk_root/lib/eSPDI" \
+  -L"$sdk_root/lib" -L"$sdk_root/lib/eSPDI" \
+  -Wl,-rpath,"$sdk_root/lib:$sdk_root/lib/eSPDI" \
+  -leSPDI_X86_64 -leys3d.X86_64 \
+  $(pkg-config --cflags --libs opencv4) \
+  -o "$install_dir/h201_camera_dashboard"
+
+echo "installed: $install_dir/h201_camera_dashboard"

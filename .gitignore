@@ -1,5 +1,6 @@
 .env
 **/.env
+**/*.local.env
 **/__pycache__/
 **/.ruff_cache/
 casino_dealer/build/

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import time
 
@@ -63,16 +64,23 @@ def _panel(capture, label: str, path: str | None) -> np.ndarray:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--left", default="/dev/dapier/left_wrist_rgb")
-    parser.add_argument("--h201", default="/dev/video6")
+    parser.add_argument("--h201", default="/dev/video8")
     parser.add_argument("--right", default="/dev/dapier/right_wrist_rgb")
+    parser.add_argument("--opencv-fallback", action="store_true")
     args = parser.parse_args()
+    native = Path.home() / ".local/lib/dapier/h201_camera_dashboard"
+    if native.exists() and not args.opencv_fallback:
+        sdk_root = Path.home() / ".local/opt/eys3d_ros/dm_preview/eYs3D_wrapper"
+        if sdk_root.exists():
+            os.chdir(sdk_root)
+        os.execv(str(native), [str(native), args.left, args.right])
     paths = (args.left, args.h201, args.right)
     captures = (
         _open(args.left),
         _open(args.h201, h201=True),
         _open(args.right),
     )
-    labels = ("LEFT WRIST RGB", "TOP H201 RGB-D", "RIGHT WRIST RGB")
+    labels = ("LEFT WRIST RGB", "TOP H201 RAW DEPTH", "RIGHT WRIST RGB")
     cv2.namedWindow("DAPIER cameras: LEFT | H201 | RIGHT", cv2.WINDOW_NORMAL)
     try:
         next_frame = time.monotonic()
