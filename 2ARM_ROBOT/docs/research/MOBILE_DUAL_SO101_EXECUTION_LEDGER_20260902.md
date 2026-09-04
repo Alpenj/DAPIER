@@ -196,9 +196,11 @@ P2에서 오른팔이 뚜껑을 유지하는 동안 왼팔의 approach·contact�
 박스 상단의 실제 간격을 사용하도록 바꿨다.
 
 오른팔은 임의 gripperframe 목표 하나로 뚜껑을 당기면서 약 0.97 rad 추종 오차와 actuator
-포화를 만들었다. 접촉 검출용 날개–그리퍼 collision과 접촉 뒤 활성화한 equality가 같은 면을
-동시에 구속한 것도 원인이었다. 접촉을 확인한 뒤 해당 날개의 collision을 equality로 넘기고,
-힌지 30도·60도·95도의 실제 contact-site 원호를 순서대로 따라가도록 변경했다.
+포화를 만들었다. 당시에는 접촉 검출용 날개–그리퍼 collision과 접촉 뒤 활성화한 equality가
+같은 면을 동시에 구속한다고 보고, 접촉 뒤 날개 collision을 비활성화했다. 2026-09-04 후속
+안전 리뷰에서 이 방식이 동적 충돌 blind spot을 만든다는 것을 확인했다. 현재는 날개 collision을
+계속 활성 상태로 두고, 허용치를 넘는 penetration을 실패 증거로 기록한다. 힌지 30도·60도·95도의
+실제 contact-site 원호를 순서대로 따라가는 경로는 유지한다.
 
 왼팔은 낮은 위치에서 곧바로 높은 목표로 이동하면 wrist–lid 충돌이 났다. 다음 waypoint로
 수직 여유를 먼저 만든 뒤 박스 밖으로 이동했다.
@@ -220,7 +222,8 @@ box_lid_left_dust_flap을 들어 올리도록 단순화했다. 이 방향의 새
 
 - position IK에 선택적 site 이름을 받아 gripper 중심 대신 실제 lid contact site를 풀 수 있게 했다.
 - 오른팔 개방을 contact-site 기준 30도·60도·95도 waypoint로 나눴다.
-- contact가 확인된 날개 collision은 equality handoff 뒤 비활성화해 중복 구속을 제거했다.
+- 후속 안전 수정에서는 equality handoff 뒤에도 날개 collision을 활성 상태로 유지하고,
+  허용치를 넘는 penetration을 실패로 처리한다.
 - 왼 contact 높이를 조정했지만 현재는 고정측만 닿으므로 lift·extract를 실행하지 않는다.
 - contact 직후 shoe를 붙이던 weld equality를 scene과 실행 코드에서 제거했다.
 - shoe contact를 고정측과 이동측으로 나눠 둘 다 닿지 않으면 실패하도록 했다.

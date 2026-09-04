@@ -107,6 +107,9 @@ class UnsafeActionError(RuntimeError):
         super().__init__(assessment.reason)
         self.assessment = assessment
 
+    def __reduce__(self):
+        return (type(self), (self.assessment,))
+
 
 def _yaw_quaternion(yaw_rad: float) -> tuple[float, float, float, float]:
     half = yaw_rad / 2.0
