@@ -17,9 +17,12 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 SMOKE = runpy.run_path(str(ROOT / "2ARM_ROBOT/scripts/dual_so101_smoke"))
 CONFIRMATION = "VISIBLE_RIGHT_SO101_MUJOCO_BOX_PREGRASP"
-# Invalidated after the endpoint labelled right physically moved the left arm.
-# Set only after a witnessed role-remapping check and a new confirmation token.
-PHYSICAL_ROLE_MAPPING_VERIFIED = False
+# The first witnessed run exposed reversed local role entries. The private profile
+# now swaps whole endpoint+calibration objects, preserving each device binding.
+PHYSICAL_ROLE_MAPPING_VERIFIED = True
+# The reviewed SIM target moved from the box top to the front tuck flap.
+# Keep the old hardware delta blocked until the replacement is witnessed.
+PHYSICAL_TARGET_MAPPING_VERIFIED = False
 MOVING_JOINTS = (
     "shoulder_pan",
     "shoulder_lift",
@@ -180,6 +183,8 @@ def main() -> int:
         _require_request(args.confirm, args.operator_present)
         if not PHYSICAL_ROLE_MAPPING_VERIFIED:
             raise RuntimeError("physical left/right role mapping is unverified")
+        if not PHYSICAL_TARGET_MAPPING_VERIFIED:
+            raise RuntimeError("physical target mapping is stale after SIM target correction")
         profile = SMOKE["load_trusted_profile"](args.profile)
         validate_trajectory_limits()
         ports = {side: item["port"] for side, item in profile.items()}
