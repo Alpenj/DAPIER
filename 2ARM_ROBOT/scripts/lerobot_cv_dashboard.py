@@ -25,6 +25,9 @@ WINDOW = "DAPIER cameras: LEFT | H201 | RIGHT"
 HEADER = struct.Struct("<IIIIQ")
 MAGIC = 0x48323031
 STATUS = "STARTING"
+RECORD_EVENTS: dict | None = None
+LEFT_KEYS = {81, 65361, 2424832, 16777234}
+RIGHT_KEYS = {83, 65363, 2555904, 16777236}
 
 
 class H201DepthCamera:
@@ -188,13 +191,34 @@ def _status_for_message(message: str) -> str:
     }.get(message, message.upper())
 
 
+def _apply_recording_key(key: int, events: dict) -> str | None:
+    if key in RIGHT_KEYS:
+        events["exit_early"] = True
+        return "FINISHING EPISODE / RESET NEXT"
+    if key in LEFT_KEYS:
+        events["rerecord_episode"] = True
+        events["exit_early"] = True
+        return "DISCARDING AND RE-RECORDING EPISODE"
+    if key in (27, ord("q")):
+        events["stop_recording"] = True
+        events["exit_early"] = True
+        return "STOPPING / SAVING CURRENT EPISODE"
+    return None
+
+
 def init_visualization(*_args, **_kwargs) -> None:
     cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL | cv2.WINDOW_GUI_NORMAL)
 
 
 def log_visualization_data(_mode, *, observation: dict, **_kwargs) -> None:
+    global STATUS
     cv2.imshow(WINDOW, compose_dashboard(observation))
-    if cv2.waitKey(1) & 0xFF in (27, ord("q")):
+    key = cv2.waitKeyEx(1)
+    if RECORD_EVENTS is not None:
+        status = _apply_recording_key(key, RECORD_EVENTS)
+        if status is not None:
+            STATUS = status
+    elif key in (27, ord("q")):
         raise KeyboardInterrupt
 
 
@@ -208,6 +232,12 @@ def main() -> int:
         assert compose_dashboard({key: frame for key, _ in CAMERAS}).shape == (304, 960, 3)
         assert _status_for_message("Recording episode 0") == "RECORDING EPISODE 1 (auto-save)"
         assert _status_for_message("Stop recording") == "FINALIZING / SAVING"
+        events = {"exit_early": False, "rerecord_episode": False, "stop_recording": False}
+        assert _apply_recording_key(2555904, events) == "FINISHING EPISODE / RESET NEXT"
+        assert events["exit_early"] and not events["stop_recording"]
+        events["exit_early"] = False
+        assert _apply_recording_key(27, events) == "STOPPING / SAVING CURRENT EPISODE"
+        assert events["exit_early"] and events["stop_recording"]
         return 0
 
     if len(sys.argv) < 2 or sys.argv[1] not in {"teleop", "record"}:
@@ -237,6 +267,15 @@ def main() -> int:
         return original_log_say(message, *args, **kwargs)
 
     target.log_say = log_say_with_status
+    if mode == "record":
+        original_init_keyboard_listener = target.init_keyboard_listener
+
+        def init_keyboard_listener_with_dashboard():
+            global RECORD_EVENTS
+            listener, RECORD_EVENTS = original_init_keyboard_listener()
+            return listener, RECORD_EVENTS
+
+        target.init_keyboard_listener = init_keyboard_listener_with_dashboard
     target.init_visualization = init_visualization
     target.log_visualization_data = log_visualization_data
     target.shutdown_visualization = shutdown_visualization
