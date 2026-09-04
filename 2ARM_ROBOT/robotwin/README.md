@@ -71,3 +71,17 @@ sim-to-real 완료라고 기록하지 않는다.
 
 현재 완료는 1단계의 generator와 SAPIEN load smoke뿐이다. Planner 이후는 실제 실행
 결과를 commit과 함께 갱신한다.
+
+`overlay/`는 공식 checkout에 복사되는 최소 파일만 보관한다. ALOHA용 원본
+`handover_block`의 740 mm 테이블과 큰 작업 범위를 그대로 쓰지 않고, DAPIER task는
+바닥 기준 surface, 40×40×120 mm 시험 물체, 로봇 앞 40~80 mm 좌우 범위로 줄였다.
+CuRobo는 한 팔을 계획할 때 중앙 몸체·H201 mast·반대 팔 collision sphere를 함께
+읽고 반대 팔은 compact home에 lock한다. sphere 근사는 실제 planning을 통과한 뒤에도
+mesh collision과 MuJoCo contact로 교차검증해야 한다.
+
+```bash
+~/RoboTwin/venv/bin/python install_runtime.py \
+  --robotwin ~/RoboTwin \
+  --source-urdf /path/to/official/so101_new_calib.urdf \
+  --mesh-source /path/to/official/meshes
+```

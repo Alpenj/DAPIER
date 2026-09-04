@@ -1,0 +1,60 @@
+collision_spheres:
+  dapier_base_link:
+    - {center: [-0.094, -0.102, 0.110], radius: 0.072}
+    - {center: [-0.094, 0.000, 0.110], radius: 0.072}
+    - {center: [-0.094, 0.102, 0.110], radius: 0.072}
+    - {center: [0.000, -0.102, 0.110], radius: 0.072}
+    - {center: [0.000, 0.000, 0.110], radius: 0.072}
+    - {center: [0.000, 0.102, 0.110], radius: 0.072}
+    - {center: [0.094, -0.102, 0.110], radius: 0.072}
+    - {center: [0.094, 0.000, 0.110], radius: 0.072}
+    - {center: [0.094, 0.102, 0.110], radius: 0.072}
+  h201_mast_link:
+    - {center: [0, 0, 0.025], radius: 0.032}
+    - {center: [0, 0, 0.075], radius: 0.032}
+    - {center: [0, 0, 0.125], radius: 0.032}
+    - {center: [0, 0, 0.175], radius: 0.032}
+    - {center: [0, 0, 0.225], radius: 0.032}
+    - {center: [0, 0, 0.275], radius: 0.032}
+  h201_link:
+    - {center: [0, 0, 0], radius: 0.049}
+  left_base_link:
+    - {center: [-0.007, 0.001, 0.051], radius: 0.035}
+    - {center: [0.033, 0.001, 0.051], radius: 0.035}
+  left_shoulder_link:
+    - {center: [-0.030, 0, -0.042], radius: 0.033}
+  left_upper_arm_link:
+    - {center: [-0.113, -0.016, 0.018], radius: 0.033}
+  left_lower_arm_link:
+    - {center: [-0.097, 0, 0.020], radius: 0.041}
+    - {center: [-0.053, 0, 0.020], radius: 0.041}
+    - {center: [-0.010, 0, 0.020], radius: 0.041}
+  left_wrist_link:
+    - {center: [0, -0.043, 0.031], radius: 0.033}
+  left_gripper_link:
+    - {center: [0.008, 0, -0.023], radius: 0.033}
+  left_moving_jaw_so101_v1_link:
+    - {center: [0, -0.059, 0.019], radius: 0.035}
+    - {center: [0, -0.013, 0.019], radius: 0.035}
+  left_camera:
+    - {center: [0, 0, 0], radius: 0.027}
+  right_base_link:
+    - {center: [-0.007, 0.001, 0.051], radius: 0.035}
+    - {center: [0.033, 0.001, 0.051], radius: 0.035}
+  right_shoulder_link:
+    - {center: [-0.030, 0, -0.042], radius: 0.033}
+  right_upper_arm_link:
+    - {center: [-0.113, -0.016, 0.018], radius: 0.033}
+  right_lower_arm_link:
+    - {center: [-0.097, 0, 0.020], radius: 0.041}
+    - {center: [-0.053, 0, 0.020], radius: 0.041}
+    - {center: [-0.010, 0, 0.020], radius: 0.041}
+  right_wrist_link:
+    - {center: [0, -0.043, 0.031], radius: 0.033}
+  right_gripper_link:
+    - {center: [0.008, 0, -0.023], radius: 0.033}
+  right_moving_jaw_so101_v1_link:
+    - {center: [0, -0.059, 0.019], radius: 0.035}
+    - {center: [0, -0.013, 0.019], radius: 0.035}
+  right_camera:
+    - {center: [0, 0, 0], radius: 0.027}

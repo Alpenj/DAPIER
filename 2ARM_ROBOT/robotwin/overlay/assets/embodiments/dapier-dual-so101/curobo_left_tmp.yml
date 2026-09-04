@@ -1,0 +1,54 @@
+robot_cfg:
+  kinematics:
+    use_usd_kinematics: false
+    urdf_path: ${ASSETS_PATH}/assets/embodiments/dapier-dual-so101/urdf/dapier_dual_so101.urdf
+    asset_root_path: null
+    base_link: dapier_base_link
+    ee_link: left_gripper_frame_link
+    collision_link_names: &collision_links
+      [dapier_base_link, h201_mast_link, h201_link,
+       left_base_link, left_shoulder_link, left_upper_arm_link, left_lower_arm_link,
+       left_wrist_link, left_gripper_link, left_moving_jaw_so101_v1_link, left_camera,
+       right_base_link, right_shoulder_link, right_upper_arm_link, right_lower_arm_link,
+       right_wrist_link, right_gripper_link, right_moving_jaw_so101_v1_link, right_camera]
+    collision_spheres: ${ASSETS_PATH}/assets/embodiments/dapier-dual-so101/collision_dual_so101.yml
+    collision_sphere_buffer: 0.003
+    extra_collision_spheres: {}
+    use_global_cumul: true
+    self_collision_ignore: &ignore
+      dapier_base_link: [h201_mast_link, h201_link, left_base_link, left_shoulder_link, left_upper_arm_link, right_base_link, right_shoulder_link, right_upper_arm_link]
+      h201_mast_link: [h201_link]
+      left_base_link: [left_shoulder_link, left_upper_arm_link]
+      left_shoulder_link: [left_upper_arm_link, left_lower_arm_link]
+      left_upper_arm_link: [left_lower_arm_link, left_wrist_link]
+      left_lower_arm_link: [left_wrist_link, left_gripper_link]
+      left_wrist_link: [left_gripper_link, left_moving_jaw_so101_v1_link, left_camera]
+      left_gripper_link: [left_moving_jaw_so101_v1_link, left_camera]
+      left_moving_jaw_so101_v1_link: [left_camera]
+      right_base_link: [right_shoulder_link, right_upper_arm_link]
+      right_shoulder_link: [right_upper_arm_link, right_lower_arm_link]
+      right_upper_arm_link: [right_lower_arm_link, right_wrist_link]
+      right_lower_arm_link: [right_wrist_link, right_gripper_link]
+      right_wrist_link: [right_gripper_link, right_moving_jaw_so101_v1_link, right_camera]
+      right_gripper_link: [right_moving_jaw_so101_v1_link, right_camera]
+      right_moving_jaw_so101_v1_link: [right_camera]
+    self_collision_buffer: {}
+    mesh_link_names: *collision_links
+    lock_joints:
+      left_gripper: -0.174533
+      right_shoulder_pan: 0.004603066
+      right_shoulder_lift: -1.571825
+      right_elbow_flex: 1.5548
+      right_wrist_flex: 0.01658
+      right_wrist_roll: -1.501367654
+      right_gripper: -0.174533
+    extra_links: null
+    cspace:
+      joint_names: [left_shoulder_pan, left_shoulder_lift, left_elbow_flex, left_wrist_flex, left_wrist_roll]
+      retract_config: [0.004603066, -1.571825, 1.5548, 0.01658, -1.501367654]
+      null_space_weight: [1, 1, 1, 1, 1]
+      cspace_distance_weight: [1, 1, 1, 1, 1]
+      max_jerk: 5.0
+      max_acceleration: 1.0
+planner:
+  frame_bias: [0, 0, 0]
