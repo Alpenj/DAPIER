@@ -67,6 +67,10 @@ REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES = (
     "printed_torso_collision",
     "printed_camera_mount_collision",
 )
+REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES = (
+    "compact_mount_plate",
+    "compact_camera_mast",
+)
 
 
 @dataclass(frozen=True)
@@ -238,6 +242,11 @@ def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
         support_names = REQUIRED_TOWER_SUPPORT_COLLISION_GEOM_NAMES
     elif printed_body_id >= 0:
         support_names = REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES
+    elif all(
+        _geom_id_if_present(model, name) is not None
+        for name in REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES
+    ):
+        support_names = REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES
     else:
         raise RuntimeError("mount collision structure is missing")
     support_geoms = tuple(
@@ -258,7 +267,11 @@ def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
             own_support_interface = (
                 body_name in {"left_shoulder", "right_shoulder"}
                 and support_name
-                in {"semi_support_column_collision", "printed_torso_collision"}
+                in {
+                    "semi_support_column_collision",
+                    "printed_torso_collision",
+                    "compact_mount_plate",
+                }
             )
             if not own_support_interface:
                 pairs.append((arm_id, support_id))

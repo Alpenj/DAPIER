@@ -18,13 +18,16 @@ except ModuleNotFoundError as error:
 
 from box_shoe_scene import box_shoe_scene_contract
 from compact_mobile_dual_so101 import (
+    COMPACT_HOME_ACTION,
     CompactMobileConfig,
     build_compact_mobile_model,
     compact_mobile_measurements_mm,
     compact_mobile_contract,
     create_compact_mobile_data,
 )
-from mobile_dual_so101 import WAFFLE_TOP_LOCAL_Z_M
+from collision_guard import check_bimanual_path
+from mobile_dual_so101 import HUMANOID_HOME_ACTION, WAFFLE_TOP_LOCAL_Z_M
+from physics_ik import solve_bimanual_position_ik
 
 
 class CompactMobileDualSO101Test(unittest.TestCase):
@@ -117,6 +120,19 @@ class CompactMobileDualSO101Test(unittest.TestCase):
                 self.model, mujoco.mjtObj.mjOBJ_CAMERA, name
             )
             self.assertGreater(float(data.cam_xpos[camera_id, 2]), box_top_m, name)
+            parent_id = int(self.model.cam_bodyid[camera_id])
+            self.assertAlmostEqual(
+                float(data.cam_xpos[camera_id, 2] - data.xpos[parent_id, 2]),
+                0.040,
+            )
+
+    def test_both_wrists_are_reversed_180_degrees_for_top_rgb_mounts(self) -> None:
+        for index in (4, 10):
+            difference = math.remainder(
+                COMPACT_HOME_ACTION[index] - HUMANOID_HOME_ACTION[index],
+                2.0 * math.pi,
+            )
+            self.assertAlmostEqual(abs(difference), math.pi)
 
     def test_box_and_cuboid_shoe_keep_measured_geometry(self) -> None:
         contract = box_shoe_scene_contract(self.model)
@@ -158,6 +174,27 @@ class CompactMobileDualSO101Test(unittest.TestCase):
             (-64.0, 0.0, 420.0),
         )
         self.assertTrue(measurements["simulation_values_only"])
+
+    def test_right_arm_pregrasp_ik_passes_compact_collision_guard(self) -> None:
+        result = solve_bimanual_position_ik(
+            self.model,
+            COMPACT_HOME_ACTION,
+            {
+                "right": (
+                    self.config.box_center_xy_m[0] - 0.135,
+                    -0.090,
+                    0.200,
+                )
+            },
+        )
+        self.assertTrue(result.converged)
+        assessment = check_bimanual_path(
+            self.model,
+            COMPACT_HOME_ACTION,
+            result.action_rad,
+            required_clearance_m=0.005,
+        )
+        self.assertTrue(assessment.safe, assessment)
 
     def test_invalid_dimensions_fail_before_model_build(self) -> None:
         invalid = (
