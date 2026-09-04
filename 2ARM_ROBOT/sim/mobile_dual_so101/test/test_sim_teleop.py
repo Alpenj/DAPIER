@@ -40,6 +40,7 @@ from sim_teleop import (
     KEYPAD_1,
     SimTeleopController,
     apply_teleop_targets,
+    run_sim_teleop,
     synchronize_stop_hold,
     synchronize_control_panel,
 )
@@ -88,6 +89,15 @@ class SimTeleopControllerTest(unittest.TestCase):
         self.assertFalse(status["hardware_dispatch_authorized"])
         self.assertFalse(status["hardware_execution"])
 
+    def test_recording_rate_rejects_invalid_values_before_viewer_launch(self) -> None:
+        for value in (0, -1, True, 20.0):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                run_sim_teleop(
+                    self.model,
+                    initial_action=HUMANOID_HOME_ACTION,
+                    record_fps=value,
+                )
+
     def test_arm_joint_selection_increment_and_rate_limit(self) -> None:
         self.assertTrue(self.controller.handle_key(KEY_RIGHT_ARM, now_ns=1).accepted)
         self.assertTrue(self.controller.handle_key(ord("2"), now_ns=2).accepted)
@@ -111,6 +121,21 @@ class SimTeleopControllerTest(unittest.TestCase):
         self.assertFalse(repeated.accepted)
         self.assertIn("rate limit", repeated.reason)
         self.assertEqual(self.controller.targets, update.targets)
+
+    def test_named_obstacles_reach_shared_collision_guard(self) -> None:
+        controller = SimTeleopController(
+            self.model,
+            initial_action=HUMANOID_HOME_ACTION,
+            obstacle_geom_names=("box_floor",),
+        )
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ) as guard:
+            self.assertTrue(controller.handle_key(KEY_INCREASE, now_ns=1).accepted)
+        self.assertEqual(
+            guard.call_args.kwargs["obstacle_geom_names"], ("box_floor",)
+        )
 
     def test_glfw_keypad_and_arrow_fallbacks_drive_the_same_contract(self) -> None:
         self.assertTrue(

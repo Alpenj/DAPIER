@@ -193,20 +193,41 @@ $$
 
 ## 9. 현재 구현과 다음 단계
 
-현재 구현된 것은 MuJoCo 모델 Jacobian을 사용하는 양팔 DLS IK, 관절 범위 제한,
-경로 충돌 검사, 7차 보간과 동역학 측정이다. 아직 IK 목표 생성은 실제 RGB-D
-역투영 경로와 연결되지 않았다. 새 workcell의 실측 외부 파라미터, RGB-D 박스
-pose, 손목 RGB visual servo와 실물 command 연결은 완료되지 않았다.
+2026-09-04에 `vision_box_pregrasp.py`로 MuJoCo H201의 렌더 depth를 optical frame에서
+역투영하고, camera-to-base transform을 적용해 박스의 base-frame pose를 계산하는
+경로를 연결했다. 물체 body pose나 segmentation ID는 계획 입력으로 사용하지 않는다.
+뚜껑 날개가 단순 PCA의 방향을 틀어지게 하므로 depth 점군에 최소면적 직사각형을
+맞춘다. 알려진 박스 본체와 날개 치수 중 관측 footprint에 가까운 형상을 선택해
+박스 중심을 복원한다.
+
+기본 장면에서 depth로 계산한 박스 중심은 `(0.4185, -0.0005) m`였고, 테스트에서만
+조회한 MuJoCo 정답 `(0.4200, 0.0000) m`과의 XY 오차는 약 `1.6 mm`였다. 박스를
+XY로 이동하고 yaw를 ±5° 바꾼 세 장면 모두 중심 오차 `8 mm` 이내를 통과했다.
+오른팔은 로봇 쪽 앞날개의 오른팔 grasp 지점을 기준으로 전방
+`9 → 5 → 3 → 2 cm`, 상단 `9.5 → 7.5 → 5.5 → 4.5 cm`의 네 구간을 순서대로 다시 IK 계산하며,
+각 구간에서 양팔·본체·카메라 지지대·바닥·박스 collision을 검사한다. 기본 장면의
+네 IK residual은 모두 `0.40 mm` 이하였다. 이는 SIM 검증이며 실물 정밀도 증거가
+아니다.
+
+계획 후 박스가 base X 방향으로 10 mm 이동한 실패 주입에서는 오른손목 RGB의 판지-바닥
+모서리 row가 10 px 넘게 달라졌다. SIM에서 5 mm probe로 구한 pixel/m 민감도와 최대
+12 mm 보정 제한을 적용하고 다시 IK·충돌 검사를 수행하니 잔차가 3 px 미만으로 줄었다.
+이는 전후 1축 보정만 검증한 결과다. 무늬 없는 판지가 근접 화면을 채우므로 좌우 위치는
+H201 3D 추정을 유지하며, 실물에서는 probe 대신 사전 실측한 image Jacobian을 사용한다.
+
+아직 실제 H201 intrinsics와 `base ← H201 optical` 외부 파라미터, 실물 depth의
+invalid code/scale, 오른손목 RGB 특징 검출과 1~2 cm 폐루프 보정은 완료되지 않았다.
+박스 열기, 왼팔 접근과 신발 인출도 이 pose 계약 위에 순서대로 연결해야 한다.
 
 다음 검증 순서는 다음과 같다.
 
-1. workcell 좌표계와 카메라·양팔 외부 파라미터 계약
-2. 사진 배치의 MuJoCo 모델과 camera frame 시각화
-3. 이동·회전된 박스의 synthetic RGB-D pose 입력
-4. 오른팔 pre-grasp·approach IK와 전체 경로 충돌 검사
-5. 손목 RGB 오차 주입과 구간별 재계획
-6. 조명·가림·지연·pose noise·모터 오차 sweep
-7. 별도 안전 통합 완료 후 사용자 입회 read-only 및 제한적 실물 검증
+1. 실제 H201 depth 저장과 intrinsics/extrinsics calibration profile 연결
+2. 오른손목 RGB 오차 주입과 1~2 cm 구간별 재관측
+3. depth hole·가림·지연·pose noise·모터 오차 sweep
+4. 오른팔 날개 접촉과 박스 열림 확인
+5. 왼손목 RGB 보정, 왼팔 접근과 신발 인출
+6. 작업 전후 Visual SLAM 이동과 manipulation mode interlock
 
-현재 저장소의 nonzero 실물 motion은 안전 검토에 따라 차단되어 있다. 위 수식의
-시뮬레이션 통과는 실물 실행 승인이 아니다.
+별도의 bounded commissioning 명령은 exact confirmation과 interactive TTY에서만
+열리지만, 위 depth 기반 계획은 아직 실물 command 경로에 연결하지 않았다. 위 수식과
+시뮬레이션 통과는 실물 visual-servo 실행 승인이 아니다.

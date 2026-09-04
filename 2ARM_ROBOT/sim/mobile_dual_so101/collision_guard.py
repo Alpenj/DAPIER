@@ -330,6 +330,7 @@ def check_bimanual_path(
     *,
     required_clearance_m: float = DEFAULT_CLEARANCE_M,
     max_joint_step_rad: float = DEFAULT_MAX_JOINT_STEP_RAD,
+    obstacle_geom_names: Sequence[str] = (),
 ) -> CollisionAssessment:
     """Reject a target if its interpolated path violates protected clearance."""
 
@@ -348,13 +349,27 @@ def check_bimanual_path(
         raise ValueError("all action values must be finite")
     max_delta = float(np.max(np.abs(target - current)))
     intervals = max(1, math.ceil(max_delta / max_joint_step_rad))
-    pairs = protected_geom_pairs(model)
+    pairs = list(protected_geom_pairs(model))
+    obstacle_ids = tuple(
+        _required_active_geom_id(model, name) for name in obstacle_geom_names
+    )
+    arm_geoms = (
+        *_collision_geoms_for_arm(model, "left"),
+        *_collision_geoms_for_arm(model, "right"),
+    )
+    pairs.extend(
+        (arm_id, obstacle_id)
+        for arm_id in arm_geoms
+        for obstacle_id in obstacle_ids
+    )
     same_arm_pairs = (
         *_same_arm_geom_pairs(model, _collision_geoms_for_arm(model, "left")),
         *_same_arm_geom_pairs(model, _collision_geoms_for_arm(model, "right")),
     )
     same_arm_pair_set = set(same_arm_pairs)
-    clearance_pairs = tuple(pair for pair in pairs if pair not in same_arm_pair_set)
+    clearance_pairs = tuple(
+        dict.fromkeys(pair for pair in pairs if pair not in same_arm_pair_set)
+    )
     data = mujoco.MjData(model)
     best = (math.inf, -1, -1, 0.0)
 
