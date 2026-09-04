@@ -9,12 +9,14 @@
 - left/right follower: 로컬 프로필의 `/dev/serial/by-id/...`
 - left/right leader: `identify-leaders`로 물리 좌·우를 확인한 뒤 로컬 프로필에만 저장
 - left wrist RGB: `/dev/dapier/left_wrist_rgb`, 320×240 YUYV 30 fps
-- top H201 visual observation: `/dev/video6`, 1280×460 YUYV 15 fps
+- top H201 depth: eYs3D 공식 SDK `zdDepthVec`, 640×460 `uint16 mm`, 15 fps
 - right wrist RGB: `/dev/dapier/right_wrist_rgb`, 320×240 YUYV 30 fps
 
-H201의 `/dev/video6`은 학습용 top-view 단안 영상이다. metric depth는 OpenCV 장치가
-아니며 eYs3D SDK가 `/dev/video8` disparity를 변환해 제공한다. 따라서 첫 ACT 데이터에는
-top mono + 양 손목 RGB를 기록하고, metric depth는 IK/박스 pose 계산 경로에 둔다.
+H201은 OpenCV의 `/dev/video*` RGB/IR 프레임을 depth라고 부르지 않는다. DAPIER SDK helper가
+eYs3D 공식 `zdDepthVec`를 직접 읽어 invalid sentinel `16384`를 `0`으로 바꾸고, 원본 거리값을
+`observation.images.top_h201_depth`에 무손실 `uint16 mm`로 저장한다. 화면에서만 컬러맵으로
+보인다. ACT는 양 손목 RGB와 12축 상태·행동을 학습하고, 이 raw depth는 박스 3D pose와 IK
+목표 계산에 사용한다.
 
 ## 1. 로컬 프로필 생성
 
@@ -89,7 +91,8 @@ side-specific JSON을 복구했고, 양쪽 모두 JSON과 EEPROM의 완전 일�
 2ARM_ROBOT/scripts/dual_so101_il teleop
 ```
 
-leader를 아주 작게 움직여 물리 좌·우, 관절 방향, gripper 방향을 확인한다. wrapper는
+leader를 아주 작게 움직여 물리 좌·우, 관절 방향, gripper 방향을 확인한다. 화면은 Rerun 없이
+동일 observation을 `LEFT WRIST | TOP H201 DEPTH | RIGHT WRIST` 순서로 표시한다. wrapper는
 한 control tick의 follower 변화량을 5도로 제한한다. 어느 축이 반대로 움직이거나 다른
 팔이 반응하면 즉시 종료하고 calibration/leader mapping을 수정한다.
 
@@ -99,7 +102,8 @@ leader를 아주 작게 움직여 물리 좌·우, 관절 방향, gripper 방향
 2ARM_ROBOT/scripts/dual_so101_il record
 ```
 
-기본 episode는 30초, reset 15초, 20회, 15 Hz다. 성공 시연만 남긴다. 동작 순서는
+기본 episode는 30초, reset 15초, 20회, 15 Hz다. 화면과 저장은 같은 observation을 사용하므로
+카메라를 두 번 열지 않는다. 성공 시연만 남긴다. 동작 순서는
 오른팔로 박스 날개 접근·열기 → 왼팔로 박스 내부 접근·신발 들어올리기다. base 이동은
 이 dataset의 action에 포함하지 않는다.
 
@@ -113,3 +117,9 @@ leader를 아주 작게 움직여 물리 좌·우, 관절 방향, gripper 방향
 `/home/dapier-jhj/dapier_training/dual-so101-box-shoe-act`에 저장된다. 학습 완료는 실물
 성공 판정이 아니다. held-out loss 확인 후 MuJoCo replay, IK/충돌 gate, 저속 실물 rollout을
 별도로 통과해야 한다.
+
+2026-09-04 실물 smoke에서 150 frame/15 Hz episode를 다시 로드해 state/action 12D, 좌·우
+RGB `(3,240,320)`, H201 depth `(1,460,640)`와 `depth_unit=mm`를 확인했다. 기본 ResNet18
+ACT는 1채널 depth를 직접 받지 못하므로 launcher가 raw depth를 보존하면서 ACT 입력을 양 손목
+RGB+state로 제한한다. 같은 dataset으로 CUDA ACT 1-step forward/backward/checkpoint 저장까지
+통과했다.

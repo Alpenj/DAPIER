@@ -118,8 +118,10 @@ gripper는 0~100으로 바꾼다. fake bus E2E에서 checkpoint 추론부터 오
 `Goal_Position` 1회 write까지 통과했으며, 좌측 bus write는 없다. 사용한 checkpoint는
 one-step wiring smoke이므로 실물 task 실행 승인의 근거는 아니다.
 
-카메라 확인은 아래 명령으로 `좌 손목 | H201 | 우 손목` 한 창에 표시한다. 미리보기는
-320×240/10fps이고 학습 원본 저장 해상도와 분리한다.
+카메라 확인은 아래 명령으로 `좌 손목 | H201 | 우 손목` 한 창에 표시한다. teleop/record에서는
+LeRobot이 이미 읽은 같은 observation을 OpenCV 3분할 창에 그려 카메라를 중복 open하지 않는다.
+H201은 eYs3D SDK `zdDepthVec`의 640×460 `uint16 mm` 원본을 저장하고 화면에서만 컬러맵으로
+변환한다.
 
 ```bash
 2ARM_ROBOT/scripts/show_camera_dashboard
@@ -127,7 +129,7 @@ one-step wiring smoke이므로 실물 task 실행 승인의 근거는 아니다.
 
 ## 아직 확인하지 못한 부분
 
-- 실제 H201의 intrinsics, depth scale과 invalid code
+- 실제 H201 intrinsics와 유효 거리별 오차(단위는 SDK `uint16 mm`, invalid `16384→0` 확인)
 - 실측 `base ← H201 optical` 외부 파라미터
 - 실물 오른손목 RGB의 앞날개 특징과 사전 실측 image Jacobian
 - 프레임 age, 두 카메라 timestamp skew와 frame drop
@@ -135,6 +137,6 @@ one-step wiring smoke이므로 실물 task 실행 승인의 근거는 아니다.
 - 오른팔 접촉 후 뚜껑 열림을 현재 visual 경로와 결합하는 작업
 - 왼팔 접근과 신발 인출
 
-다음에는 실제 H201 depth 한 프레임을 같은 함수에 넣을 수 있는 저장 경계를 먼저
-연결하고, 현재 SIM 손목 RGB 보정을 실측 Jacobian 기반 경계로 교체한다. 실제 calibration이 없으면
+다음에는 저장된 실제 H201 depth를 박스 pose 함수에 연결하고, 현재 SIM 손목 RGB 보정을
+실측 Jacobian 기반 경계로 교체한다. 실제 calibration이 없으면
 MuJoCo transform을 실물 값처럼 복사하지 않고 실행을 막는다.

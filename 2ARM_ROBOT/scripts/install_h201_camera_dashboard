@@ -37,4 +37,20 @@ g++ -std=c++17 -O2 \
   $(pkg-config --cflags --libs opencv4) \
   -o "$install_dir/h201_camera_dashboard"
 
+g++ -std=c++17 -O2 \
+  "$repo_root/2ARM_ROBOT/scripts/native/h201_depth_stream.cpp" \
+  -I"$sdk_root/include" \
+  -I"$sdk_root/include/DMPreview_utility" \
+  -I"$sdk_root/include/DMPreview_utility/sqlite3" \
+  -I"$sdk_root/include/devices" \
+  -I"$sdk_root/include/devices/controller" \
+  -I"$sdk_root/include/devices/model" \
+  -I"$sdk_root/include/sensors" \
+  -I"$sdk_root/lib/eSPDI" \
+  -L"$sdk_root/lib" -L"$sdk_root/lib/eSPDI" \
+  -Wl,-rpath,"$sdk_root/lib:$sdk_root/lib/eSPDI" \
+  -leSPDI_X86_64 -leys3d.X86_64 \
+  -o "$install_dir/h201_depth_stream"
+
 echo "installed: $install_dir/h201_camera_dashboard"
+echo "installed: $install_dir/h201_depth_stream"

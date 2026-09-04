@@ -5,6 +5,7 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 profile=${DAPIER_IL_PROFILE:-"$repo_root/2ARM_ROBOT/config/dual_so101_il.local.env"}
 example="$repo_root/2ARM_ROBOT/config/dual_so101_il.example.env"
 venv=${DAPIER_LEROBOT_VENV:-"/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv"}
+export PATH="$venv/bin:$PATH"
 python="$venv/bin/python"
 
 usage() {
@@ -38,6 +39,10 @@ require_ports() {
   }
 }
 
+require_h201() {
+  lsusb -d 3438:0173 >/dev/null || { echo "missing HP-ASC-H201 (3438:0173)" >&2; exit 7; }
+}
+
 require_calibrations() {
   local file missing=0
   for file in \
@@ -56,7 +61,6 @@ require_calibrations() {
 camera_args() {
   LEFT_CAMERA_JSON=$(printf '{"wrist":{"type":"opencv","index_or_path":"%s","width":320,"height":240,"fps":30,"fourcc":"YUYV"}}' "$LEFT_WRIST_CAMERA")
   RIGHT_CAMERA_JSON=$(printf '{"wrist":{"type":"opencv","index_or_path":"%s","width":320,"height":240,"fps":30,"fourcc":"YUYV"}}' "$RIGHT_WRIST_CAMERA")
-  TOP_CAMERA_JSON=$(printf '{"top_mono":{"type":"opencv","index_or_path":"%s","width":1280,"height":460,"fps":15,"fourcc":"YUYV"}}' "$TOP_MONO_CAMERA")
 }
 
 base_args() {
@@ -121,10 +125,12 @@ case ${1:-} in
   status)
     load_profile
     echo "profile: $profile"
-    for name in LEFT_FOLLOWER_PORT RIGHT_FOLLOWER_PORT LEFT_LEADER_PORT RIGHT_LEADER_PORT LEFT_WRIST_CAMERA RIGHT_WRIST_CAMERA TOP_MONO_CAMERA; do
+    for name in LEFT_FOLLOWER_PORT RIGHT_FOLLOWER_PORT LEFT_LEADER_PORT RIGHT_LEADER_PORT LEFT_WRIST_CAMERA RIGHT_WRIST_CAMERA; do
       value=${!name}; [[ -e "$value" ]] && state=OK || state=MISSING
       printf '%-22s %-7s %s\n' "$name" "$state" "$value"
     done
+    lsusb -d 3438:0173 >/dev/null && state=OK || state=MISSING
+    printf '%-22s %-7s %s\n' H201_DEPTH "$state" '3438:0173 / eYs3D SDK'
     for file in \
       "$CALIBRATION_DIR/${FOLLOWER_ID}_left.json" \
       "$CALIBRATION_DIR/${FOLLOWER_ID}_right.json" \
@@ -153,35 +159,37 @@ case ${1:-} in
       "--robot.id=$FOLLOWER_ID"
     ;;
   teleop)
-    load_profile; require_ports; require_calibrations; camera_args; base_args
+    load_profile; require_ports; require_h201; require_calibrations; camera_args; base_args
     confirm VISIBLE_DUAL_SO101_LEADER_TELEOP
-    "$venv/bin/lerobot-teleoperate" "${ROBOT_ARGS[@]}" \
+    "$python" "$repo_root/2ARM_ROBOT/scripts/lerobot_cv_dashboard.py" teleop "${ROBOT_ARGS[@]}" \
       "--robot.left_arm_config.cameras=$LEFT_CAMERA_JSON" \
       "--robot.right_arm_config.cameras=$RIGHT_CAMERA_JSON" \
-      "--robot.cameras=$TOP_CAMERA_JSON" \
       "${TELEOP_ARGS[@]}" --fps="$DATASET_FPS" --display_data=true
     ;;
   record)
-    load_profile; require_ports; require_calibrations; camera_args; base_args
+    load_profile; require_ports; require_h201; require_calibrations; camera_args; base_args
     confirm VISIBLE_RECORD_DUAL_SO101_DEMONSTRATIONS
+    record_episodes=${DAPIER_RECORD_EPISODES:-$NUM_EPISODES}
+    record_episode_time_s=${DAPIER_RECORD_EPISODE_TIME_S:-$EPISODE_TIME_S}
     resume=(); [[ -d "$DATASET_ROOT/meta" ]] && resume=(--resume=true)
-    "$venv/bin/lerobot-record" "${ROBOT_ARGS[@]}" \
+    "$python" "$repo_root/2ARM_ROBOT/scripts/lerobot_cv_dashboard.py" record "${ROBOT_ARGS[@]}" \
       "--robot.left_arm_config.cameras=$LEFT_CAMERA_JSON" \
       "--robot.right_arm_config.cameras=$RIGHT_CAMERA_JSON" \
-      "--robot.cameras=$TOP_CAMERA_JSON" \
       "${TELEOP_ARGS[@]}" \
       "--dataset.repo_id=$DATASET_REPO_ID" "--dataset.root=$DATASET_ROOT" \
       "--dataset.single_task=$TASK_DESCRIPTION" "--dataset.fps=$DATASET_FPS" \
-      "--dataset.episode_time_s=$EPISODE_TIME_S" "--dataset.reset_time_s=$RESET_TIME_S" \
-      "--dataset.num_episodes=$NUM_EPISODES" --dataset.video=false \
+      "--dataset.episode_time_s=$record_episode_time_s" "--dataset.reset_time_s=$RESET_TIME_S" \
+      "--dataset.num_episodes=$record_episodes" --dataset.video=false \
       --dataset.push_to_hub=false --display_data=true "${resume[@]}"
     ;;
   train)
     load_profile
     [[ -d "$DATASET_ROOT/meta" ]] || { echo "recorded dataset not found: $DATASET_ROOT" >&2; exit 8; }
+    act_inputs='{"observation.state":{"type":"STATE","shape":[12]},"observation.images.left_wrist":{"type":"VISUAL","shape":[3,240,320]},"observation.images.right_wrist":{"type":"VISUAL","shape":[3,240,320]}}'
     "$venv/bin/lerobot-train" \
       "--dataset.repo_id=$DATASET_REPO_ID" "--dataset.root=$DATASET_ROOT" \
       --policy.type=act --policy.device=cuda --policy.push_to_hub=false \
+      "--policy.input_features=$act_inputs" \
       "--output_dir=$TRAIN_OUTPUT" --job_name=dual_so101_box_shoe_act \
       "--steps=$TRAIN_STEPS" "--batch_size=$TRAIN_BATCH_SIZE" \
       --save_checkpoint=true --wandb.enable=false
