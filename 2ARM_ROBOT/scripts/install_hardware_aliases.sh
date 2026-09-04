@@ -64,6 +64,7 @@ fi
 sudo install -m 0644 "${staged_rules}" /etc/udev/rules.d/99-dapier-hardware.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger
+sudo udevadm settle --timeout=10
 cleanup
 trap - EXIT
 
