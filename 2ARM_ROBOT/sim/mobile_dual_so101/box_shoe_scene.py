@@ -200,7 +200,7 @@ def _add_box(spec: mujoco.MjSpec, config: BoxShoeSceneConfig) -> None:
         pos=[0.0, -outer_y - config.lid_front_tuck_depth_m / 2.0, 0.0],
         size=[half_x, config.lid_front_tuck_depth_m / 2.0, half_t],
         rgba=[0.58, 0.39, 0.20, 1.0],
-        **flexible_visual_common,
+        **lid_common,
     )
     for side, sign in (("left", 1.0), ("right", -1.0)):
         wing_common = lid_common if side == "left" else flexible_visual_common

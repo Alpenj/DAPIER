@@ -16,6 +16,7 @@ import mujoco
 import numpy as np
 
 from box_shoe_scene import BOX_GEOM_NAMES
+from box_shoe_physics_demo import _matching_contacts
 from collision_guard import check_bimanual_path
 from compact_mobile_dual_so101 import (
     COMPACT_HOME_ACTION,
@@ -116,6 +117,11 @@ class RightPregraspPlan:
     targets_base_m: tuple[tuple[float, float, float], ...]
     actions_rad: tuple[tuple[float, ...], ...]
     residuals_m: tuple[float, ...]
+    contact_target_base_m: tuple[float, float, float]
+    contact_open_action_rad: tuple[float, ...]
+    contact_closed_action_rad: tuple[float, ...]
+    contact_residual_m: float
+    front_flap_contact_count: int
     minimum_clearance_m: float
     accepted: bool
     hardware_execution: bool = False
@@ -426,7 +432,7 @@ def estimate_box_pose_from_depth(
 def right_pregrasp_targets(
     box: BoxPoseEstimate,
     *,
-    clearances_m: Sequence[float] = (0.09, 0.05, 0.03, 0.02),
+    clearances_m: Sequence[float] = (0.05, 0.04, 0.03, 0.02),
     heights_above_flap_m: Sequence[float] = (0.095, 0.075, 0.055, 0.045),
     box_short_m: float = 0.210,
     front_flap_depth_m: float = 0.055,
@@ -500,7 +506,9 @@ def plan_right_pregrasp_from_depth(
         float(grasp_xy[1]),
         float(box.top_center_base_m[2]),
     )
-    action = tuple(start_action_rad)
+    action = list(start_action_rad)
+    action[11] = 1.2
+    action = tuple(action)
     actions, residuals = [], []
     minimum_clearance = math.inf
     obstacles = tuple(
@@ -533,13 +541,71 @@ def plan_right_pregrasp_from_depth(
         actions.append(action)
         residuals.append(ik.residual_m_by_side["right"])
         minimum_clearance = min(minimum_clearance, assessment.minimum_clearance_m)
+
+    contact_target = tuple(
+        float(value)
+        for value in np.asarray(flap_grasp) + np.asarray((-0.004, 0.0, 0.005))
+    )
+    contact_ik = solve_bimanual_position_ik(
+        model,
+        action,
+        {"right": contact_target},
+        max_iterations=250,
+    )
+    if not contact_ik.converged:
+        raise ValueError(
+            f"right front-flap contact IK did not converge: "
+            f"{contact_ik.residual_m_by_side}"
+        )
+    non_target_obstacles = tuple(
+        name for name in obstacles if name != "box_lid_front_tuck_flap"
+    )
+    contact_guard = check_bimanual_path(
+        model,
+        action,
+        contact_ik.action_rad,
+        required_clearance_m=0.003,
+        obstacle_geom_names=non_target_obstacles,
+    )
+    if not contact_guard.safe:
+        raise ValueError(f"right front-flap contact path rejected: {contact_guard.reason}")
+    contact_closed = list(contact_ik.action_rad)
+    contact_closed[11] = 0.2
+    close_guard = check_bimanual_path(
+        model,
+        contact_ik.action_rad,
+        contact_closed,
+        required_clearance_m=0.003,
+        obstacle_geom_names=non_target_obstacles,
+    )
+    if not close_guard.safe:
+        raise ValueError(f"right front-flap close path rejected: {close_guard.reason}")
+    contact_data = create_compact_mobile_data(model)
+    apply_control_as_pose(model, contact_data, contact_closed)
+    front_flap_contacts = _matching_contacts(
+        model,
+        contact_data,
+        geom_name="box_lid_front_tuck_flap",
+        arm_side="right",
+    )
+    if not front_flap_contacts:
+        raise ValueError("right gripper did not contact the front tuck flap")
     return RightPregraspPlan(
         box=box,
         right_front_flap_grasp_base_m=flap_grasp,
         targets_base_m=targets,
         actions_rad=tuple(actions),
         residuals_m=tuple(residuals),
-        minimum_clearance_m=minimum_clearance,
+        contact_target_base_m=contact_target,
+        contact_open_action_rad=contact_ik.action_rad,
+        contact_closed_action_rad=tuple(contact_closed),
+        contact_residual_m=contact_ik.residual_m_by_side["right"],
+        front_flap_contact_count=len(front_flap_contacts),
+        minimum_clearance_m=min(
+            minimum_clearance,
+            contact_guard.minimum_clearance_m,
+            close_guard.minimum_clearance_m,
+        ),
         accepted=True,
     )
 
@@ -564,7 +630,13 @@ def show_plan(model: mujoco.MjModel, plan: RightPregraspPlan) -> None:
     import mujoco.viewer
 
     data = create_compact_mobile_data(model)
-    actions = (COMPACT_HOME_ACTION, *plan.actions_rad, COMPACT_HOME_ACTION)
+    actions = (
+        COMPACT_HOME_ACTION,
+        *plan.actions_rad,
+        plan.contact_open_action_rad,
+        plan.contact_closed_action_rad,
+        COMPACT_HOME_ACTION,
+    )
     with mujoco.viewer.launch_passive(model, data) as viewer:
         viewer.cam.lookat[:] = (0.16, 0.0, 0.16)
         viewer.cam.distance = 0.85

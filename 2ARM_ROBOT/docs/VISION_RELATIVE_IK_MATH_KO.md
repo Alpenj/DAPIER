@@ -204,10 +204,14 @@ $$
 조회한 MuJoCo 정답 `(0.4200, 0.0000) m`과의 XY 오차는 약 `1.6 mm`였다. 박스를
 XY로 이동하고 yaw를 ±5° 바꾼 세 장면 모두 중심 오차 `8 mm` 이내를 통과했다.
 오른팔은 로봇 쪽 앞날개의 오른팔 grasp 지점을 기준으로 전방
-`9 → 5 → 3 → 2 cm`, 상단 `9.5 → 7.5 → 5.5 → 4.5 cm`의 네 구간을 순서대로 다시 IK 계산하며,
+`5 → 4 → 3 → 2 cm`, 상단 `9.5 → 7.5 → 5.5 → 4.5 cm`의 네 구간을 순서대로 다시 IK 계산하며,
 각 구간에서 양팔·본체·카메라 지지대·바닥·박스 collision을 검사한다. 기본 장면의
-네 IK residual은 모두 `0.40 mm` 이하였다. 이는 SIM 검증이며 실물 정밀도 증거가
-아니다.
+네 IK 뒤에는 집게를 연 채 앞날개 전방 `4 mm`, 상단 `5 mm`까지 내려가 닫는 접촉
+구간이 있다. 앞날개 collision은 활성화하고 이 마지막 구간에서만 목표 날개 접촉을
+허용한다. 640×460 depth로 박스 x/y를 각각 ±30 mm, yaw를 ±5° 바꾼 27조합이 모두
+통과했으며, 최대 pre-grasp IK residual은 `0.474 mm`, 최대 접촉 IK residual은
+`0.446 mm`, 각 조합의 앞날개 접촉은 최소 1건이었다. 이는 SIM 검증이며 실물 정밀도
+증거가 아니다.
 
 계획 후 박스가 base X 방향으로 10 mm 이동한 실패 주입에서는 오른손목 RGB의 판지-바닥
 모서리 row가 10 px 넘게 달라졌다. SIM에서 5 mm probe로 구한 pixel/m 민감도와 최대
@@ -224,7 +228,7 @@ invalid code/scale, 오른손목 RGB 특징 검출과 1~2 cm 폐루프 보정은
 1. 실제 H201 depth 저장과 intrinsics/extrinsics calibration profile 연결
 2. 오른손목 RGB 오차 주입과 1~2 cm 구간별 재관측
 3. depth hole·가림·지연·pose noise·모터 오차 sweep
-4. 오른팔 날개 접촉과 박스 열림 확인
+4. 현재 검증한 오른팔 날개 접촉 경로와 박스 열림을 결합
 5. 왼손목 RGB 보정, 왼팔 접근과 신발 인출
 6. 작업 전후 Visual SLAM 이동과 manipulation mode interlock
 

@@ -80,6 +80,7 @@ class VisionBoxPregraspTest(unittest.TestCase):
         self.assertTrue(plan.accepted)
         self.assertEqual(len(plan.targets_base_m), 4)
         self.assertEqual(len(plan.actions_rad), 4)
+        self.assertTrue(all(action[11] == 1.2 for action in plan.actions_rad))
         self.assertLess(
             np.linalg.norm(
                 np.asarray(plan.right_front_flap_grasp_base_m)
@@ -90,8 +91,24 @@ class VisionBoxPregraspTest(unittest.TestCase):
         self.assertLess(plan.targets_base_m[-1][0], data.geom_xpos[flap_id][0])
         self.assertLess(plan.targets_base_m[-1][1], -0.08)
         self.assertTrue(all(residual < 0.0005 for residual in plan.residuals_m))
-        self.assertGreaterEqual(plan.minimum_clearance_m, 0.005)
+        self.assertNotEqual(int(model.geom_contype[flap_id]), 0)
+        self.assertLess(plan.contact_residual_m, 0.0005)
+        self.assertEqual(plan.contact_closed_action_rad[11], 0.2)
+        self.assertGreater(plan.front_flap_contact_count, 0)
+        self.assertGreaterEqual(plan.minimum_clearance_m, 0.003)
         self.assertFalse(plan.hardware_execution)
+
+    def test_plan_handles_declared_box_pose_randomization(self) -> None:
+        for config in (
+            CompactMobileConfig(box_center_xy_m=(0.39, -0.03), box_yaw_deg=-95.0),
+            CompactMobileConfig(),
+            CompactMobileConfig(box_center_xy_m=(0.45, 0.03), box_yaw_deg=-85.0),
+        ):
+            with self.subTest(config=config):
+                model, _, calibration, depth = self.render(config)
+                plan = plan_right_pregrasp_from_depth(model, depth, calibration)
+                self.assertTrue(plan.accepted)
+                self.assertGreater(plan.front_flap_contact_count, 0)
 
     def test_invalid_or_missing_depth_fails_closed(self) -> None:
         model, _, calibration, depth = self.render(CompactMobileConfig())

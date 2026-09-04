@@ -31,16 +31,19 @@ Manipulation 단계는 다음 순서로 고정한다. 이 앞뒤에는 Visual SL
 앞날개 기준으로 수정했다.
 
 ```text
-앞날개 grasp 지점 전방 9 cm / 상단 9.5 cm
-→ 전방 5 cm / 상단 7.5 cm
+앞날개 grasp 지점 전방 5 cm / 상단 9.5 cm
+→ 전방 4 cm / 상단 7.5 cm
 → 전방 3 cm / 상단 5.5 cm
 → 전방 2 cm / 상단 4.5 cm
+→ 집게를 연 채 전방 4 mm / 상단 5 mm 접촉점
+→ 집게 닫기
 ```
 
 각 목표마다 이전 관절 자세에서 오른팔 5축 DLS IK를 다시 풀고, 양팔·TurtleBot3
 본체·카메라 지지대·바닥뿐 아니라 박스 collision geom과의 거리도 검사한다. 마지막
 목표만 한 번 계산해 보내지 않는 이유는 이후 각 구간 사이에 오른손목 RGB 재관측을
-끼워 넣기 위해서다.
+끼워 넣기 위해서다. 앞날개는 시각용 판이 아니라 충돌 geom으로 바꿨으며, 마지막
+접촉 구간에서만 목표 날개와의 접촉을 허용하고 나머지 박스 벽 충돌은 계속 막는다.
 
 ## 실행 결과
 
@@ -49,10 +52,11 @@ Manipulation 단계는 다음 순서로 고정한다. 이 앞뒤에는 Visual SL
 기본 MuJoCo 정답:    (420.0,  0.0) mm
 기본 XY 중심 오차:   약 1.6 mm
 앞날개 오른팔 grasp:  (286.0, -90.5, 105.7) mm
-박스 이동/yaw 시험:  3/3, 중심 오차 8 mm 이내
+박스 이동/yaw 시험:  27/27 (x/y ±30 mm, yaw ±5°)
 오른팔 IK 구간:       4/4 수렴
-최대 IK residual:     0.40 mm 미만
-박스 포함 경로 검사: 4/4 통과, 요구 clearance 5 mm
+최대 IK residual:     0.474 mm
+박스 포함 경로 검사: 4/4 통과, pre-grasp 요구 clearance 5 mm
+앞날개 접촉 IK:       최대 residual 0.446 mm, 모든 조합 접촉 1건 이상
 손목 RGB 지연 이동:   박스 +10 mm 이동 시 초기 오차 10 px 초과
 손목 RGB 1회 보정:    보정 후 앞날개 edge 오차 3 px 미만
 실물 명령:            없음
@@ -114,7 +118,8 @@ python -m shoe_sorting_data.dapier_native_act train \
 - 실물 오른손목 RGB의 앞날개 특징과 사전 실측 image Jacobian
 - 프레임 age, 두 카메라 timestamp skew와 frame drop
 - depth hole·가림·조명·박스 이동에 대한 실물 허용치
-- 오른팔 접촉 후 뚜껑 열림, 왼팔 접근과 신발 인출
+- 오른팔 접촉 후 뚜껑 열림을 현재 visual 경로와 결합하는 작업
+- 왼팔 접근과 신발 인출
 
 다음에는 실제 H201 depth 한 프레임을 같은 함수에 넣을 수 있는 저장 경계를 먼저
 연결하고, 현재 SIM 손목 RGB 보정을 실측 Jacobian 기반 경계로 교체한다. 실제 calibration이 없으면
