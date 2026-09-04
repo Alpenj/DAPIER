@@ -109,10 +109,10 @@ case ${1:-} in
       printf '%-22s %-7s %s\n' "$name" "$state" "$value"
     done
     for file in \
-      "$HOME/.cache/huggingface/lerobot/calibration/robots/bi_so_follower/${FOLLOWER_ID}_left.json" \
-      "$HOME/.cache/huggingface/lerobot/calibration/robots/bi_so_follower/${FOLLOWER_ID}_right.json" \
-      "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/bi_so_leader/${LEADER_ID}_left.json" \
-      "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/bi_so_leader/${LEADER_ID}_right.json"; do
+      "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_left.json" \
+      "$HOME/.cache/huggingface/lerobot/calibration/robots/so_follower/${FOLLOWER_ID}_right.json" \
+      "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_left.json" \
+      "$HOME/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/${LEADER_ID}_right.json"; do
       [[ -f "$file" ]] && state=OK || state=MISSING
       printf 'calibration %-7s %s\n' "$state" "$file"
     done
