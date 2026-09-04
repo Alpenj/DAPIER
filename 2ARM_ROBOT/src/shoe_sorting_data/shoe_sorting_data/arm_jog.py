@@ -10,11 +10,9 @@ import argparse
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
-import json
 import math
 from pathlib import Path
 import re
-import signal
 import time
 from typing import Any, Mapping, Sequence
 
@@ -31,6 +29,9 @@ _CONTROLLER_NAME = re.compile(r"usb-1a86_USB_Single_Serial_(?P<serial>[A-Za-z0-9
 FULL_RANGE_PROFILE = "joint-full-range"
 TICKS_PER_REVOLUTION = 4096
 FULL_TORQUE_LIMIT_RAW = 1000
+PHYSICAL_MOTION_DISABLED = (
+    "physical motion is disabled until local safety integration is complete"
+)
 
 
 class JogSafetyError(ValueError):
@@ -429,6 +430,7 @@ class STS3215Bus:
     """Narrow serial transport that cannot write outside the guarded RAM block."""
 
     def __init__(self, port: str, *, timeout_seconds: float = 0.08) -> None:
+        raise JogSafetyError(PHYSICAL_MOTION_DISABLED)
         try:
             import serial
         except ImportError as error:
@@ -453,6 +455,7 @@ class STS3215Bus:
         )
 
     def _send(self, packet: bytes) -> None:
+        raise JogSafetyError(PHYSICAL_MOTION_DISABLED)
         written = self.connection.write(packet)
         self.connection.flush()
         if written != len(packet):
@@ -513,6 +516,7 @@ def verify_controller_identity(port: str, expected_serial: str) -> dict[str, str
 
 
 def _run_hardware(args: argparse.Namespace) -> dict[str, Any]:
+    raise JogSafetyError(PHYSICAL_MOTION_DISABLED)
     identity = verify_controller_identity(args.port, args.expected_serial)
     bus = STS3215Bus(args.port)
     try:
@@ -574,28 +578,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command in ("jog", FULL_RANGE_PROFILE) and args.confirm != CONFIRM_TEXT:
         parser.error(f"--confirm must be exactly {CONFIRM_TEXT}")
-
-    previous_handlers: dict[int, Any] = {}
-
-    def _abort(_signum, _frame):
-        raise KeyboardInterrupt
-
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        previous_handlers[signum] = signal.signal(signum, _abort)
-    try:
-        result = _run_hardware(args)
-    except (JogSafetyError, OSError, KeyboardInterrupt) as error:
-        result = {
-            "schema_version": SCHEMA_VERSION,
-            "status": "BLOCKED",
-            "motion_command_sent": False,
-            "error": "operator interrupt" if isinstance(error, KeyboardInterrupt) else str(error),
-        }
-    finally:
-        for signum, handler in previous_handlers.items():
-            signal.signal(signum, handler)
-    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if result.get("status") == "PASS" else 1
+    parser.error(PHYSICAL_MOTION_DISABLED)
 
 
 if __name__ == "__main__":

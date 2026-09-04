@@ -76,7 +76,8 @@ class HardwareRolesTest(unittest.TestCase):
         legacy = (ROOT / "scripts/run_mujoco_hardware_teleop.sh").read_text(
             encoding="utf-8"
         )
-        self.assertIn("DAPIER_ENABLE_LEGACY_JDCOBOT", legacy)
+        self.assertIn("physical motion is disabled until local safety integration", legacy)
+        self.assertNotIn("DAPIER_ENABLE_LEGACY_JDCOBOT", legacy)
 
     def test_usb_snapshot_requires_exact_readonly_confirmation(self):
         script = ROOT / "scripts/capture_usb_snapshot"

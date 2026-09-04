@@ -40,7 +40,7 @@ MuJoCo에서는 신발을 직육면체 proxy로 먼저 구현한다. 박스 실�
 
 - 박스 미션 단위 테스트: 6/6 통과
 - grasp planner 단위 테스트: 5/5 통과
-- 최신 후속 실행: MuJoCo 단위 테스트 210/210과 model smoke 통과, hardware_execution=false
+- 최신 후속 실행: MuJoCo 단위 테스트 217/217과 model smoke 통과, hardware_execution=false
 - 수정된 물리 판정: 오른팔 날개 contact 2, 뚜껑 95.05도, 왼 고정측 contact 1,
   왼 이동측 contact 1이지만 contact normal이 opposing 조건을 만족하지 않았다. shoe weld 없음,
   뚜껑·오른 moving jaw 및 신발·왼 gripper 쌍의 허용치 초과 penetration도 감지돼 success=false

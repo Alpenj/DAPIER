@@ -62,6 +62,21 @@ class SimTeleopControllerTest(unittest.TestCase):
             self.model.jnt_qposadr[first_joint_id]
         )
 
+    @staticmethod
+    def safe_assessment() -> CollisionAssessment:
+        return CollisionAssessment(
+            safe=True,
+            reason="protected clearance satisfied",
+            minimum_clearance_m=0.03,
+            required_clearance_m=0.03,
+            path_fraction=1.0,
+            checked_samples=2,
+            first_body="left_arm",
+            second_body="right_arm",
+            first_geom_id=1,
+            second_geom_id=2,
+        )
+
     def test_initial_status_is_simulation_only_and_deterministic(self) -> None:
         status = self.controller.status()
         self.assertEqual(status["action_order"], ACTION_NAMES)
@@ -77,7 +92,11 @@ class SimTeleopControllerTest(unittest.TestCase):
         self.assertTrue(self.controller.handle_key(KEY_RIGHT_ARM, now_ns=1).accepted)
         self.assertTrue(self.controller.handle_key(ord("2"), now_ns=2).accepted)
         before = self.controller.targets
-        update = self.controller.handle_key(KEY_INCREASE, now_ns=1_000_000_000)
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ):
+            update = self.controller.handle_key(KEY_INCREASE, now_ns=1_000_000_000)
         self.assertTrue(update.accepted)
         self.assertEqual(update.action_name, "right_shoulder_lift")
         self.assertAlmostEqual(
@@ -101,7 +120,11 @@ class SimTeleopControllerTest(unittest.TestCase):
             self.controller.handle_key(KEYPAD_1 + 1, now_ns=2).accepted
         )
         before = self.controller.targets
-        update = self.controller.handle_key(KEY_UP_ARROW, now_ns=1_000_000_000)
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ):
+            update = self.controller.handle_key(KEY_UP_ARROW, now_ns=1_000_000_000)
         self.assertTrue(update.accepted)
         self.assertEqual(update.action_name, "right_shoulder_lift")
         self.assertGreater(self.controller.targets[7], before[7])
@@ -368,10 +391,14 @@ class SimTeleopControllerTest(unittest.TestCase):
         data = mujoco.MjData(self.model)
         apply_control_as_pose(self.model, data, HUMANOID_HOME_ACTION)
         before = data.qpos.copy()
-        update = self.controller.handle_key(
-            KEY_INCREASE,
-            now_ns=1_000_000_000,
-        )
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ):
+            update = self.controller.handle_key(
+                KEY_INCREASE,
+                now_ns=1_000_000_000,
+            )
         self.assertTrue(update.accepted)
         control_targets = self.controller.advance(0.02)
         apply_teleop_targets(self.model, data, control_targets)
@@ -424,10 +451,10 @@ class SimTeleopControllerTest(unittest.TestCase):
             ("--teleop", "--teleop-step-deg", "0"),
             ("--teleop", "--teleop-min-key-interval-ms", "-1"),
             ("--teleop", "--teleop-clearance-m", "0"),
-        )
-        for extra_arguments in invalid_arguments:
             ("--teleop", "--teleop-max-speed-deg-s", "0"),
             ("--teleop", "--teleop-accel-deg-s2", "0"),
+        )
+        for extra_arguments in invalid_arguments:
             with self.subTest(arguments=extra_arguments):
                 with redirect_stderr(StringIO()):
                     with self.assertRaises(SystemExit):
