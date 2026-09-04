@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from collision_guard import (  # noqa: E402
     REQUIRED_BASE_COLLISION_GEOM_NAMES,
+    REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES,
     REQUIRED_FLOOR_COLLISION_GEOM_NAMES,
     REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES,
     REQUIRED_RGBD_COLLISION_GEOM_NAMES,
@@ -416,6 +417,7 @@ def _forbidden_contact_count(model: mujoco.MjModel, data: mujoco.MjData) -> int:
         *REQUIRED_RGBD_COLLISION_GEOM_NAMES,
         *REQUIRED_TOWER_SUPPORT_COLLISION_GEOM_NAMES,
         *REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES,
+        *REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES,
     }
     for contact_index in range(data.ncon):
         contact = data.contact[contact_index]

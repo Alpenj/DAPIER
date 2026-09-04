@@ -37,7 +37,10 @@ from mujoco_mission_adapters import _add_gripper_cameras  # noqa: E402
 from waffle_reference import WAFFLE_TOP_REFERENCE_ORIGIN_M  # noqa: E402
 
 
-COMPACT_HOME_ACTION = HUMANOID_HOME_ACTION
+COMPACT_HOME_ACTION = tuple(
+    value - math.pi if index in (4, 10) else value
+    for index, value in enumerate(HUMANOID_HOME_ACTION)
+)
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,7 @@ class CompactMobileConfig:
     mount_x_m: float = WAFFLE_TOP_REFERENCE_ORIGIN_M[0]
     camera_center_z_m: float = 0.410
     camera_down_tilt_rad: float = math.radians(43.0)
-    box_center_xy_m: tuple[float, float] = (0.30, 0.0)
+    box_center_xy_m: tuple[float, float] = (0.42, 0.0)
 
     def validate(self) -> None:
         values = (
@@ -181,8 +184,12 @@ def _orient_wrist_cameras_to_box(
         world_from_parent = data.xmat[parent_id].reshape(3, 3)
         parent_position = data.xpos[parent_id]
         approach = target - parent_position
-        approach /= np.linalg.norm(approach)
-        camera_position = parent_position + 0.04 * world_up + 0.08 * approach
+        horizontal_approach = approach.copy()
+        horizontal_approach[2] = 0.0
+        horizontal_approach /= np.linalg.norm(horizontal_approach)
+        camera_position = (
+            parent_position + 0.04 * world_up + 0.08 * horizontal_approach
+        )
         model.cam_pos[camera_id] = world_from_parent.T @ (
             camera_position - parent_position
         )
