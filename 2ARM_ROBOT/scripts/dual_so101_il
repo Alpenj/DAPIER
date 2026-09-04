@@ -31,7 +31,9 @@ require_file() {
 require_ports() {
   local port
   for port in "$LEFT_FOLLOWER_PORT" "$RIGHT_FOLLOWER_PORT" "$LEFT_LEADER_PORT" "$RIGHT_LEADER_PORT"; do
-    [[ "$port" == /dev/serial/by-id/* ]] || { echo "use /dev/serial/by-id paths; invalid: $port" >&2; exit 5; }
+    [[ "$port" == /dev/serial/by-id/* || "$port" == /dev/dapier/* ]] || {
+      echo "use stable /dev/serial/by-id or /dev/dapier paths; invalid: $port" >&2; exit 5;
+    }
     require_file "$port"
   done
   [[ $(printf '%s\n' "$LEFT_FOLLOWER_PORT" "$RIGHT_FOLLOWER_PORT" "$LEFT_LEADER_PORT" "$RIGHT_LEADER_PORT" | sort -u | wc -l) -eq 4 ]] || {
