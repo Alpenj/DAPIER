@@ -1,7 +1,7 @@
 render_freq: 0
 episode_num: 1
 use_seed: false
-save_freq: 1
+save_freq: 15
 embodiment: [dapier-dual-so101]
 language_num: 1
 eval_instruction: seen
@@ -34,3 +34,11 @@ save_path: ./data
 clear_cache_freq: 1
 collect_data: true
 eval_video_log: true
+pregrasp_clearance_m: 0.12
+grasp_height_offset_m: 0.02
+# Residual jaw-center calibration; zero uses the generated grasp link.
+grasp_lateral_offset_m: 0.02
+# 30 mm diameter rod: contact-holding aperture, not a fully closed command.
+grasp_gripper_position: 0.22
+min_approach_alignment: 0.45
+min_jaw_axis_alignment: 0.35

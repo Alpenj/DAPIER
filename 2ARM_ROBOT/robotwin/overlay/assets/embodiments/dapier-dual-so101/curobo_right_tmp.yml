@@ -40,8 +40,8 @@ robot_cfg:
       left_elbow_flex: 1.5548
       left_wrist_flex: 0.01658
       left_wrist_roll: -1.501367654
-      left_gripper: -0.174533
-      right_gripper: -0.174533
+      left_gripper: 1.745329
+      right_gripper: 1.745329
     extra_links: null
     cspace:
       joint_names: [right_shoulder_pan, right_shoulder_lift, right_elbow_flex, right_wrist_flex, right_wrist_roll]

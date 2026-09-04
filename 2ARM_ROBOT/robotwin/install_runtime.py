@@ -11,7 +11,7 @@ import sys
 
 import yaml
 
-from build_dual_so101 import build, validate_with_sapien
+from build_dual_so101 import build, validate_with_sapien_subprocess
 
 
 def _merge_yaml(path: Path, values: dict) -> None:
@@ -40,7 +40,7 @@ def install(robotwin: Path, source_urdf: Path, mesh_source: Path) -> None:
     asset = robotwin / "assets/embodiments/dapier-dual-so101"
     urdf = build(source_urdf, mesh_source, asset)
     for source in overlay.rglob("*"):
-        if source.is_file():
+        if source.is_file() and source.suffix != ".pyc":
             target = robotwin / source.relative_to(overlay)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
@@ -61,7 +61,7 @@ def install(robotwin: Path, source_urdf: Path, mesh_source: Path) -> None:
         cwd=robotwin,
         check=True,
     )
-    validate_with_sapien(urdf)
+    validate_with_sapien_subprocess(urdf)
 
 
 def main() -> None:

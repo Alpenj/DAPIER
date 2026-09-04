@@ -1,120 +1,93 @@
 # RoboTwin Dual SO-101
 
-이 폴더가 DAPIER의 RoboTwin 관련 코드와 검증 기록의 정본이다. `~/RoboTwin`은
-공식 upstream 실행 환경으로만 사용하며 그 checkout의 변경은 DAPIER 결과물로
-간주하지 않는다.
+이 폴더는 내가 RoboTwin 2.0을 Dual SO-101에 적용하며 확인한 코드와 기록의 정본이다.
+`~/RoboTwin`은 공식 upstream 실행 환경이고, 재현할 변경은 이 폴더의 installer·overlay·patch에만 둔다.
 
-## 첫 깊은 개발 과제
+## 현재 확인한 범위
 
-`handover_block`을 Dual SO-101으로 생성하고 같은 정책 입력·출력을 실물 양팔까지
-전달한다. 박스 모델링 없이도 양팔 reachability,
-5축 IK, 양팔 충돌, 물리 접촉, gripper, 12차원 state/action, 세 카메라 observation을
-한 번에 검증할 수 있기 때문이다. 이 과제가 통과한 뒤 `place_dual_shoes`로 확장한다.
+2026-09-05에 `dapier_handover_block` 한 episode를 SAPIEN 물리 접촉으로 끝까지 실행했다.
+왼팔이 지름 30 mm, 길이 160 mm인 원기둥을 집어 들어 오른팔에 전달하고 왼팔이 빠진 뒤에도
+오른쪽 두 jaw가 물체를 서로 반대 방향으로 누르는 것을 성공 조건으로 삼았다. equality constraint나
+물체 강제 부착은 사용하지 않았다.
 
-## 실제 하드웨어 계약
+이 결과는 **SIM 성공**이다. 실제 모터, 카메라, serial, ROS graph에는 접근하지 않았고 실물
+sim-to-real 성공을 뜻하지 않는다.
 
-- 팔: 동일한 SO-101 follower 2대, 각각 5 arm joints + gripper
-- action: `[left 5 rad, left gripper 0..1, right 5 rad, right gripper 0..1]`
-- arm base: `(x, y, z)=(-64, +80, 109.5) mm`, `(-64, -80, 109.5) mm`
-- top RGB-D: HP-ASC-H201/R77, optical center `(-64, 0, 420) mm`, 아래 43도
-- wrist RGB: 좌/우 320×240, 학습 observation
-- H201 depth: 640×460 `uint16 mm`, IK·3D target용
-- 실행 역할: laptop이 RoboTwin/학습/인식을 맡고 Raspberry Pi 4는 대상이 아니다.
-- 실물 calibration 값과 controller serial은 Git에 넣지 않는다.
+## 실물과 맞춘 계약
 
-수치는 기존
-[`hardware_roles.json`](../config/hardware_roles.json)과
-[`mobile_dual_so101/README.md`](../sim/mobile_dual_so101/README.md)의 승인 배치를
-재사용한다. 시뮬레이터 결과가 실물 성공을 뜻하지 않으며, 실제 follower별 calibration,
-관절 범위, 지연, 발열, 전류, 촉각, 카메라 extrinsic은 rollout gate에서 다시 검사한다.
+- 팔: 동일한 SO-101 follower 2대, 각 5 arm joints + gripper
+- action/state 순서: `left 5 rad, left gripper 0..1, right 5 rad, right gripper 0..1`
+- arm base: `(-64, +80, 109.5) mm`, `(-64, -80, 109.5) mm`
+- top RGB-D: HP-ASC-H201/R77, optical center `(-64, 0, 420) mm`
+- wrist RGB: 좌·우 320×240
+- H201 depth: 640×460, canonical 변환에서는 `uint16 mm`
+- 실행 역할: 노트북이 RoboTwin·학습·인식을 맡고 Raspberry Pi 4는 이 실행 대상이 아니다.
 
-## 생성과 검증
+배치 수치는 기존 [`hardware_roles.json`](../config/hardware_roles.json)과
+[`mobile_dual_so101/README.md`](../sim/mobile_dual_so101/README.md)를 재사용했다. wrist camera
+extrinsic과 FOV는 CAD 기반 provisional 값이며 실측 calibration이 아니다.
 
-```bash
-cd ~/DAPIER/2ARM_ROBOT/robotwin
-python3 test_contract.py
+## 구현한 handover 순서
 
-~/RoboTwin/venv/bin/python build_dual_so101.py \
-  --source-urdf /path/to/official/so101_new_calib.urdf \
-  --mesh-source /path/to/official/meshes \
-  --output ~/RoboTwin/assets/embodiments/dapier-dual-so101
-```
+1. 왼팔 pre-grasp → 원기둥 grasp
+2. 왼팔 80 mm lift
+3. 오른팔 handover 대기 위치 이동
+4. 왼팔이 중앙 전달 위치로 30/40/25 mm 이동
+5. 오른팔이 여섯 구간으로 접근해 원기둥을 0.2 aperture로 잡음
+6. 왼팔을 `0.30 → 0.40 → 0.50 → 0.65 → 0.80 → 1.0`으로 점진 개방
+7. 왼팔이 `-30/-40/+20 mm`로 빠진 뒤 home 복귀
+8. 오른쪽 두 jaw 접촉, 반대 접촉 법선, 양팔 충돌 0, 물체 높이로 성공 판정
 
-두 번째 명령은 RoboTwin venv의 SAPIEN으로 생성 URDF를 실제 load하고, active joint
-12개와 필수 camera/base link를 확인한다. CuRobo planning과 demonstration 생성은 별도
-완료 조건이며 이 검사를 통과했다는 이유로 완료 처리하지 않는다.
+SO-101은 5축이라 6-DoF pose를 그대로 강제하지 않았다. CuRobo로 위치와 접근축을 만족하는
+후보를 구하고 jaw 방향, 관절 한계, self/world collision을 검사한 뒤 quintic joint path를 만든다.
+그래프 fallback이 현재 상태에서 떨어진 점으로 시작할 때는 같은 제한을 적용한 연결 구간을 앞에 붙인다.
 
-RTX 50 계열(`sm_120`)에서는 RoboTwin이 사용하는 CuRobo v0.7.8의 fused LBFGS가
-SO-101 5축 IK에서 illegal memory access를 낸다. 설치기는 이 조합에만 CUDA graph와
-fused IK kernel을 끄고 CuRobo의 PyTorch LBFGS/gradient-descent 경로를 사용하는
-`patches/robotwin-blackwell-so101.patch`를 공식 checkout에 멱등 적용한다. RTX 5050에서
-좌·우 각각 5 mm Cartesian 계획(625 waypoint)을 직접 통과시켰으며, 이 검사는 실물
-모터 명령을 전송하지 않는다.
+## 데이터에서 발견해 수정한 문제
 
-SO-101의 `gripper_frame_joint`는 180도 회전된 joint frame이고 CuRobo는 child-link
-frame을 목표로 삼는다. RoboTwin 기본 코드는 SAPIEN joint pose를 읽기 때문에 위치는
-같아도 자세가 180도 어긋났고, 현재 자세를 그대로 넣은 계획조차 실패했다. 생성 URDF에
-zero-offset `left/right_ee_link`를 두고 `ee_pose_from_child_link` 패치를 적용한 뒤 현재
-자세 재계획이 31 waypoint로 성공했다. 현재 자세에서 약 10 mm씩 내리는 Cartesian
-접근은 5개 chunk까지 성공하고 여섯 번째에서 실패했다. 따라서 frame 변환은 해결됐지만
-전체 handover episode와 큰 이동용 5축 waypoint 생성은 아직 완료가 아니다.
+공식 RoboTwin 기본 renderer는 CUDA ray tracing과 OIDN을 강제했다. 현재 SAPIEN 3.0.0b1
+환경에서는 `OIDN Error: invalid handle`과 RGB 과노출·노이즈가 발생했다. DAPIER task에만
+SAPIEN `default` raster shader를 사용하도록 patch했고, 좌·상단·우 카메라의 실제 저장 frame을
+육안 확인했다.
 
-RoboTwin이 생성한 HDF5는 바로 실물 dataset이라고 부르지 않는다. 다음 변환이 5+1+5+1
-관절 순서, gripper 정규화, 좌/H201/우 카메라 shape와 frame 수를 검사한 뒤 DAPIER
-canonical episode를 원자적으로 생성한다.
+공식 저장기는 servo drive target을 `state`로 기록하고 다음 target을 `action`으로 옮긴다. 이 방식은
+이번 SO-101 경로에서 한 frame 0.25246 rad 불연속을 만들었다. DAPIER task는 SAPIEN의 실제 qpos와
+실제 gripper aperture를 기록하고 `action=다음 시점에 도달한 관절 상태`로 저장한다. 수정 후 15 Hz
+팔 관절 최대 변화는 0.033236 rad로, 설정한 0.5 rad/s 한계 안이다.
+
+## 재현
 
 ```bash
-~/RoboTwin/venv/bin/python convert_episode.py \
-  ~/RoboTwin/data/.../episode_0000000.hdf5 \
-  /tmp/dapier-robotwin-episode-0000000.npz
-```
+cd ~/DAPIER-vision-relative-manipulation-02
+unset LD_LIBRARY_PATH
+export CUDA_HOME=/usr/local/cuda-12.8
+export PATH=~/RoboTwin/venv/bin:/usr/local/cuda-12.8/bin:$PATH
 
-출력은 `observation_state (T,12)`, `action (T,12)`, 좌·우 RGB
-`(T,3,240,320)`, H201 depth `(T,1,460,640) uint16 mm`다. 다음 단계에서 이
-canonical episode와 실물 LeRobot episode를 같은 ACT 학습 dataset으로 합친다.
-
-## 단계 게이트
-
-1. **Asset:** 공식 SO-101 URDF/mesh provenance, SAPIEN load, 12축 계약
-2. **Planner:** 각 팔 CuRobo IK·collision sphere·reachability
-3. **Task:** `handover_block` 1 episode 물리 성공 및 HDF5/영상 저장
-4. **Dataset:** 실제 12축·좌/우 RGB·H201 depth 스키마로 변환/재로딩
-5. **Transfer:** 실제 calibration mapping, limit/watchdog, 저속 shadow→rollout
-
-## Sim-to-real 완료 조건
-
-MuJoCo와 RoboTwin은 서로 다른 좌표계·동역학을 쓰더라도 아래 경계에서는 같은 값을
-내보내야 한다.
-
-- state/action 관절 순서와 단위: 좌 5 rad + 좌 gripper 0..1 + 우 5 rad + 우 gripper 0..1
-- 관측 역할: left wrist RGB, H201 depth, right wrist RGB와 각 timestamp
-- 시뮬레이터 정답 pose는 학습·실물 입력에 사용하지 않음
-- sim action은 follower별 실제 calibration으로 ticks에 변환하기 전에 관절 limit,
-  변화량, collision, freshness, watchdog 검사를 통과해야 함
-- domain randomization에는 카메라 extrinsic·조명·마찰·질량·backlash·지연·frame drop의
-  실측 범위를 사용하며 임의 범위를 성공 근거로 쓰지 않음
-
-완료 판정은 `sim dataset 재로딩 → 실제 observation으로 policy shadow 실행 → 명령 없이
-오차 측정 → 제한된 저속 rollout` 순서다. 실제 두 팔이 같은 task를 반복 성공하기 전에는
-sim-to-real 완료라고 기록하지 않는다.
-
-현재 1단계는 완료했고, 2단계는 좌·우 5 mm 계획과 EE frame 정합까지 통과했다. 큰
-pre-grasp 이동과 3단계 전체 episode는 미완료다. 실패 seed를 성공으로 기록하지 않는다.
-
-`overlay/`는 공식 checkout에 복사되는 최소 파일만 보관한다. ALOHA용 원본
-`handover_block`의 큰 작업 범위를 그대로 쓰지 않고, DAPIER task는 40×40×120 mm
-시험 물체와 로봇 앞 40~80 mm 좌우 범위로 줄였다. RoboTwin world에서는 표면이
-Z=740 mm지만 robot root도 Z=740 mm에 두므로 로봇 기준으로는 실물의 바닥 Z=0과 같다.
-CuRobo는 한 팔을 계획할 때 중앙 몸체·H201 mast·반대 팔 collision sphere를 함께
-읽고 반대 팔은 compact home에 lock한다. sphere 근사는 실제 planning을 통과한 뒤에도
-mesh collision과 MuJoCo contact로 교차검증해야 한다.
-RoboTwin grasp frame의 `X=approach, Z=up`은 SO-101 URDF EE의
-`Z=approach, Y=up`과 다르므로 `delta_matrix`가 두 frame을 변환한다. 이를 identity로
-두면 위치가 맞아도 5축 팔에 불가능한 orientation을 요구한다.
-
-```bash
-~/RoboTwin/venv/bin/python install_runtime.py \
+python 2ARM_ROBOT/robotwin/install_runtime.py \
   --robotwin ~/RoboTwin \
-  --source-urdf /path/to/official/so101_new_calib.urdf \
-  --mesh-source /path/to/official/meshes
+  --source-urdf ~/so101_ros2_ws/src/so101-ros-physical-ai/so101_description/urdf/legacy/so101_new_calib.urdf \
+  --mesh-source ~/so101_ros2_ws/src/so101-ros-physical-ai/so101_description/meshes
+
+cd ~/RoboTwin
+bash collect_data.sh dapier_handover_block dapier_so101_smoke 0
 ```
+
+생성 HDF5는 그대로 실물 dataset이라고 부르지 않는다. 다음 명령이 12축 순서, gripper 범위,
+세 카메라 크기, frame 수, H201 depth를 검사한 뒤 canonical NPZ를 원자적으로 만든다.
+
+```bash
+cd ~/DAPIER-vision-relative-manipulation-02
+~/RoboTwin/venv/bin/python 2ARM_ROBOT/robotwin/convert_episode.py \
+  ~/RoboTwin/data/dapier_so101_smoke/dapier_handover_block/dapier_dual_so101/data/episode_0000000.hdf5 \
+  /tmp/dapier-robotwin-handover-0000000.npz
+```
+
+출력 shape는 `state/action (T,12)`, 좌·우 RGB `(T,3,240,320)`, H201 depth
+`(T,1,460,640) uint16 mm`다. 상세한 실행 결과와 실패 기록은
+[`HANDOVER_VALIDATION_20260905.md`](HANDOVER_VALIDATION_20260905.md)에 남겼다.
+
+## 다음 gate
+
+RoboTwin synthetic episode를 ACT에 넣기 전 여러 seed의 성공률, 물체·카메라·조명·마찰 범위를
+실측 기반으로 확장해야 한다. 그 뒤 실제 LeRobot episode와 같은 schema로 합치고, 실물에서는
+`policy shadow → calibration/limit/watchdog 검사 → 저속 rollout` 순서로 확인한다. 실제 두 팔이
+반복 성공하기 전에는 sim-to-real 완료로 기록하지 않는다.

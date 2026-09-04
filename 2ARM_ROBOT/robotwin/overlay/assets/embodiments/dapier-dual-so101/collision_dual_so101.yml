@@ -1,14 +1,14 @@
 collision_spheres:
   dapier_base_link:
-    - {center: [-0.094, -0.102, 0.110], radius: 0.072}
-    - {center: [-0.094, 0.000, 0.110], radius: 0.072}
-    - {center: [-0.094, 0.102, 0.110], radius: 0.072}
-    - {center: [0.000, -0.102, 0.110], radius: 0.072}
-    - {center: [0.000, 0.000, 0.110], radius: 0.072}
-    - {center: [0.000, 0.102, 0.110], radius: 0.072}
-    - {center: [0.094, -0.102, 0.110], radius: 0.072}
-    - {center: [0.094, 0.000, 0.110], radius: 0.072}
-    - {center: [0.094, 0.102, 0.110], radius: 0.072}
+    - {center: [-0.090, -0.100, 0.090], radius: 0.050}
+    - {center: [-0.090, 0.000, 0.090], radius: 0.050}
+    - {center: [-0.090, 0.100, 0.090], radius: 0.050}
+    - {center: [0.000, -0.100, 0.090], radius: 0.050}
+    - {center: [0.000, 0.000, 0.090], radius: 0.050}
+    - {center: [0.000, 0.100, 0.090], radius: 0.050}
+    - {center: [0.090, -0.100, 0.090], radius: 0.050}
+    - {center: [0.090, 0.000, 0.090], radius: 0.050}
+    - {center: [0.090, 0.100, 0.090], radius: 0.050}
   h201_mast_link:
     - {center: [0, 0, 0.025], radius: 0.032}
     - {center: [0, 0, 0.075], radius: 0.032}
@@ -32,10 +32,16 @@ collision_spheres:
   left_wrist_link:
     - {center: [0, -0.043, 0.031], radius: 0.033}
   left_gripper_link:
-    - {center: [0.008, 0, -0.023], radius: 0.033}
+    - {center: [0.008, 0, -0.023], radius: 0.028}
+    - {center: [-0.024, 0.012, -0.012], radius: 0.025}
+    - {center: [-0.018, 0, -0.052], radius: 0.012}
+    - {center: [-0.018, 0, -0.076], radius: 0.012}
+    - {center: [-0.017, 0, -0.098], radius: 0.012}
   left_moving_jaw_so101_v1_link:
-    - {center: [0, -0.059, 0.019], radius: 0.035}
-    - {center: [0, -0.013, 0.019], radius: 0.035}
+    - {center: [0, -0.075, 0.019], radius: 0.012}
+    - {center: [0, -0.053, 0.019], radius: 0.012}
+    - {center: [0, -0.033, 0.019], radius: 0.012}
+    - {center: [0, -0.013, 0.019], radius: 0.018}
   left_camera:
     - {center: [0, 0, 0], radius: 0.027}
   right_base_link:
@@ -52,9 +58,15 @@ collision_spheres:
   right_wrist_link:
     - {center: [0, -0.043, 0.031], radius: 0.033}
   right_gripper_link:
-    - {center: [0.008, 0, -0.023], radius: 0.033}
+    - {center: [0.008, 0, -0.023], radius: 0.028}
+    - {center: [-0.024, 0.012, -0.012], radius: 0.025}
+    - {center: [-0.018, 0, -0.052], radius: 0.012}
+    - {center: [-0.018, 0, -0.076], radius: 0.012}
+    - {center: [-0.017, 0, -0.098], radius: 0.012}
   right_moving_jaw_so101_v1_link:
-    - {center: [0, -0.059, 0.019], radius: 0.035}
-    - {center: [0, -0.013, 0.019], radius: 0.035}
+    - {center: [0, -0.075, 0.019], radius: 0.012}
+    - {center: [0, -0.053, 0.019], radius: 0.012}
+    - {center: [0, -0.033, 0.019], radius: 0.012}
+    - {center: [0, -0.013, 0.019], radius: 0.018}
   right_camera:
     - {center: [0, 0, 0], radius: 0.027}

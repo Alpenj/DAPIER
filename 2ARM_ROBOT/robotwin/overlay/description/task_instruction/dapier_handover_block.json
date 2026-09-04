@@ -1,0 +1,13 @@
+{
+  "full_description": "grasp the red rod with the left arm and hand it to the right arm",
+  "schema": "",
+  "preference": "num of words should not exceed 15",
+  "seen": [
+    "Hand the red rod from the left arm to the right arm.",
+    "Transfer the red rod between the two grippers.",
+    "Pick up the red rod and pass it to the right arm."
+  ],
+  "unseen": [
+    "Use both arms to hand over the red rod."
+  ]
+}

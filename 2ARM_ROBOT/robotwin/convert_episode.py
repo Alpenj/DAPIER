@@ -25,6 +25,7 @@ CAMERAS = {
     "cam_head": (460, 640),
     "cam_right_wrist": (240, 320),
 }
+MAX_ARM_VELOCITY_RAD_S = 0.5
 
 
 def _joints(group: h5py.Group, label: str) -> np.ndarray:
@@ -80,6 +81,13 @@ def load_episode(path: Path) -> dict[str, np.ndarray | int]:
         frequency = int(np.asarray(episode["additional_info/frequency"]).item())
         if frequency <= 0:
             raise ValueError("frequency must be positive")
+        if not np.allclose(action[:-1], state[1:], atol=1e-5):
+            raise ValueError("RoboTwin action[t] must equal measured state[t+1]")
+        arm = np.c_[action[:, :5], action[:, 6:11]]
+        if len(arm) > 1 and np.abs(np.diff(arm, axis=0)).max() > (
+            MAX_ARM_VELOCITY_RAD_S / frequency + 1e-4
+        ):
+            raise ValueError("RoboTwin arm action exceeds the 0.5 rad/s data limit")
         vision = episode["vision"]
         missing = set(CAMERAS) - set(vision)
         if missing:

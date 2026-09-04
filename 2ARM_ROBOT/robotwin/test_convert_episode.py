@@ -52,6 +52,14 @@ def main() -> None:
             assert episode["right_wrist_rgb"].shape == (2, 3, 240, 320)
             assert episode["top_h201_depth_mm"].dtype == np.uint16
         assert report["hardware_execution"] is False
+        with h5py.File(source, "r+") as episode:
+            episode["action/left_arm_joint_states"][1, 0] = 0.1
+        try:
+            convert(source, root / "unsafe.npz")
+        except ValueError as error:
+            assert "0.5 rad/s" in str(error)
+        else:
+            raise AssertionError("unsafe arm action was accepted")
     print("PASS: RoboTwin HDF5 -> DAPIER Dual SO-101 canonical episode")
 
 

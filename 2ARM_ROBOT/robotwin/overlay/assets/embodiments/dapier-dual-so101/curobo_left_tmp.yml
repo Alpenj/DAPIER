@@ -35,13 +35,13 @@ robot_cfg:
     self_collision_buffer: {}
     mesh_link_names: *collision_links
     lock_joints:
-      left_gripper: -0.174533
+      left_gripper: 1.745329
       right_shoulder_pan: 0.004603066
       right_shoulder_lift: -1.571825
       right_elbow_flex: 1.5548
       right_wrist_flex: 0.01658
       right_wrist_roll: -1.501367654
-      right_gripper: -0.174533
+      right_gripper: 1.745329
     extra_links: null
     cspace:
       joint_names: [left_shoulder_pan, left_shoulder_lift, left_elbow_flex, left_wrist_flex, left_wrist_roll]
