@@ -32,6 +32,7 @@ wrist RGB다. 장치명·역할·stable alias는 [`../config/hardware_roles.json
 - [`WIKIDOCS_20199_JDCOBOT200_URDF_GUIDE.md`](WIKIDOCS_20199_JDCOBOT200_URDF_GUIDE.md): legacy WikiDocs jdCobot200 학습 가이드
 - [`research/LATEST_MOBILE_DUAL_SO101_BOX_SHOE_MISSION_RESEARCH_20260902.md`](research/LATEST_MOBILE_DUAL_SO101_BOX_SHOE_MISSION_RESEARCH_20260902.md): 이동형 양팔 SO-101 박스·신발 미션의 ROS2-free 경계, 이동학습+IK 판정, sim-to-real gate, 데이터 전처리와 2026-11-04 완충 일정
 - [`VISION_RELATIVE_IK_MATH_KO.md`](VISION_RELATIVE_IK_MATH_KO.md): 중앙 RGB-D·좌우 SO-101 workcell의 좌표 변환, 5-DoF DLS IK, visual servo와 실행 gate 수식
+- [`2026-09-04-depth-box-pregrasp.md`](2026-09-04-depth-box-pregrasp.md): H201 depth 박스 pose, 앞날개 오른팔 IK·손목 RGB 보정, teleop→ACT episode 검증 기록
 - [`research/MOBILE_DUAL_SO101_EXECUTION_LEDGER_20260902.md`](research/MOBILE_DUAL_SO101_EXECUTION_LEDGER_20260902.md): PR #40을 고정한 뒤 별도 브랜치에서 진행하는 양팔 박스·신발 미션의 단계별 구현·검증·학습 원장
 
 팀의 현재 결정은 `ACT baseline + DYNA-lite + 4주차 이후 보조학습

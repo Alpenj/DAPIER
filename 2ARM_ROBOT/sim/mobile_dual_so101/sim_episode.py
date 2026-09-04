@@ -131,6 +131,58 @@ def _write_samples(path: Path, samples: Sequence[Mapping[str, object]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def write_sim_camera_sample(
+    root: Path,
+    camera: MuJoCoMultiCameraAdapter,
+    index: int,
+) -> tuple[dict[str, object], dict[str, int], dict[str, int]]:
+    camera_records: dict[str, object] = {}
+    camera_timestamps: dict[str, int] = {}
+    camera_receipts: dict[str, int] = {}
+    for frame in camera.capture().frames:
+        prefix = CAMERA_PREFIXES[frame.role]
+        streams = [(f"{prefix}_rgb", "rgb8", frame.width * 3, frame.rgb)]
+        if frame.depth_m_le_f32 is not None:
+            streams.append(
+                (
+                    f"{prefix}_depth",
+                    "32FC1",
+                    frame.width * 4,
+                    frame.depth_m_le_f32,
+                )
+            )
+        for stream, encoding, step, payload in streams:
+            timestamp_ns = (
+                frame.rgb_timestamp_ns
+                if encoding == "rgb8"
+                else int(frame.depth_timestamp_ns)
+            )
+            camera_records[stream] = {
+                "timestamp_ns": timestamp_ns,
+                "received_monotonic_ns": frame.received_monotonic_ns,
+                "frame_id": frame.frame_id,
+                "valid": frame.valid,
+                "optical_frame": frame.optical_frame,
+                "calibration_id": frame.calibration_id,
+                "payload": write_camera_payload(
+                    root,
+                    stream,
+                    index,
+                    CameraFramePayload(
+                        width=frame.width,
+                        height=frame.height,
+                        encoding=encoding,
+                        is_bigendian=0,
+                        step=step,
+                        data=payload,
+                    ),
+                ),
+            }
+            camera_timestamps[stream] = timestamp_ns
+            camera_receipts[stream] = frame.received_monotonic_ns
+    return camera_records, camera_timestamps, camera_receipts
+
+
 def record_sim_episode(
     output_dir: str | Path,
     config: SimEpisodeConfig,
@@ -200,64 +252,10 @@ def _record_sim_episode(
                         f"action source target {actuator_id} is outside actuator range"
                     )
             timestamp_ns = round(float(env.data.time) * 1_000_000_000)
-            frame_set = camera.capture()
             frame_metrics = task_metrics(env.model, env.data)
-            camera_records: dict[str, object] = {}
-            camera_timestamps: dict[str, int] = {}
-            camera_receipts: dict[str, int] = {}
-            for frame in frame_set.frames:
-                prefix = CAMERA_PREFIXES[frame.role]
-                rgb_stream = f"{prefix}_rgb"
-                rgb_payload = write_camera_payload(
-                    root,
-                    rgb_stream,
-                    index,
-                    CameraFramePayload(
-                        width=frame.width,
-                        height=frame.height,
-                        encoding="rgb8",
-                        is_bigendian=0,
-                        step=frame.width * 3,
-                        data=frame.rgb,
-                    ),
-                )
-                camera_records[rgb_stream] = {
-                    "timestamp_ns": frame.rgb_timestamp_ns,
-                    "received_monotonic_ns": frame.received_monotonic_ns,
-                    "frame_id": frame.frame_id,
-                    "valid": frame.valid,
-                    "optical_frame": frame.optical_frame,
-                    "calibration_id": frame.calibration_id,
-                    "payload": rgb_payload,
-                }
-                camera_timestamps[rgb_stream] = frame.rgb_timestamp_ns
-                camera_receipts[rgb_stream] = frame.received_monotonic_ns
-                if frame.depth_m_le_f32 is not None:
-                    depth_stream = f"{prefix}_depth"
-                    depth_payload = write_camera_payload(
-                        root,
-                        depth_stream,
-                        index,
-                        CameraFramePayload(
-                            width=frame.width,
-                            height=frame.height,
-                            encoding="32FC1",
-                            is_bigendian=0,
-                            step=frame.width * 4,
-                            data=frame.depth_m_le_f32,
-                        ),
-                    )
-                    camera_records[depth_stream] = {
-                        "timestamp_ns": frame.depth_timestamp_ns,
-                        "received_monotonic_ns": frame.received_monotonic_ns,
-                        "frame_id": frame.frame_id,
-                        "valid": frame.valid,
-                        "optical_frame": frame.optical_frame,
-                        "calibration_id": frame.calibration_id,
-                        "payload": depth_payload,
-                    }
-                    camera_timestamps[depth_stream] = int(frame.depth_timestamp_ns)
-                    camera_receipts[depth_stream] = frame.received_monotonic_ns
+            camera_records, camera_timestamps, camera_receipts = (
+                write_sim_camera_sample(root, camera, index)
+            )
             stream_times = {
                 name: timestamp_ns
                 for name in (

@@ -53,6 +53,7 @@ class CompactMobileConfig:
     camera_center_z_m: float = 0.410
     camera_down_tilt_rad: float = math.radians(43.0)
     box_center_xy_m: tuple[float, float] = (0.42, 0.0)
+    box_yaw_deg: float = -90.0
 
     def validate(self) -> None:
         values = (
@@ -61,6 +62,7 @@ class CompactMobileConfig:
             self.mount_x_m,
             self.camera_center_z_m,
             self.camera_down_tilt_rad,
+            self.box_yaw_deg,
             *self.box_center_xy_m,
         )
         if not all(math.isfinite(float(value)) for value in values):
@@ -149,7 +151,7 @@ def build_compact_mobile_spec(
     _add_gripper_cameras(spec)
     box_config = BoxShoeSceneConfig(
         box_center_xy_m=resolved.box_center_xy_m,
-        box_yaw_deg=-90.0,
+        box_yaw_deg=resolved.box_yaw_deg,
     )
     _add_box(spec, box_config)
     _add_cuboid_shoe(spec, box_config)
