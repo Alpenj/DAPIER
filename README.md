@@ -1,101 +1,83 @@
+# deepThinkCar-mini | 비전·모방학습 주행 실습
 
-# deepThinkCar-mini: 멘토와 함께 만드는 딥러닝 자율주행자동차 키트 
+**카메라 영상 → OpenCV 차선 인식 → 데이터 라벨링 → PC 학습 → 차량 추론**의 연결을 배우는 Raspberry Pi 기반 교육용 저장소입니다.
 
-### 라즈베리파이 5에서는 테스트되지 않았습니다. 
+[전형주 포트폴리오](https://julianjeonresume.netlify.app/) · [개인 학습 아카이브](https://github.com/Alpenj/physical-ai-lab) · [변경 이력](https://github.com/Alpenj/deepThinkCar_mini/commits/main/)
 
-###  알아보기 
-deepThinkCar-mini는 라즈베리파이 기반의 자율주행자동차 키트 입니다. 기존 deepThibCar를 좀 더 개량하고 기능을 추가한 버전입니다. OpenCV와 딥러닝을 사용하여 차선인식 자율주행 배울 수 있고, 추가적인 하드웨어장치를 이용하면 보행자나 교통신호를 식별하는 오브젝트 디텍션을 학습 할 수 있습니다. 또한 ADAS 기능을 테스트 할 수 있습니다.  
-#### OpenCV를 이용한 차선인식
-deepThinkCar-mini는 오픈소스 컴퓨터 비젼 라이브러리인 OpenCV를 사용해서 차선을 인식하는 기능을 구현해 볼 수 있습니다. 아주 단순한 방법으로 차선을 인식하는 방법과 ADAS에 실제로 사용되는 방법까지 구현 할 수 있습니다. 
-#### 딥러닝 차선인식 주행(Behavior Cloning)
-deepThinkCar-mini는 최근에 주목받고 있는 딥러닝 기술을 이용하여 차선인식 주행을 구현해 볼 수 있습니다. OpenCV로 차선인식 주행을 몇 번 실행 하면서 얻은 데이터를 트레이닝 하여 추론모델을 생성하고, 이 추론모델을 이용하여 딥러닝 차선주행을 구현합니다.
-#### ADAS 기능 
-deepThinkCar-mini는 초음파센서와 카메라를 이용해서 현재 현장에서 사용되고 있는 ADAS를 실제와 같이 구현 및 학습할 수 있습니다. 
+> 기반 자료는 JD-edu의 deepThinkCar-mini 교육 코드와 키트 문서입니다. 원본이 제공하는 기능, 개인이 수정한 코드, 직접 수행한 실험 결과를 구분합니다. 키트의 주행·ADAS 소개나 저장된 모델·영상이 곧 개인의 독자 구현 또는 검증된 주행 성능을 뜻하지 않습니다.
 
-### deepThinkCar-mini 키트 준비하기 
+## 검토 시작점
 
-#### 라즈베리파이 OS 이미지 만들기 
-deepThinkCar-mini는 라즈베리파이를 기반으로 동작을 합니다. 따라서 먼저 라즈베리파이 OS 이미지를 만들어야 합니다. 라즈베리파이 OS이미지를 만드는 방법은 아래 링크를 참고해 주십시오.  
-    
-[라즈베리파이 OS 이미지 만들기](https://jd-edu.github.io/deepThinkCar_mini/doc/os)   
-    
-deepThinkCar-mini는 라즈베리파이 3B, 3B+, 4에서 테스트 되었습니다. 라즈베리파이 이미지를 만든 다음에는 라즈베리파이 셋업을 합니다.
-   
-#### 라즈베리파이 소프트웨어 셋업 
-라즈베리파이의 OS 이미지를 만든 후에는 deepThinkCar-mini를 활용할 수 있도록 필요한 소프트웨어를 설치하고 셋업해야 합니다. 설치하고 셋업할 소프트웨어는 다음과 같습니다. 
-1. OpenCV 라이브러리 
-2. 텐서플로 딥러닝 라이브러리 
-3. 에이다프루트 서보모터 라이브러리 
+| 확인하려는 내용 | 읽을 위치 |
+|---|---|
+| 영상에서 조향까지의 흐름 | [`jd_opencv_lane_detect.py`](jd_opencv_lane_detect.py) → [`jd_deep_lane_detect.py`](jd_deep_lane_detect.py) |
+| 데이터 수집·가공 | [`jd_1_record_lane_video.py`](jd_1_record_lane_video.py), [`jd_2_get_train_data.py`](jd_2_get_train_data.py) |
+| PC에서 학습하는 부분 | [`PC_run_code/`](PC_run_code/) |
+| 제어와 장치 경계 | [`jd_car_motor_l9110.py`](jd_car_motor_l9110.py), [`test_code/`](test_code/) |
+| 원본 준비·조립·수업 순서 | 아래 원본 문서 안내 및 [`doc/`](doc/) |
 
-라즈베리파이 소프트웨어 셋업 및 설치하는 방법은 아래 링크를 참고해 주십시오. 
+코드 검토에는 차량을 움직일 필요가 없습니다. 개인 기여를 판단할 때에는 변경 이력과 실행 기록을 원본 자료와 함께 비교합니다.
 
-[라즈베리파이 소프트웨어 설치 및 셋업](https://jd-edu.github.io/deepThinkCar_mini/doc/setup)
+## 전체 폴더·파일 지도
 
-deepThinkCar-mini는 라즈베리파이 3B, 3B+, 4에서 테스트 되었습니다. 라즈베리파이 셋업 이후에는 deepThinkCar-mini 하드웨어를 조립합니다. 
+| 경로 | 역할 |
+|---|---|
+| [`PC_run_code/`](PC_run_code/) | PC 측 실행·학습 코드 |
+| [`Package_part_label/`](Package_part_label/) | 키트 부품 라벨 자료 |
+| [`doc/`](doc/) | OS·설치·조립·주행 학습 문서 |
+| [`test_code/`](test_code/) | 장치와 기능별 시험 코드; 자동화된 무장비 테스트 모음으로 간주하지 않음 |
+| [`data/`](data/) | 기존 데이터 자산 |
+| [`models/`](models/) | 기존 모델 자산; 개인 학습 결과 여부는 출처·실행 기록으로 별도 확인 |
+| [`jd_1_record_lane_video.py`](jd_1_record_lane_video.py) | 차선 영상 기록 단계 |
+| [`jd_2_get_train_data.py`](jd_2_get_train_data.py), [`jd_label_data_compress.py`](jd_label_data_compress.py) | 학습 데이터 생성·라벨 데이터 압축 관련 코드 |
+| [`jd_opencv_lane_detect.py`](jd_opencv_lane_detect.py) | OpenCV 차선 인식 |
+| [`jd_deep_lane_detect.py`](jd_deep_lane_detect.py), [`jd_4_lane_follower_deep.py`](jd_4_lane_follower_deep.py) | 학습 모델 기반 차선 인식·주행 |
+| [`jd_5_object_detection_opencv.py`](jd_5_object_detection_opencv.py), [`jd_opencv_dnn_objectdetect_v3.py`](jd_opencv_dnn_objectdetect_v3.py) | 객체 인식 관련 예제 |
+| [`jd_car_motor_l9110.py`](jd_car_motor_l9110.py), [`jd_remote_control.py`](jd_remote_control.py) | 모터 제어·원격 조작 |
+| [`car_video.avi`](car_video.avi) | 기존 영상 파일; 촬영자·조건·개인 수행 여부를 확인하기 전에는 실적 근거로 사용하지 않음 |
 
-### deepThinkCar-mini 조립
-라즈베리파이 부분의 셋업이 모두 완료되면, deepThinkCar-mini를 조립하고 테스트를 실행합니다. 
+원본 문서, Python import와 데이터 경로의 호환성을 유지하기 위해 기존 파일을 이동하거나 이름을 바꾸지 않았습니다.
 
-#### deepThinkCar조립
-deepThinkCar-mini는 조립이 되지 않은 부품 상태로 제공이 됩니다. deepThinkCar-mini를 시용하기 위해서는 차체를 조립해야 합니다. 조립순서는 아래 링크를 참고해 주십시오. 
+## 원본 문서와 학습 순서
 
-[deepThinkCar-mini 조립](https://jd-edu.github.io/deepThinkCar_mini/doc/assembly)   
+기존 README가 안내하던 준비·조립·실습 자료를 모두 유지합니다. 아래 내용은 **원본 교육 과정의 안내**이며 이 저장소 관리자의 실습 완료 목록이 아닙니다.
 
-#### VNC 개발환경 셋업
-deepThinkCar-mini를 프로그래밍해서 자율주행을 하려면 라즈베리파이 VNC 코딩 환경을 만들어야 합니다. deepThinkCar-mini는 움직이는 자동차이기 때문에 모니터/키보드/마우스를 이용해서 프로그래밍 하는 것이 불가능 합니다. 따라서 VNC를 이용해서 프로그래밍 하는 환경을 만들어야 합니다.    
-VNC 개발환경을 구축하는 방법은 아래 링크를참고해 주십시오.    
+| 순서 | 원본 문서 | 확인할 내용 |
+|---|---|---|
+| 준비 1 | [Raspberry Pi OS 이미지](https://jd-edu.github.io/deepThinkCar_mini/doc/os) | 보드와 OS 구성 |
+| 준비 2 | [소프트웨어 설치·셋업](https://jd-edu.github.io/deepThinkCar_mini/doc/setup) | OpenCV, TensorFlow, Adafruit 서보 관련 라이브러리 |
+| 준비 3 | [키트 조립](https://jd-edu.github.io/deepThinkCar_mini/doc/assembly) | 차체·카메라·구동·조향 연결 |
+| 준비 4 | [VNC 환경](https://jd-edu.github.io/deepThinkCar_mini/doc/vnc) | 원격 개발 환경 |
+| 준비 5 | [하드웨어 테스트](https://jd-edu.github.io/deepThinkCar_mini/doc/hardware) | 카메라, DC 모터, 조향 서보, 조향 오프셋, 전원 |
+| 실습 1 | [OpenCV 차선 인식 주행](https://jd-edu.github.io/deepThinkCar_mini/doc/step_1) | 차선 인식과 학습용 영상 수집 |
+| 실습 2 | [데이터 라벨링](https://jd-edu.github.io/deepThinkCar_mini/doc/step_2) | 영상과 학습 정답의 연결 |
+| 실습 3 | [PC 딥러닝 학습](https://jd-edu.github.io/deepThinkCar_mini/doc/step_3) | 학습과 모델 파일 생성 |
+| 실습 4 | [딥러닝 차선 인식 주행](https://jd-edu.github.io/deepThinkCar_mini/doc/step_4) | 저장한 모델을 차량에서 실행 |
 
-[deepThinkCar-mini 라즈베리파이 VNC 환경 구축](https://jd-edu.github.io/deepThinkCar_mini/doc/vnc)
+원본 README의 호환성 안내는 **Raspberry Pi 3B·3B+·4에서 시험, Pi 5는 미시험**입니다. 이는 원본의 기록이며 이번 문서 정리에서 보드·OS별 재시험을 수행하지 않았습니다. 현재 사용 장비와 의존성 버전의 호환성을 별도로 확인합니다.
 
-deepThinkCar-mini의 라즈베리파이 VNC 개발환경은 라즈베리파이 3B, 3B+, 4에서 테스트 되었습니다. VNC 개발환경 구축에 이어서 deepThinkCar-mini를 테스트 합니다. 
+## 실행과 안전 경계
 
-#### deepThinkCar-mini 하드웨어 테스트
-deepThinkCar-mini 조립이 끝이나면 하드웨어를 테스트 합니다. 테스트 할 하드웨어는 다음과 같습니다. 
-1. PI 카메라 
-2. 뒷바퀴 구동용 DC모터 
-3. 앞바퀴 조향용 서보모터 
-4. 앞바퀴 조향 오프셋 조종
-5. 전원 스위칭 (배터리, 파워뱅크)
+이 저장소는 PC 학습 코드와 Raspberry Pi 장치 제어 코드가 섞여 있으므로 루트에서 모든 스크립트를 일괄 실행하지 않습니다. 파일의 import, 모델·데이터 경로, 카메라·GPIO·모터 접근 여부를 읽은 뒤 필요한 예제만 선택합니다.
 
-deepThinkCar-mini 하드웨어를 테스트 하는 방법은 아래 링크를 참고해 주십시오. 
+실물 시험 전에는 원본 하드웨어 안내를 기준으로 전원과 배선, 조향 범위·오프셋, 정지 방법을 확인합니다. 원격 접속이 된다는 사실이나 추론 파일이 있다는 사실만으로 차량이 안전하게 주행할 준비가 끝났다고 판단하지 않습니다.
 
-[deepThinkCar-mini 하드웨어 테스트](https://jd-edu.github.io/deepThinkCar_mini/doc/hardware)
+## 개인 재현 기록
 
-### 자율주행하기 
-#### 1단계: OpenCV 기반 차선인식 주행
-1단계에서는 OpenCV를 이용해서 차선인식 주행을 실행합니다. 차선인식 주행을 실행해서 딥러닝 트레이닝에 사용할 데이터셋을 같이 얻습니다. 
-OpenCV 기반 차선인식 주행을 하는 파이썬 코드에 대한 설명은 다음 링크를 참고해 주십시오. 
+실험을 포트폴리오에 추가할 때 다음 항목을 함께 남깁니다.
 
-[1단계 OpenCV 차선인식 주행](https://jd-edu.github.io/deepThinkCar_mini/doc/step_1)
+| 구분 | 필요한 기록 |
+|---|---|
+| 출처·기여 | 기준 원본, 수정 commit, 변경 목적과 범위 |
+| 환경 | 보드·OS·카메라·구동부, Python·라이브러리 버전 |
+| 데이터 | 촬영 조건, 라벨 정의, 학습·평가 데이터 분리 |
+| 실행 | 실제 명령, 모델 버전, 제어 주기, 정지 조건 |
+| 결과 | 코스·조명·속도·반복 횟수, 실패·개입 사례, 로그 또는 영상 |
 
-#### 2단계: 차선인식 데이터 라벨링 
-2단계에서는 1단계에서 얻은 차선인식주행 데이터셋을 라벨링을 합니다. 데이터셋이 라벨링이 되면 딥러닝 트레이닝을 할 수 있습니다. 
-데이터셋 라벨링을 하는 파이썬 코드에 대한 설명은 다음 링크를 참고해 주십시오. 
+주행 성공률, 일반화 성능, ADAS 성능은 해당 조건과 측정 기록이 있을 때만 소개합니다. 현재 README에는 새 성능 수치를 추가하지 않았습니다.
 
-[2단계 차선인식 데이터 라벨링](https://jd-edu.github.io/deepThinkCar_mini/doc/step_2) 
+## 출처·공개 범위
 
-#### 3단계: 딥러닝 트레이닝 
-3단계에서는 OpenCV를 통해 얻은 데이터셋을 딥러닝 신경망으로 트레이닝을 합니다. 실제 트레이닝은 라즈베리파이에서 실행하지 않고 PC에서 실행하게 됩니다.   
-트레이닝을 수행하면 추론파일을 생성해 줍니다. 딥러닝 트레이닝을 실행하는 방법에 대한 설명은 다음 링크를 참고해 주십시오. 
+원본 문서와 코드·모델·데이터의 권리 표기를 유지합니다. 2026-09-05 루트 목록에서는 별도 LICENSE 파일을 확인하지 못했으며, 문서 정리는 새로운 이용 허락을 부여하지 않습니다. 민감한 네트워크 정보, 인증 정보, 타인의 개인정보는 실행 예시나 공개 결과에 넣지 않습니다.
 
-[3단계 딥러닝 트레이닝](https://jd-edu.github.io/deepThinkCar_mini/doc/step_3) 
-
-#### 4단계: 딥러닝 기반 차선인식 주행 
-4단계에서는 딥러닝 트레이닝을 통해 얻은 추론 파일을 이용해서 딥러닝 기반의 차선인식 주행을 수행 합니다. 
-데이터셋의 정확도, 데이터셋의 양에 따라 딥러닝 차선인식 주행의 정확도를 비교할 수 있습니다. 
-딥러닝 차선인식 주행에 대한 설명은 다음 링크를 참고해 주십시오.
-
-[4단계 딥러닝 차선인식 주행](https://jd-edu.github.io/deepThinkCar_mini/doc/step_4)  
-
-### 링크
-[라즈베리파이 OS 이미지 만들기](https://jd-edu.github.io/deepThinkCar_mini/doc/os)      
-[라즈베리파이 소프트웨어 설치 및 셋업](https://jd-edu.github.io/deepThinkCar_mini/doc/setup)       
-[deepThinkCar-mini 조립](https://jd-edu.github.io/deepThinkCar_mini/doc/assembly)   
-[deepThinkCar-mini 라즈베리파이 VNC 환경 구축](https://jd-edu.github.io/deepThinkCar_mini/doc/vnc)     
-[deepThinkCar-mini 하드웨어 테스트](https://jd-edu.github.io/deepThinkCar_mini/doc/hardware)     
-[1단계 OpenCV 차선인식 주행](https://jd-edu.github.io/deepThinkCar_mini/doc/step_1)        
-[2단계 차선인식 데이터 라벨링](https://jd-edu.github.io/deepThinkCar_mini/doc/step_2)      
-[3단계 딥러닝 트레이닝](https://jd-edu.github.io/deepThinkCar_mini/doc/step_3)     
-[4단계 딥러닝 차선인식 주행](https://jd-edu.github.io/deepThinkCar_mini/doc/step_4)        
-
-
+문서·구조 점검: 2026-09-05. 이번 변경은 안내 문서에 한정되며 차량 주행·모델 학습·전체 코드 보안 감사를 새로 수행한 결과가 아닙니다.
