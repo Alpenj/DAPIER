@@ -2,10 +2,53 @@
 
 record_id: `DAPIER-2026-09-07-main-integration`
 
-## 상태
+## 로컬 병합 전 재검증 — 2026-09-07
 
-현재는 **Draft 통합 후보**다. `main` 병합 완료나 실물 실행 승인이 아니다.
-기존 PR #40, #49, #51과 다른 개발 브랜치를 변경하거나 종료하지 않는다.
+PR #53의 `8434591e9257a710fe53495318d00183d8cc6a1c`를 별도 worktree에서 읽고,
+보고서에 남아 있던 두 거부 경계 문제를 직접 재현했다.
+
+- 시작 상태가 infeasible이어도 뒤쪽이 clear이면 경로를 반환했다. 해당 예외를 제거해
+  direct path와 graph connector 모두 모든 점의 constraint 검사를 통과해야 반환하도록 했다.
+- checkpoint loader가 `weights_only=True` 호출의 TypeError 뒤에 안전 옵션 없이 재시도했다.
+  재시도를 제거했다. 이 옵션을 지원하지 않는 PyTorch는 checkpoint를 읽지 못한 채 실패한다.
+
+같은 신규 테스트가 수정 전에는 각각 실패하고, 수정 후에는 통과하는 것을 확인했다.
+planner 테스트는 실제 nested segment를 NumPy 연산과 가짜 constraint 결과로 실행한다.
+CuRobo collision geometry나 전체 SAPIEN trajectory 검증은 아니다.
+
+| 로컬 검사 | 결과 |
+|---|---|
+| converter 회귀 16개 + planner 거부 회귀 1개 | 17개 PASS |
+| native ACT: 안전 로드 거부, queue 경계, CPU 학습/checkpoint roundtrip | 3개 PASS |
+| native ACT rollout/supervisor/mock bus | 6개 PASS |
+| 기존 physical-motion 차단 및 static safety | 9개 PASS |
+| 기존 XML model contract, HDF5 converter fixture | 각 PASS |
+| `git diff --check` | PASS |
+
+RoboTwin fixture는 기존 RoboTwin Python 3.10 환경, ACT는 기존 LeRobot Python 3.12 환경에서
+CPU로 실행했다. 패키지를 설치하거나 기존 runtime·dataset·원본 worktree에 patch를 적용하지 않았다.
+원격 CI는 최종 PR head에서 다시 확인한다. 병합 여부와 최종 SHA는 GitHub PR #53을 기준으로 한다.
+
+### 확인한 경계와 미지원 범위
+
+- config의 좌/우 5개 joint 이름과 `get_obs()`의 이름 기반 qpos 선택, converter의
+  `left arm 5 → left gripper → right arm 5 → right gripper` 필드 연결을 대조했다.
+  실제 IL과의 단위/action 의미 교차 검증은 미완료다. NPZ를 실제 record/train 경로에 자동으로
+  연결하는 importer는 없으며, SIM/offline 결과로만 취급한다.
+- native ACT 평가 함수는 bus를 주입하지 않는 dry-run이다. 명시적 승인 decision을 받은
+  adapter의 rad→degree와 gripper→percent 변환은 fake bus로 확인했다. 기존 jog/wheel/teleop
+  차단은 static suite로 확인했다. 별도 수동 IL 스크립트의 사용자 확인 절차는 실행하지 않았다.
+- 외부 RoboTwin HEAD는 `45a853a9c87bd190e028db911137be01c2087d54`이고 local dirty 변경이 있다.
+  읽기만 수행했다. runtime pin, asset provenance, 실제 SAPIEN/CuRobo 재실행은 검증하지 못했다.
+  installer는 외부 경로를 명시하는 별도 수동 SIM 도구이며 CI가 실행하지 않는다.
+- 9월 5일 handover 결과는 초기 constraint 예외 제거 전 기록이다. 수정 후 handover 성공,
+  전 경로의 실제 collision 무발생 또는 실물 안전성을 인증하지 않는다.
+- PR #40/#49/#51의 ancestry는 포함한다. 별도 C++ safety/bimanual/jitter/문서 PR과 로컬 WIP는
+  이번 병합 범위가 아니며, 원본 브랜치·worktree를 정리하지 않는다.
+
+## 초기 통합 후보 기록
+
+아래는 로컬 추가 수정 전의 후보 생성 및 검증 기록이다.
 
 - 후보: `pro/main-integration-so101-20260907-01`
 - 시작 소스: `3ff180aff3eb312b91a2e2c6ea8e8d6b734148b3` (PR #51)
@@ -84,21 +127,15 @@ python -B -m unittest discover -s 2ARM_ROBOT/robotwin -p test_merge_regressions.
 CI 전용 dependency를 별도 runner에 설치하며 노트북의 venv 또는 RoboTwin을 변경하지 않는다.
 Workflow 추가 자체는 CI 통과 증거가 아니다. 최종 PR head의 실제 check 결과를 별도로 확인해야 한다.
 
-## 남은 병합 차단 및 별도 검증
+## 후속 실행 검증
 
-- main과 누적 79커밋을 결합한 전체 CI/build 결과 확인. 로컬에서는 위 일부 fixture만 실행했다.
-- RoboTwin planner의 초기 infeasible 구간 허용 예외, 전체 경로의 금지 collision gate 재검증.
-- canonical 관절 이름·순서, 실제 IL 단위/action 의미·depth 계약과 importer 연결 검증.
-- 외부 RoboTwin upstream·dirty 상태·asset provenance 및 실제 SAPIEN/CuRobo 실행 검증.
-- checkpoint loading fallback과 실물 dispatch 경계의 보안 검증.
-- 다른 개발 브랜치와 로컬 WIP의 필요한 변경 선별. 별도 C++ safety 코드를 이미 통합했다고 표시하지 않는다.
-
-실물 camera/calibration, watchdog/E-stop, 양팔 동기 dispatch와 hardware acceptance는 미검증이다.
-위 회귀 테스트는 실제 writer episode, task rollout, 실제 IL 교차 테스트 또는 hardware test가 아니다.
+실제 IL 교차 검증, runtime/asset 재현성, 변경 후 SAPIEN/CuRobo rollout, 실물 camera/calibration,
+watchdog/E-stop과 양팔 동기 dispatch는 아직 확인하지 못했다. 이 항목은 위에 명시한
+SIM/offline 통합 범위를 실제 학습·실물 실행으로 확대하기 전에 별도 검증한다.
 
 ## 병합·정리 원칙
 
-검증 완료 전 main에 병합하거나 auto-merge를 켜지 않는다.
+위 통합 범위의 로컬 검사와 최종 PR head의 CI 성공을 확인한 뒤 사용자 병합 요청에 따라 진행한다.
 병합 직전에 main/source/candidate SHA 변화를 다시 확인하고, 다른 작업자의 변경이 있으면 덮어쓰지 않는다.
 현재와 같이 후속 브랜치가 기존 커밋을 공유하는 경우 저장소 정책이 허용하면 merge commit 방식으로 이력을 보존한다.
 기존 브랜치/PR/worktree 정리는 별도 작업이며, 로컬 미푸시 변경이 확인되기 전에는 삭제하지 않는다.

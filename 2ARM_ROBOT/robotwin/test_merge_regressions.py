@@ -1,9 +1,11 @@
-"""Hardware-free regression gates for canonical episode conversion.
+"""Hardware-free regression gates for canonical conversion and planner rejection.
 
 Fixtures are handcrafted HDF5, not RoboTwin writer/rollout or physical IL data.
 """
 
 from pathlib import Path
+import ast
+from types import SimpleNamespace
 import tempfile
 import subprocess
 import sys
@@ -186,6 +188,49 @@ class ConverterRegressionTests(unittest.TestCase):
                 converter.convert(self.source, self.output)
         self.assertFalse(self.output.exists())
         self.assertEqual(list(self.root.glob(f".{self.output.name}.*")), [])
+
+
+class PlannerRegressionTests(unittest.TestCase):
+    def test_path_rejects_infeasible_start_middle_and_end(self):
+        # Run the actual segment on CPU, without importing SAPIEN/CuRobo.
+        # NumPy supplies tensor arithmetic; constraint results are fixtures.
+        source = Path(__file__).parent / "overlay/envs/dapier_handover_block.py"
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        method = next(node for node in ast.walk(tree)
+                      if isinstance(node, ast.FunctionDef) and node.name == "_five_dof_plan")
+        segment = next(node for node in method.body
+                       if isinstance(node, ast.FunctionDef) and node.name == "segment")
+        for rejected_index in (None, 0, 1, 8, -1, "all"):
+            with self.subTest(rejected_index=rejected_index):
+                def constraints(path):
+                    feasible = np.ones(len(path), dtype=bool)
+                    if rejected_index == "all":
+                        feasible[:] = False
+                    elif rejected_index is not None:
+                        feasible[rejected_index] = False
+                    return SimpleNamespace(feasible=feasible)
+
+                namespace = dict(
+                    np=np,
+                    torch=SimpleNamespace(
+                        abs=np.abs,
+                        linspace=lambda start, end, steps, **kw: np.linspace(start, end, steps),
+                        nonzero=lambda values, **kw: np.argwhere(values),
+                    ),
+                    JointState=SimpleNamespace(from_position=lambda path, **kw: path),
+                    planner=SimpleNamespace(motion_gen=SimpleNamespace(check_constraints=constraints)),
+                    joint_names=["fixture_joint"],
+                    arm_tag="left",
+                    limits=dict(max_velocity_rad_s=0.5, max_acceleration_rad_s2=2.0,
+                                max_jerk_rad_s3=10.0, control_hz=60),
+                )
+                exec(compile(ast.Module(body=[segment], type_ignores=[]), str(source), "exec"), namespace)
+                result = namespace["segment"](np.array([0.0]), np.array([0.02]))
+                if rejected_index is None:
+                    self.assertIsNotNone(result)
+                    np.testing.assert_allclose(result[0][[0, -1], 0], [0.0, 0.02])
+                else:
+                    self.assertIsNone(result)
 
 
 if __name__ == "__main__":

@@ -245,18 +245,7 @@ class dapier_handover_block(handover_block):
             states = JointState.from_position(path, joint_names=joint_names)
             feasible = planner.motion_gen.check_constraints(states).feasible.flatten()
             if not feasible.all():
-                first_clear = torch.nonzero(feasible, as_tuple=False)
-                if (
-                    not len(first_clear)
-                    or first_clear[0].item() > len(feasible) // 4
-                    or not feasible[first_clear[0].item() :].all()
-                ):
-                    return None
-                print(
-                    f"DAPIER_EXIT_CONTACT_PATH: arm={arm_tag} "
-                    f"clear_at={first_clear[0].item()}/{len(feasible)}",
-                    flush=True,
-                )
+                return None
             blend_rate = (30 * phase**2 - 60 * phase**3 + 30 * phase**4) / duration
             return path, blend_rate[:, None] * delta
 

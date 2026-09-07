@@ -366,10 +366,7 @@ def save_checkpoint(path: str | Path, model: Any, optimizer: Any, *, config: DAP
 
 def load_checkpoint(path: str | Path, *, device: str = "cpu", with_optimizer: bool = False):
     _, torch = _require_ml()
-    try:
-        payload = torch.load(Path(path), map_location=device, weights_only=True)
-    except TypeError:  # PyTorch < 2.0 compatibility on the education PC.
-        payload = torch.load(Path(path), map_location=device)
+    payload = torch.load(Path(path), map_location=device, weights_only=True)
     if payload.get("schema_version") != RUNTIME_SCHEMA_VERSION:
         raise ValueError("unsupported DAPIER-native ACT checkpoint")
     config = DAPIERACTConfig(**payload["config"])

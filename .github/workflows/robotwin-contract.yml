@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "2ARM_ROBOT/robotwin/**"
+      - "2ARM_ROBOT/src/shoe_sorting_data/**"
       - ".github/workflows/robotwin-contract.yml"
   workflow_dispatch:
 
@@ -41,3 +42,9 @@ jobs:
           python -B 2ARM_ROBOT/robotwin/test_contract.py
           python -B 2ARM_ROBOT/robotwin/test_convert_episode.py
           python -B -m unittest discover -s 2ARM_ROBOT/robotwin -p test_merge_regressions.py -v
+      - name: Check native ACT checkpoint boundary without hardware
+        env:
+          PYTHONPATH: 2ARM_ROBOT/src/shoe_sorting_data
+        run: >-
+          python -B -m unittest discover -s 2ARM_ROBOT/src/shoe_sorting_data/test
+          -p test_dapier_native_act.py -v

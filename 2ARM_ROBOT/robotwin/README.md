@@ -13,6 +13,22 @@
 이 결과는 **SIM 성공**이다. 실제 모터, 카메라, serial, ROS graph에는 접근하지 않았고 실물
 sim-to-real 성공을 뜻하지 않는다.
 
+## main 통합 시 지원 범위 — 2026-09-07
+
+이번에 다시 실행한 범위는 CPU 계약 검사와 synthetic ACT/checkpoint/mock-bus 테스트다.
+planner는 이제 **시작점을 포함해 한 점이라도 constraint 검사가 실패하면 해당 경로를 거부**한다.
+이전의 초기 contact 구간 허용 예외를 제거했으므로, 위 9월 5일 handover 결과를 수정된 planner의
+성공 근거로 재사용하지 않는다. 새 SAPIEN/CuRobo rollout은 아직 확인하지 못했다.
+
+RoboTwin의 joint/action은 `rad + gripper 0..1`, `action[t] = measured state[t+1]` 계약이다.
+아래 NPZ는 SIM/offline 변환 결과이며, 실제 LeRobot record/train 경로에 자동으로 넣는 importer는
+연결하지 않았다. 실제 IL 단위·action 의미와 대조하기 전에는 두 dataset을 합치지 않는다.
+
+`install_runtime.py`는 사용자가 지정한 외부 RoboTwin·URDF·mesh에 수동 적용하는 SIM 도구다.
+CI는 이 installer나 실제 장치를 실행하지 않는다. 외부 runtime pin, dirty 변경, asset 출처와
+재배포 권리는 아직 검증하지 못했으며, 해당 환경을 main의 재현 보장 범위에 포함하지 않는다.
+실물 dispatch는 이번 통합의 실행 승인 대상이 아니다.
+
 ## 실물과 맞춘 계약
 
 - 팔: 동일한 SO-101 follower 2대, 각 5 arm joints + gripper
