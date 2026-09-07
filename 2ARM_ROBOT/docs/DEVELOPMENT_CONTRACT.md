@@ -1,0 +1,97 @@
+# Dual SO-101 공통 개발 기준
+
+record_id: DAPIER-2026-09-07-native-hybrid-development-contract
+
+나는 양팔 로봇의 데이터·학습·실행 흐름을 DAPIER 코드로 이해하고 관리하는 방향으로
+개발한다. 이 문서는 Codex와 Hermes가 함께 적용하는 **설계 기준**이며, 아래 기능이
+이미 구현되었거나 실물에서 검증됐다는 뜻은 아니다.
+
+## 1. 개인화의 범위
+
+- DAPIER가 observation/action 계약, episode 저장, 학습 연결, 제어권 전환과 실행을
+  소유한다. RoboTwin·LeRobot 실행기를 호출하는 래퍼를 완성된 자체 런타임이라 부르지 않는다.
+- RoboTwin은 demonstration 생성·randomization·planner의 비교 기준으로 사용하고,
+  관련 overlay와 변환 코드는 `2ARM_ROBOT/robotwin/`에 분리한다. upstream 의존성을
+  제거하기 전에는 독립 구현이라고 기록하지 않는다.
+- ROS2는 외부 SLAM·이동 모듈과 연결할 때 선택 가능한 어댑터다. 핵심 데이터·학습·제어
+  계약이 ROS 메시지나 ROS 실행 환경을 필수로 요구하지 않도록 한다.
+- MuJoCo/SAPIEN, PyTorch, OpenCV, 수치 라이브러리와 공식 장치 SDK는 필요한 범위에서
+  재사용한다. 개인화는 모든 라이브러리를 다시 만드는 일이 아니다. 버전·라이선스·출처를 남긴다.
+
+## 2. IL + IK + rule: 단계에 따라 제어권을 나눈다
+
+| 단계 | 기본 역할 | 다음 단계로 넘어갈 근거 |
+| --- | --- | --- |
+| 이동 후 정지 | 이동 모듈 + 상태 규칙 | base 정지·관측 freshness 확인 |
+| 물체 재관측 | RGB-D 인식 + 양팔 좌표 변환 | pose·보정값·불확실성 확인 |
+| pre-grasp와 비접촉 접근 | IK + 충돌 검사 + 손목 visual servo | 도달 가능·가시성·오차 확인 |
+| 날개 잡기·열기·물체 조작 | IL 후보 동작 + visual servo + 접촉 규칙 | 실제 접촉·들림·과부하 확인 |
+| 운반·내려놓기 | 상황에 따라 IK/IL + 상태 규칙 | 지지·놓임·그리퍼 해제 확인 |
+
+IL과 IK를 고정 비율로 섞지 않는다. 각 단계에 입력, 출력, 제어권 소유자, 전환 조건,
+timeout과 실패 로그를 명시한다. IL이 학습되기 전의 scripted expert는 IL 정책이 아니다.
+
+- IL 출력이 Cartesian 목표이면 IK로 관절 목표를 구한다. **관절 action chunk이면 IK를
+  다시 적용하지 않고** 단위·순서·한계·충돌·시간 유효성을 검증한다.
+- 각 SO-101은 팔 5자유도와 그리퍼다. 위치 3 + 접근축 2 등 가능한 task 제약을 사용하고,
+  임의의 6D 자세를 모두 정확히 만족한다고 가정하지 않는다.
+- 좌우 팔 모두 변환·경로·충돌 검사 대상이다. 오른팔이 박스를 열고 왼팔이 물체를 꺼내는
+  역할 차이가 왼팔 실행 생략의 근거가 되지 않는다.
+- 목표 위치에 도착했다는 이유만으로 grasp 성공으로 처리하지 않는다. 접촉·물체 들림·
+  미끄러짐과 유지 여부를 확인한다. 센서가 없는 항목은 미검증으로 남긴다.
+- LLM은 고수준 작업 지시만 담당한다. IL·IK·LLM 어느 것도 실행 안전 검사를 우회하지 않는다.
+
+## 3. 언어별 책임
+
+| 계층 | 우선 언어 | 범위 |
+| --- | --- | --- |
+| 연구·데이터·학습 | Python | sim 구성, 전처리, demonstration, ACT, 평가, 인식·IK 실험 |
+| 인식·지역화 런타임 | C++ | 실측상 필요한 영상 처리·Visual SLAM·지역화; servo loop와 분리 |
+| 장치 실행·안전 | C++17 | 장치 I/O, 보정 변환, 제한·watchdog, bounded command 실행 |
+| MCU·C ABI 경계 | C, 필요한 경우만 | 펌웨어·기존 SDK 호출; 별도 C 프레임워크를 만들지 않음 |
+
+프로파일링 없이 Python 전체를 C++로 다시 쓰지 않는다. Python에서 호출하는 native
+라이브러리는 이미 native 연산을 수행할 수 있다. C++라는 이유만으로 hard real-time이나
+동적 할당 없음이 보장되지 않는다. 지연·할당·주기·실패 동작을 실제 측정한다.
+
+ROS2가 맡던 역할도 필요한 것만 대체한다: 같은 프로세스는 함수·명시적 자료형,
+별도 프로세스는 bounded IPC 계약, TF는 시간·단위가 있는 보정 변환, QoS는 sequence·
+capture/receive timestamp·TTL·backpressure, launch는 설정과 실행 진입점, 기록은
+episode와 구조화 로그로 관리한다. ROS 전체의 복제품을 새로 만들지는 않는다.
+
+## 4. 양팔·카메라·sim-to-real 계약
+
+- 공통 순서는 left 6축 → right 6축이다. 내부 단위는 팔 rad, 그리퍼 0..1로 명시하고,
+  degree·tick·gripper 0..100 자료는 경계에서 이름 있는 변환으로 처리한다.
+- 측정 joint state, 원래 요청 action, 안전 제한 후 실제 전송 action을 구분한다.
+  `action[t] = state[t+1]` 자료를 실기 command 자료와 설명 없이 섞지 않는다.
+- top H201은 manipulation용 metric depth, 좌우 손목은 RGB visual servo다.
+  Astra는 전면 SLAM 역할이며, 연결되어 있지 않으면 실제 스트림으로 표시하지 않는다.
+  depth 컬러맵은 표시용이며 학습·3D 계산용 원본 거리값이 아니다.
+- 실제 목표는 visual 관측 → camera frame → base 및 **좌·우 arm frame**으로 변환한다.
+  intrinsics, extrinsics, 단위, 보정 revision과 시간 유효성을 함께 확인한다.
+  시뮬레이터 정답은 expert/평가용으로 구분하고 정책 관측이나 실물 pose로 섞지 않는다.
+- 장치 역할은 검증된 identity와 calibration에 결합한다. 포트 번호를 바꿨다고 매번
+  재보정하지 않는다. 고유 serial 없는 동일 카메라를 포트 변경 후 자동 구별한다고 보장하지 않는다.
+- Raspberry Pi 4에서 ARM SDK 지원, USB 대역폭, 동시 FPS, CPU·메모리·온도·지연을
+  실측한다. 학습·무거운 추론은 노트북 우선이며 Pi에는 필요한 I/O·실행만 둔다.
+  양 손목 설정은 동일하게 유지하고 해상도는 관측 품질과 자원 측정을 함께 보고 결정한다.
+- frame drop·시간 불일치·tracking loss·네트워크 지연·모터 이상·접촉 실패를 시험한다.
+  단순 품질 경고와 실제 실행 중단 조건을 구분하며 기존 실물 승인·정지 경계는 유지한다.
+
+## 5. 현재 코드와 작업 완료 기준
+
+현재 `scripts/dual_so101_il`은 LeRobot 실행 래퍼다. 자체 Python ACT 모듈
+`src/shoe_sorting_data/shoe_sorting_data/dapier_native_act.py`와 C++
+`so101_ros2/dapier_so101_core`의 보정·관절 수학은 재사용 후보지만, 이 존재만으로
+3카메라·양팔 학습 정책·실물 closed-loop가 완성된 것은 아니다. C++ 코어의 현재
+CMake도 ament 의존성이 있으므로 ROS2-free 배포 완료라고 기록하지 않는다.
+
+다음 구현은 기존 계약·데이터 호환 확인 → 자체 양팔 teleop/record의 mock 검증 →
+visual IK/IL 연결 → sim closed-loop → 실측 profile을 사용한 shadow → 승인된 저속
+실물 검증 순서로 진행한다. 이번 지침 추가는 기존 실행기나 하드웨어 동작을 변경하지 않는다.
+
+작업 시작 때 해당 단계와 모듈을 밝히고, 완료 때 변경 파일·명령·결과·artifact·남은
+불확실성을 기록한다. SIM/MOCK/HW를 구분하고, 학습·replay 성공을 실물 성공으로
+바꾸어 쓰지 않는다. 공개 GitHub에는 검증 가능한 코드·자체 설명만, 비공개 Notion에는
+학습 원문과 개인 탐구를 남긴다. 원문과 과거 설계가 최신 사용자 결정과 다르면 차이를 기록한다.

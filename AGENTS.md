@@ -17,6 +17,16 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
 작업 전 기존 폴더 구조와 변경사항을 확인하고, 실제 검증 후 작은 단위로
 커밋한다. `record_id`는 `DAPIER-YYYY-MM-DD-short-topic` 형식을 사용한다.
 
+## 양팔 프로젝트 공통 개발 기준 — Codex·Hermes
+
+SO-101 양팔의 계획·구현·리뷰·실행 안내 전에
+[`2ARM_ROBOT/docs/DEVELOPMENT_CONTRACT.md`](2ARM_ROBOT/docs/DEVELOPMENT_CONTRACT.md)를
+읽는다. IL+IK+rule의 단계별 분담, Python/C++/C 책임, ROS2-free 실행 경계,
+양팔·카메라·sim-to-real 계약을 변경안에 적용한다. LeRobot/RoboTwin 실행 래퍼를
+완성된 개인화 런타임으로 안내하지 않는다. 로컬 원문 위치는
+`~/.config/dapier/dual_so101_project_sources.local.md`에 있으며 공개하지 않는다.
+원문·과거 문서와 현재 사용자 결정이 충돌하면 차이를 기록하고 현재 결정을 따른다.
+
 ## GitHub 및 Codex 에이전트 규칙
 
 - Codex cloud와 `scripts/cowork`를 사용하는 Mode A에서는 요청받은
@@ -35,6 +45,21 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
 - 관련된 가장 작은 테스트를 실행하고, 실행하지 못한 검증과 이유를 최종 요약에
   남긴다.
 - 변경 목적, 검증 명령, 결과를 커밋 메시지 또는 PR 본문에 남긴다.
+
+## 2026-09-07 main 통합 이후 업로드 기준
+
+- 새 작업은 최신 `origin/main`에서 writer별 작업 브랜치와 별도 worktree를 만든다.
+  Mode A는 기존 `scripts/cowork start <task>-<writer>-<date> origin/main`을 사용한다.
+  Mode B의 앱 관리 worktree 규칙은 그대로 적용한다.
+- 업로드 저장소는 `Alpenj/DAPIER`, PR의 base는 `main`이다. 병합된 mission/followup
+  브랜치를 새 PR의 base로 재사용하지 않는다. 작업 브랜치에 normal push한다.
+- 한 writer의 기존 detached/WIP는 먼저 이름 있는 브랜치로 보존한다. 이전 main에서
+  시작한 미완료 작업에 최신 main을 강제 적용하거나 reset/stash/clean하지 않는다.
+  후속 PR에서 최신 main과의 겹치는 변경을 검증한다.
+- 사용자가 정리를 요청하면 main에 모든 커밋이 포함되고 미커밋·미푸시 작업이 없는
+  브랜치와 clean worktree만 정리한다. 고유 커밋, dirty worktree, 진행 중 writer는 보존한다.
+- 구체적인 시작·업로드 명령은 [GitHub 협업 안내](docs/CHATGPT_PRO_CODEX_COWORK_KO.md)의
+  main 통합 이후 절을 따른다. 데이터·calibration·개인 설정은 기존 공개 금지 규칙을 유지한다.
 
 ## 모든 에이전트의 실물 하드웨어 안전 경계
 
