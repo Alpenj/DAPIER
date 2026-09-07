@@ -4,12 +4,21 @@ import inspect
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 import shoe_sorting_data.dapier_native_act as native_act
 from shoe_sorting_data.dapier_native_act import ActionChunkQueue, dependency_status, run_smoke
 
 
 class DAPIERNativeACTTest(unittest.TestCase):
+    def test_checkpoint_load_never_retries_without_weights_only(self):
+        torch = Mock()
+        torch.load.side_effect = TypeError("weights_only unavailable")
+        with patch.object(native_act, "_require_ml", return_value=(None, torch)):
+            with self.assertRaisesRegex(TypeError, "weights_only unavailable"):
+                native_act.load_checkpoint("untrusted.pt")
+        torch.load.assert_called_once_with(Path("untrusted.pt"), map_location="cpu", weights_only=True)
+
     def test_dependency_boundary_and_stale_chunk_reset(self):
         self.assertNotIn("lerobot", dependency_status()["modules"])
         self.assertFalse(dependency_status()["lerobot_required"])

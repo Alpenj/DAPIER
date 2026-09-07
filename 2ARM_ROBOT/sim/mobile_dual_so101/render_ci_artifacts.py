@@ -98,10 +98,10 @@ def render_artifacts(output_dir: Path, model_path: Path | None) -> Path:
                 },
             }
 
-        renderer.update_scene(data, camera="front_depth_camera")
+        renderer.update_scene(data, camera="workspace_depth_camera")
         rendered["depth_camera_rgb"] = {
             **_write_png(output_dir / "depth_camera_rgb.png", renderer.render()),
-            "camera": {"type": "model", "name": "front_depth_camera"},
+            "camera": {"type": "model", "name": "workspace_depth_camera"},
         }
 
     report = {

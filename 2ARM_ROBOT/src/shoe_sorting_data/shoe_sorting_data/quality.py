@@ -152,8 +152,7 @@ def validate_episode(manifest_path: str | Path) -> ValidationReport:
         "right_joint_action",
         "base_velocity",
         "base_command",
-        "workspace_rgb",
-        "workspace_depth",
+        *camera_names,
     }
     limits = manifest["quality_limits"]
 

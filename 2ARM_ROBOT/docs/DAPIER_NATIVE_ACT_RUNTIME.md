@@ -1,5 +1,7 @@
 ﻿# Stage 6 · LeRobot 완전 독립 DAPIER-native ACT runtime
 
+> 현행 장비 역할은 [`../config/hardware_roles.json`](../config/hardware_roles.json)을 정본으로 한다: SO-101 양팔, 전면 Astra S, top-view HP-ASC-H201, 좌·우 wrist RGB.
+
 ## 결과
 
 `shoe_sorting_data.dapier_native_act`가 finalized DAPIER episode를 직접 읽고 다음 경로를 소유한다.
@@ -108,8 +110,8 @@ ros2 run shoe_sorting_data shoe_dapier_act infer \
   호환 또는 동등하다고 주장하지 않는다.
 - synthetic smoke는 task success 증거가 아니다. 실제 신발 데이터의 held-out offline 평가와
   supervisor-guarded closed-loop 성공률이 별도로 필요하다.
-- depth scale 기본값 `1000`은 mm→m 변환 knob다. Astra Pro 실측 depth unit, CameraInfo, registration을
-  확인한 뒤 고정한다.
+- depth scale 기본값 `1000`은 mm→m 변환 knob다. 전면 Astra S와 top-view HP-ASC-H201 각각의
+  실측 depth unit, CameraInfo, registration을 확인한 뒤 장치별로 고정한다.
 - 첫 실물 rollout은 `n_action_steps=1`, base stationary, E-stop·joint limit·watchdog 승인으로 제한한다.
 - Stage 7에서 inference proposal과 Stage 5 supervisor trace 연결을 완료했다. 실제 checkpoint SHA,
   reset generation, source observation identity를 검증하며 hardware publish는 계속 차단한다.

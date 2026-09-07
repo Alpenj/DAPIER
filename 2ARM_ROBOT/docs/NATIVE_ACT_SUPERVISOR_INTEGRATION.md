@@ -1,5 +1,8 @@
 ﻿# Stage 7 · Native ACT proposal와 독립 safety supervisor 통합
 
+> **Legacy integration:** JDcobot-shaped dry-run 기록이다. 현재 SO-101 실물 adapter나 실행
+> 승인 근거가 아니며 현행 장비 역할은 `../config/hardware_roles.json`을 따른다.
+
 ## 결과
 
 DAPIER-native ACT가 만든 action chunk를 기존 Stage 5 `SafetySupervisor`와

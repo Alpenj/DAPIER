@@ -130,6 +130,7 @@ class SimTeleopController:
         required_clearance_m: float = DEFAULT_CLEARANCE_M,
         max_speed_rad_s: float = DEFAULT_MAX_SPEED_RAD_S,
         accel_rad_s2: float = DEFAULT_ACCEL_RAD_S2,
+        obstacle_geom_names: Sequence[str] = (),
     ) -> None:
         if not math.isfinite(step_rad) or step_rad <= 0:
             raise ValueError("step_rad must be finite and positive")
@@ -151,6 +152,7 @@ class SimTeleopController:
         self._required_clearance_m = float(required_clearance_m)
         self._max_speed_rad_s = float(max_speed_rad_s)
         self._accel_rad_s2 = float(accel_rad_s2)
+        self._obstacle_geom_names = tuple(obstacle_geom_names)
         self._selected_arm = 0
         self._selected_joint = 0
         self._stopped = False
@@ -269,6 +271,7 @@ class SimTeleopController:
                 bounded,
                 required_clearance_m=self._required_clearance_m,
                 max_joint_step_rad=DEFAULT_MAX_JOINT_STEP_RAD,
+                obstacle_geom_names=self._obstacle_geom_names,
             )
             if not assessment.safe:
                 return self._update(
@@ -344,6 +347,7 @@ class SimTeleopController:
                 resolved_candidate,
                 required_clearance_m=self._required_clearance_m,
                 max_joint_step_rad=DEFAULT_MAX_JOINT_STEP_RAD,
+                obstacle_geom_names=self._obstacle_geom_names,
             )
             if not assessment.safe:
                 self._targets = self._control_targets
@@ -463,6 +467,7 @@ class SimTeleopController:
                 resolved_candidate,
                 required_clearance_m=self._required_clearance_m,
                 max_joint_step_rad=DEFAULT_MAX_JOINT_STEP_RAD,
+                obstacle_geom_names=self._obstacle_geom_names,
             )
             if not assessment.safe:
                 return self._update(
@@ -538,11 +543,19 @@ def run_sim_teleop(
     required_clearance_m: float = DEFAULT_CLEARANCE_M,
     max_speed_rad_s: float = DEFAULT_MAX_SPEED_RAD_S,
     accel_rad_s2: float = DEFAULT_ACCEL_RAD_S2,
+    obstacle_geom_names: Sequence[str] = (),
+    record_fps: int | None = None,
 ) -> dict[str, object]:
     """Run the passive viewer with Control-panel and keyboard targets."""
 
     import mujoco.viewer
 
+    if record_fps is not None and (
+        isinstance(record_fps, bool)
+        or not isinstance(record_fps, int)
+        or record_fps <= 0
+    ):
+        raise ValueError("record_fps must be a positive integer")
     controller = SimTeleopController(
         model,
         initial_action=initial_action,
@@ -551,6 +564,7 @@ def run_sim_teleop(
         required_clearance_m=required_clearance_m,
         max_speed_rad_s=max_speed_rad_s,
         accel_rad_s2=accel_rad_s2,
+        obstacle_geom_names=obstacle_geom_names,
     )
     data = mujoco.MjData(model)
     initial = controller.targets
@@ -571,6 +585,8 @@ def run_sim_teleop(
     was_stopped = False
     control_elapsed_s = DEFAULT_CONTROL_PERIOD_S
     last_applied_controls = initial
+    recorded_actions: list[tuple[float, ...]] = []
+    next_record_time_s = 0.0
     with mujoco.viewer.launch_passive(
         model,
         data,
@@ -597,6 +613,9 @@ def run_sim_teleop(
                 apply_teleop_targets(model, data, control_targets)
                 mujoco.mj_step(model, data)
                 last_applied_controls = control_targets
+                if record_fps is not None and data.time >= next_record_time_s:
+                    recorded_actions.append(tuple(control_targets))
+                    next_record_time_s += 1.0 / record_fps
             viewer.sync()
             if panel_update is not None:
                 print(json.dumps(panel_update.as_report(), ensure_ascii=False), flush=True)
@@ -605,7 +624,12 @@ def run_sim_teleop(
                 time.sleep(remaining)
 
     report = controller.status()
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    if record_fps is not None:
+        report["record_fps"] = record_fps
+        report["recorded_actions_rad"] = tuple(recorded_actions)
+    printed = {key: value for key, value in report.items() if key != "recorded_actions_rad"}
+    printed["recorded_sample_count"] = len(recorded_actions)
+    print(json.dumps(printed, ensure_ascii=False, indent=2))
     return report
 
 

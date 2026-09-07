@@ -2,15 +2,19 @@
 
 기준일: 2026-08-20
 
-목표 구성은 TurtleBot3 Waffle Pi 위에 JDcobot200 두 팔과 RGB-D 카메라를 탑재하고,
+목표 구성은 TurtleBot3 Waffle Pi 위에 SO-101 두 팔, 전면 Astra S, top-view H201과 좌우
+wrist RGB를 탑재하고,
 이동 후 정지한 상태에서 신발을 집는 것이다. 아래 값은 **제조사 상한**, **이번 실측**, **설계
 여유를 둔 권고**를 구분한다. 아직 측정하지 않은 실제 작업 평균 전류를 임의로 채우지 않는다.
 
 ## 현재 결론
 
-- 기존 Raspberry Pi 4 한 대는 TurtleBot3의 OpenCR, 바퀴, LiDAR, ROS 2 bringup 전용으로 유지한다.
-- 노트북을 로봇에 탑재하면 추가 계산 보드는 0대다. 양팔 USB와 RGB-D 카메라는 전원형 USB 3
-  허브를 거쳐 노트북에 연결한다.
+- Raspberry Pi 4는 TurtleBot3 OpenCR·바퀴, 경량 sensor I/O, health/watchdog를 담당한다.
+  LLM과 IL policy는 로컬 노트북에서 실행한다.
+- Pi 4가 RGB-D 두 대와 wrist RGB 두 대의 full-rate raw 처리를 감당한다고 가정하지 않는다.
+  Visual SLAM 실행 위치와 stream rate는 Pi 4/노트북의 FPS·CPU·온도·network jitter 실측 후 정한다.
+- 양팔 USB와 카메라는 전원형 허브를 사용할 수 있지만, 카메라 bandwidth는 물리 허브 수가 아니라
+  `lsusb -t`의 root hub별로 계산한다.
 - 노트북을 로봇 밖에 두고 자유롭게 이동하려면 USB 장치의 종단이 될 탑재 계산 보드 한 대가
   추가로 필요하다. 이 경우 총 계산 보드는 기존 Pi 4 한 대와 추가 보드 한 대다.
 - 외부 노트북에 양팔과 카메라를 USB로 직접 연결하는 구성은 정지 개발에는 쓸 수 있지만 이동
@@ -26,8 +30,10 @@
 | STS3215 팔 서보 | 12 | 관측 12.1–12.3V, 정격 계산 12V | 무부하 0.18A/개, stall 2.7A/개 | 무부하 합계 25.92W, 동시 stall 이론값 388.8W | 모델·전압 실측, 전류 값은 제조사 |
 | XM430-W210 바퀴 서보 | 2 | 권장 12V | 대기 0.04A/개, stall 2.3A/개 | 대기 0.96W, 동시 stall 이론값 55.2W | 모델은 Waffle Pi 사양, 전류는 제조사 |
 | Raspberry Pi 4 | 1 | 5V | 권장 전원 용량 3A | 공급 설계 15W | 보드 모델 실측, 값은 제조사 권고 |
-| RPLIDAR | 1 | 5V | A1이면 명목 0.1A | A1이면 0.5W | 런타임 계열만 확인, 정확한 라벨 미확인 |
-| AADJA1300GX/Orbbec Astra 계열 | 1 | USB 5V | USB descriptor 최대 0.5A | 최대 선언값 2.5W | 이 PC에서 관측, 현재 분리됨 |
+| RPLIDAR | 0 active / 실물 미확인 | 5V | A1이면 명목 0.1A | A1이면 0.5W | 현재 MuJoCo·Visual-SLAM active path에서 제외 |
+| Orbbec Astra S | 1 | USB 5V | 과거 descriptor 최대 0.5A | 최대 선언값 2.5W | TurtleBot3 전면 SLAM 역할 |
+| HP-ASC-H201 | 1 | USB 5V | 미측정 | 미정 | 기둥 상단 workspace top-view 역할 |
+| USB UVC wrist RGB | 2 | USB 5V | 미측정 | 미정 | 좌·우 그리퍼 근접 관측 |
 | 전원형 USB 허브·USB-서보 어댑터 | 1식 | 5V | 제품 선정 후 확인 | 미정 | 아직 제품 미선정 |
 | 노트북 | 1 | 자체 배터리/정품 어댑터 | 실제 추론 부하 측정 필요 | 미정 | 기존 장비 사용 |
 
@@ -50,7 +56,7 @@ stall은 모터가 멈춘 위험 상태의 순간 상한이며 정상 소비전�
 AC 전원
 ├─ 비상정지 접점 ─ 12V 20A급 팔 A 전원 ─ 팔 A 서보 6개
 ├─ 비상정지 접점 ─ 12V 20A급 팔 B 전원 ─ 팔 B 서보 6개
-├─ TurtleBot 기본 12V 4.5A SMPS 또는 기본 배터리 ─ OpenCR/바퀴/Pi/LiDAR
+├─ TurtleBot 기본 12V 4.5A SMPS 또는 기본 배터리 ─ OpenCR/바퀴/Pi/[optional LiDAR]
 └─ 노트북 정품 전원 ─ 노트북 ─ 전원형 USB 허브 ─ 카메라/서보 어댑터
 ```
 
@@ -65,7 +71,7 @@ AC 전원
 보호회로/BMS가 있는 주 배터리
 ├─ 고전류 DC/DC 12V ─ 보호 분기 ─ 팔 A
 ├─ 고전류 DC/DC 12V ─ 보호 분기 ─ 팔 B
-├─ 안정화된 TurtleBot 전원 분기 ─ OpenCR/바퀴/Pi/LiDAR
+├─ 안정화된 TurtleBot 전원 분기 ─ OpenCR/바퀴/Pi/[optional LiDAR]
 └─ 필요 시 5V 분기 ─ 전원형 USB 허브/카메라
 ```
 
@@ -108,7 +114,8 @@ TurtleBot3 Waffle Pi 제조사 표에는 최대 payload 30kg가 기재되어 있
 ## 아직 확정할 수 없는 값
 
 - 양팔의 실제 작업 평균·순간 피크 전류와 열 상승
-- 정확한 LiDAR 모델 라벨과 시작 전류
+- LiDAR를 다시 active path에 넣을 경우 정확한 모델 라벨과 시작 전류
+- H201·wrist RGB 두 대의 USB 전류와 4카메라 동시 root-hub 부하
 - 탑재 노트북의 AI 추론 중 소비전력 또는 추가 계산 보드의 전력
 - 프레임·팔·배터리·노트북의 질량 및 전체 무게중심
 - 요구 운용시간

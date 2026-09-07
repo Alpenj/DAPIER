@@ -1,0 +1,42 @@
+urdf_path: "./urdf/dapier_dual_so101.urdf"
+joint_stiffness: 1000
+joint_damping: 200
+gripper_stiffness: 1000
+gripper_damping: 200
+move_group: ["left_ee_link", "right_ee_link"]
+ee_joints: ["left_ee_joint", "right_ee_joint"]
+ee_pose_from_child_link: true
+arm_joints_name:
+  - ["left_shoulder_pan", "left_shoulder_lift", "left_elbow_flex", "left_wrist_flex", "left_wrist_roll"]
+  - ["right_shoulder_pan", "right_shoulder_lift", "right_elbow_flex", "right_wrist_flex", "right_wrist_roll"]
+gripper_name:
+  - base: "left_gripper"
+    mimic: []
+  - base: "right_gripper"
+    mimic: []
+# The generated EE link is the jaw midpoint; 0.12 cancels RoboTwin's legacy offset.
+gripper_bias: 0.12
+gripper_scale: [-0.174533, 1.745329]
+homestate:
+  - [0.004603066, -1.571825, 1.5548, 0.01658, -1.501367654]
+  - [0.004603066, -1.571825, 1.5548, 0.01658, -1.501367654]
+joint_path_limits:
+  control_hz: 250
+  max_velocity_rad_s: 0.5
+  max_acceleration_rad_s2: 1.0
+  max_jerk_rad_s3: 5.0
+  settle_s: 0.5
+# RoboTwin grasp frame: X approach, Z up. SO-101 EE: Z approach, Y up.
+delta_matrix: [[0, 1, 0], [0, 0, 1], [1, 0, 0]]
+global_trans_matrix: [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+robot_pose: [[0, -0.185, 0.74, 0.707106781, 0, 0, 0.707106781]]
+planner: "curobo"
+dual_arm: true
+rotate_lim: [0, 1]
+grasp_perfect_direction: ["front_right", "front_left"]
+static_camera_list:
+  - name: head_camera
+    type: DAPIER_H201
+    position: [0, -0.249, 1.160]
+    forward: [0, 0.731354, -0.681998]
+    left: [-1, 0, 0]

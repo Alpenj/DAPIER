@@ -1,0 +1,67 @@
+diff --git a/envs/robot/planner.py b/envs/robot/planner.py
+index 21ae432..74524f6 100644
+--- a/envs/robot/planner.py
++++ b/envs/robot/planner.py
+@@ -47,6 +47,10 @@ try:
+             self.robot_origion_pose = robot_origion_pose
+             self.active_joints_name = active_joints_name
+             self.all_joints = all_joints
++            self.blackwell_so101_fallback = (
++                torch.cuda.get_device_capability()[0] >= 12
++                and len(active_joints_name) == 5
++            )
+ 
+             # translate from baselink to arm's base
+             with open(self.yml_path, "r") as f:
+@@ -75,10 +79,14 @@ try:
+                 self.yml_path,
+                 world_config,
+                 interpolation_dt=1 / 250,
+-                num_trajopt_seeds=1,
++                num_trajopt_seeds=4 if self.blackwell_so101_fallback else 1,
++                use_cuda_graph=not self.blackwell_so101_fallback,
++                use_gradient_descent=self.blackwell_so101_fallback,
+             )
+ 
+             self.motion_gen = MotionGen(motion_gen_config)
++            if self.blackwell_so101_fallback:
++                self.motion_gen.ik_solver.solver.newton_optimizer.use_cuda_kernel = False
+             self.motion_gen.warmup()
+             motion_gen_config = MotionGenConfig.load_from_robot_config(
+                 self.yml_path,
+@@ -86,8 +94,12 @@ try:
+                 interpolation_dt=1 / 250,
+                 num_trajopt_seeds=1,
+                 num_graph_seeds=1,
++                use_cuda_graph=not self.blackwell_so101_fallback,
++                use_gradient_descent=self.blackwell_so101_fallback,
+             )
+             self.motion_gen_batch = MotionGen(motion_gen_config)
++            if self.blackwell_so101_fallback:
++                self.motion_gen_batch.ik_solver.solver.newton_optimizer.use_cuda_kernel = False
+             self.motion_gen_batch.warmup(batch=CONFIGS.ROTATE_NUM)
+ 
+         def plan_path(
+diff --git a/envs/_base_task.py b/envs/_base_task.py
+--- a/envs/_base_task.py
++++ b/envs/_base_task.py
+@@ -211,10 +211,13 @@ class Base_Task(gym.Env):
+         # give renderer to sapien sim
+         self.engine.set_renderer(self.renderer)
+-
+-        sapien.render.set_camera_shader_dir("rt")
+-        sapien.render.set_ray_tracing_samples_per_pixel(32)
+-        sapien.render.set_ray_tracing_path_depth(8)
+-        sapien.render.set_ray_tracing_denoiser("oidn")
+-
++
++        if self.task_name.startswith("dapier_"):
++            sapien.render.set_camera_shader_dir("default")
++        else:
++            sapien.render.set_camera_shader_dir("rt")
++            sapien.render.set_ray_tracing_samples_per_pixel(32)
++            sapien.render.set_ray_tracing_path_depth(8)
++            sapien.render.set_ray_tracing_denoiser("oidn")
++
+         # declare sapien scene
+         scene_config = sapien.SceneConfig()

@@ -24,8 +24,10 @@ from mobile_dual_so101 import (
     ASSEMBLED_SUPPORT_UNDER_STL,
     ASSEMBLED_SUPPORT_UPPER_SOURCE_STL,
     ASSEMBLED_SUPPORT_UPPER_STL,
-    DEPTH_CAMERA_SIZE_M,
-    DEPTH_CAMERA_VERTICAL_FOV_DEG,
+    FRONT_SLAM_CAMERA_CENTER_M,
+    FRONT_SLAM_CAMERA_OPTICAL_CENTER_M,
+    FRONT_SLAM_CAMERA_MASS_KG,
+    FRONT_SLAM_CAMERA_SIZE_M,
     HUMANOID_HOME_ACTION,
     SO101_BASE_LARGE_HOLE_CENTER_ARM_FRAME_M,
     SO101_BASE_LARGE_HOLE_MESH_SHA256,
@@ -40,6 +42,7 @@ from mobile_dual_so101 import (
     TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M,
     TOWER_RECOMMENDED_ARM_MOUNT_X_M,
     WAFFLE_TOP_LOCAL_Z_M,
+    WORKSPACE_DEPTH_CAMERA_VERTICAL_FOV_DEG,
     apply_control_as_pose,
     build_model,
     model_names,
@@ -348,9 +351,11 @@ class TowerLayoutTest(unittest.TestCase):
                 -1,
             )
 
-    def test_depth_camera_is_raised_on_separate_mast_and_interface_plate(self) -> None:
+    def test_workspace_camera_is_raised_on_separate_mast_and_interface_plate(self) -> None:
         camera_body = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "depth_camera_body"
+            self.model,
+            mujoco.mjtObj.mjOBJ_BODY,
+            "workspace_depth_camera_body",
         )
         camera_position = self.model.body_pos[camera_body]
         self.assertAlmostEqual(
@@ -365,7 +370,7 @@ class TowerLayoutTest(unittest.TestCase):
             float(camera_position[2] - TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M),
             TOWER_CAMERA_HEIGHT_ABOVE_ARM_M,
         )
-        camera_geom = self.geom_id("depth_camera_collision")
+        camera_geom = self.geom_id("workspace_depth_camera_collision")
         plate = self.geom_id("tower_camera_interface_plate_collision")
         from_to = np.zeros(6)
         self.assertAlmostEqual(
@@ -387,16 +392,50 @@ class TowerLayoutTest(unittest.TestCase):
             np.asarray(TOWER_CAMERA_INTERFACE_PLATE_SIZE_M) / 2.0,
         )
 
-    def test_camera_vertical_fov_covers_near_floor_and_long_slam_view(self) -> None:
+    def test_astra_is_centered_on_turtlebot_front_camera_bracket(self) -> None:
+        astra_body = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_BODY,
+            "front_slam_depth_camera_body",
+        )
+        astra_geom = self.geom_id("front_slam_depth_camera_collision")
+        np.testing.assert_allclose(
+            self.model.body_pos[astra_body],
+            FRONT_SLAM_CAMERA_CENTER_M,
+        )
+        optical_site = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_SITE,
+            "front_slam_depth_optical_frame",
+        )
+        np.testing.assert_allclose(
+            self.model.body_pos[astra_body]
+            + self.model.site_pos[optical_site],
+            FRONT_SLAM_CAMERA_OPTICAL_CENTER_M,
+        )
+        np.testing.assert_allclose(
+            self.model.geom_size[astra_geom],
+            np.asarray(FRONT_SLAM_CAMERA_SIZE_M) / 2.0,
+        )
+        self.assertAlmostEqual(
+            float(self.model.body_mass[astra_body]),
+            FRONT_SLAM_CAMERA_MASS_KG,
+        )
+
+    def test_workspace_camera_vertical_fov_covers_floor(self) -> None:
         camera_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_CAMERA, "front_depth_camera"
+            self.model,
+            mujoco.mjtObj.mjOBJ_CAMERA,
+            "workspace_depth_camera",
         )
         rotation = self.data.cam_xmat[camera_id].reshape(3, 3)
         forward = -rotation[:, 2]
         image_up = rotation[:, 1]
         down_tilt = math.atan2(-float(forward[2]), float(forward[0]))
         self.assertAlmostEqual(down_tilt, TOWER_CAMERA_DOWN_TILT_RAD)
-        tangent = math.tan(math.radians(DEPTH_CAMERA_VERTICAL_FOV_DEG) / 2.0)
+        tangent = math.tan(
+            math.radians(WORKSPACE_DEPTH_CAMERA_VERTICAL_FOV_DEG) / 2.0
+        )
         rays = {
             "near": forward - image_up * tangent,
             "center": forward,

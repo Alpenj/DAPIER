@@ -1,5 +1,8 @@
 # JDcobot200 단일 관절 micro-jog
 
+> **Legacy hardware tool:** 현재 SO-101에는 사용하지 않는다. 현재 양팔 저속 시험은
+> `2ARM_ROBOT/scripts/dual_so101_smoke`와 `config/hardware_roles.json`을 따른다.
+
 ## 이번 단계의 범위
 
 오늘 수업에서 확인한 두 팔은 팔당 STS3215 모터 6개가 1 Mbps로 응답했다. 기존 코드는

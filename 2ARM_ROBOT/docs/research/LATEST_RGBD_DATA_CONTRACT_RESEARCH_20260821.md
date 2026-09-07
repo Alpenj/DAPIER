@@ -1,5 +1,7 @@
 ﻿# 최신 RGB-D 데이터 계약 조사 — 2ARM_ROBOT
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../../config/hardware_roles.json`](../../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-21
 적용 대상: JDcobot 양팔, TurtleBot3 Waffle Pi, Orbbec Astra Pro 1대, RTX 5050 노트북, 4인·6주·추가 예산 0원
 

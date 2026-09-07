@@ -1,13 +1,13 @@
 # DAPIER 로봇 모델 자산 감사와 sim-to-real 계획
 
-기준일: 2026-08-20
+기준일: 2026-08-20 · 현행 장비 재감사: 2026-09-03
 
 ## 결론
 
-TurtleBot3 Waffle Pi의 공식 URDF와 메시는 재사용할 수 있다. JDcobot200 강사 저장소의 URDF,
-MJCF, STL은 저장소에 표준 라이선스가 확인되지 않았지만, 2026-08-24에 강사 사용·개인화 허가를
-받았다고 사용자가 확인했다. 원본과 DAPIER 개인화 코드를 분리하고 출처와 commit을 고지한 상태로
-양팔 MuJoCo 기준 모델에 사용한다. 실측 치수와 장치별 보정값은 원본에 덮어쓰지 않고 별도 작성한다.
+현행 MuJoCo 기준 모델은 TurtleBot3 Waffle Pi 공식 자산과 pinned LeRobot SO-101 자산을 조합한
+`sim/mobile_dual_so101`이다. JDcobot200 자산과 `sim/jdcobot200_dual`은 초기 학습·비교용 legacy이며
+현행 실물 모델이나 명령 경로로 사용하지 않는다. 센서·팔 역할은
+[`../config/hardware_roles.json`](../config/hardware_roles.json)을 정본으로 한다.
 
 ## 확인된 자산
 
@@ -45,35 +45,36 @@ URDF, MJCF, MuJoCo scene, STL/part 자산과 sim-to-real 예제가 있다. 2026-
 - DAPIER의 좌우 prefix, 장착 변환, action contract는 원본과 분리한 코드로 구현한다.
 - 표준 오픈소스 라이선스가 생긴 것은 아니므로 DAPIER 밖의 일반 재사용 권한으로 확대 해석하지 않는다.
 
-## 실측으로 확인한 팔 구성
+## 실측으로 확인한 현행 팔 구성
 
+- 좌·우 장치는 동일한 SO-101이며 stable alias와 controller serial로 구분한다.
 - 팔 두 대에서 각각 STS3215 ID 1–6이 1Mbps로 응답했다.
 - 현재 의미 모델은 ID 1–5를 5개 팔 관절, ID 6을 그리퍼로 분리한다. 총 모터 수는 팔당 6개,
   양팔 12개다.
 - 이 역할 순서는 참고 코드 구조와 일치하지만 실제 저속 동작으로 아직 검증하지 않았다.
-- 한 팔은 모든 offset이 `+85`이고 position limit이 `0..4095`라 초기값 가능성이 높다.
-- 다른 팔은 관절별 offset과 일부 position limit이 다르게 저장되어 있다. 더 구체적으로 보정된 흔적일
-  수는 있지만, 장착 자세와 충돌을 확인하기 전에는 안전한 정답으로 간주하지 않는다.
+- 좌·우는 각자 저장된 calibration을 사용한다. legacy LeRobot cache의 `leader`/`follower` 폴더명은
+  장비 역할을 뜻하지 않으며 서로 바꿔 적용하지 않는다.
 - offset은 엔코더 영점, position limit은 기구 안전 범위, 전류/load는 동적 부하에 관한 값이다.
   관절 부하가 다르다는 이유만으로 offset이나 position limit이 자동 결정되지는 않는다.
 
-## DAPIER 전용 모델 구조
+## DAPIER 전용 현행 모델 구조
 
 팔 모델을 만들 때 하나의 공통 기구 Xacro와 장치별 calibration 파일을 분리한다.
 
 ```text
 base_footprint
 └─ turtlebot3_waffle_pi
-   └─ dapier_mount
-      ├─ arm_a_mount ─ arm_a_joint_1 ... arm_a_joint_5 ─ arm_a_gripper
-      ├─ arm_b_mount ─ arm_b_joint_1 ... arm_b_joint_5 ─ arm_b_gripper
-      └─ camera_mount ─ camera_link ─ camera_optical_frame
+   ├─ front_rgbd ─ Astra S
+   └─ dapier_tower
+      ├─ workspace_rgbd ─ HP-ASC-H201 top view
+      ├─ left_so101 ─ left_wrist_rgb
+      └─ right_so101 ─ right_wrist_rgb
 ```
 
 공통 Xacro에는 링크 길이, 관절축, collision, visual, 질량과 관성, nominal joint limit을 둔다.
 장치별 YAML에는 다음을 둔다.
 
-- `arm_a`/`arm_b`의 실제 좌우 의미와 고정 장착 변환
+- `left_arm`/`right_arm`의 고정 장착 변환
 - 모터 ID, 엔코더 영점, 회전 부호, radian 변환
 - 충돌로 검증한 soft/hard position limit
 - 속도·가속도·전류 제한과 검증 상태
@@ -98,7 +99,7 @@ URDF만 있다고 sim-to-real이 완성되는 것은 아니다. 정확한 장착
 
 ## 다음 실측 순서
 
-1. 팔 A/B에 물리 라벨을 붙이고 각 ID를 한 번에 하나씩 아주 작은 각도로 움직여 역할과 부호를 확인한다.
+1. 내일 사용자가 현장에 있을 때 화면·E-stop을 준비하고 각 팔을 한 번에 하나씩 ±3° 이내로 움직여 역할과 부호를 확인한다.
 2. 홈 자세에서 엔코더 원시값을 기록하고, 기구 충돌 직전이 아닌 여유 있는 soft limit을 설정한다.
 3. 링크 길이, 팔 베이스 장착 좌표, 카메라 장착 좌표를 측정한다.
 4. 링크/브래킷/카메라/배터리 질량과 무게중심을 측정한다.

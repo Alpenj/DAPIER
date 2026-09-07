@@ -1,5 +1,7 @@
 ﻿# 최신 JDcobot ROS2 Rollout Adapter·독립 Safety Supervisor 조사 — 2ARM_ROBOT
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../../config/hardware_roles.json`](../../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-21
 대상: JDcobot 양팔(정확한 ROS2 driver/API는 현장 확인 전), TurtleBot3 Waffle Pi/XM430-W210-T, Astra Pro, ACT baseline, RTX 5050, 4인·6주·추가 예산 0원
 

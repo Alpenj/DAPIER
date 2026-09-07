@@ -14,7 +14,7 @@ import time
 from typing import Sequence
 
 from mobile_dual_so101 import ACTION_NAMES, actuator_targets_from_qpos
-from shoe_task import OBSERVATION_NAMES, ShoeTaskConfig, ShoeTaskEnv
+from shoe_task import OBSERVATION_NAMES, ShoeTaskConfig, ShoeTaskEnv, UnsafeActionError
 from sim_policy import (
     ActionChunkExecutor,
     EXECUTION_MODES,
@@ -64,6 +64,7 @@ def _rollout_worker(
     hardware_execution = False
     final_shoe_y = 0.0
     policy_queries = 0
+    unsafe_rejections = 0
     for episode_index in range(episode_count):
         observation, reset_info = env.reset(
             seed=worker_id * 100_000 + episode_index
@@ -86,7 +87,14 @@ def _rollout_worker(
             actuator_targets = policy_action_to_actuator_targets(
                 env.model, policy_action
             )
-            observation, _, _, _, info = env.step(actuator_targets)
+            try:
+                observation, _, _, _, info = env.step(actuator_targets)
+            except UnsafeActionError as error:
+                unsafe_rejections += 1
+                hardware_execution = hardware_execution or bool(
+                    error.assessment.hardware_execution
+                )
+                break
             hardware_execution = hardware_execution or bool(
                 info["hardware_execution"]
             )
@@ -102,6 +110,7 @@ def _rollout_worker(
         "episodes": episode_count,
         "transitions": transitions,
         "policy_queries": policy_queries,
+        "unsafe_rejections": unsafe_rejections,
         "observation_checksum": observation_checksum,
         "finite_observations": finite,
         "hardware_execution": hardware_execution,
@@ -159,6 +168,7 @@ def run_parallel_rollouts(
 
     transitions = sum(int(worker["transitions"]) for worker in workers)
     policy_queries = sum(int(worker["policy_queries"]) for worker in workers)
+    unsafe_rejections = sum(int(worker["unsafe_rejections"]) for worker in workers)
     pids = {int(worker["pid"]) for worker in workers}
     finite = all(bool(worker["finite_observations"]) for worker in workers)
     hardware_execution = any(
@@ -183,6 +193,7 @@ def run_parallel_rollouts(
         "chunk_size": config.chunk_size,
         "n_action_steps": config.n_action_steps,
         "policy_queries": policy_queries,
+        "unsafe_rejections": unsafe_rejections,
         "wall_seconds": wall_seconds,
         "transitions_per_second": transitions / wall_seconds,
         "independent_processes": True,

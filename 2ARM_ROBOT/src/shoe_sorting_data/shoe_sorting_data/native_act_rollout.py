@@ -1,6 +1,7 @@
-"""Dry-run bridge from DAPIER-native ACT inference to the Stage 5 supervisor.
+"""Bridge DAPIER-native ACT inference through safety to an SO-101 command.
 
-This module has no ROS imports and cannot publish hardware commands.
+This module never opens a serial port.  A caller may inject an already-open,
+identity-checked bus only after the supervisor explicitly authorizes hardware.
 """
 
 from __future__ import annotations
@@ -8,13 +9,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 import time
 from typing import Any, Mapping
 
 from shoe_sorting_data.dapier_native_act import infer, run_smoke
 from shoe_sorting_data.rollout_safety import (
-    JDcobotRos2DryRunAdapter,
     SafetyContractError,
     SafetySupervisor,
     build_rollout_safety_fixture,
@@ -22,6 +23,78 @@ from shoe_sorting_data.rollout_safety import (
 
 
 NATIVE_ACT_ROLLOUT_SCHEMA_VERSION = "dapier.native-act-rollout.v0.1"
+SO101_MOTOR_NAMES = (
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll",
+    "gripper",
+)
+
+
+class SO101RightArmAdapter:
+    """Translate one approved 12-D policy action to the physical right arm."""
+
+    def __init__(self, *, left_hold_tolerance: float = 1e-6) -> None:
+        if not math.isfinite(left_hold_tolerance) or left_hold_tolerance < 0:
+            raise ValueError("left_hold_tolerance must be finite and non-negative")
+        self.left_hold_tolerance = left_hold_tolerance
+
+    def dispatch(
+        self,
+        decision: Mapping[str, Any],
+        measured_action: list[float],
+        *,
+        bus: Any | None = None,
+    ) -> dict[str, Any]:
+        action = decision.get("approved_action")
+        if decision.get("safety_passed") is not True or not isinstance(action, list):
+            return {
+                "status": "NOT_DISPATCHED",
+                "published": False,
+                "reason": "supervisor_rejected",
+                "executed_action": None,
+            }
+        if len(action) != 12 or len(measured_action) != 12:
+            raise SafetyContractError("SO-101 policy and measured actions must contain 12 values")
+        if any(
+            not math.isfinite(float(value))
+            for value in (*action, *measured_action)
+        ):
+            raise SafetyContractError("SO-101 actions must be finite")
+        if any(
+            abs(float(target) - float(current)) > self.left_hold_tolerance
+            for target, current in zip(action[:6], measured_action[:6], strict=True)
+        ):
+            raise SafetyContractError("right-arm phase requires the left arm to hold its measured pose")
+        gripper = float(action[11])
+        if not 0.0 <= gripper <= 1.0:
+            raise SafetyContractError("right gripper action must be normalized to [0, 1]")
+        command = {
+            name: (math.degrees(float(value)) if index < 5 else gripper * 100.0)
+            for index, (name, value) in enumerate(
+                zip(SO101_MOTOR_NAMES, action[6:12], strict=True)
+            )
+        }
+        if bus is None:
+            return {
+                "status": "SIMULATED_ONLY",
+                "published": False,
+                "reason": "no_motor_bus_injected",
+                "would_write": {"register": "Goal_Position", "values": command},
+                "executed_action": None,
+            }
+        if decision.get("hardware_dispatch_authorized") is not True:
+            raise SafetyContractError("supervisor did not authorize hardware dispatch")
+        bus.sync_write("Goal_Position", command, num_retry=2)
+        return {
+            "status": "DISPATCHED",
+            "published": True,
+            "reason": "supervisor_authorized_right_arm_step",
+            "executed_action": list(action),
+            "written": {"register": "Goal_Position", "values": command},
+        }
 
 
 def checkpoint_sha256(path: str | Path) -> str:
@@ -59,6 +132,11 @@ def evaluate_native_act_rollout(
     action_chunk = inference["action_chunk"]
     if not action_chunk or len(action_chunk[0]) != 12:
         raise ValueError("native ACT inference must return a non-empty 12-DoF action chunk")
+    measured_action = list(snapshot.get("measured_action", []))
+    if len(measured_action) != 12:
+        raise ValueError("right-arm rollout requires a 12-DoF measured action")
+    raw_policy_action = list(action_chunk[0])
+    phase_action = measured_action[:6] + raw_policy_action[6:]
     created_monotonic_ns = time.monotonic_ns()
     checkpoint_hash = checkpoint_sha256(checkpoint_path)
     episode_id = inference["episode_id"]
@@ -78,14 +156,19 @@ def evaluate_native_act_rollout(
         "source_frame_index": inference["frame_index"],
         "source_observation_monotonic_ns": snapshot.get("observation_monotonic_ns"),
         "created_monotonic_ns": created_monotonic_ns,
-        "action": list(action_chunk[0]),
+        "action": phase_action,
+        "raw_policy_action": raw_policy_action,
+        "phase_mask": "hold_left_execute_right",
     }
     snapshot_for_supervision = dict(snapshot)
     # ``now`` is the supervisor evaluation clock, not a sensor timestamp.  Set
     # it after inference so proposal freshness cannot be evaluated in the past.
     snapshot_for_supervision["now_monotonic_ns"] = created_monotonic_ns
     decision = supervisor.evaluate(proposal, snapshot_for_supervision)
-    adapter_result = JDcobotRos2DryRunAdapter(supervisor.config).dispatch(decision)
+    adapter_result = SO101RightArmAdapter().dispatch(
+        decision,
+        measured_action,
+    )
     return {
         "schema_version": NATIVE_ACT_ROLLOUT_SCHEMA_VERSION,
         "created_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),

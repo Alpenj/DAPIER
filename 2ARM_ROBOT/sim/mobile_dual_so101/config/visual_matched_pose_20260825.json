@@ -9,12 +9,24 @@
   "arm_mount_separation_m": 0.20,
   "lidar_installed": false,
   "original_rgb_camera_installed": false,
-  "front_depth_camera": {
-    "identity_status": "AADJA1300GX observed as Orbbec Astra family; exact enclosure unmeasured",
-    "assumed_center_m": [0.120, 0.0, 0.20],
-    "assumed_size_m": [0.040, 0.165, 0.048],
-    "assumed_mass_kg": 0.310,
+  "workspace_depth_camera": {
+    "identity_status": "HP-ASC-H201 USB PID 0x0173; official eYs3D mapping HYPATIA2/R77",
+    "urdf_source": "eYs3D/eys3d-ros2 eys3d_R77.urdf.xacro",
+    "mount_datum_m": [0.120, 0.0, 0.20],
+    "collision_size_m": [0.0255, 0.090, 0.025],
+    "collision_origin_m": [-0.00805, 0.0, 0.0],
+    "mass_kg": 0.096,
+    "fov_status": "provisional until mounted CameraInfo is measured",
     "down_tilt_deg": 10.0
+  },
+  "tower_front_slam_depth_camera": {
+    "identity_status": "Orbbec Astra S",
+    "optical_center_m": [0.076, 0.0, 0.093],
+    "body_center_m": [0.055, 0.0, 0.093],
+    "collision_size_m": [0.040, 0.165, 0.048],
+    "mass_kg": 0.310,
+    "view": "forward level",
+    "placement": "centered on the TurtleBot3 front camera bracket"
   },
   "action_order": [
     "left_shoulder_pan",

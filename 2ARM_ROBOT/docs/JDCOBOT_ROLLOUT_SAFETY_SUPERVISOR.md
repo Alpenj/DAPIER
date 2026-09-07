@@ -1,5 +1,8 @@
 ﻿# JDcobot rollout adapter · 독립 safety supervisor
 
+> **Legacy dry-run:** safety 개념 참고용이며 현재 SO-101 driver가 아니다. 현행 장비 역할은
+> `../config/hardware_roles.json`, 실행 모델은 `../sim/mobile_dual_so101`을 따른다.
+
 확인일: 2026-08-21
 단계: 5/5
 현재 범위: policy proposal → 독립 supervisor → ROS2-shaped dry-run envelope와 fault trace

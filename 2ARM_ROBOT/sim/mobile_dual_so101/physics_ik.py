@@ -22,7 +22,17 @@ import numpy as np
 PROJECT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from collision_guard import check_bimanual_path  # noqa: E402
+from collision_guard import (  # noqa: E402
+    REQUIRED_BASE_COLLISION_GEOM_NAMES,
+    REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES,
+    REQUIRED_FLOOR_COLLISION_GEOM_NAMES,
+    REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES,
+    REQUIRED_RGBD_COLLISION_GEOM_NAMES,
+    REQUIRED_TOWER_SUPPORT_COLLISION_GEOM_NAMES,
+    _collision_geoms_for_arm,
+    _same_arm_geom_pairs,
+    check_bimanual_path,
+)
 from mobile_dual_so101 import ACTION_NAMES  # noqa: E402
 
 
@@ -41,6 +51,7 @@ class IKResult:
     converged: bool
     iterations: int
     residual_m_by_side: dict[str, float]
+    tool_axis_error_rad_by_side: dict[str, float]
     planning_qpos_writes: int
     runtime_qpos_writes: int = 0
     hardware_execution: bool = False
@@ -51,12 +62,16 @@ class MotionLimits:
     max_velocity_rad_s: float = 0.50
     max_acceleration_rad_s2: float = 1.50
     max_jerk_rad_s3: float = 8.0
+    max_tracking_error_rad: float = 0.10
+    max_final_tracking_error_rad: float = 0.02
 
     def validate(self) -> None:
         values = (
             self.max_velocity_rad_s,
             self.max_acceleration_rad_s2,
             self.max_jerk_rad_s3,
+            self.max_tracking_error_rad,
+            self.max_final_tracking_error_rad,
         )
         if not all(math.isfinite(value) and value > 0.0 for value in values):
             raise ValueError("motion limits must be finite and positive")
@@ -162,18 +177,34 @@ def solve_bimanual_position_ik(
     start_action_rad: Sequence[float],
     targets_m: Mapping[str, Sequence[float]],
     *,
+    site_names: Mapping[str, str] | None = None,
+    tool_axis_targets: Mapping[str, Sequence[float]] | None = None,
+    tool_axis_weight_m: float = 0.05,
+    tool_axis_tolerance_rad: float = math.radians(2.0),
     damping: float = 0.02,
     tolerance_m: float = 5e-4,
     max_iterations: int = 100,
     max_joint_step_rad: float = 0.05,
 ) -> IKResult:
-    """Solve one or both gripper XYZ targets using bounded DLS IK."""
+    """Solve arm-site XYZ and optional local-X direction using bounded DLS IK."""
 
     if not targets_m or any(side not in ("left", "right") for side in targets_m):
         raise ValueError("targets_m must contain left and/or right")
-    scalars = (damping, tolerance_m, max_joint_step_rad)
+    if site_names is not None and set(site_names) != set(targets_m):
+        raise ValueError("site_names must contain the same sides as targets_m")
+    if tool_axis_targets is not None and not set(tool_axis_targets).issubset(
+        targets_m
+    ):
+        raise ValueError("tool_axis_targets sides must also have position targets")
+    scalars = (
+        damping,
+        tolerance_m,
+        max_joint_step_rad,
+        tool_axis_weight_m,
+        tool_axis_tolerance_rad,
+    )
     if not all(math.isfinite(value) and value > 0.0 for value in scalars):
-        raise ValueError("IK damping, tolerance, and step must be positive")
+        raise ValueError("IK scalar parameters must be finite and positive")
     if max_iterations <= 0:
         raise ValueError("max_iterations must be positive")
 
@@ -187,6 +218,21 @@ def solve_bimanual_position_ik(
         raise ValueError("each IK target must contain XYZ")
     if any(not np.all(np.isfinite(target)) for target in targets.values()):
         raise ValueError("IK targets must be finite")
+    axis_targets = {
+        side: np.asarray(target, dtype=np.float64)
+        for side, target in (tool_axis_targets or {}).items()
+    }
+    if any(target.shape != (3,) for target in axis_targets.values()):
+        raise ValueError("each tool axis target must contain XYZ")
+    if any(
+        not np.all(np.isfinite(target)) or np.linalg.norm(target) <= 1e-12
+        for target in axis_targets.values()
+    ):
+        raise ValueError("tool axis targets must be finite non-zero vectors")
+    axis_targets = {
+        side: target / np.linalg.norm(target)
+        for side, target in axis_targets.items()
+    }
 
     actuator_offsets = {"left": 0, "right": 6}
     actuator_ids = np.asarray(
@@ -202,12 +248,14 @@ def solve_bimanual_position_ik(
     selected_ranges = model.actuator_ctrlrange[actuator_ids]
     site_ids = {
         side: mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_SITE, f"{side}_gripperframe"
+            model,
+            mujoco.mjtObj.mjOBJ_SITE,
+            site_names[side] if site_names is not None else f"{side}_gripperframe",
         )
         for side in sides
     }
     if min(site_ids.values()) < 0:
-        raise RuntimeError("gripperframe site is missing")
+        raise RuntimeError("requested IK site is missing")
 
     planning_data = mujoco.MjData(model)
     mujoco.mj_resetData(model, planning_data)
@@ -215,6 +263,7 @@ def solve_bimanual_position_ik(
     converged = False
     iterations = 0
     residuals: dict[str, float] = {}
+    axis_errors: dict[str, float] = {}
 
     for iteration in range(max_iterations + 1):
         _set_planning_action(model, planning_data, action, qpos_addresses)
@@ -227,7 +276,20 @@ def solve_bimanual_position_ik(
             side: float(np.linalg.norm(error))
             for side, error in zip(sides, errors, strict=True)
         }
-        if max(residuals.values()) <= tolerance_m:
+        current_axes = {
+            side: planning_data.site_xmat[site_ids[side]].reshape(3, 3)[:, 0]
+            for side in axis_targets
+        }
+        axis_errors = {
+            side: math.acos(
+                float(np.clip(np.dot(current_axes[side], target), -1.0, 1.0))
+            )
+            for side, target in axis_targets.items()
+        }
+        if max(residuals.values()) <= tolerance_m and (
+            not axis_errors
+            or max(axis_errors.values()) <= tool_axis_tolerance_rad
+        ):
             converged = True
             iterations = iteration
             break
@@ -235,19 +297,30 @@ def solve_bimanual_position_ik(
             iterations = iteration
             break
 
-        jacobian = np.zeros((3 * len(sides), len(actuator_ids)), dtype=np.float64)
+        jacobian_rows = []
+        residual_rows = []
         for side_index, side in enumerate(sides):
             position_jacobian = np.zeros((3, model.nv), dtype=np.float64)
+            rotation_jacobian = np.zeros((3, model.nv), dtype=np.float64)
             mujoco.mj_jacSite(
                 model,
                 planning_data,
                 position_jacobian,
-                None,
+                rotation_jacobian,
                 site_ids[side],
             )
-            row = slice(3 * side_index, 3 * side_index + 3)
-            jacobian[row, :] = position_jacobian[:, selected_dofs]
-        residual = np.concatenate(errors)
+            jacobian_rows.append(position_jacobian[:, selected_dofs])
+            residual_rows.append(errors[side_index])
+            if side in axis_targets:
+                jacobian_rows.append(
+                    tool_axis_weight_m * rotation_jacobian[:, selected_dofs]
+                )
+                residual_rows.append(
+                    tool_axis_weight_m
+                    * np.cross(current_axes[side], axis_targets[side])
+                )
+        jacobian = np.vstack(jacobian_rows)
+        residual = np.concatenate(residual_rows)
         regularized = jacobian @ jacobian.T + damping**2 * np.eye(len(residual))
         joint_delta = jacobian.T @ np.linalg.solve(regularized, residual)
         action[actuator_ids] += np.clip(
@@ -262,6 +335,7 @@ def solve_bimanual_position_ik(
         converged=converged,
         iterations=iterations,
         residual_m_by_side=residuals,
+        tool_axis_error_rad_by_side=axis_errors,
         planning_qpos_writes=planning_writes,
     )
 
@@ -330,6 +404,21 @@ def _combined_center_of_mass(model: mujoco.MjModel, data: mujoco.MjData) -> np.n
 
 def _forbidden_contact_count(model: mujoco.MjModel, data: mujoco.MjData) -> int:
     result = 0
+    same_arm_pairs = {
+        frozenset(pair)
+        for side in ("left", "right")
+        for pair in _same_arm_geom_pairs(
+            model, _collision_geoms_for_arm(model, side)
+        )
+    }
+    protected_structures = {
+        *REQUIRED_BASE_COLLISION_GEOM_NAMES,
+        *REQUIRED_FLOOR_COLLISION_GEOM_NAMES,
+        *REQUIRED_RGBD_COLLISION_GEOM_NAMES,
+        *REQUIRED_TOWER_SUPPORT_COLLISION_GEOM_NAMES,
+        *REQUIRED_PRINTED_MOUNT_COLLISION_GEOM_NAMES,
+        *REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES,
+    }
     for contact_index in range(data.ncon):
         contact = data.contact[contact_index]
         geom_ids = (int(contact.geom1), int(contact.geom2))
@@ -352,12 +441,11 @@ def _forbidden_contact_count(model: mujoco.MjModel, data: mujoco.MjData) -> int:
             body_names[0].startswith("right_") and body_names[1].startswith("left_")
         )
         arm_structure = any(
-            name.startswith(("left_", "right_")) for name in body_names
-        ) and any(
-            name == "depth_camera_collision" or name.startswith("tower_")
-            for name in geom_names
+            body_names[index].startswith(("left_", "right_"))
+            and geom_names[1 - index] in protected_structures
+            for index in (0, 1)
         )
-        if left_right or arm_structure:
+        if left_right or frozenset(geom_ids) in same_arm_pairs or arm_structure:
             result += 1
     return result
 
@@ -382,6 +470,7 @@ def execute_physics_trajectory(
     model: mujoco.MjModel,
     trajectory: SepticJointTrajectory,
     *,
+    initial_data: mujoco.MjData | None = None,
     pre_settle_time_s: float = 0.50,
     settle_time_s: float = 0.25,
     required_clearance_m: float = 0.030,
@@ -403,15 +492,23 @@ def execute_physics_trajectory(
             f"clearance={collision.minimum_clearance_m:.6f} m"
         )
 
-    data = initialize_physics_state(model, trajectory.start_rad)
     _, qpos_addresses, dof_addresses = _actuated_addresses(model)
+    data = initial_data or initialize_physics_state(model, trajectory.start_rad)
+    if initial_data is not None:
+        if (
+            data.qpos.shape != (model.nq,)
+            or data.qvel.shape != (model.nv,)
+            or data.ctrl.shape != (model.nu,)
+        ):
+            raise ValueError("initial_data dimensions do not match model")
+        if not np.all(np.isfinite(data.qpos)):
+            raise ValueError("initial_data contains non-finite qpos")
+        if np.max(np.abs(data.qpos[qpos_addresses] - trajectory.start_rad)) > 0.10:
+            raise ValueError("initial_data is not near trajectory start")
     timestep = float(model.opt.timestep)
     pre_settle_steps = math.ceil(pre_settle_time_s / timestep)
     motion_steps = max(1, math.ceil(trajectory.duration_s / timestep))
     settle_steps = math.ceil(settle_time_s / timestep)
-    for _ in range(pre_settle_steps):
-        data.ctrl[:] = trajectory.start_rad
-        mujoco.mj_step(model, data)
     previous_acceleration = data.qacc[dof_addresses].copy()
     maximum_tracking = 0.0
     maximum_velocity = 0.0
@@ -423,12 +520,20 @@ def execute_physics_trajectory(
     maximum_force_ratio = 0.0
     minimum_support_margin = math.inf
     forbidden_contacts = 0
+    finite_state = True
 
-    for step_index in range(motion_steps + settle_steps):
-        time_s = min((step_index + 1) * timestep, trajectory.duration_s)
-        target, target_velocity, target_acceleration, target_jerk = (
-            trajectory.sample(time_s)
-        )
+    for step_index in range(pre_settle_steps + motion_steps + settle_steps):
+        motion_step = step_index - pre_settle_steps
+        if motion_step < 0:
+            target = trajectory.start_rad
+            target_velocity = target_acceleration = target_jerk = np.zeros(
+                model.nu
+            )
+        else:
+            time_s = min((motion_step + 1) * timestep, trajectory.duration_s)
+            target, target_velocity, target_acceleration, target_jerk = (
+                trajectory.sample(time_s)
+            )
         data.ctrl[:] = target
         mujoco.mj_step(model, data)
 
@@ -468,14 +573,14 @@ def execute_physics_trajectory(
             _signed_support_margin(_combined_center_of_mass(model, data)[:2]),
         )
         forbidden_contacts += _forbidden_contact_count(model, data)
+        finite_state = finite_state and bool(
+            np.all(np.isfinite(data.qpos))
+            and np.all(np.isfinite(data.qvel))
+            and np.all(np.isfinite(data.qacc))
+        )
 
     final_error = float(
         np.max(np.abs(data.qpos[qpos_addresses] - trajectory.goal_rad))
-    )
-    finite_state = bool(
-        np.all(np.isfinite(data.qpos))
-        and np.all(np.isfinite(data.qvel))
-        and np.all(np.isfinite(data.qacc))
     )
     numerical_tolerance = 1e-3
     dynamics_limit_violations = []
@@ -488,6 +593,25 @@ def execute_physics_trajectory(
         dynamics_limit_violations.append("acceleration")
     if maximum_jerk > trajectory.limits.max_jerk_rad_s3 + numerical_tolerance:
         dynamics_limit_violations.append("jerk")
+    if maximum_tracking > trajectory.limits.max_tracking_error_rad:
+        dynamics_limit_violations.append("tracking_error")
+    if final_error > trajectory.limits.max_final_tracking_error_rad:
+        dynamics_limit_violations.append("final_tracking_error")
+    if (
+        maximum_target_velocity
+        > trajectory.limits.max_velocity_rad_s + numerical_tolerance
+    ):
+        dynamics_limit_violations.append("target_velocity")
+    if (
+        maximum_target_acceleration
+        > trajectory.limits.max_acceleration_rad_s2 + numerical_tolerance
+    ):
+        dynamics_limit_violations.append("target_acceleration")
+    if (
+        maximum_target_jerk
+        > trajectory.limits.max_jerk_rad_s3 + numerical_tolerance
+    ):
+        dynamics_limit_violations.append("target_jerk")
     dynamics_limits_satisfied = not dynamics_limit_violations
     simulation_motion_accepted = (
         finite_state

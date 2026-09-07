@@ -45,7 +45,19 @@ UNSAFE_BIMANUAL_TARGET = (
 
 
 class SimEpisodeTest(unittest.TestCase):
-    def test_records_synchronized_rgbd_and_12_axis_executed_action(self) -> None:
+    def test_acceptance_requires_continuous_terminal_carry_evidence(self) -> None:
+        self.assertTrue(
+            sim_episode._continuous_carry_success([False, True, True], True)
+        )
+        self.assertFalse(
+            sim_episode._continuous_carry_success([False, True, False, True], True)
+        )
+        self.assertFalse(
+            sim_episode._continuous_carry_success([False, True, True], False)
+        )
+        self.assertFalse(sim_episode._continuous_carry_success([False, False], True))
+
+    def test_records_four_synchronized_cameras_and_12_axis_executed_action(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "episode"
             manifest_path = record_sim_episode(
@@ -65,6 +77,7 @@ class SimEpisodeTest(unittest.TestCase):
             )
             self.assertEqual(manifest["recording"]["sample_count"], 3)
             self.assertEqual(manifest["recording"]["expected_period_ns"], 50_000_000)
+            self.assertEqual(tuple(manifest["recording"]["camera_streams"]), sim_episode.CAMERA_STREAMS)
             self.assertEqual(manifest["outcome"]["status"], "recorded")
             self.assertFalse(manifest["outcome"]["success"])
             self.assertEqual(manifest["provenance"]["data_origin"], "synthetic")
@@ -84,6 +97,16 @@ class SimEpisodeTest(unittest.TestCase):
                 self.assertEqual(len(sample["action"]["right_arm"]), 5)
                 self.assertEqual(len(sample["action"]["left_gripper"]), 1)
                 self.assertFalse(sample["simulation"]["hardware_execution"])
+                self.assertFalse(sample["simulation"]["task_success"])
+                self.assertFalse(sample["simulation"]["carry_supported"])
+                self.assertFalse(sample["simulation"]["bilateral_gripper_contact"])
+                self.assertFalse(sample["simulation"]["shoe_gripper_attachment"])
+                self.assertEqual(set(sample["cameras"]), set(sim_episode.CAMERA_STREAMS))
+                front = read_camera_payload(
+                    output,
+                    "front_rgb",
+                    sample["cameras"]["front_rgb"]["payload"],
+                )
                 rgb = read_camera_payload(
                     output,
                     "workspace_rgb",
@@ -94,8 +117,15 @@ class SimEpisodeTest(unittest.TestCase):
                     "workspace_depth",
                     sample["cameras"]["workspace_depth"]["payload"],
                 )
+                left = read_camera_payload(
+                    output,
+                    "left_gripper_rgb",
+                    sample["cameras"]["left_gripper_rgb"]["payload"],
+                )
+                self.assertEqual((front.width, front.height, front.encoding), (16, 12, "rgb8"))
                 self.assertEqual((rgb.width, rgb.height, rgb.encoding), (16, 12, "rgb8"))
                 self.assertEqual((depth.width, depth.height, depth.encoding), (16, 12, "32FC1"))
+                self.assertEqual((left.width, left.height, left.encoding), (16, 12, "rgb8"))
                 self.assertEqual(sample["cameras"]["workspace_rgb"]["frame_id"], index)
                 self.assertTrue(sample["simulation"]["collision_guard"]["safe"])
 
@@ -136,17 +166,20 @@ class SimEpisodeTest(unittest.TestCase):
                     action_source=lambda _index, _observation: UNSAFE_BIMANUAL_TARGET,
                 )
             self.assertFalse(output.exists())
+            self.assertEqual(
+                list(Path(temp_dir).glob(".unsafe.staging-*")), []
+            )
             self.assertLess(
                 raised.exception.assessment.minimum_clearance_m,
                 0.03,
             )
 
-    def test_manifest_outcome_matches_last_recorded_frame(self) -> None:
+    def test_terminal_success_without_prior_carry_is_not_accepted(self) -> None:
         real_task_metrics = sim_episode.task_metrics
 
         def boundary_metrics(model, data):
             metrics = dict(real_task_metrics(model, data))
-            metrics["success"] = float(data.time) >= 0.15
+            metrics["success"] = float(data.time) >= 0.10
             return metrics
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -172,11 +205,8 @@ class SimEpisodeTest(unittest.TestCase):
                     encoding="utf-8"
                 ).splitlines()
             ]
-            self.assertFalse(samples[-1]["simulation"]["task_success"])
-            self.assertEqual(
-                manifest["outcome"]["success"],
-                samples[-1]["simulation"]["task_success"],
-            )
+            self.assertTrue(samples[-1]["simulation"]["task_success"])
+            self.assertFalse(manifest["outcome"]["success"])
 
     def test_interrupted_recording_can_retry_same_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -188,13 +218,14 @@ class SimEpisodeTest(unittest.TestCase):
                 height=12,
             )
             with patch.object(
-                sim_episode,
-                "_render_rgbd",
+                sim_episode.MuJoCoMultiCameraAdapter,
+                "capture",
                 side_effect=RuntimeError("render interrupted"),
             ):
                 with self.assertRaisesRegex(RuntimeError, "render interrupted"):
                     record_sim_episode(output, config)
             self.assertFalse(output.exists())
+            self.assertEqual(list(Path(temp_dir).iterdir()), [])
 
             manifest_path = record_sim_episode(output, config)
             self.assertEqual(manifest_path, output / "episode_manifest.json")

@@ -1,6 +1,7 @@
 ﻿# DAPIER 관점: DYNA Dyna-2 인프라와 SLIM-0.5B의 이중팔 로봇 적용 조사
 
 > 확인일: 2026-08-20 (KST)
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../config/hardware_roles.json`](../config/hardware_roles.json)을 따른다.
 > 조사 대상: [DYNA — *Training Dyna-2 at million-hour scale, repeatably*](https://www.dyna.co/research/dyna-2-infrastructure), [SLIM 프로젝트 페이지](https://kzz1031.github.io/slim-project-page/) 및 해당 페이지가 직접 연결한 저자 원문·공개 구현
 > 작성 원칙: **[사실]**은 링크한 1차 출처의 명시 내용, **[추론/권고]**는 그 사실을 이중팔 프로젝트에 적용해 도출한 판단이다. DYNA의 성능·규모 수치는 회사의 자체 보고이며 독립 재현 결과가 아니다.
 

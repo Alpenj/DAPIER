@@ -1,5 +1,9 @@
 # JDcobot200 양팔 MuJoCo 기준 모델
 
+> **Legacy reference:** 현재 실물은 SO-101 두 팔이다. 이 모델을 실물 명령·관절 제한·카메라
+> 역할의 근거로 사용하지 않는다. 현재 정본은 `2ARM_ROBOT/config/hardware_roles.json`과
+> `sim/mobile_dual_so101`이다.
+
 이 폴더는 강사 저장소의 JDcobot200 단일 팔 모델을 출발점으로, DAPIER의 양팔 제어 의미를
 확인하기 위한 시뮬레이션 전용 작업 공간이다. ROS 2 publisher, USB serial, Dynamixel 명령 경로는
 포함하지 않는다.
