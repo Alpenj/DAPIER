@@ -3,6 +3,10 @@
 이 폴더는 내가 RoboTwin 2.0을 Dual SO-101에 적용하며 확인한 코드와 기록의 정본이다.
 `~/RoboTwin`은 공식 upstream 실행 환경이고, 재현할 변경은 이 폴더의 installer·overlay·patch에만 둔다.
 
+> 2026-09-07 개발 방향은 [공통 개발 기준](../docs/DEVELOPMENT_CONTRACT.md)을 따른다.
+> 이 폴더는 upstream 의존 overlay이며, 완성된 독립 런타임은 아니다. RoboTwin은 비교·
+> synthetic data 생성 경로로 남기고 DAPIER의 IL+IK·데이터·실행 계약은 별도로 소유한다.
+
 ## 현재 확인한 범위
 
 2026-09-05에 `dapier_handover_block` 한 episode를 SAPIEN 물리 접촉으로 끝까지 실행했다.
