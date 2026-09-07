@@ -17,6 +17,16 @@ DAPIER에는 직접 실행하고 확인한 코드, Markdown, 실습 결과만 �
 작업 전 기존 폴더 구조와 변경사항을 확인하고, 실제 검증 후 작은 단위로
 커밋한다. `record_id`는 `DAPIER-YYYY-MM-DD-short-topic` 형식을 사용한다.
 
+## 양팔 프로젝트 공통 개발 기준 — Codex·Hermes
+
+SO-101 양팔의 계획·구현·리뷰·실행 안내 전에
+[`2ARM_ROBOT/docs/DEVELOPMENT_CONTRACT.md`](2ARM_ROBOT/docs/DEVELOPMENT_CONTRACT.md)를
+읽는다. IL+IK+rule의 단계별 분담, Python/C++/C 책임, ROS2-free 실행 경계,
+양팔·카메라·sim-to-real 계약을 변경안에 적용한다. LeRobot/RoboTwin 실행 래퍼를
+완성된 개인화 런타임으로 안내하지 않는다. 로컬 원문 위치는
+`~/.config/dapier/dual_so101_project_sources.local.md`에 있으며 공개하지 않는다.
+원문·과거 문서와 현재 사용자 결정이 충돌하면 차이를 기록하고 현재 결정을 따른다.
+
 ## GitHub 및 Codex 에이전트 규칙
 
 - Codex cloud와 `scripts/cowork`를 사용하는 Mode A에서는 요청받은

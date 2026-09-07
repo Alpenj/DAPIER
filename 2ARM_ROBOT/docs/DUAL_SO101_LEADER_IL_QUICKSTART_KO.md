@@ -2,7 +2,11 @@
 
 실행 파일은 [`../scripts/dual_so101_il`](../scripts/dual_so101_il) 하나다. LeRobot 0.6의
 `bi_so_leader`, `bi_so_follower`, `lerobot-record`, `lerobot-train --policy.type=act`를
-그대로 호출한다. DAPIER가 별도 teleoperation framework를 다시 구현하지 않는다.
+그대로 호출하는 기존 수집·비교 경로다. 완성된 DAPIER 자체 실행기는 아니다.
+
+> 2026-09-07 개발 방향: [공통 개발 기준](DEVELOPMENT_CONTRACT.md)에 따라 DAPIER가
+> 데이터·학습·실행 흐름을 소유한다. 아래 LeRobot 경로는 기존 자료를 보존하고 비교하기 위한
+> 선택적 경로로 남기며, 이를 실행했다는 이유로 자체 양팔 IL+IK가 완성됐다고 기록하지 않는다.
 
 ## 장치 정본
 
