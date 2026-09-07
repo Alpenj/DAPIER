@@ -25,6 +25,17 @@ pick/place → 데이터와 정책 검증 → 실물 calibration** 순서로 진
 
 ## 저장소 구성
 
+### 기존 fork 통합
+
+나는 별도로 관리하던 두 fork를 같은 이름의 하위 폴더로 옮겨 보관한다.
+원본 코드·학습용 자산과 커밋 이력을 유지했으며, 이번 정리에서 실행 결과를
+새로 검증한 것은 아니다. 출처와 보존 브랜치는 [통합 기록](docs/FORK_MIGRATION_20260907_KO.md)에 남긴다.
+
+| 경로 | 원본 |
+|---|---|
+| [`deepThinkCar_mini/`](deepThinkCar_mini/) | JD-edu/deepThinkCar_mini에서 fork한 자율주행 실습 |
+| [`so101_imitation_learning/`](so101_imitation_learning/) | JD-edu/so101_imitation_learning에서 fork한 PyTorch·모방학습·MuJoCo 실습 |
+
 ### SO-101 주 작업
 
 | 경로 | 내용 |
