@@ -78,12 +78,24 @@ def load_episode(path: Path) -> dict[str, np.ndarray | int]:
         action = _joints(episode["action"], "action")
         if state.shape != action.shape or len(state) == 0:
             raise ValueError("state/action must have the same non-zero shape")
-        frequency = int(np.asarray(episode["additional_info/frequency"]).item())
-        if frequency <= 0:
-            raise ValueError("frequency must be positive")
-        if not np.allclose(action[:-1], state[1:], atol=1e-5):
+        raw_frequency = np.asarray(episode["additional_info/frequency"])
+        if raw_frequency.ndim != 0 or raw_frequency.dtype.kind not in "iuf":
+            raise ValueError("frequency must be a numeric scalar positive integer")
+        value = raw_frequency.item()
+        if (
+            not np.isfinite(value)
+            or value <= 0
+            or value != int(value)
+            or int(value) > np.iinfo(np.int64).max
+        ):
+            raise ValueError("frequency must be a finite positive int64 integer")
+        frequency = int(value)
+        if not np.allclose(action[:-1], state[1:], atol=1e-5, rtol=0):
             raise ValueError("RoboTwin action[t] must equal measured state[t+1]")
-        arm = np.c_[action[:, :5], action[:, 6:11]]
+        # Include the first measured state: action-only differences miss the
+        # initial transition and every transition in a single-frame episode.
+        trajectory = np.concatenate((state[:1], action), axis=0)
+        arm = np.c_[trajectory[:, :5], trajectory[:, 6:11]]
         if len(arm) > 1 and np.abs(np.diff(arm, axis=0)).max() > (
             MAX_ARM_VELOCITY_RAD_S / frequency + 1e-4
         ):
@@ -109,7 +121,7 @@ def load_episode(path: Path) -> dict[str, np.ndarray | int]:
 
 
 def convert(source: Path, output: Path) -> dict[str, object]:
-    if output.exists():
+    if output.exists() or output.is_symlink():
         raise FileExistsError(f"refusing to overwrite {output}")
     values = load_episode(source)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -119,7 +131,10 @@ def convert(source: Path, output: Path) -> dict[str, object]:
     try:
         with temporary.open("wb") as stream:
             np.savez_compressed(stream, **values)
-        temporary.replace(output)
+        # A same-directory hard link publishes complete bytes without replacing
+        # an output created by another writer after the initial existence check.
+        # Unsupported filesystems fail closed; never fall back to replace().
+        os.link(temporary, output)
     finally:
         temporary.unlink(missing_ok=True)
     report = {
@@ -141,7 +156,7 @@ def main() -> None:
     parser.add_argument("source", type=Path)
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
-    print(json.dumps(convert(args.source.resolve(), args.output.resolve()), indent=2))
+    print(json.dumps(convert(args.source.resolve(), args.output.absolute()), indent=2))
 
 
 if __name__ == "__main__":
