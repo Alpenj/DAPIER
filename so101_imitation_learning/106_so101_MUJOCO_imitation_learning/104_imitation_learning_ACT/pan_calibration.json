@@ -1,0 +1,9 @@
+{
+    "shoulder_pan": {
+        "id": 1,
+        "hw_range_min": 3562,
+        "hw_range_max": 857,
+        "sim_range_min": -1.9198621771937616,
+        "sim_range_max": 1.9198621771937634
+    }
+}
