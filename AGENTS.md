@@ -46,6 +46,21 @@ SO-101 양팔의 계획·구현·리뷰·실행 안내 전에
   남긴다.
 - 변경 목적, 검증 명령, 결과를 커밋 메시지 또는 PR 본문에 남긴다.
 
+## 2026-09-07 main 통합 이후 업로드 기준
+
+- 새 작업은 최신 `origin/main`에서 writer별 작업 브랜치와 별도 worktree를 만든다.
+  Mode A는 기존 `scripts/cowork start <task>-<writer>-<date> origin/main`을 사용한다.
+  Mode B의 앱 관리 worktree 규칙은 그대로 적용한다.
+- 업로드 저장소는 `Alpenj/DAPIER`, PR의 base는 `main`이다. 병합된 mission/followup
+  브랜치를 새 PR의 base로 재사용하지 않는다. 작업 브랜치에 normal push한다.
+- 한 writer의 기존 detached/WIP는 먼저 이름 있는 브랜치로 보존한다. 이전 main에서
+  시작한 미완료 작업에 최신 main을 강제 적용하거나 reset/stash/clean하지 않는다.
+  후속 PR에서 최신 main과의 겹치는 변경을 검증한다.
+- 사용자가 정리를 요청하면 main에 모든 커밋이 포함되고 미커밋·미푸시 작업이 없는
+  브랜치와 clean worktree만 정리한다. 고유 커밋, dirty worktree, 진행 중 writer는 보존한다.
+- 구체적인 시작·업로드 명령은 [GitHub 협업 안내](docs/CHATGPT_PRO_CODEX_COWORK_KO.md)의
+  main 통합 이후 절을 따른다. 데이터·calibration·개인 설정은 기존 공개 금지 규칙을 유지한다.
+
 ## 모든 에이전트의 실물 하드웨어 안전 경계
 
 이 절의 조건은 세션의 시작 디렉터리와 무관하게 항상 적용한다. 하위 경로의
