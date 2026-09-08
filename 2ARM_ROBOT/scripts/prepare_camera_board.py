@@ -19,10 +19,16 @@ DEFINITION = {
 }
 
 
+def make_board():
+    board = cv2.aruco.CharucoBoard((DEFINITION["squares_x"], DEFINITION["squares_y"]),
+        DEFINITION["square_length_m"], DEFINITION["marker_length_m"],
+        cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, DEFINITION["dictionary"])))
+    board.setLegacyPattern(DEFINITION["legacy_pattern"])
+    return board
+
+
 def target():
-    board = cv2.aruco.CharucoBoard((10, 7), 0.025, 0.018,
-                                  cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
-    board.setLegacyPattern(False)
+    board = make_board()
     page = Image.new("L", (2970, 2100), 255)  # 10 pixels/mm = 254 DPI, exact A4.
     page.paste(Image.fromarray(board.generateImage((2500, 1750), marginSize=0, borderBits=1)), (235, 175))
     draw = ImageDraw.Draw(page)
