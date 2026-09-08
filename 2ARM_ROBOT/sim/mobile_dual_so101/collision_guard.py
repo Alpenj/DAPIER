@@ -148,7 +148,13 @@ def _required_collision_geoms_for_arm(
 ) -> tuple[int, ...]:
     geoms = _collision_geoms_for_arm(model, side)
     observed = Counter(_body_name_for_geom(model, geom_id) for geom_id in geoms)
-    for suffix, expected_count in REQUIRED_ARM_COLLISION_GEOM_COUNTS.items():
+    required = REQUIRED_ARM_COLLISION_GEOM_COUNTS
+    if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_pgripper_gear") >= 0:
+        required = {**required, "gripper": 1, "pgripper_jaw_1": 1, "pgripper_jaw_2": 1}
+        del required["moving_jaw_so101_v1"]
+        for suffix in ("pgripper_housing", "pgripper_pad_1", "pgripper_pad_2"):
+            _required_active_geom_id(model, f"{side}_{suffix}")
+    for suffix, expected_count in required.items():
         body_name = f"{side}_{suffix}"
         if observed[body_name] < expected_count:
             raise RuntimeError(

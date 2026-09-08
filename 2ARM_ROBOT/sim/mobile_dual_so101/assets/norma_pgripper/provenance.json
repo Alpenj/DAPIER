@@ -1,0 +1,26 @@
+{
+  "repository": "https://github.com/norma-core/norma-core",
+  "commit": "b935fc4b887e576538921b15630a30db22759ec8",
+  "source_directory": "hardware/elrobot/simulation",
+  "hardware_license": "Apache-2.0",
+  "standalone_hardware_directory": "hardware/pgripper",
+  "adaptation": "ElRobot gripper subtree; not an upstream SO-101 PGripper URDF",
+  "sha256": {
+    "elrobot_follower.urdf": "eb355948d0e02268587491123ba9c4704e70bb1782298d86bcad1280ff86d1cb",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "assets/Gripper_Base_v1_1.stl": "ff0c113090056f6211368eb0a20138caef245c7e490793821e85c92c53301900",
+    "assets/Gripper_Gear_v1_1.stl": "0c6e45bbd7115b1e6a346af11e5ee331d2eaebb2780b51f8c519893e14bff3a5",
+    "assets/Gripper_Jaw_01_v1_1.stl": "3efe42f96b3cbe4b9c5db59fb3c3f395647b098f1a93de98889672dc07ecaaa1",
+    "assets/Gripper_Jaw_02_v1_1.stl": "d615ada9f3bee9d44b75cefbbbe1fb8d3687664a57871891f1a6047a59df13b7",
+    "assets/ST3215_8_v1_1.stl": "4aebce2fef7b4a946c332c94075e369c3c2667237c0a89c07ff6dddcf5dd3507"
+  },
+  "upstream_motor_range_rad": [0.0, 2.2028],
+  "upstream_jaw_travel_m_per_motor_rad": 0.0115,
+  "upstream_combined_jaw_travel_m": 0.0506644,
+  "advertised_combined_jaw_travel_m": 0.054,
+  "physical_mount_verified": false,
+  "physical_opening_calibrated": false,
+  "dynamics_identified": false,
+  "camera_mount_measured": false,
+  "hardware_execution": false
+}

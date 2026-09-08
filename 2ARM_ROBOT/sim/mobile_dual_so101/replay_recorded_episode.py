@@ -20,6 +20,7 @@ import pyarrow.parquet as pq
 
 from mobile_dual_so101 import ACTION_NAMES, apply_control_as_pose, model_names
 from sim_policy import policy_action_to_actuator_targets
+from pgripper import replace_gripper, selected_sides, require_stock_recording
 
 ARM = np.array([0, 1, 2, 3, 4, 6, 7, 8, 9, 10])
 GRIPPER = np.array([5, 11])
@@ -50,6 +51,7 @@ def mapping(profile):
 
 
 def recorded_to_sim(model, values, profile):
+    require_stock_recording(model)
     values = finite_vector(values, 12, "recorded positions").copy()
     signs, offsets = mapping(profile)
     values[ARM] = np.deg2rad(values[ARM] * signs + offsets)
@@ -60,6 +62,7 @@ def recorded_to_sim(model, values, profile):
 
 
 def sim_to_recorded(model, values, profile):
+    require_stock_recording(model)
     # Measured qpos may exceed MuJoCo's soft limits. Decode it faithfully;
     # command limits belong to recorded_to_sim, not the observation boundary.
     policy = finite_vector(values, 12, "measured simulator positions").copy()
@@ -112,7 +115,8 @@ def load_episode(root, episode):
     return state, action, fps, alignment
 
 
-def build_tabletop(model_path, profile):
+def build_tabletop_spec(model_path, profile, *, grippers="stock"):
+    pgripper_sides = selected_sides(grippers)
     if profile.get("schema_version") != 2:
         raise ValueError("unknown scene profile")
     from lerobot.envs.so101_mujoco.camera_profiles import load_camera_profile, WRIST_CAMERA_PROFILE_ID
@@ -161,9 +165,13 @@ def build_tabletop(model_path, profile):
                             rgba=[0.91, 0.91, 0.89, 1])
     for side, y, yaw in zip(("left", "right"), (distance, -distance), yaws):
         arm = mujoco.MjSpec.from_file(str(model_path))
+        # Attached specs compile in memory, but serialization loses their asset directory.
+        for mesh in arm.meshes:
+            if mesh.file:
+                mesh.file = str((Path(model_path).resolve().parent / arm.compiler.meshdir / mesh.file).resolve())
         # Reuse the existing CAD-aligned fingertip proxies. A convex hull of
         # the hollow finger mesh otherwise collides in visibly empty space.
-        for pad in _FINGER_PAD_SPECS:
+        for pad in (() if side in pgripper_sides else _FINGER_PAD_SPECS):
             body = arm.body(pad["body"])
             for geom in body.geoms:
                 # Only replace hollow fingers. Preserve the motor housing's
@@ -178,12 +186,14 @@ def build_tabletop(model_path, profile):
                           solref=contact_solref, solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
                           rgba=[0.07, 0.07, 0.07, 1], density=0)
         wrist = load_camera_profile(WRIST_CAMERA_PROFILE_ID)
-        fixed = _FINGER_PAD_SPECS[0]
-        # A target at the cube center when its face meets the fixed pad.
-        # This site is geometry only; it cannot constrain or attach the object.
-        pinch = np.asarray(fixed["pos"]) + np.array([fixed["size"][2] + block_size[0] / 2, 0, 0])
-        arm.body("gripper").add_site(name="cube_grasp", pos=pinch,
-            quat=arm.site("gripperframe").quat, size=[.002, .002, .002], group=3)
+        if side in pgripper_sides:
+            replace_gripper(arm)
+        else:
+            fixed = _FINGER_PAD_SPECS[0]
+            # Geometry only: never constrain or attach the object.
+            pinch = np.asarray(fixed["pos"]) + np.array([fixed["size"][2] + block_size[0] / 2, 0, 0])
+            arm.body("gripper").add_site(name="cube_grasp", pos=pinch,
+                quat=arm.site("gripperframe").quat, size=[.002, .002, .002], group=3)
         _apply_camera_profile(arm.body(wrist.parent_body).add_camera(name="wrist_rgb"), wrist, mujoco)
         for material in arm.materials:
             if material.rgba[0] > 0.8 and material.rgba[1] > 0.7 and material.rgba[2] < 0.3:
@@ -213,7 +223,11 @@ def build_tabletop(model_path, profile):
                    size=block_size / 2, mass=block_mass, rgba=[0.65, 0.03, 0.025, 1],
                    contype=1, conaffinity=1, condim=4, friction=block_friction,
                    solref=contact_solref, solimp=[0.95, 0.99, 0.001, 0.5, 2.0])
-    model = spec.compile()
+    return spec
+
+
+def build_tabletop(model_path, profile, *, grippers="stock"):
+    model = build_tabletop_spec(model_path, profile, grippers=grippers).compile()
     if model_names(model, mujoco.mjtObj.mjOBJ_ACTUATOR, model.nu) != ACTION_NAMES:
         raise ValueError("MJCF actuator order mismatch")
     return model
@@ -238,7 +252,10 @@ def block_contacts(model, data):
             mujoco.mj_contactForce(model, data, i, force)
             if force[0] > 0:
                 touched.update(model.geom(g).name for g in pair if g != block)
-    return {side: all(f"{side}_dapier_{finger}_finger_pad" in touched for finger in ("fixed", "moving"))
+    return {side: all(f"{side}_{name}" in touched for name in (
+                ("pgripper_pad_1", "pgripper_pad_2")
+                if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_pgripper_gear") >= 0
+                else ("dapier_fixed_finger_pad", "dapier_moving_finger_pad")))
             for side in ("left", "right")}
 
 

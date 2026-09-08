@@ -18,6 +18,7 @@ import time
 from typing import Sequence
 
 import mujoco
+from pgripper import replace_gripper, selected_sides, sync_kinematic_jaws, MOTOR_MAX_RAD
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -767,6 +768,7 @@ def build_spec(
     mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     include_lidar: bool = False,
     model_path: Path | str | None = None,
+    grippers: str = "stock",
 ) -> tuple[mujoco.MjSpec, Path]:
     """Build a Waffle Pi with two human-shoulder-oriented SO-101 arms.
 
@@ -774,6 +776,7 @@ def build_spec(
     visualization height places the short SO-101 outside floor-shoe reach.
     """
 
+    pgripper_sides = selected_sides(grippers)
     if mount_layout not in MOUNT_LAYOUTS:
         raise ValueError(
             f"mount_layout must be one of {MOUNT_LAYOUTS}, got {mount_layout!r}"
@@ -870,6 +873,8 @@ def build_spec(
             quat=_holder_quaternion(HUMANOID_HOLDER_PITCH_RAD, twist_rad),
         )
         arm_spec = mujoco.MjSpec.from_file(str(source))
+        if side in pgripper_sides:
+            replace_gripper(arm_spec)
         if mount_layout == "tower":
             _replace_stock_base_with_tower_socket(arm_spec)
         spec.attach(arm_spec, prefix=f"{side}_", frame=frame)
@@ -884,6 +889,7 @@ def build_model(
     mount_layout: str = DEFAULT_MOUNT_LAYOUT,
     include_lidar: bool = False,
     model_path: Path | str | None = None,
+    grippers: str = "stock",
 ) -> tuple[mujoco.MjModel, Path]:
     spec, source = build_spec(
         arm_mount_height_m=arm_mount_height_m,
@@ -892,6 +898,7 @@ def build_model(
         mount_layout=mount_layout,
         include_lidar=include_lidar,
         model_path=model_path,
+        grippers=grippers,
     )
     return spec.compile(), source
 
@@ -955,6 +962,7 @@ def apply_control_as_pose(
         data.ctrl[actuator_id] = target
         joint_id = int(model.actuator_trnid[actuator_id, 0])
         data.qpos[int(model.jnt_qposadr[joint_id])] = target
+    sync_kinematic_jaws(model, data)
     data.qvel[:] = 0.0
     mujoco.mj_forward(model, data)
 
@@ -1002,7 +1010,10 @@ def validate_model(
 ) -> dict[str, object]:
     if smoke_steps < 0:
         raise ValueError("smoke_steps must be non-negative")
-    if (model.nq, model.nv, model.nu, model.njnt, model.neq) != (14, 14, 12, 14, 0):
+    pgripper_count = sum(mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_pgripper_gear") >= 0
+                        for side in ("left", "right"))
+    extra = 2 * pgripper_count
+    if (model.nq, model.nv, model.nu, model.njnt, model.neq) != (14 + extra, 14 + extra, 12, 14 + extra, extra):
         raise RuntimeError(
             "unexpected mobile dual-SO-101 dimensions: "
             f"nq={model.nq}, nv={model.nv}, nu={model.nu}, "
@@ -1048,6 +1059,8 @@ def validate_model(
         "nbody": model.nbody,
         "njnt": model.njnt,
         "neq": model.neq,
+        "pgripper_count": pgripper_count,
+        "gripper_physical_mapping_verified": False,
         "ngeom": model.ngeom,
         "actuators": actuators,
         "finite_state": finite_state,
@@ -1154,6 +1167,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="printed torso (existing default) or dual tower concept",
     )
     parser.add_argument("--model", type=Path)
+    parser.add_argument("--grippers", choices=("stock", "right", "both"), default="stock",
+                        help="explicit hardware-shape variant; historical runs remain stock")
     parser.add_argument(
         "--include-lidar",
         action="store_true",
@@ -1226,6 +1241,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.initial_action_rad is not None
         else HUMANOID_HOME_ACTION
     )
+    if args.initial_action_rad is None:
+        initial_action = list(initial_action)
+        for side in selected_sides(args.grippers):
+            initial_action[5 if side == "left" else 11] = MOTOR_MAX_RAD
     model, source = build_model(
         arm_mount_height_m=args.arm_mount_height_m,
         arm_mount_x_m=args.arm_mount_x_m,
@@ -1233,6 +1252,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         mount_layout=args.mount_layout,
         include_lidar=args.include_lidar,
         model_path=args.model,
+        grippers=args.grippers,
     )
     print(
         json.dumps(

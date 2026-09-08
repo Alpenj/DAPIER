@@ -33,6 +33,7 @@ from mobile_dual_so101 import (  # noqa: E402
     apply_control_as_pose,
     resolve_so101_model,
 )
+from pgripper import replace_gripper, selected_sides, home_action
 from mujoco_mission_adapters import _add_gripper_cameras  # noqa: E402
 from waffle_reference import WAFFLE_TOP_REFERENCE_ORIGIN_M  # noqa: E402
 
@@ -87,7 +88,9 @@ def build_compact_mobile_spec(
     config: CompactMobileConfig | None = None,
     *,
     model_path: Path | str | None = None,
+    grippers: str = "stock",
 ) -> tuple[mujoco.MjSpec, Path]:
+    pgripper_sides = selected_sides(grippers)
     resolved = config or CompactMobileConfig()
     resolved.validate()
     source = resolve_so101_model(model_path)
@@ -142,8 +145,11 @@ def build_compact_mobile_spec(
             pos=[resolved.mount_x_m, y_position, WAFFLE_TOP_LOCAL_Z_M + 0.008],
             quat=_yaw_quaternion(yaw_rad),
         )
+        arm = mujoco.MjSpec.from_file(str(source))
+        if side in pgripper_sides:
+            replace_gripper(arm)
         spec.attach(
-            mujoco.MjSpec.from_file(str(source)),
+            arm,
             prefix=f"{side}_",
             frame=frame,
         )
@@ -162,9 +168,10 @@ def build_compact_mobile_model(
     config: CompactMobileConfig | None = None,
     *,
     model_path: Path | str | None = None,
+    grippers: str = "stock",
 ) -> tuple[mujoco.MjModel, Path]:
     resolved = config or CompactMobileConfig()
-    spec, source = build_compact_mobile_spec(resolved, model_path=model_path)
+    spec, source = build_compact_mobile_spec(resolved, model_path=model_path, grippers=grippers)
     model = spec.compile()
     _orient_wrist_cameras_to_box(model, resolved)
     return model, source
@@ -177,7 +184,7 @@ def _orient_wrist_cameras_to_box(
     """Fix each wrist-camera mount so its home view points at the box."""
 
     data = mujoco.MjData(model)
-    apply_control_as_pose(model, data, COMPACT_HOME_ACTION)
+    apply_control_as_pose(model, data, home_action(model, COMPACT_HOME_ACTION))
     target = np.asarray((*config.box_center_xy_m, 0.08), dtype=np.float64)
     world_up = np.asarray((0.0, 0.0, 1.0), dtype=np.float64)
     for name in ("left_gripper_camera", "right_gripper_camera"):
@@ -212,7 +219,7 @@ def _orient_wrist_cameras_to_box(
 
 def create_compact_mobile_data(model: mujoco.MjModel) -> mujoco.MjData:
     data = mujoco.MjData(model)
-    apply_control_as_pose(model, data, COMPACT_HOME_ACTION)
+    apply_control_as_pose(model, data, home_action(model, COMPACT_HOME_ACTION))
     return data
 
 
@@ -300,7 +307,7 @@ def compact_mobile_contract(
         "camera_count": len(camera_names),
         "camera_roles": camera_names,
         "action_names": actuator_names,
-        "home_action_rad": COMPACT_HOME_ACTION,
+        "home_action_rad": home_action(model, COMPACT_HOME_ACTION),
         "camera_centerline_aligned": True,
         "arm_mount_measurement_required": True,
         "simulator_truth_for_runtime_forbidden": True,
