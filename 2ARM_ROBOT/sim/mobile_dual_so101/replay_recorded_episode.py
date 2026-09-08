@@ -106,8 +106,10 @@ def load_episode(root, episode):
 
 
 def build_tabletop(model_path, profile):
-    if profile.get("schema_version") != 1:
+    if profile.get("schema_version") != 2:
         raise ValueError("unknown scene profile")
+    from lerobot.envs.so101_mujoco.camera_profiles import load_camera_profile, WRIST_CAMERA_PROFILE_ID
+    from lerobot.envs.so101_mujoco.env import _FINGER_PAD_SPECS, _apply_camera_profile
     mapping(profile)
     distance = float(profile["camera_to_base_horizontal_m"])
     size = finite_vector(profile["table_size_m"], 3, "table size")
@@ -118,6 +120,10 @@ def build_tabletop(model_path, profile):
     yaws = finite_vector(profile["arm_yaw_deg"], 2, "mount yaw")
     block_size = finite_vector(profile["reference_block_size_m"], 3, "block size")
     block_center = finite_vector(profile["reference_block_center_m"], 3, "block center")
+    block_mass = float(profile["block_mass_kg"])
+    block_friction = finite_vector(profile["block_friction"], 3, "block friction")
+    if not np.isfinite(block_mass) or block_mass <= 0 or np.any(block_friction < 0):
+        raise ValueError("block requires positive mass and non-negative friction")
     if not np.isfinite([distance, height, front, tilt, fov]).all():
         raise ValueError("scene dimensions must be finite")
     if distance <= 0 or height <= 0 or np.any(size <= 0) or np.any(block_size <= 0):
@@ -136,6 +142,21 @@ def build_tabletop(model_path, profile):
                             rgba=[0.91, 0.91, 0.89, 1])
     for side, y, yaw in zip(("left", "right"), (distance, -distance), yaws):
         arm = mujoco.MjSpec.from_file(str(model_path))
+        # Reuse the existing CAD-aligned fingertip proxies. A convex hull of
+        # the hollow finger mesh otherwise collides in visibly empty space.
+        for pad in _FINGER_PAD_SPECS:
+            body = arm.body(pad["body"])
+            for geom in body.geoms:
+                if geom.type == mujoco.mjtGeom.mjGEOM_MESH and geom.contype:
+                    geom.contype = 0
+                    geom.conaffinity = 0
+            body.add_geom(name=pad["name"], type=mujoco.mjtGeom.mjGEOM_BOX,
+                          pos=pad["pos"], quat=pad["quat"], size=pad["size"],
+                          contype=1, conaffinity=1, condim=4, friction=block_friction,
+                          solref=[0.005, 1.0], solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
+                          rgba=[0.07, 0.07, 0.07, 1], density=0)
+        wrist = load_camera_profile(WRIST_CAMERA_PROFILE_ID)
+        _apply_camera_profile(arm.body(wrist.parent_body).add_camera(name="wrist_rgb"), wrist, mujoco)
         for material in arm.materials:
             if material.rgba[0] > 0.8 and material.rgba[1] > 0.7 and material.rgba[2] < 0.3:
                 material.rgba = [0.88, 0.89, 0.88, 1]
@@ -143,8 +164,8 @@ def build_tabletop(model_path, profile):
         frame = spec.worldbody.add_frame(name=f"{side}_mount", pos=[0, y, 0],
                                          quat=[np.cos(angle), 0, 0, np.sin(angle)])
         spec.attach(arm, prefix=f"{side}_", frame=frame)
-    # ponytail: photo-estimated camera body and static block only; replace with
-    # measured extrinsics/object dynamics before visual policy evaluation.
+    # ponytail: camera optics and physical parameters remain estimates;
+    # replace them with measured profiles before claiming sim-to-real validity.
     spec.worldbody.add_geom(name="camera_mast", type=mujoco.mjtGeom.mjGEOM_BOX,
                             size=[0.012, 0.02, height / 2], pos=[front, 0, height / 2],
                             rgba=[0.08, 0.08, 0.08, 1])
@@ -158,13 +179,31 @@ def build_tabletop(model_path, profile):
     theta = np.deg2rad(90 - tilt) / 2
     spec.worldbody.add_camera(name="top_h201_reference", pos=[0, 0, height],
                               quat=[np.cos(theta), 0, -np.sin(theta), 0], fovy=fov)
-    spec.worldbody.add_geom(name="red_block_reference", type=mujoco.mjtGeom.mjGEOM_BOX,
-                            size=block_size / 2, pos=block_center, rgba=[0.65, 0.03, 0.025, 1],
-                            contype=0, conaffinity=0)
+    block = spec.worldbody.add_body(name="red_block", pos=block_center)
+    block.add_freejoint(name="red_block_free")
+    block.add_geom(name="red_block_geom", type=mujoco.mjtGeom.mjGEOM_BOX,
+                   size=block_size / 2, mass=block_mass, rgba=[0.65, 0.03, 0.025, 1],
+                   contype=1, conaffinity=1, condim=4, friction=block_friction,
+                   solref=[0.005, 1.0], solimp=[0.95, 0.99, 0.001, 0.5, 2.0])
     model = spec.compile()
     if model_names(model, mujoco.mjtObj.mjOBJ_ACTUATOR, model.nu) != ACTION_NAMES:
         raise ValueError("MJCF actuator order mismatch")
     return model
+
+
+def block_contacts(model, data):
+    """Contact evidence only: never used to attach or teleport the block."""
+    block = model.geom("red_block_geom").id
+    touched = set()
+    for i, contact in enumerate(data.contact):
+        pair = {int(contact.geom1), int(contact.geom2)}
+        if block in pair:
+            force = np.zeros(6)
+            mujoco.mj_contactForce(model, data, i, force)
+            if force[0] > 0:
+                touched.update(model.geom(g).name for g in pair if g != block)
+    return {side: all(f"{side}_dapier_{finger}_finger_pad" in touched for finger in ("fixed", "moving"))
+            for side in ("left", "right")}
 
 
 def inspect_contacts(model, data, deepest, frame):
@@ -214,12 +253,17 @@ def run(args):
         "-movflags", "+faststart", str(output / "replay.mp4")], stdin=subprocess.PIPE)
     import cv2
     simulated = []
+    block_positions = []
+    block_contact_frames = {"left": 0, "right": 0}
     deepest_contact = {"depth_m": 0.0}
     warning_counts = np.zeros(len(physics.warning), dtype=int)
     try:
         for i, (measured, target) in enumerate(zip(state_q, action_q)):
             apply_control_as_pose(model, observed, measured)
             simulated.append(physics.qpos[addresses].copy())
+            block_positions.append(physics.body("red_block").xpos.copy())
+            for side, touching in block_contacts(model, physics).items():
+                block_contact_frames[side] += int(touching)
             inspect_contacts(model, physics, deepest_contact, i)
             panels = []
             for data in (observed, physics):
@@ -227,7 +271,7 @@ def run(args):
                 panels.append(renderer.render().copy())
             frame = np.zeros((400, 960, 3), dtype=np.uint8)
             frame[40:] = np.concatenate(panels, axis=1)
-            for x, title in [(8, "RECORDED STATE (kinematic)"), (488, "SENT ACTION (MuJoCo physics)")]:
+            for x, title in [(8, "JOINT REPLAY; BLOCK AT INITIAL POSE"), (488, "SENT ACTION + FREE BLOCK (physics)")]:
                 cv2.putText(frame, title, (x, 17), cv2.FONT_HERSHEY_SIMPLEX, .48, (255, 255, 255), 1)
             spacing_mm = 2000 * profile["camera_to_base_horizontal_m"]
             cv2.putText(frame, f"SIM ONLY | {i / fps:.2f}s | base spacing {spacing_mm:g}mm | scene/joint zero NOT calibrated", (8, 34),
@@ -253,6 +297,7 @@ def run(args):
     error = simulated - state_q
     np.savez_compressed(output / "joint_trace.npz", recorded_state_rad=state_q,
                         sent_action_rad=action_q, simulated_state_rad=simulated,
+                        simulated_block_position_m=np.asarray(block_positions),
                         timestamp_s=np.arange(len(state)) / fps)
     preserved = all(sha256(Path(path)) == digest for path, digest in before.items())
     report = {
@@ -271,13 +316,21 @@ def run(args):
         "gripper_rmse_percent": (np.sqrt(np.mean(error[:, GRIPPER] ** 2, axis=0)) /
                                   np.diff(model.actuator_ctrlrange[GRIPPER], axis=1).ravel() * 100).tolist(),
         "max_contact_penetration_m": deepest_contact["depth_m"],
+        "block_dynamics": {"free_joint": True, "mass_kg": profile["block_mass_kg"],
+                           "size_m": profile["reference_block_size_m"],
+                           "bilateral_contact_frames": block_contact_frames,
+                           "max_center_height_m": float(np.max(np.asarray(block_positions)[:, 2])),
+                           "final_position_m": physics.body("red_block").xpos.tolist(),
+                           "attachment_or_pose_updates": False,
+                           "grasp_success_verified": False},
         "deepest_contact": deepest_contact,
         "mujoco_warning_counts": warning_counts.tolist(),
         "physical_mapping_verified": profile["joint_mapping_physically_verified"],
         "ready_for_policy_evaluation": False,
         "limitations": ["No measured MJCF neutral/sign/gripper correspondence",
-                        "Camera parameters and desk/block sizes are estimates",
-                        "Object movement and task success are not reconstructed",
+                        "Camera parameters and desk size are estimates; cube side is user-confirmed 4 cm",
+                        "Object moves only under physics; initial XY/mass/friction remain estimates",
+                        "Wrist camera CAD profile is not physically calibrated; no policy is executing",
                         "Original MuJoCo motor parameters, no system identification"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
