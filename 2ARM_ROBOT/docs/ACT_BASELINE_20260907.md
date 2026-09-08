@@ -104,9 +104,41 @@ action을 정책에 전달하지 않았다. 최초 실행에서 이미지 라이
 소비하도록 한다. 관절 action에 IK를 다시 적용하지 않으며 시뮬레이터 정답 물체
 좌표를 정책 입력으로 넣지 않는다.
 
-[책상형 재생](../sim/mobile_dual_so101/TABLETOP_REPLAY.md)에서는 첫 자세의 테이블
-관통 약 11.12mm를 확인했다. 관절 영점·장착 방향과 카메라 보정이 미검증이고 블록도
-정적 참고물이다. 이 조건을 해결하기 전에는 CPU 병렬 작업 성공률을 발표하지 않는다.
+[책상형 재생](../sim/mobile_dual_so101/TABLETOP_REPLAY.md)의 초기 schema v1에서는
+첫 자세 테이블 관통 약 11.12mm를 확인했고 블록도 정적 참고물이었다. 현재 v2는
+4cm·약 20g 자유 강체와 접촉을 사용한다. 관절 영점·장착 방향과 카메라 보정은
+여전히 미검증이다. 이 조건을 해결하기 전에는 CPU 병렬 작업 성공률을 발표하지 않는다.
 GPU 병렬 RL도 보상·리셋·물리 환경과 CPU 기준이 확인된 뒤 필요성을 판단한다.
+
+## 2026-09-08 · 실제 CPU 폐루프 연결 시험
+
+`sim/mobile_dual_so101/parallel_tabletop_act.py`에서 DAPIER가 매 주기 새 양손목
+렌더 RGB와 측정 관절 상태를 구성해 기존 LeRobot ACT 체크포인트에 전달한다.
+정책은 새 관측으로 action을 계산하고, 범위와 명령 변화율을 제한한 뒤 `mj_step()`으로
+실행한다. 저장된 action이나 미래 state, 물체 정답 좌표는 정책에 넘기지 않는다.
+여기서 native ACT는 기존 체크포인트 형식을 직접 읽는다는 뜻이며 ACT 자체를 새로
+구현했다는 뜻이 아니다. DAPIER 소유 범위는 관측·제어 연결과 실행 로그다.
+
+```bash
+HF_HUB_OFFLINE=1 MUJOCO_GL=egl OMP_NUM_THREADS=2 python \
+  2ARM_ROBOT/sim/mobile_dual_so101/parallel_tabletop_act.py \
+  --dataset "$DATASET" --checkpoint "$OUTPUT/checkpoints/002000/pretrained_model" \
+  --model /home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml \
+  --output /home/dapier-jhj/DAPIER/2ARM_ROBOT/recording/simulation/20260908/act-closed-loop-new \
+  --workers 2 --episodes 2 --steps 30
+```
+
+MuJoCo 3.8.1의 현재 elliptic 장면에서 CPU 2개 프로세스가 각각 30 transition을
+완료했다. 각 worker의 정책 질의 30회, 양손목 이미지 각각 30종, 시뮬레이션 시간
+2초를 확인했다. 총 60 transition이고 시작을 포함한 wall time은 약 9.41초였다.
+명령은 모든 step에서 변화율 제한을 거쳤고 시뮬레이터 경고는 없었다.
+원본 dataset·체크포인트·scene 해시도 유지했다. 실제 15Hz 실시간 추론 성능을
+검증한 것은 아니며 EGL 렌더링은 GPU를 사용할 수 있다.
+
+`task_success_rate=null`, `task_evaluation_valid=false`, `physical_mapping_verified=false`다.
+기록 첫 자세에서 시작한 관통 17.08mm도 그대로 보고한다. **60 transition은 집기 성공
+60회가 아니다.** 별도 영상+IK 집기 baseline의 통과도 ACT 점수로 합치지 않는다.
+로컬 근거: `recording/simulation/20260908/act-closed-loop-elliptic/report.json`과
+각 episode의 관측·제안·제한 후 명령·다음 상태 trace다. 이 진입점은 optimizer/RL을 실행하지 않는다.
 
 원본 영상·사진·개인 calibration·체크포인트는 공개 저장소에 올리지 않는다.

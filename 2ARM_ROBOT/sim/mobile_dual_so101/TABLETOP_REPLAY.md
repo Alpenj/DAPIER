@@ -6,8 +6,8 @@ record_id: DAPIER-2026-09-07-tabletop-episode-replay
 책상 고정형 배치를 사용하며 TurtleBot 이동형 배치를 그대로 가져오지 않는다.
 카메라 중심선에서 좌우 베이스까지 **수평 0.15 m씩**, 베이스 간격 0.30 m는
 사용자가 확인한 값이다. 책상 면을 z=0, 양팔 베이스를 (0,+0.15,0), (0,-0.15,0)로
-놓는다. 블록은 사용자가 확인한 한 변 4cm의 정육면체다. 나머지 치수와 장착 방향,
-블록 초기 XY·무게·마찰은 `tabletop_replay.json`의 추정치다.
+놓는다. 블록은 사용자가 알려준 한 변 4cm·약 20g의 정육면체다. 질량은 근사값이며,
+나머지 치수와 장착 방향, 블록 초기 XY·마찰은 `tabletop_replay.json`의 추정치다.
 
 ## 실행
 
@@ -67,26 +67,62 @@ MUJOCO_GL=egl /home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/.venv/bin/
 양손목 카메라도 모델에 추가했지만 실제 렌즈·장착 보정을 완료한 것은 아니다.
 
 ```bash
-/home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/.venv/bin/python \
+MUJOCO_GL=egl /home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/.venv/bin/python \
   2ARM_ROBOT/sim/mobile_dual_so101/test_tabletop_physics.py \
   --model /home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml \
   --dataset /home/dapier-jhj/DAPIER/2ARM_ROBOT/recording/episodes/20260907
 ```
 
-직접 실행한 결과:
+이전 결과의 정정:
 
 - 자유 블록 낙하·책상 지지·weld 없음·양손목 카메라 존재 검사가 통과했다.
 - 블록을 **처음부터 손가락 사이에 둔 접촉 fixture**에서는 1,500 step 중 1,491 step에
-  양면 접촉을 유지하고 0.051418m 올라갔다. 초기 배치 이후 물체 pose는 쓰지 않았다.
-- 같은 초기 조건에서 손가락 접촉만 끄면 양면 접촉은 0 step, 높이 변화는 -0.070683m였다.
-  강제 부착으로 만들어진 성공이 아니라는 대조 검사다. MuJoCo 경고도 없었다.
-- 이것은 책상에서 집는 정책의 성공 검사가 아니다. 실제 에피소드 전체를 추정 XY로
+  양면 접촉을 유지하고 0.051418m 올라갔다는 과거 50g·부드러운 접촉 설정의 기록이 있다.
+  그러나 frame 600의 이미 닫힌 집게에 큐브를 넣어 **초기 6.468mm 관통**이 있었다.
+  따라서 이 결과와 접촉 제거 시 -0.070683m 하강을 정상 파지의 근거로 사용하지 않는다.
+  현재 테스트에서는 이 잘못된 초기 배치를 검출하는 negative 검사로만 남긴다.
+- 실제 에피소드 전체를 추정 XY로
   재생한 첫 v2 실행은 양면 접촉이 좌우 모두 0프레임이었다. 첫 자세의 접촉 겹침도
   최대 17.08mm로 남아 있다. 원본 데이터·모터 보정은 수정하지 않았다.
 
 블록 초기 위치, 모델과 실물의 관절/베이스 기준, 손목 카메라 영상 방향·내외부
 파라미터를 맞춘 뒤에만 폐루프 성공률을 평가한다. 현재 XY를 그리퍼가 지나가는
 위치로 옮겨 성공 수치만 높이거나, 관통을 숨기려고 관절 보정값을 바꾸지 않는다.
+
+## 2026-09-08 · 영상 + IK로 실제 바닥 집기 대조
+
+`vision_tabletop_pick.py`는 학습 정책이 아닌 **SIM 전용 scripted baseline**이다.
+가상 metric depth로 중심을 추정하고 5축 IK와 7차 관절 경로를 적용한다.
+3mm 옆으로 비켜 내려온 뒤 큐브 높이에서 옆으로 접근해 고정 손가락이 윗면을 치지 않게 했다.
+15Hz마다 0.00025rad씩 닫고 양쪽 가상 패드 힘이 각각 1N 이상으로 5주기 유지되면
+lift를 허용한다. 최대 270주기 안에 접촉이 잡히지 않으면 lift 명령을 보내지 않는다.
+1N은 접촉 확인 기준이며 이동·유지 중 일정한 힘을 제어한다는 뜻은 아니다.
+
+확인한 환경은 MuJoCo 3.8.1, 1/510초, elliptic cone, Newton, tolerance 1e-10,
+impratio 1, NoSlip 0이다. 기존 pyramidal 설정에서는 추가 약 3초 유지 중 2.30mm가
+미끄러져 2mm 검사에 실패했다. elliptic의 초기 0.5N 설정도 이동 중 놓쳐 실패했다.
+1N 기준과 작은 닫기 증분을 함께 적용한 최종 회귀 검사는 다음과 같다.
+
+- 바닥 집기·3초 유지 통과: 최종 중심 67.10mm, 약 47.1mm 상승.
+- 접근 단계 패드 정상력 0N, 전체 최대 2.145N, 최대 접촉 겹침 0.0518mm, 경고 0.
+- 처음부터 패드 접촉을 끄면 접촉 확인에 실패하고 lift 명령을 보내지 않는다.
+- 실제로 잡은 상태를 초기 조건으로 복제해 1,500 step 더 유지하면 양면 접촉 1,500회,
+  높이 변화 -0.646mm다. 동일 상태에서 접촉만 끄면 0회, -47.108mm로 떨어진다.
+- 모델·scene·제어 코드 해시와 실제 엔진/solver 설정을 결과에 남긴다. 3.3.7에서의
+  별도 통과 결과를 3.8.1 결과로 섞지 않는다.
+
+로컬 근거는 `recording/simulation/20260908/tabletop-contact-final/`의
+`physics-regression.json`, `contact-on/report.json`, `contact-off/report.json`이다.
+회귀 검사 출력 경로는 `--output`으로 지정할 수 있고 기존 결과를 덮어쓰지 않는다.
+GUI는 같은 Python에서 `vision_tabletop_pick.py --model <위 MJCF> --output <새 폴더> --viewer`로 연다.
+열린 viewer는 코드 변경을 자동 반영하지 않으므로 다시 실행해야 한다.
+
+마찰 계수·접촉 강성은 실측 전이며 현재 geom 설정은 큐브-책상 접촉에도 적용된다.
+모터 외함 충돌은 유지하지만 손가락 몸통 전체의 충돌 형상은 아직 완전하지 않다.
+15Hz 목표의 sample-and-hold와 들어 올릴 때 약 0.199m/s 순간 속도도 남아 있어
+모든 덜컹거림·충돌 안전이 해결됐다고 하지 않는다. 가상 힘 센서는 실물에 연결되지 않는다.
+[MuJoCo의 마찰 원뿔·미끄러짐 설명](https://mujoco.readthedocs.io/en/stable/modeling.html#preventing-slip)을
+참고했으며 이 통과는 ACT·양팔 전달·실물 성공이나 물성 보정의 증명이 아니다.
 
 ## RGB-D 보정은 다음 단계
 

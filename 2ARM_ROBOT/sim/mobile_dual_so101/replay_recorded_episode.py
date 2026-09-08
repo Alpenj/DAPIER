@@ -19,7 +19,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from mobile_dual_so101 import ACTION_NAMES, apply_control_as_pose, model_names
-from sim_policy import actuator_targets_to_policy_action, policy_action_to_actuator_targets
+from sim_policy import policy_action_to_actuator_targets
 
 ARM = np.array([0, 1, 2, 3, 4, 6, 7, 8, 9, 10])
 GRIPPER = np.array([5, 11])
@@ -60,7 +60,14 @@ def recorded_to_sim(model, values, profile):
 
 
 def sim_to_recorded(model, values, profile):
-    policy = np.asarray(actuator_targets_to_policy_action(model, values))
+    # Measured qpos may exceed MuJoCo's soft limits. Decode it faithfully;
+    # command limits belong to recorded_to_sim, not the observation boundary.
+    policy = finite_vector(values, 12, "measured simulator positions").copy()
+    ranges = np.asarray(model.actuator_ctrlrange)[GRIPPER]
+    widths = ranges[:, 1] - ranges[:, 0]
+    if not np.isfinite(ranges).all() or np.any(widths <= 0):
+        raise ValueError("invalid gripper ranges")
+    policy[GRIPPER] = (policy[GRIPPER] - ranges[:, 0]) / widths
     signs, offsets = mapping(profile)
     policy[ARM] = (np.rad2deg(policy[ARM]) - offsets) / signs
     policy[GRIPPER] *= 100.0
@@ -109,7 +116,9 @@ def build_tabletop(model_path, profile):
     if profile.get("schema_version") != 2:
         raise ValueError("unknown scene profile")
     from lerobot.envs.so101_mujoco.camera_profiles import load_camera_profile, WRIST_CAMERA_PROFILE_ID
-    from lerobot.envs.so101_mujoco.env import _FINGER_PAD_SPECS, _apply_camera_profile
+    from lerobot.envs.so101_mujoco.env import (
+        _FINGER_PAD_SPECS, _apply_camera_profile, FINGER_PAD_CUBE_CONTACT_SOLREF,
+    )
     mapping(profile)
     distance = float(profile["camera_to_base_horizontal_m"])
     size = finite_vector(profile["table_size_m"], 3, "table size")
@@ -122,6 +131,9 @@ def build_tabletop(model_path, profile):
     block_center = finite_vector(profile["reference_block_center_m"], 3, "block center")
     block_mass = float(profile["block_mass_kg"])
     block_friction = finite_vector(profile["block_friction"], 3, "block friction")
+    contact_solref = finite_vector(profile.get("contact_solref", FINGER_PAD_CUBE_CONTACT_SOLREF), 2, "contact solref")
+    if np.any(contact_solref >= 0):
+        raise ValueError("expected negative direct-format contact stiffness/damping")
     if not np.isfinite(block_mass) or block_mass <= 0 or np.any(block_friction < 0):
         raise ValueError("block requires positive mass and non-negative friction")
     if not np.isfinite([distance, height, front, tilt, fov]).all():
@@ -132,6 +144,13 @@ def build_tabletop(model_path, profile):
         raise ValueError("invalid camera tilt/FOV")
     spec = mujoco.MjSpec()
     spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
+    cones = {"pyramidal": mujoco.mjtCone.mjCONE_PYRAMIDAL, "elliptic": mujoco.mjtCone.mjCONE_ELLIPTIC}
+    cone = profile.get("friction_cone", "pyramidal")
+    tolerance = float(profile.get("solver_tolerance", spec.option.tolerance))
+    if cone not in cones or not np.isfinite(tolerance) or tolerance <= 0:
+        raise ValueError("invalid friction cone or solver tolerance")
+    spec.option.cone = cones[cone]
+    spec.option.tolerance = tolerance
     spec.add_texture(name="sky", type=mujoco.mjtTexture.mjTEXTURE_SKYBOX,
                      builtin=mujoco.mjtBuiltin.mjBUILTIN_GRADIENT,
                      rgb1=[0.28, 0.32, 0.38], rgb2=[0.65, 0.68, 0.70], width=256, height=1536)
@@ -147,15 +166,24 @@ def build_tabletop(model_path, profile):
         for pad in _FINGER_PAD_SPECS:
             body = arm.body(pad["body"])
             for geom in body.geoms:
-                if geom.type == mujoco.mjtGeom.mjGEOM_MESH and geom.contype:
+                # Only replace hollow fingers. Preserve the motor housing's
+                # original collision even when it shares the gripper body.
+                if (geom.type == mujoco.mjtGeom.mjGEOM_MESH and geom.contype
+                        and geom.meshname in ("wrist_roll_follower_so101_v1", "moving_jaw_so101_v1")):
                     geom.contype = 0
                     geom.conaffinity = 0
             body.add_geom(name=pad["name"], type=mujoco.mjtGeom.mjGEOM_BOX,
                           pos=pad["pos"], quat=pad["quat"], size=pad["size"],
                           contype=1, conaffinity=1, condim=4, friction=block_friction,
-                          solref=[0.005, 1.0], solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
+                          solref=contact_solref, solimp=[0.95, 0.99, 0.001, 0.5, 2.0],
                           rgba=[0.07, 0.07, 0.07, 1], density=0)
         wrist = load_camera_profile(WRIST_CAMERA_PROFILE_ID)
+        fixed = _FINGER_PAD_SPECS[0]
+        # A target at the cube center when its face meets the fixed pad.
+        # This site is geometry only; it cannot constrain or attach the object.
+        pinch = np.asarray(fixed["pos"]) + np.array([fixed["size"][2] + block_size[0] / 2, 0, 0])
+        arm.body("gripper").add_site(name="cube_grasp", pos=pinch,
+            quat=arm.site("gripperframe").quat, size=[.002, .002, .002], group=3)
         _apply_camera_profile(arm.body(wrist.parent_body).add_camera(name="wrist_rgb"), wrist, mujoco)
         for material in arm.materials:
             if material.rgba[0] > 0.8 and material.rgba[1] > 0.7 and material.rgba[2] < 0.3:
@@ -184,11 +212,19 @@ def build_tabletop(model_path, profile):
     block.add_geom(name="red_block_geom", type=mujoco.mjtGeom.mjGEOM_BOX,
                    size=block_size / 2, mass=block_mass, rgba=[0.65, 0.03, 0.025, 1],
                    contype=1, conaffinity=1, condim=4, friction=block_friction,
-                   solref=[0.005, 1.0], solimp=[0.95, 0.99, 0.001, 0.5, 2.0])
+                   solref=contact_solref, solimp=[0.95, 0.99, 0.001, 0.5, 2.0])
     model = spec.compile()
     if model_names(model, mujoco.mjtObj.mjOBJ_ACTUATOR, model.nu) != ACTION_NAMES:
         raise ValueError("MJCF actuator order mismatch")
     return model
+
+
+def physics_settings(model):
+    return {"mujoco_version": mujoco.__version__, "timestep_s": float(model.opt.timestep),
+            "friction_cone": mujoco.mjtCone(model.opt.cone).name,
+            "solver": mujoco.mjtSolver(model.opt.solver).name,
+            "tolerance": float(model.opt.tolerance), "impratio": float(model.opt.impratio),
+            "noslip_iterations": int(model.opt.noslip_iterations)}
 
 
 def block_contacts(model, data):
@@ -311,7 +347,7 @@ def run(args):
         "alignment_metadata": alignment, "leader_alignment_reapplied": False,
         "roundtrip_max_error_source_units": roundtrip,
         "input_range_check_passed": True, "source_and_calibration_hashes_unchanged": preserved,
-        "source_hashes": before, "scene": profile,
+        "source_hashes": before, "scene": profile, "physics_settings": physics_settings(model),
         "arm_rmse_deg": dict(zip([ACTION_NAMES[i] for i in ARM], np.rad2deg(np.sqrt(np.mean(error[:, ARM] ** 2, axis=0))).tolist())),
         "gripper_rmse_percent": (np.sqrt(np.mean(error[:, GRIPPER] ** 2, axis=0)) /
                                   np.diff(model.actuator_ctrlrange[GRIPPER], axis=1).ravel() * 100).tolist(),
@@ -351,6 +387,9 @@ def self_test():
     assert np.isclose(q[0], np.deg2rad(-23))
     assert np.allclose(q[GRIPPER], [-np.pi, np.pi])
     assert np.allclose(sim_to_recorded(model, q, profile), row)
+    overshoot = q.copy()
+    overshoot[11] += .001
+    assert sim_to_recorded(model, overshoot, profile)[11] > 100
     for index, bad in [(0, np.nan), (0, 1000), (5, -1), (11, 101)]:
         invalid = row.copy()
         invalid[index] = bad
