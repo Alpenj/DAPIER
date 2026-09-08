@@ -70,6 +70,7 @@ sim-to-real은 카메라·단위·관절 범위·제어 주기 계약, 관측 �
 python 2ARM_ROBOT/scripts/calibrate_camera_images.py --self-test
 python 2ARM_ROBOT/scripts/calibrate_camera_images.py \
   --images /path/to/left-wrist-images --camera left_wrist \
+  --measured-line-mm 95 \
   --capture-notes '실제 장치 식별·해상도·초점·raw/rectified·crop·회전 설정을 기록' \
   --output /path/to/new-left-intrinsics-candidate
 ```
@@ -90,5 +91,26 @@ RMS 1px 초과, 첫 view 대비 법선 변화 15도 미만, corner 분포의 폭
 출력은 항상 `candidate_only=true`다. view별 pose는 **board→camera**이며
 camera→gripper/base가 아니다. 인쇄 실측·장치 identity·미사용 사진 검증·손목 외부
 보정·H201 depth 보정은 아직 남아 있고, 런타임 보정 파일에는 자동 적용하지 않는다.
+
+## 이번 출력물은 확인선 95mm로 계산한다
+
+인쇄 후 확인선을 재보니 100mm가 아니라 **95mm**였다. 재인쇄하지 않고 이 측정값으로
+진행한다. 위 명령의 `--measured-line-mm 95`는 이번 출력물에 대한 값이며, 다른
+출력물에는 그 출력물에서 잰 길이를 넣는다. 이 옵션은 필수이고 기본값을 추측하지 않는다.
+
+가로·세로가 균일하게 축소됐다는 가정에서 배율은 `95/100 = 0.95`다. 한 칸은
+23.75mm, marker는 17.10mm, 전체 **격자**는 237.5×166.25mm로 계산한다.
+종이 전체 크기가 아니다. 확인선은 한 방향의 측정이므로 세로 격자가 약 166.25mm인지와
+판의 평평함을 촬영 전에 확인해야 한다. 두 축의 배율이 다르거나 판이 휘면 이 가정을 쓰지 않는다.
+
+PDF와 명목 보정판 정의는 유지하고, ID에 대응시킨 3D 점에만 0.95를 한 번 곱한다.
+사진 resize나 카메라 `K`에 0.95를 곱하는 처리가 아니다. 동일 영상에 대해 물체 좌표와
+이동 벡터를 함께 균일 축소하면 투영 비율이 같다는 식을 self-test로 확인했다:
+100mm/95mm 계산의 `K`·왜곡은 수치 허용오차 내 같고, board→camera 이동 벡터는 0.95배다.
+0·음수·NaN·무한대와 이 A4 보정판에 맞지 않는 950mm 입력도 거부했다.
+
+출력 schema 2는 `nominal_board_definition`과 `print_measurement`를 나눠 저장한다.
+`uniform_xy_scale_verified=false`와 `candidate_only=true`는 유지하며, 실제 카메라
+사진으로 보정한 결과는 아직 없다. 측정값과 가정만 로컬에 남기고 개인 보정 파일은 공개하지 않는다.
 
 참고: [OpenCV 4.13 ChArUco calibration](https://docs.opencv.org/4.13.0/da/d13/tutorial_aruco_calibration.html).
