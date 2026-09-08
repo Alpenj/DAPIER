@@ -69,10 +69,14 @@ def run(args):
             renderer.update_scene(pose, camera=camera)
             Image.fromarray(renderer.render()).save(output / f"tabletop-{label}.png")
             if sides:
-                camera.lookat[:] = pose.site(f"{sides[-1]}_cube_grasp").xpos
-                camera.distance, camera.azimuth, camera.elevation = .28, 140, -25
+                camera.lookat[:] = (pose.site(f"{sides[-1]}_cube_grasp").xpos
+                                    + pose.body(f"{sides[-1]}_gripper").xpos) / 2
+                camera.distance, camera.azimuth, camera.elevation = .34, 140, -25
                 renderer.update_scene(pose, camera=camera)
                 Image.fromarray(renderer.render()).save(output / f"pgripper-{label}.png")
+                for side in sides:
+                    renderer.update_scene(pose, camera=f"{side}_wrist_rgb")
+                    Image.fromarray(renderer.render()).save(output / f"{side}-wrist-{label}.png")
     finally:
         renderer.close()
     report = {"grippers": args.grippers, "matches_operator_reported_gripper_selection": args.grippers == "right",
@@ -81,9 +85,11 @@ def run(args):
         "physics_steps": 1500, "warning_counts": warnings.tolist(), "endpoint_gap_m": endpoint_gaps,
         "trace": trace, "saved_mjcf_reloaded": True, "runtime_qpos_writes_after_initialization": 0,
         "gripper_command": "opening-positive radians; upstream motor angle = 2.2028 - command",
-        "camera_mount_parameters_preserved": True, "camera_mount_physically_verified": False,
+        "camera_mount_parameters_preserved": False, "camera_mount_physically_verified": False,
+        "camera_mount_basis": "photo-estimated rigid NORMA bracket; not target-tracking",
         "sim_to_real_valid": False, "grasp_success_verified": False, "hardware_execution": False,
-        "limitations": ["Horn centers/axes aligned; SO-101-specific mounting transform still unmeasured",
+        "limitations": ["SO-101 mounting transform follows the supplied URDF; physical assembly/encoder zero remain unverified",
+            "Camera bracket seat, lens center, image roll and FOV are estimates; camera mass/collision are not modeled",
             "Dynamics are source/stock model estimates; gear inertia approximated from its bounding box",
             "Convex distal fingertip hulls and a housing box; full finger/rack/gear tooth contact is not simulated",
             "Endpoint PNGs are pose-only; dynamic trace is a no-object opening/closing smoke test",
@@ -98,7 +104,7 @@ def run(args):
         with mj_viewer.launch_passive(model, data) as viewer:
             viewer.cam.lookat[:] = [.12, 0, .15]
             viewer.cam.distance, viewer.cam.azimuth, viewer.cam.elevation = .9, 135, -30
-            deadline = time.monotonic() + 300
+            deadline = time.monotonic() + 1800
             while viewer.is_running() and time.monotonic() < deadline:
                 started = time.monotonic()
                 mujoco.mj_step(model, data)
@@ -112,5 +118,5 @@ if __name__ == "__main__":
     parser.add_argument("--grippers", choices=("right", "both"), default="right",
                         help="right matches the current assembly; both previews the planned replacement")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--viewer", action="store_true", help="open simulation-only controls for up to 5 minutes")
+    parser.add_argument("--viewer", action="store_true", help="open simulation-only controls for up to 30 minutes")
     run(parser.parse_args())

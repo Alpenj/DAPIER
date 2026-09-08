@@ -4,7 +4,7 @@
   "source_directory": "hardware/elrobot/simulation",
   "hardware_license": "Apache-2.0",
   "standalone_hardware_directory": "hardware/pgripper",
-  "adaptation": "ElRobot gripper subtree; not an upstream SO-101 PGripper URDF",
+  "adaptation": "ElRobot gripper subtree with operator-supplied SO-101 wrist transform and photo-estimated camera mount",
   "sha256": {
     "elrobot_follower.urdf": "eb355948d0e02268587491123ba9c4704e70bb1782298d86bcad1280ff86d1cb",
     "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
@@ -12,7 +12,29 @@
     "assets/Gripper_Gear_v1_1.stl": "0c6e45bbd7115b1e6a346af11e5ee331d2eaebb2780b51f8c519893e14bff3a5",
     "assets/Gripper_Jaw_01_v1_1.stl": "3efe42f96b3cbe4b9c5db59fb3c3f395647b098f1a93de98889672dc07ecaaa1",
     "assets/Gripper_Jaw_02_v1_1.stl": "d615ada9f3bee9d44b75cefbbbe1fb8d3687664a57871891f1a6047a59df13b7",
-    "assets/ST3215_8_v1_1.stl": "4aebce2fef7b4a946c332c94075e369c3c2667237c0a89c07ff6dddcf5dd3507"
+    "assets/ST3215_8_v1_1.stl": "4aebce2fef7b4a946c332c94075e369c3c2667237c0a89c07ff6dddcf5dd3507",
+    "assets/CameraMount_square_27mm.stl": "3191faa66b87c20fbdd3596b7691017083a82afd3348761623bab2aaa39e8f32"
+  },
+  "so101_mount": {
+    "source": "Operator-supplied so101_pgripper.urdf wrist_roll joint; not physical calibration",
+    "source_urdf_sha256": "a54ce073bcaa0b0692ead1bf16140ec832d1f668f2ced509b149c567b700bcc0",
+    "position_m": [0.0, -0.0611, 0.0181],
+    "rpy_rad": [3.14151353, 1.52211682, -0.00007819],
+    "axis_in_source_frame": [0.0, -1.0, 0.0]
+  },
+  "wrist_camera": {
+    "source": "Operator assembly photos and pinned NORMA 27 mm-hole-pitch bracket; seat and optical center estimated",
+    "mesh_source": "hardware/pgripper/STL/camera_mounts/CameraMount_square_27mm.stl",
+    "mesh_position_m": [0.0, -0.02345, 0.0],
+    "mesh_quaternion_wxyz": [0.5, 0.5, 0.5, -0.5],
+    "position_m": [0.0, -0.0687612295, -0.0068314023],
+    "quaternion_wxyz": [0.9762960071, 0.2164396139, 0.0, 0.0],
+    "vertical_fov_deg": 75.0,
+    "pcb_size_m": [0.032, 0.032, 0.0016],
+    "optical_offset_from_pcb_m": 0.009,
+    "camera_mass_and_collision_modeled": false,
+    "optical_center_and_image_roll_measured": false,
+    "intrinsics_measured": false
   },
   "upstream_motor_range_rad": [0.0, 2.2028],
   "upstream_jaw_travel_m_per_motor_rad": 0.0115,

@@ -15,10 +15,52 @@ from mobile_dual_so101 import (ACTION_NAMES, HUMANOID_HOME_ACTION, apply_control
 from compact_mobile_dual_so101 import build_compact_mobile_model, create_compact_mobile_data
 from collision_guard import protected_geom_pairs
 from pgripper import (MOTOR_MAX_RAD, JAW_METRES_PER_RAD, description, home_action,
-    jaw_gap_m, require_stock_recording, selected_sides)
+    jaw_gap_m, require_stock_recording, selected_sides, replace_gripper)
 
 
 class PGripperIntegrationTest(unittest.TestCase):
+    def test_supplied_wrist_transform_and_rigid_camera(self):
+        source = resolve_so101_model()
+        arm = mujoco.MjSpec.from_file(str(source))
+        parts, provenance = replace_gripper(arm)
+        model = arm.compile()
+        data = mujoco.MjData(model)
+        basis = np.empty(9)
+        mujoco.mju_quat2Mat(basis, parts[0]["mesh_quat"])
+        basis = basis.reshape(3, 3)
+        # Independent fixed-axis RPY calculation from the supplied URDF snapshot.
+        r, p, y = [3.14151353, 1.52211682, -0.00007819]
+        cr, sr, cp, sp, cy, sy = np.cos(r), np.sin(r), np.cos(p), np.sin(p), np.cos(y), np.sin(y)
+        supplied = np.array([[cy*cp, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+                             [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
+                             [-sp, cp*sr, cp*cr]])
+        camera = provenance["wrist_camera"]
+        local_camera = np.asarray(camera["position_m"])
+        for angle in (-.5, 0, .5):
+            data.joint("wrist_roll").qpos[0] = angle
+            mujoco.mj_forward(model, data)
+            wrist = data.body("wrist")
+            gripper = data.body("gripper")
+            parent_rotation = wrist.xmat.reshape(3, 3)
+            root_rotation = gripper.xmat.reshape(3, 3)
+            c, s = np.cos(angle), np.sin(angle)
+            source_joint_rotation = np.array([[c, 0, -s], [0, 1, 0], [s, 0, c]])
+            np.testing.assert_allclose(parent_rotation.T @ root_rotation @ basis,
+                                       supplied @ source_joint_rotation, atol=1e-9)
+            np.testing.assert_allclose(parent_rotation.T @ (gripper.xpos - wrist.xpos),
+                                       [0, -.0611, .0181], atol=1e-12)
+            cam = data.camera("wrist_cam")
+            np.testing.assert_allclose(root_rotation.T @ (cam.xpos - gripper.xpos), local_camera, atol=1e-12)
+            forward = -cam.xmat.reshape(3, 3)[:, 2]
+            to_tip = data.site("cube_grasp").xpos - cam.xpos
+            self.assertGreater(np.dot(forward, to_tip) / np.linalg.norm(to_tip),
+                               np.cos(np.deg2rad(camera["vertical_fov_deg"] / 2)))
+        compact, _ = build_compact_mobile_model(model_path=source, grippers="right")
+        np.testing.assert_allclose(compact.camera("right_gripper_camera").pos, local_camera, atol=1e-12)
+        np.testing.assert_allclose(compact.camera("right_gripper_camera").quat,
+                                   model.camera("wrist_cam").quat, atol=1e-12)
+        self.assertFalse(provenance["camera_mount_measured"])
+
     def test_mobile_variants_and_coupling(self):
         source = resolve_so101_model()
         parts, provenance = description()
@@ -88,6 +130,7 @@ class PGripperIntegrationTest(unittest.TestCase):
         source = resolve_so101_model()
         profile = json.loads((PROJECT / "tabletop_replay.json").read_text())
         stock = build_tabletop(source, profile)
+        camera_position = description()[1]["wrist_camera"]["position_m"]
         for variant in ("right", "both"):
             model = build_tabletop(source, profile, grippers=variant)
             with tempfile.TemporaryDirectory() as directory:
@@ -97,9 +140,14 @@ class PGripperIntegrationTest(unittest.TestCase):
                 spec.to_file(str(xml))
                 reloaded = mujoco.MjModel.from_xml_path(str(xml))
                 self.assertEqual((reloaded.nq, reloaded.nu, reloaded.neq), (model.nq, model.nu, model.neq))
-            np.testing.assert_array_equal(model.cam_pos, stock.cam_pos)
-            np.testing.assert_array_equal(model.cam_quat, stock.cam_quat)
-            np.testing.assert_array_equal(model.cam_fovy, stock.cam_fovy)
+            for index in range(stock.ncam):
+                name = stock.camera(index).name
+                if name in {f"{side}_wrist_rgb" for side in selected_sides(variant)}:
+                    np.testing.assert_allclose(model.camera(name).pos, camera_position)
+                    continue
+                other = model.camera(name).id
+                for field in ("cam_pos", "cam_quat", "cam_fovy"):
+                    np.testing.assert_array_equal(getattr(model, field)[other], getattr(stock, field)[index])
             for side in selected_sides(variant):
                 self.assertEqual(mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM,
                                                   f"{side}_dapier_fixed_finger_pad"), -1)

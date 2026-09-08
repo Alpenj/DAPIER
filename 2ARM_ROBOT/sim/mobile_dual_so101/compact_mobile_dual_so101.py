@@ -188,6 +188,9 @@ def _orient_wrist_cameras_to_box(
     target = np.asarray((*config.box_center_xy_m, 0.08), dtype=np.float64)
     world_up = np.asarray((0.0, 0.0, 1.0), dtype=np.float64)
     for name in ("left_gripper_camera", "right_gripper_camera"):
+        side = name.split("_", 1)[0]
+        if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_pgripper_gear") >= 0:
+            continue  # Preserve the photo-based rigid mount, regardless of box position.
         camera_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, name)
         parent_id = int(model.cam_bodyid[camera_id])
         world_from_parent = data.xmat[parent_id].reshape(3, 3)

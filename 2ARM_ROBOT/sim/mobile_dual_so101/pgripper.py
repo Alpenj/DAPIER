@@ -50,8 +50,8 @@ def description():
             raise ValueError(f"PGripper upstream hash mismatch: {name}")
     robot = ET.parse(ASSETS / "upstream/elrobot_follower.urdf").getroot()
     joints = {j.find("child").get("link"): j for j in robot.findall("joint")}
-    # Align the source wrist axis with SO-101 local +Z and jaw travel with +X.
-    # ponytail: horn centers/axes are aligned; physical mounting offset/clocking still need measurement.
+    # Canonical geometry frame: source wrist axis +Z and jaw travel +X.
+    # The SO-101 mounting transform is applied separately in replace_gripper.
     z = _vector(joints[PARTS[0]].find("axis")); z /= np.linalg.norm(z)
     x = _vector(joints[PARTS[3]].find("axis")); x -= z * np.dot(x, z); x /= np.linalg.norm(x)
     rotation = np.array([x, np.cross(z, x), z])
@@ -96,12 +96,23 @@ def _fullinertia(tensor):
 
 
 def replace_gripper(arm):
-    """Replace stock jaw geometry on an in-memory single-arm spec; retain wrist/camera parent."""
+    """Replace an in-memory arm using the supplied wrist transform and estimated camera rig."""
     parts, provenance = description()
     root = arm.body("gripper")
     jaw = arm.body("moving_jaw_so101_v1")
     if root is None or jaw is None or arm.body("pgripper_gear") is not None:
         raise ValueError("PGripper adaptation requires an unmodified stock SO-101 arm")
+    mount = provenance["so101_mount"]
+    source_quat, mounted_quat = np.empty(4), np.empty(4)
+    # URDF RPY is extrinsic XYZ. Rebase both geometry AND the revolute axis.
+    mujoco.mju_euler2Quat(source_quat, np.asarray(mount["rpy_rad"]), "XYZ")
+    inverse_basis = parts[0]["mesh_quat"].copy()
+    inverse_basis[1:] *= -1
+    mujoco.mju_mulQuat(mounted_quat, source_quat, inverse_basis)
+    root.pos, root.quat = mount["position_m"], mounted_quat
+    basis = np.empty(9)
+    mujoco.mju_quat2Mat(basis, parts[0]["mesh_quat"])
+    arm.joint("wrist_roll").axis = basis.reshape(3, 3) @ mount["axis_in_source_frame"]
     previous = arm.actuator("gripper")
     actuator_properties = {key: getattr(previous, key) for key in ("gaintype", "biastype", "dyntype")}
     actuator_properties.update({key: getattr(previous, key).copy() for key in ("gainprm", "biasprm", "dynprm")})
@@ -123,7 +134,7 @@ def replace_gripper(arm):
         body.add_geom(name=part["name"] + "_visual", type=mujoco.mjtGeom.mjGEOM_MESH,
             meshname=part["name"], pos=part["mesh_pos"] - offset, quat=part["mesh_quat"],
             contype=0, conaffinity=0, mass=0, group=2,
-            rgba=[.08, .08, .08, 1] if part["name"] == "pgripper_motor" else [.22, .43, .7, 1])
+            rgba=[.08, .08, .08, 1] if part["name"] == "pgripper_motor" else [.055, .055, .055, 1])
         if part["name"] == "pgripper_gear":
             body.add_joint(name="gripper", type=mujoco.mjtJoint.mjJNT_HINGE,
                 pos=part["pivot"] - offset, axis=-part["axis"], range=[0, MOTOR_MAX_RAD],
@@ -168,6 +179,28 @@ def replace_gripper(arm):
     arm.site("gripperframe").pos = midpoint
     root.add_site(name="cube_grasp", pos=midpoint, quat=arm.site("gripperframe").quat,
                   size=[.002] * 3, group=3)
+    camera = provenance["wrist_camera"]
+    # ponytail: photo-estimated seat/optics; tune these persisted values after hand-eye calibration.
+    arm.add_mesh(name="pgripper_camera_mount",
+        file=str(ASSETS / "upstream/assets/CameraMount_square_27mm.stl"), scale=[.001] * 3)
+    root.add_geom(name="pgripper_camera_mount_visual", type=mujoco.mjtGeom.mjGEOM_MESH,
+        meshname="pgripper_camera_mount", pos=camera["mesh_position_m"],
+        quat=camera["mesh_quaternion_wxyz"], rgba=[.055, .055, .055, 1],
+        contype=0, conaffinity=0, mass=0, group=2)
+    wrist = root.add_camera(name="wrist_cam", pos=camera["position_m"],
+        quat=camera["quaternion_wxyz"], fovy=camera["vertical_fov_deg"])
+    optical_rotation = np.empty(9)
+    mujoco.mju_quat2Mat(optical_rotation, np.asarray(camera["quaternion_wxyz"]))
+    backward = optical_rotation.reshape(3, 3)[:, 2]
+    # Visual-only PCB/lens proxies, behind the optical plane so they cannot occlude its image.
+    for name, kind, size, offset, color in (
+        ("pcb", mujoco.mjtGeom.mjGEOM_BOX, np.asarray(camera["pcb_size_m"]) / 2,
+         camera["optical_offset_from_pcb_m"], [.09, .12, .10, 1]),
+        ("lens", mujoco.mjtGeom.mjGEOM_CYLINDER, [.005, .0035, 0], .0035, [.025, .025, .025, 1]),
+    ):
+        root.add_geom(name=f"pgripper_camera_{name}_visual", type=kind, size=size,
+            pos=wrist.pos + offset * backward, quat=wrist.quat,
+            rgba=color, contype=0, conaffinity=0, mass=0, group=2)
     return parts, provenance
 
 

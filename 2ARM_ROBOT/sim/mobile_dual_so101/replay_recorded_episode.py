@@ -188,13 +188,15 @@ def build_tabletop_spec(model_path, profile, *, grippers="stock"):
         wrist = load_camera_profile(WRIST_CAMERA_PROFILE_ID)
         if side in pgripper_sides:
             replace_gripper(arm)
+            arm.camera("wrist_cam").name = "wrist_rgb"
         else:
             fixed = _FINGER_PAD_SPECS[0]
             # Geometry only: never constrain or attach the object.
             pinch = np.asarray(fixed["pos"]) + np.array([fixed["size"][2] + block_size[0] / 2, 0, 0])
             arm.body("gripper").add_site(name="cube_grasp", pos=pinch,
                 quat=arm.site("gripperframe").quat, size=[.002, .002, .002], group=3)
-        _apply_camera_profile(arm.body(wrist.parent_body).add_camera(name="wrist_rgb"), wrist, mujoco)
+        if side not in pgripper_sides:
+            _apply_camera_profile(arm.body(wrist.parent_body).add_camera(name="wrist_rgb"), wrist, mujoco)
         for material in arm.materials:
             if material.rgba[0] > 0.8 and material.rgba[1] > 0.7 and material.rgba[2] < 0.3:
                 material.rgba = [0.88, 0.89, 0.88, 1]
