@@ -75,6 +75,20 @@ def check_teacher_and_datasets(root):
     assert not np.array_equal(episodes[0]["memory_target"], episodes[1]["memory_target"])
     np.testing.assert_array_equal(episodes[0]["memory"][-8:], episodes[1]["memory"][-8:])
 
+    feedback = app.make_action_episodes(episodes, seed=42)
+    assert len(feedback) == len(episodes)*5
+    for e in feedback:
+        q, a = e["states"], e["actions"]
+        np.testing.assert_allclose(q[1:], q[:-1]+app.LAG*(a-q[:-1]), atol=1e-7)
+        goal = app.counter_pose(app.CLASSES[e["label"]])
+        if goal is None:
+            np.testing.assert_allclose(a, np.broadcast_to(q[0], a.shape), atol=1e-7)
+        else:
+            # 같은 입력에서 현재 자세 복사가 정답이 되지 않고, 각 손가락이 목표에 접근한다.
+            assert np.all(np.abs(a[0]-goal) <= .301*np.abs(q[0]-goal)+1e-6)
+            np.testing.assert_allclose(q[20], goal, atol=.01)
+    assert len(app.ActionDataset(root, feedback)) == len(episodes)*20
+
     sequence = app.SequenceDataset(episodes)
     assert len(sequence) == len(episodes)*6
     for index, (episode_id, t) in enumerate(sequence.samples):
@@ -144,7 +158,13 @@ def check_models():
 
     act = app.ActionCVAE(dimension=32, latent=4)
     target = torch.rand(2, app.CHUNK, app.JOINTS)*app.MAX_RAD
-    predicted, mu, logvar, logits = act(image, joints, actions=target)
+    latent_inputs = []
+    latent_hook = act.z_embed.register_forward_pre_hook(lambda _m, inputs: latent_inputs.append(inputs[0].detach().clone()))
+    with patch.object(torch, "rand", return_value=torch.tensor([[0.], [1.]])):
+        predicted, mu, logvar, logits = act(image, joints, actions=target)
+    latent_hook.remove()
+    assert torch.count_nonzero(latent_inputs[0][0]) == 0, "deployment z=0 branch was not trained"
+    assert torch.count_nonzero(latent_inputs[0][1]) > 0, "posterior sample branch was lost"
     assert predicted.shape == (2, app.CHUNK, app.JOINTS) and logits.shape == (2, 4)
     assert mu.shape == logvar.shape == (2, 4)
     assert (predicted >= 0).all() and (predicted <= app.MAX_RAD).all()

@@ -1,121 +1,80 @@
-rnn 1/30: train MSE=0.063908, val MSE=0.015907
-rnn 2/30: train MSE=0.013521, val MSE=0.012239
-rnn 3/30: train MSE=0.011761, val MSE=0.011622
-rnn 4/30: train MSE=0.011048, val MSE=0.010966
-rnn 5/30: train MSE=0.010202, val MSE=0.010194
-rnn 6/30: train MSE=0.009312, val MSE=0.009008
-rnn 7/30: train MSE=0.008314, val MSE=0.009063
-rnn 8/30: train MSE=0.007722, val MSE=0.007538
-rnn 9/30: train MSE=0.006665, val MSE=0.006551
-rnn 10/30: train MSE=0.006040, val MSE=0.006071
-rnn 11/30: train MSE=0.005359, val MSE=0.005835
-rnn 12/30: train MSE=0.005102, val MSE=0.005365
-rnn 13/30: train MSE=0.004755, val MSE=0.004827
-rnn 14/30: train MSE=0.004102, val MSE=0.004148
-rnn 15/30: train MSE=0.003778, val MSE=0.003569
-rnn 16/30: train MSE=0.003260, val MSE=0.003393
-rnn 17/30: train MSE=0.003090, val MSE=0.003188
-rnn 18/30: train MSE=0.002869, val MSE=0.002991
-rnn 19/30: train MSE=0.002495, val MSE=0.002420
-rnn 20/30: train MSE=0.002345, val MSE=0.002421
-rnn 21/30: train MSE=0.002245, val MSE=0.002373
-rnn 22/30: train MSE=0.002188, val MSE=0.002247
-rnn 23/30: train MSE=0.002086, val MSE=0.002303
-rnn 24/30: train MSE=0.002086, val MSE=0.002224
-rnn 25/30: train MSE=0.002081, val MSE=0.002282
-rnn 26/30: train MSE=0.001983, val MSE=0.002267
-rnn 27/30: train MSE=0.001963, val MSE=0.002330
-rnn 28/30: train MSE=0.001973, val MSE=0.002180
-rnn 29/30: train MSE=0.001997, val MSE=0.002221
-rnn 30/30: train MSE=0.001924, val MSE=0.002227
-lstm 1/30: train MSE=0.082276, val MSE=0.017594
-lstm 2/30: train MSE=0.013625, val MSE=0.012148
-lstm 3/30: train MSE=0.011805, val MSE=0.011493
-lstm 4/30: train MSE=0.011324, val MSE=0.011325
-lstm 5/30: train MSE=0.011129, val MSE=0.011122
-lstm 6/30: train MSE=0.010716, val MSE=0.010378
-lstm 7/30: train MSE=0.009342, val MSE=0.008933
-lstm 8/30: train MSE=0.007995, val MSE=0.007428
-lstm 9/30: train MSE=0.006568, val MSE=0.006502
-lstm 10/30: train MSE=0.005683, val MSE=0.005428
-lstm 11/30: train MSE=0.004751, val MSE=0.004495
-lstm 12/30: train MSE=0.004042, val MSE=0.003727
-lstm 13/30: train MSE=0.003511, val MSE=0.003083
-lstm 14/30: train MSE=0.002656, val MSE=0.002693
-lstm 15/30: train MSE=0.002276, val MSE=0.002601
-lstm 16/30: train MSE=0.002083, val MSE=0.002101
-lstm 17/30: train MSE=0.001878, val MSE=0.002075
-lstm 18/30: train MSE=0.001894, val MSE=0.002324
-lstm 19/30: train MSE=0.001848, val MSE=0.002266
-lstm 20/30: train MSE=0.001952, val MSE=0.001912
-lstm 21/30: train MSE=0.001696, val MSE=0.001916
-lstm 22/30: train MSE=0.001653, val MSE=0.001982
-lstm 23/30: train MSE=0.001696, val MSE=0.002070
-lstm 24/30: train MSE=0.001601, val MSE=0.002008
-lstm 25/30: train MSE=0.001618, val MSE=0.001783
-lstm 26/30: train MSE=0.001588, val MSE=0.002052
-lstm 27/30: train MSE=0.001562, val MSE=0.001854
-lstm 28/30: train MSE=0.001560, val MSE=0.001937
-lstm 29/30: train MSE=0.001534, val MSE=0.002094
-lstm 30/30: train MSE=0.001634, val MSE=0.001915
-transformer 1/30: train MSE=0.041218, val MSE=0.012647
-transformer 2/30: train MSE=0.013234, val MSE=0.009309
-transformer 3/30: train MSE=0.009679, val MSE=0.007248
-transformer 4/30: train MSE=0.006433, val MSE=0.004033
-transformer 5/30: train MSE=0.004682, val MSE=0.002573
-transformer 6/30: train MSE=0.003502, val MSE=0.002091
-transformer 7/30: train MSE=0.003032, val MSE=0.002065
-transformer 8/30: train MSE=0.002772, val MSE=0.001780
-transformer 9/30: train MSE=0.002543, val MSE=0.001906
-transformer 10/30: train MSE=0.002683, val MSE=0.001618
-transformer 11/30: train MSE=0.002553, val MSE=0.002013
-transformer 12/30: train MSE=0.002376, val MSE=0.001567
-transformer 13/30: train MSE=0.002466, val MSE=0.001751
-transformer 14/30: train MSE=0.002488, val MSE=0.001707
-transformer 15/30: train MSE=0.002269, val MSE=0.001619
-transformer 16/30: train MSE=0.002338, val MSE=0.001665
-transformer 17/30: train MSE=0.002421, val MSE=0.001646
-transformer 18/30: train MSE=0.002164, val MSE=0.001549
-transformer 19/30: train MSE=0.002320, val MSE=0.001884
-transformer 20/30: train MSE=0.002307, val MSE=0.001772
-transformer 21/30: train MSE=0.002166, val MSE=0.001957
-transformer 22/30: train MSE=0.002418, val MSE=0.001501
-transformer 23/30: train MSE=0.002224, val MSE=0.001590
-transformer 24/30: train MSE=0.002123, val MSE=0.001785
-transformer 25/30: train MSE=0.002267, val MSE=0.001605
-transformer 26/30: train MSE=0.002306, val MSE=0.001969
-transformer 27/30: train MSE=0.002262, val MSE=0.001525
-transformer 28/30: train MSE=0.002257, val MSE=0.001673
-transformer 29/30: train MSE=0.002175, val MSE=0.001602
-transformer 30/30: train MSE=0.002383, val MSE=0.001604
-ACT 1/30: train MSE=0.156962, KL=0.0617 | prior val MSE=0.151181, image acc=0.637
-ACT 2/30: train MSE=0.145096, KL=0.0098 | prior val MSE=0.145728, image acc=0.688
-ACT 3/30: train MSE=0.134697, KL=0.4158 | prior val MSE=0.126241, image acc=0.662
-ACT 4/30: train MSE=0.058455, KL=1.4075 | prior val MSE=0.084371, image acc=0.704
-ACT 5/30: train MSE=0.041092, KL=1.2587 | prior val MSE=0.047517, image acc=0.767
-ACT 6/30: train MSE=0.035769, KL=1.2080 | prior val MSE=0.049718, image acc=0.733
-ACT 7/30: train MSE=0.031470, KL=1.2608 | prior val MSE=0.067851, image acc=0.633
-ACT 8/30: train MSE=0.027508, KL=1.3344 | prior val MSE=0.066557, image acc=0.854
-ACT 9/30: train MSE=0.025901, KL=1.2803 | prior val MSE=0.067515, image acc=0.850
-ACT 10/30: train MSE=0.025131, KL=1.2083 | prior val MSE=0.057263, image acc=0.854
-ACT 11/30: train MSE=0.024680, KL=1.1034 | prior val MSE=0.058838, image acc=0.633
-ACT 12/30: train MSE=0.024222, KL=1.0254 | prior val MSE=0.051747, image acc=0.883
-ACT 13/30: train MSE=0.023763, KL=0.9545 | prior val MSE=0.046623, image acc=0.858
-ACT 14/30: train MSE=0.023587, KL=0.8931 | prior val MSE=0.043788, image acc=0.883
-ACT 15/30: train MSE=0.023243, KL=0.8240 | prior val MSE=0.040142, image acc=0.892
-ACT 16/30: train MSE=0.022791, KL=0.7843 | prior val MSE=0.037966, image acc=0.867
-ACT 17/30: train MSE=0.022337, KL=0.7194 | prior val MSE=0.036562, image acc=0.883
-ACT 18/30: train MSE=0.021702, KL=0.6680 | prior val MSE=0.032002, image acc=0.767
-ACT 19/30: train MSE=0.021064, KL=0.6390 | prior val MSE=0.030872, image acc=0.796
-ACT 20/30: train MSE=0.019568, KL=0.5957 | prior val MSE=0.031429, image acc=0.883
-ACT 21/30: train MSE=0.018046, KL=0.5621 | prior val MSE=0.025428, image acc=0.867
-ACT 22/30: train MSE=0.016483, KL=0.5282 | prior val MSE=0.023756, image acc=0.846
-ACT 23/30: train MSE=0.014919, KL=0.5168 | prior val MSE=0.019492, image acc=0.879
-ACT 24/30: train MSE=0.013771, KL=0.4914 | prior val MSE=0.018393, image acc=0.754
-ACT 25/30: train MSE=0.012279, KL=0.4729 | prior val MSE=0.017352, image acc=0.858
-ACT 26/30: train MSE=0.010693, KL=0.4803 | prior val MSE=0.013655, image acc=0.850
-ACT 27/30: train MSE=0.009233, KL=0.4717 | prior val MSE=0.012881, image acc=0.863
-ACT 28/30: train MSE=0.008009, KL=0.4507 | prior val MSE=0.012003, image acc=0.825
-ACT 29/30: train MSE=0.007422, KL=0.4386 | prior val MSE=0.009458, image acc=0.838
-ACT 30/30: train MSE=0.006840, KL=0.4337 | prior val MSE=0.009253, image acc=0.850
-완료: ./problem2_hand/runs/cd9a368691de4b759ca03cfcb2876b31/report.html
+rnn 1/20: train MSE=0.063908, val MSE=0.015907
+rnn 2/20: train MSE=0.013521, val MSE=0.012239
+rnn 3/20: train MSE=0.011761, val MSE=0.011622
+rnn 4/20: train MSE=0.011048, val MSE=0.010966
+rnn 5/20: train MSE=0.010202, val MSE=0.010194
+rnn 6/20: train MSE=0.009312, val MSE=0.009008
+rnn 7/20: train MSE=0.008314, val MSE=0.009063
+rnn 8/20: train MSE=0.007722, val MSE=0.007538
+rnn 9/20: train MSE=0.006665, val MSE=0.006551
+rnn 10/20: train MSE=0.006040, val MSE=0.006071
+rnn 11/20: train MSE=0.005359, val MSE=0.005835
+rnn 12/20: train MSE=0.005102, val MSE=0.005365
+rnn 13/20: train MSE=0.004755, val MSE=0.004827
+rnn 14/20: train MSE=0.004102, val MSE=0.004148
+rnn 15/20: train MSE=0.003778, val MSE=0.003569
+rnn 16/20: train MSE=0.003260, val MSE=0.003393
+rnn 17/20: train MSE=0.003090, val MSE=0.003188
+rnn 18/20: train MSE=0.002869, val MSE=0.002991
+rnn 19/20: train MSE=0.002495, val MSE=0.002420
+rnn 20/20: train MSE=0.002345, val MSE=0.002421
+lstm 1/20: train MSE=0.082276, val MSE=0.017594
+lstm 2/20: train MSE=0.013625, val MSE=0.012148
+lstm 3/20: train MSE=0.011805, val MSE=0.011493
+lstm 4/20: train MSE=0.011324, val MSE=0.011325
+lstm 5/20: train MSE=0.011129, val MSE=0.011122
+lstm 6/20: train MSE=0.010716, val MSE=0.010378
+lstm 7/20: train MSE=0.009342, val MSE=0.008933
+lstm 8/20: train MSE=0.007995, val MSE=0.007428
+lstm 9/20: train MSE=0.006568, val MSE=0.006502
+lstm 10/20: train MSE=0.005683, val MSE=0.005428
+lstm 11/20: train MSE=0.004751, val MSE=0.004495
+lstm 12/20: train MSE=0.004042, val MSE=0.003727
+lstm 13/20: train MSE=0.003511, val MSE=0.003083
+lstm 14/20: train MSE=0.002656, val MSE=0.002693
+lstm 15/20: train MSE=0.002276, val MSE=0.002601
+lstm 16/20: train MSE=0.002083, val MSE=0.002101
+lstm 17/20: train MSE=0.001878, val MSE=0.002075
+lstm 18/20: train MSE=0.001894, val MSE=0.002324
+lstm 19/20: train MSE=0.001848, val MSE=0.002266
+lstm 20/20: train MSE=0.001952, val MSE=0.001912
+transformer 1/20: train MSE=0.041218, val MSE=0.012647
+transformer 2/20: train MSE=0.013234, val MSE=0.009309
+transformer 3/20: train MSE=0.009679, val MSE=0.007248
+transformer 4/20: train MSE=0.006433, val MSE=0.004033
+transformer 5/20: train MSE=0.004682, val MSE=0.002573
+transformer 6/20: train MSE=0.003502, val MSE=0.002091
+transformer 7/20: train MSE=0.003032, val MSE=0.002065
+transformer 8/20: train MSE=0.002772, val MSE=0.001780
+transformer 9/20: train MSE=0.002543, val MSE=0.001906
+transformer 10/20: train MSE=0.002683, val MSE=0.001618
+transformer 11/20: train MSE=0.002553, val MSE=0.002013
+transformer 12/20: train MSE=0.002376, val MSE=0.001567
+transformer 13/20: train MSE=0.002466, val MSE=0.001751
+transformer 14/20: train MSE=0.002488, val MSE=0.001707
+transformer 15/20: train MSE=0.002269, val MSE=0.001619
+transformer 16/20: train MSE=0.002338, val MSE=0.001665
+transformer 17/20: train MSE=0.002421, val MSE=0.001646
+transformer 18/20: train MSE=0.002164, val MSE=0.001549
+transformer 19/20: train MSE=0.002320, val MSE=0.001884
+transformer 20/20: train MSE=0.002307, val MSE=0.001772
+ACT 1/20: train MSE=0.148090, KL=0.2251 | prior val MSE=0.101260, image acc=0.650
+ACT 2/20: train MSE=0.046856, KL=0.8474 | prior val MSE=0.071243, image acc=0.721
+ACT 3/20: train MSE=0.033622, KL=0.6136 | prior val MSE=0.086208, image acc=0.729
+ACT 4/20: train MSE=0.027738, KL=0.6099 | prior val MSE=0.102585, image acc=0.683
+ACT 5/20: train MSE=0.021480, KL=0.6178 | prior val MSE=0.075087, image acc=0.721
+ACT 6/20: train MSE=0.018693, KL=0.6983 | prior val MSE=0.100324, image acc=0.708
+ACT 7/20: train MSE=0.016473, KL=0.6292 | prior val MSE=0.065887, image acc=0.829
+ACT 8/20: train MSE=0.014685, KL=0.5598 | prior val MSE=0.061766, image acc=0.787
+ACT 9/20: train MSE=0.015328, KL=0.5572 | prior val MSE=0.047785, image acc=0.850
+ACT 10/20: train MSE=0.013454, KL=0.4889 | prior val MSE=0.069844, image acc=0.767
+ACT 11/20: train MSE=0.013447, KL=0.4689 | prior val MSE=0.050135, image acc=0.892
+ACT 12/20: train MSE=0.013333, KL=0.4334 | prior val MSE=0.048408, image acc=0.887
+ACT 13/20: train MSE=0.011891, KL=0.4712 | prior val MSE=0.067191, image acc=0.838
+ACT 14/20: train MSE=0.011548, KL=0.4218 | prior val MSE=0.059187, image acc=0.854
+ACT 15/20: train MSE=0.011928, KL=0.3612 | prior val MSE=0.052961, image acc=0.863
+ACT 16/20: train MSE=0.011159, KL=0.3780 | prior val MSE=0.068736, image acc=0.858
+ACT 17/20: train MSE=0.011549, KL=0.3710 | prior val MSE=0.045101, image acc=0.900
+ACT 18/20: train MSE=0.010841, KL=0.3760 | prior val MSE=0.070939, image acc=0.792
+ACT 19/20: train MSE=0.010384, KL=0.3255 | prior val MSE=0.069796, image acc=0.863
+ACT 20/20: train MSE=0.010290, KL=0.2941 | prior val MSE=0.057849, image acc=0.887

@@ -1,0 +1,190 @@
+{
+  "created": "2026-09-09T02:43:39.429516+00:00",
+  "scope": "학습 도중 best-prior-validation 체크포인트 사본의 검증20장60전환 진단. v3와 동일한 이미지·초기 자세이며 최종 test 성능이 아니다.",
+  "split": "val",
+  "device": "cpu",
+  "teacher_version": "feedback-prior-v4",
+  "history_latest_epoch_observed": 10,
+  "checkpoint_sha256": "7a544305b9dbd9a112f0a25670dd4bbb64db1688e199bd17a92dd05b23772377",
+  "selection": "클래스별 validation 행에서 일정 간격 5장씩, 각 이미지 3가지 canonical 시작",
+  "snapshot_history": [
+    {
+      "epoch": 1,
+      "train_mse": 0.14809036540843193,
+      "train_kl": 0.22506126569140525,
+      "train_classification_loss": 0.7554948166438511,
+      "val_mse": 0.10126022022217512,
+      "val_vision_accuracy": 0.65
+    },
+    {
+      "epoch": 2,
+      "train_mse": 0.04685554400441192,
+      "train_kl": 0.8474245702652704,
+      "train_classification_loss": 0.43810271796726047,
+      "val_mse": 0.07124306259211152,
+      "val_vision_accuracy": 0.7208333333333333
+    },
+    {
+      "epoch": 3,
+      "train_mse": 0.03362236700952053,
+      "train_kl": 0.6135512993449257,
+      "train_classification_loss": 0.3475106200150081,
+      "val_mse": 0.08620849277668943,
+      "val_vision_accuracy": 0.7291666666666666
+    },
+    {
+      "epoch": 4,
+      "train_mse": 0.02773769059528907,
+      "train_kl": 0.6099226096698216,
+      "train_classification_loss": 0.28402820150057473,
+      "val_mse": 0.102584870227923,
+      "val_vision_accuracy": 0.6833333333333333
+    },
+    {
+      "epoch": 5,
+      "train_mse": 0.021480271862376304,
+      "train_kl": 0.6177806705520267,
+      "train_classification_loss": 0.22565664052963258,
+      "val_mse": 0.07508748658389473,
+      "val_vision_accuracy": 0.7208333333333333
+    },
+    {
+      "epoch": 6,
+      "train_mse": 0.01869275521132208,
+      "train_kl": 0.6983396534692673,
+      "train_classification_loss": 0.19274054344211305,
+      "val_mse": 0.10032444566488266,
+      "val_vision_accuracy": 0.7083333333333334
+    },
+    {
+      "epoch": 7,
+      "train_mse": 0.016473453194789944,
+      "train_kl": 0.6291987207957677,
+      "train_classification_loss": 0.17101089552754448,
+      "val_mse": 0.06588690222085763,
+      "val_vision_accuracy": 0.8291666666666667
+    },
+    {
+      "epoch": 8,
+      "train_mse": 0.014684635571071079,
+      "train_kl": 0.5598424861544654,
+      "train_classification_loss": 0.14313134810044653,
+      "val_mse": 0.06176644776714966,
+      "val_vision_accuracy": 0.7875
+    },
+    {
+      "epoch": 9,
+      "train_mse": 0.015327764698969466,
+      "train_kl": 0.5571817208471752,
+      "train_classification_loss": 0.14225154200480097,
+      "val_mse": 0.04778513875867551,
+      "val_vision_accuracy": 0.85
+    },
+    {
+      "epoch": 10,
+      "train_mse": 0.013453512085335595,
+      "train_kl": 0.4888601890064421,
+      "train_classification_loss": 0.11807402109461171,
+      "val_mse": 0.06984437042769666,
+      "val_vision_accuracy": 0.7666666666666667
+    }
+  ],
+  "settings": {
+    "sample": false,
+    "future_targets_used": false,
+    "chunks": 16,
+    "executed_steps": 4,
+    "ticks": 64,
+    "gate_confidence": 0.7,
+    "lag": 0.35,
+    "criterion_rmse_rad": 0.2
+  },
+  "overall": {
+    "transitions": 60,
+    "unique_images": 20,
+    "raw_classification_fraction": 0.95,
+    "response_fraction": 0.7,
+    "mean_initial_joint_rmse_rad": 0.381644070148468,
+    "mean_final_joint_rmse_rad": 0.06680530459464838,
+    "correct_classified_count": 57,
+    "correct_classified_mean_final_rmse_rad": 0.03945229922241548,
+    "correct_and_responding_mean_final_rmse_rad": 0.017841075487339344,
+    "predicted_goal_mean_final_rmse_rad": 0.038317462592385707,
+    "responding_predicted_goal_mean_final_rmse_rad": 0.01776353913980226,
+    "within_final_criterion_fraction": 0.9,
+    "eligible_2s_count": 30,
+    "reached_within_2s_fraction_excluding_initial": 0.7
+  },
+  "per_class": {
+    "scissors": {
+      "transitions": 15,
+      "unique_images": 5,
+      "raw_classification_fraction": 1.0,
+      "response_fraction": 0.8,
+      "mean_initial_joint_rmse_rad": 0.5176597038904825,
+      "mean_final_joint_rmse_rad": 0.1378792140632868,
+      "correct_classified_count": 15,
+      "correct_classified_mean_final_rmse_rad": 0.1378792140632868,
+      "correct_and_responding_mean_final_rmse_rad": 0.04293409160648783,
+      "predicted_goal_mean_final_rmse_rad": 0.1378792140632868,
+      "responding_predicted_goal_mean_final_rmse_rad": 0.04293409160648783,
+      "within_final_criterion_fraction": 0.8,
+      "eligible_2s_count": 10,
+      "reached_within_2s_fraction_excluding_initial": 0.3
+    },
+    "rock": {
+      "transitions": 15,
+      "unique_images": 5,
+      "raw_classification_fraction": 1.0,
+      "response_fraction": 1.0,
+      "mean_initial_joint_rmse_rad": 0.5627333720525106,
+      "mean_final_joint_rmse_rad": 0.00364569453522563,
+      "correct_classified_count": 15,
+      "correct_classified_mean_final_rmse_rad": 0.00364569453522563,
+      "correct_and_responding_mean_final_rmse_rad": 0.00364569453522563,
+      "predicted_goal_mean_final_rmse_rad": 0.00364569453522563,
+      "responding_predicted_goal_mean_final_rmse_rad": 0.00364569453522563,
+      "within_final_criterion_fraction": 1.0,
+      "eligible_2s_count": 10,
+      "reached_within_2s_fraction_excluding_initial": 1.0
+    },
+    "paper": {
+      "transitions": 15,
+      "unique_images": 5,
+      "raw_classification_fraction": 0.8,
+      "response_fraction": 1.0,
+      "mean_initial_joint_rmse_rad": 0.4461832046508789,
+      "mean_final_joint_rmse_rad": 0.12569630978008112,
+      "correct_classified_count": 12,
+      "correct_classified_mean_final_rmse_rad": 0.010492285558333,
+      "correct_and_responding_mean_final_rmse_rad": 0.010492285558333,
+      "predicted_goal_mean_final_rmse_rad": 0.011744941771030425,
+      "responding_predicted_goal_mean_final_rmse_rad": 0.011744941771030425,
+      "within_final_criterion_fraction": 0.8,
+      "eligible_2s_count": 10,
+      "reached_within_2s_fraction_excluding_initial": 0.8
+    },
+    "none": {
+      "transitions": 15,
+      "unique_images": 5,
+      "raw_classification_fraction": 1.0,
+      "response_fraction": 0.0,
+      "mean_initial_joint_rmse_rad": 0.0,
+      "mean_final_joint_rmse_rad": 0.0,
+      "correct_classified_count": 15,
+      "correct_classified_mean_final_rmse_rad": 0.0,
+      "correct_and_responding_mean_final_rmse_rad": null,
+      "predicted_goal_mean_final_rmse_rad": 0.0,
+      "responding_predicted_goal_mean_final_rmse_rad": null,
+      "within_final_criterion_fraction": 1.0,
+      "eligible_2s_count": 0,
+      "reached_within_2s_fraction_excluding_initial": null
+    }
+  },
+  "common_correct_responding_comparison_to_v3": {
+    "scope": "두 중간 validation 진단 모두에서 분류가 맞고 응답한 동일 전환의 교집합. 최종 test 비교가 아니다.",
+    "common_transition_count": 39,
+    "v3_mean_final_rmse_rad": 0.4258192436148723,
+    "v4_mean_final_rmse_rad": 0.017841075487339344
+  }
+}

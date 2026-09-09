@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """문제 2: 웹캠 가위바위보에 반응하는 10관절 가상 손의 미래 행동 예측.
 
-2026-09-09 실제 Test MSE(rad²): RNN 0.001381, LSTM 0.001847,
-Transformer 0.001447, ACT(z=0) 0.010636; ViT 보조 Accuracy 75.83%.
-30 Epoch, mixed-open-start-v2 교사. 상세 결과는 RESULTS.md 참고.
+2026-09-09 v4 Test MSE(rad²): RNN 0.001445, LSTM 0.001938,
+Transformer 0.001516, ACT(z=0) 0.149103; ViT 보조 Accuracy 64.17%.
+20 Epoch, feedback-prior-v4 ACT / mixed-open-start-v2 시퀀스 교사.
+교사 버전별 비교와 실제 자세 전환 진단은 상위 RESULTS.md 참고.
 문제 1의 촬영 이미지는 재사용하고, 관절 상태·행동은 기구학 교사로 생성한다.
 이 코드는 물리 접촉 시뮬레이션이나 실물 로봇 구동을 수행하지 않는다.
 """
@@ -90,6 +91,30 @@ def make_episodes(rows, seed):
     return episodes
 
 
+def make_action_episodes(episodes, seed):
+    """현재 q에서 목표로 접근하는 feedback 교사. 영상이 바뀌면 전이 방향도 바뀐다.
+
+    시퀀스 비교용의 느린 궤적은 보존하고, ACT는 현재 관측으로 결정되는
+    명령을 학습한다. 각 사진을 열린 자세·보·바위·가위·임의 자세와 모두 짝짓는다.
+    """
+    rng = np.random.default_rng(seed)
+    result = []
+    poses = [np.zeros(JOINTS, dtype=np.float32)] + [counter_pose(label) for label in ("rock", "scissors", "paper")]
+    for e in episodes:
+        starts = poses + [rng.uniform(0, MAX_RAD, JOINTS).astype(np.float32)]
+        goal = counter_pose(CLASSES[e["label"]])
+        for start in starts:
+            states = np.empty((EPISODE_STEPS+1, JOINTS), dtype=np.float32)
+            actions = np.empty((EPISODE_STEPS, JOINTS), dtype=np.float32)
+            states[0] = start
+            gain = rng.uniform(.7, 1., JOINTS).astype(np.float32)
+            for t in range(EPISODE_STEPS):
+                actions[t] = states[t] if goal is None else states[t]+gain*(goal-states[t])
+                states[t+1] = states[t]+LAG*(actions[t]-states[t])
+            result.append({**e, "states": states, "actions": actions, "action_times": (0, 2, 6, 20)})
+    return result
+
+
 class SequenceDataset(Dataset):
     def __init__(self, episodes):
         self.episodes = episodes
@@ -110,7 +135,7 @@ class ActionDataset(Dataset):
     def __init__(self, data, episodes, training=False):
         self.data, self.episodes = data.resolve(), episodes
         self.transform = vision.image_transform(training, 64)
-        self.samples = [(i, t) for i in range(len(episodes)) for t in (0, 12, 24, 40, 56)]
+        self.samples = [(i, t) for i, e in enumerate(episodes) for t in e.get("action_times", (0, 12, 24, 40, 56))]
 
     def __len__(self):
         return len(self.samples)
@@ -232,6 +257,9 @@ class ActionCVAE(nn.Module):
             posterior = self.posterior(self.posterior_position(tokens))[:, 0]
             mu, logvar = self.mu(posterior), self.logvar(posterior).clamp(-8, 6)
             z = mu+(logvar*.5).exp()*torch.randn_like(mu)
+            if self.training:
+                # 배포 조건도 학습해 미래 정답 posterior만 사용하는 우회를 막는다.
+                z = torch.where(torch.rand(len(image), 1, device=image.device) < .5, torch.zeros_like(z), z)
         else:
             z = torch.randn(len(image), self.latent, device=image.device) if sample else torch.zeros(len(image), self.latent, device=image.device)
         memory = torch.cat((features, state, self.z_embed(z).unsqueeze(1)), dim=1)
@@ -356,9 +384,11 @@ def report(run, meta, seq, act, complete=False):
             "| 모델 | 다음 상태 MSE (rad²) | 기억 과제 32시점 MSE | 마지막 8시점 MSE |\n|---|---:|---:|---:|\n"+rows)
     if act:
         text += f"\nACT prior z=0 chunk MSE: **{act['chunk_mse']:.6f} rad²**\n\nACT prior 샘플 chunk MSE: **{act['prior_sample_mse']:.6f} rad²**\n\nViT 보조 이미지 분류 Accuracy: **{act['vision_accuracy']:.2%}**\n"
-    text += (f"\n나는 문제 1의 웹캠 이미지를 재사용하고 10관절 가상 손의 교사 궤적을 생성하여 실습한다.\n"
+    text += (f"\n문제 1의 웹캠 이미지에 10관절 가상 손의 교사 궤적을 연결해 학습·평가했다.\n"
              f"- seed={meta['seed']}, Epoch={meta['epochs']}, batch={meta['batch_size']}, 장치={meta['device_name']}.\n"
              f"- 교사 버전: {meta.get('teacher_version', 'random-start-v1')}. 버전이 다른 MSE는 평가 궤적도 다르므로 직접 비교하지 않는다.\n"
+             "- ACT 교사는 사진당 열린 손·보·주먹·가위·임의 자세 5개에서 시작하고, a=q+gain*(goal-q), gain=0.7~1.0으로 목표에 접근하도록 구성했다.\n"
+             "- ACT 창은 전이 초반을 포함한 0·2·6·20시점에서 추출했다. 시퀀스 비교용 교사는 mixed-open-start-v2를 보존했다.\n"
              "- 상대 이미지의 패에 이기는 손 모양을 목표로 한다. 없음이면 현재 자세를 유지한다.\n"
              "- 단위 rad, 관절 범위 0~1.4. 엄지/검지/중지/약지/소지 각 2개 관절.\n"
              "- 10Hz 기구학 상태 갱신 q[t+1]=q[t]+0.35*(a[t]-q[t]). 물리 접촉이나 실물 검증은 수행하지 않는다.\n"
@@ -368,6 +398,7 @@ def report(run, meta, seq, act, complete=False):
              "- 마지막 8시점 평가는 동일 모델의 입력을 잘라낸 진단이다. 별도로 짧은 입력에 최적화한 모델 비교가 아니므로 입력 분포 변화도 결과에 영향을 준다.\n"
              "- ViT는 64×64 이미지, 8×8 패치, Linear Projection, CLS·학습 가능한 위치 임베딩, 2층 Encoder를 사용한다.\n"
              "- ACT는 ViT 특징·현재 관절값·z로 미래 8개 목표 명령을 출력한다. posterior는 학습에만 정답 청크를 사용한다.\n"
+             "- 학습 표본마다 50% 확률로 z=0으로 바꿔 실제 실행 조건도 학습한다. 나머지는 posterior 표본이며 KL은 전체 표본에 적용한다.\n"
              "- 학습 손실은 재구성 MSE + 0.001 KL + 0.2 이미지 보조 분류 CE. 원 ACT와 달리 직접 만든 ViT와 보조 분류기를 사용한다.\n"
              "- 검증 MSE로 가중치를 선택한다. 평가는 정답 액션 없이 z=0, 고정 seed의 prior 샘플링을 각각 수행한다.\n"
              "- 학습률 Adam 0.001(시퀀스), 0.0003(ACT), weight decay 0.0001. 이 설정의 우월성은 대조 실험 없이 주장하지 않는다.\n"
@@ -400,8 +431,8 @@ def train(args):
     if (run/"meta.json").exists():
         raise ValueError("기록이 있는 실행 폴더입니다. 새 경로를 지정하세요.")
     meta = {"smoke": args.smoke, "complete": False, "seed": args.seed, "epochs": args.epochs,
-            "teacher_version": "mixed-open-start-v2",
-            "batch_size": args.batch_size, "created": datetime.now(timezone.utc).isoformat(),
+            "teacher_version": "feedback-prior-v4", "sequence_teacher_version": "mixed-open-start-v2",
+            "prior_zero_probability": .5, "batch_size": args.batch_size, "created": datetime.now(timezone.utc).isoformat(),
             "device_name": torch.cuda.get_device_name(0) if device.type == "cuda" else "CPU",
             "torch_version": str(torch.__version__), "source_fingerprint": manifest["fingerprint"]}
     vision.write_json(run/"meta.json", meta); vision.write_json(run/"source_manifest.json", manifest)
@@ -434,6 +465,7 @@ def train(args):
         del model, optimizer, checkpoint
         if device.type == "cuda":
             torch.cuda.empty_cache()
+    episodes = {split: make_action_episodes(es, args.seed+i) for i, (split, es) in enumerate(episodes.items())}
     torch.manual_seed(args.seed)
     model = ActionCVAE().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=.0003, weight_decay=.0001)

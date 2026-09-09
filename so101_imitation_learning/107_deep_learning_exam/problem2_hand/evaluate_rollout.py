@@ -19,10 +19,12 @@ CHUNKS, EXECUTED, CONFIDENCE, CRITERION = 16, 4, .7, .2
 
 
 @torch.inference_mode()
-def rollout(model, images):
+def rollout(model, images, initial_joints=None):
     """정답 라벨·목표 자세를 받지 않는다. UI와 같은 prior z=0 관찰/명령 경로다."""
     model.eval()
-    q = images.new_zeros((len(images), app.JOINTS))
+    q = images.new_zeros((len(images), app.JOINTS)) if initial_joints is None else initial_joints.to(images).clone()
+    if q.shape != (len(images), app.JOINTS) or not torch.isfinite(q).all() or (q < 0).any() or (q > app.MAX_RAD).any():
+        raise ValueError("초기 관절은 0~1.4 rad의 유한한 [B,10] 배열이어야 합니다.")
     trajectory, responses = [q.clone()], images.new_zeros(len(images))
     first = None
     for _ in range(CHUNKS):

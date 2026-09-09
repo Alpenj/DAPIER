@@ -1,10 +1,8 @@
 {
-  "created": "2026-09-09T02:49:26.237272+00:00",
+  "created": "2026-09-09T01:40:40.261309+00:00",
   "smoke": false,
   "scope": "고정 held-out 웹캠 이미지에 대한 가상 운동학 폐루프 평가. 실물·새 웹캠 장면·게임 승률 평가 아님.",
   "device": "cuda",
-  "source_fingerprint": "169fd07754a258f26a2010ddaa6af97590c31efcd9065beca33e2de5841a468a",
-  "checkpoint_sha256": "4515c4c2f37cc1abbaada469d72ee445a51770dd2ccfc01a91c16c2fdbd1e5ed",
   "settings": {
     "chunks": 16,
     "predicted_steps_per_chunk": 8,
@@ -34,40 +32,40 @@
   },
   "overall": {
     "images": 120,
-    "raw_vit_accuracy": 0.6416666666666667,
-    "response_fraction": 0.65,
+    "raw_vit_accuracy": 0.7583333333333333,
+    "response_fraction": 0.6,
     "mean_initial_joint_rmse_rad": 0.4568644883111119,
-    "mean_final_joint_rmse_rad": 0.29740290267315383,
+    "mean_final_joint_rmse_rad": 0.2457097235135734,
     "initial_within_criterion_fraction": 0.5,
-    "within_criterion_fraction": 0.6333333333333333
+    "within_criterion_fraction": 0.6916666666666667
   },
   "per_class": {
     "scissors": {
       "images": 30,
-      "raw_vit_accuracy": 0.5666666666666667,
-      "response_fraction": 0.9,
+      "raw_vit_accuracy": 0.36666666666666664,
+      "response_fraction": 0.6,
       "mean_initial_joint_rmse_rad": 1.0012491941452026,
-      "mean_final_joint_rmse_rad": 0.37010011843716106,
+      "mean_final_joint_rmse_rad": 0.7380925300220649,
       "initial_within_criterion_fraction": 0.0,
-      "within_criterion_fraction": 0.4666666666666667
+      "within_criterion_fraction": 0.06666666666666667
     },
     "rock": {
       "images": 30,
-      "raw_vit_accuracy": 0.23333333333333334,
-      "response_fraction": 0.8,
+      "raw_vit_accuracy": 0.9,
+      "response_fraction": 0.8666666666666667,
       "mean_initial_joint_rmse_rad": 0.05000000074505806,
-      "mean_final_joint_rmse_rad": 0.6358747236120205,
+      "mean_final_joint_rmse_rad": 0.08494836526612441,
       "initial_within_criterion_fraction": 1.0,
-      "within_criterion_fraction": 0.3333333333333333
+      "within_criterion_fraction": 0.9
     },
     "paper": {
       "images": 30,
       "raw_vit_accuracy": 0.8,
-      "response_fraction": 0.9,
+      "response_fraction": 0.9333333333333333,
       "mean_initial_joint_rmse_rad": 0.776208758354187,
-      "mean_final_joint_rmse_rad": 0.18363676864343384,
+      "mean_final_joint_rmse_rad": 0.15979799876610437,
       "initial_within_criterion_fraction": 0.0,
-      "within_criterion_fraction": 0.7333333333333333
+      "within_criterion_fraction": 0.8
     },
     "none": {
       "images": 30,

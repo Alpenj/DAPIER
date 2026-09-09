@@ -40,6 +40,16 @@ run('drawHand()');
 assert.equal(get('jointRows').children.length,5);
 assert.equal(get('jointRows').children.reduce((n,r)=>n+r.children.length-1,0),10);
 assert.equal(canvasCalls.filter(c=>c[0]==='arc').length,20,'Ten joint circles, each with inner/outer arc');
+// Canonical teacher q must produce a folded fist and two separated extended fingers.
+const silhouette=q=>{context.pose=q;return JSON.parse(run('JSON.stringify(HAND_FINGERS.map((f,i)=>fingerPoints(f,pose[i*2],pose[i*2+1])))'));};
+const rock=silhouette(Array.from({length:10},(_,i)=>i%2?.95:1.05));
+const scissors=silhouette([1.05,.95,.05,.05,.05,.05,1.05,.95,1.05,.95]);
+assert.ok(rock.slice(1).every(points=>points[2][1]>points[0][1]+20 && Math.min(...points.map(p=>p[1]))>points[0][1]-45),'Folded fingers must turn into the palm, not reverse on one straight ray');
+assert.ok(rock[0][2][0]>390 && rock[0][2][1]>350,'Folded thumb must cross the palm');
+assert.deepEqual(scissors.map((p,i)=>p[2][1]<200?i:null).filter(i=>i!==null),[1,2]);
+assert.ok(scissors[2][2][0]-scissors[1][2][0]>100,'Index and middle must have a visible fixed V spread');
+for(let q=0;q<=1.4;q+=.1){const a=silhouette(Array(10).fill(q)),b=silhouette(Array(10).fill(q+1e-6));assert.ok(a.flat().flat().every(Number.isFinite));assert.ok(a.every((f,i)=>f.every((p,j)=>Math.hypot(p[0]-b[i][j][0],p[1]-b[i][j][1])<.001)),'Projection must stay continuous as actual q changes');}
+
 run('state.joints=Array(10).fill(.2);applyAction(Array(10).fill(1))');
 assert.ok(joints().every(q=>Math.abs(q-.48)<1e-12),'q must use .35 response rate');
 
