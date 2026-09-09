@@ -1,0 +1,12 @@
+{
+  "smoke": false,
+  "complete": true,
+  "seed": 42,
+  "epochs": 30,
+  "teacher_version": "mixed-open-start-v2",
+  "batch_size": 64,
+  "created": "2026-09-09T01:36:19.700143+00:00",
+  "device_name": "NVIDIA GeForce RTX 5050 Laptop GPU",
+  "torch_version": "2.11.0+cu130",
+  "source_fingerprint": "169fd07754a258f26a2010ddaa6af97590c31efcd9065beca33e2de5841a468a"
+}

@@ -1,0 +1,19 @@
+{
+  "seed": 42,
+  "epochs": 10,
+  "batch_size": 32,
+  "image_size": 128,
+  "classes": [
+    "scissors",
+    "rock",
+    "paper",
+    "none"
+  ],
+  "smoke": false,
+  "complete": true,
+  "device_name": "NVIDIA GeForce RTX 5050 Laptop GPU",
+  "torch_version": "2.11.0+cu130",
+  "fingerprint": "169fd07754a258f26a2010ddaa6af97590c31efcd9065beca33e2de5841a468a",
+  "created": "2026-09-09T01:15:15.229818+00:00",
+  "selected_model": "resnet_finetune"
+}

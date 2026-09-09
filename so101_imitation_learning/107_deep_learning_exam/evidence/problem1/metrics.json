@@ -1,0 +1,170 @@
+[
+  {
+    "model": "mlp",
+    "val_accuracy": 0.6125,
+    "val_loss": 1.056072264459605,
+    "best_epoch": 5,
+    "test_accuracy": 0.6,
+    "test_loss": 0.8226790428161621,
+    "confusion": [
+      [
+        4,
+        21,
+        5,
+        0
+      ],
+      [
+        0,
+        24,
+        6,
+        0
+      ],
+      [
+        0,
+        16,
+        14,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        30
+      ]
+    ],
+    "trainable_parameters": 12616580,
+    "total_parameters": 12616580,
+    "latency_ms": 0.20611399988410994,
+    "fps": 4851.684022251094,
+    "latency_p95_ms": 0.21104250226926524,
+    "pipeline_ms": 0.7345616805832833,
+    "benchmark_repeats": 50,
+    "benchmark_batch": 1
+  },
+  {
+    "model": "cnn",
+    "val_accuracy": 0.8875,
+    "val_loss": 0.34202991501272967,
+    "best_epoch": 8,
+    "test_accuracy": 0.7416666666666667,
+    "test_loss": 0.5256641153207359,
+    "confusion": [
+      [
+        18,
+        0,
+        12,
+        0
+      ],
+      [
+        13,
+        13,
+        4,
+        0
+      ],
+      [
+        1,
+        1,
+        28,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        30
+      ]
+    ],
+    "trainable_parameters": 155524,
+    "total_parameters": 155524,
+    "latency_ms": 0.22716199950082228,
+    "fps": 4402.14473458348,
+    "latency_p95_ms": 0.2692147008929169,
+    "pipeline_ms": 0.7124993398610968,
+    "benchmark_repeats": 50,
+    "benchmark_batch": 1
+  },
+  {
+    "model": "resnet_frozen",
+    "val_accuracy": 0.8083333333333333,
+    "val_loss": 0.43203587432702384,
+    "best_epoch": 4,
+    "test_accuracy": 0.6083333333333333,
+    "test_loss": 0.9781100114186605,
+    "confusion": [
+      [
+        8,
+        5,
+        17,
+        0
+      ],
+      [
+        4,
+        11,
+        15,
+        0
+      ],
+      [
+        0,
+        1,
+        29,
+        0
+      ],
+      [
+        0,
+        0,
+        5,
+        25
+      ]
+    ],
+    "trainable_parameters": 2052,
+    "total_parameters": 11178564,
+    "latency_ms": 1.4741720801976044,
+    "fps": 678.3468588456483,
+    "latency_p95_ms": 1.65011719946051,
+    "pipeline_ms": 1.9940048796706833,
+    "benchmark_repeats": 50,
+    "benchmark_batch": 1
+  },
+  {
+    "model": "resnet_finetune",
+    "val_accuracy": 0.9666666666666667,
+    "val_loss": 0.10452261473207423,
+    "best_epoch": 5,
+    "test_accuracy": 0.7916666666666666,
+    "test_loss": 1.0378710319598516,
+    "confusion": [
+      [
+        9,
+        17,
+        4,
+        0
+      ],
+      [
+        1,
+        29,
+        0,
+        0
+      ],
+      [
+        1,
+        1,
+        28,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        29
+      ]
+    ],
+    "trainable_parameters": 11178564,
+    "total_parameters": 11178564,
+    "latency_ms": 1.5042060405539814,
+    "fps": 664.8025423642839,
+    "latency_p95_ms": 1.8520210462156679,
+    "pipeline_ms": 1.979345360014122,
+    "benchmark_repeats": 50,
+    "benchmark_batch": 1
+  }
+]
