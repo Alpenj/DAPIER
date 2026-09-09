@@ -45,24 +45,44 @@ def validate(folder):
         assert np.allclose(np.linalg.norm(block[:, 3:], axis=1), 1, atol=1e-5)
         assert np.allclose(f["expert/pad_force_N"][1:], force[index[1:]-1])
         assert np.allclose(f["expert/block_pose"][1:], block[index[1:]-1])
-        for side, close in enumerate(("donor close", "recipient close")):
-            selection = np.flatnonzero(phase == close)
-            assert len(selection) >= 165 and force[selection[-165:], side].min() >= 1
-        donor_hold = np.isin(phase, ["donor lift", "donor present", "recipient orient away",
-                                    "recipient approach", "recipient insert", "recipient close"])
-        assert force[donor_hold, 0].min() >= .3
-        recipient_hold = np.isin(phase, ["donor release", "donor retreat", "recipient hold",
-                                        "recipient carry", "place approach", "place seat", "place support confirm"])
-        assert force[recipient_hold, 1].min() >= .3
-        alone = phase == "recipient hold"
-        assert alone.sum() >= 1500 and force[alone, 0].max() <= .01 and block[alone, 2].min() > .06
-        seat = phase == "place support confirm"
-        assert seat.sum() >= 100 and support[seat].min() >= .05
-        rest = phase == "table hold"
-        assert rest.sum() >= 1500 and support[rest].min() >= .1 and force[rest].max() <= .01
-        assert block[rest, 2].min() >= .019 and block[rest, 2].max() <= .022
-        assert np.max(np.linalg.norm(np.diff(block[rest, :3], axis=0), axis=1)/.002) < .01
-        assert np.max(np.linalg.norm(block[rest, :3]-block[rest, :3][0], axis=1)) < .001
+        if report.get("camera_driven"):
+            side = 0 if report["arm"] == "left" else 1
+            close = np.flatnonzero(phase == "close")
+            assert len(close) >= 165 and force[close[-165:], side].min() >= 1
+            lift = np.isin(phase, ["vision lift", "hold"])
+            assert force[lift, side].min() >= .3
+            hold = phase == "hold"
+            assert hold.sum() == 1500 and block[hold, 2].min() > .06
+            assert support[hold].max() <= .01 and force[hold, 1-side].max() <= .01
+            assert report["hold_seconds"] == 3 and report["maximum_coupling_error_m"] <= .0003
+            assert not report["object_ground_truth_used_for_control"]
+            assert not report["object_attachments"] and not report["hardware_execution"]
+            assert report["object_pose_writes_after_initialization"] == 0
+            assert report["runtime_qpos_writes_after_initialization"] == 0
+            sources = [d["source"] for d in report["detections"]]
+            assert sources[0] == "top RGB + metric depth"
+            assert report["arm"]+" wrist RGB" in sources
+            assert sources[-1] == report["arm"]+" wrist RGB visibility"
+            assert not report["blank_top"] and not report["blank_wrist"]
+        else:
+            for side, close in enumerate(("donor close", "recipient close")):
+                selection = np.flatnonzero(phase == close)
+                assert len(selection) >= 165 and force[selection[-165:], side].min() >= 1
+            donor_hold = np.isin(phase, ["donor lift", "donor present", "recipient orient away",
+                                        "recipient approach", "recipient insert", "recipient close"])
+            assert force[donor_hold, 0].min() >= .3
+            recipient_hold = np.isin(phase, ["donor release", "donor retreat", "recipient hold",
+                                            "recipient carry", "place approach", "place seat", "place support confirm"])
+            assert force[recipient_hold, 1].min() >= .3
+            alone = phase == "recipient hold"
+            assert alone.sum() >= 1500 and force[alone, 0].max() <= .01 and block[alone, 2].min() > .06
+            seat = phase == "place support confirm"
+            assert seat.sum() >= 100 and support[seat].min() >= .05
+            rest = phase == "table hold"
+            assert rest.sum() >= 1500 and support[rest].min() >= .1 and force[rest].max() <= .01
+            assert block[rest, 2].min() >= .019 and block[rest, 2].max() <= .022
+            assert np.max(np.linalg.norm(np.diff(block[rest, :3], axis=0), axis=1)/.002) < .01
+            assert np.max(np.linalg.norm(block[rest, :3]-block[rest, :3][0], axis=1)) < .001
         depth_valid_fraction = []
         for start in range(0, n, 32):
             chunk = f["observation/depth_m"][start:start+32]

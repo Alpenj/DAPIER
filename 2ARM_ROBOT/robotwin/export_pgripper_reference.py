@@ -72,6 +72,12 @@ def export(source, model_path, output):
     cameras = [dict(name=c.name, body=model.body(int(c.bodyid[0])).name,
                    pos=c.pos.tolist(), quat=c.quat.tolist(), fovy=float(c.fovy[0]))
                for c in [model.camera(n) for n in ("top_h201_reference", "left_wrist_rgb", "right_wrist_rgb")]]
+    tcp = {}
+    for side in ("left", "right"):
+        site = model.site(side+"_cube_grasp")
+        tcp[side] = dict(body=model.body(int(site.bodyid[0])).name,
+                         pos=site.pos.tolist(), quat=site.quat.tolist())
+    (output / "vision_tcp.json").write_text(json.dumps(tcp, indent=2))
     # Freeze several configurations, including both aperture endpoints, for independent FK checks.
     samples = []
     rng = np.random.default_rng(60909)
