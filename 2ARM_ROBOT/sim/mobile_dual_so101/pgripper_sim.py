@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Current right-only PGripper tabletop scene; offline SIM only, no dataset replay."""
+"""Dual PGripper tabletop scene; offline SIM only, no dataset replay."""
 import argparse
 import json
 from pathlib import Path
@@ -115,8 +115,8 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path)
-    parser.add_argument("--grippers", choices=("right", "both"), default="right",
-                        help="right matches the current assembly; both previews the planned replacement")
+    parser.add_argument("--grippers", choices=("right", "both"), default="both",
+                        help="requested dual SIM configuration; left hardware replacement is unverified")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--viewer", action="store_true", help="open simulation-only controls for up to 30 minutes")
     run(parser.parse_args())
