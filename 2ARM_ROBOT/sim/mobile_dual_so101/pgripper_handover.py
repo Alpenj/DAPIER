@@ -3,6 +3,7 @@
 import argparse
 import json
 from pathlib import Path
+from threading import Event
 import time
 import mujoco
 import numpy as np
@@ -60,7 +61,8 @@ def table_support_force(model, data):
     return total
 
 
-def run(args):
+def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
+    replay_requested = replay_requested if replay_requested is not None else Event()
     if args.donor != "left" and not args.handover_only:
         raise ValueError("the full task is left pickup -> right receive -> right place; use --handover-only for reverse")
     output = args.output.resolve()
@@ -100,11 +102,20 @@ def run(args):
         raise ValueError("the block must be an unattached free body")
     data = mujoco.MjData(model)
     command = np.asarray(home_action(model, np.tile(np.deg2rad([0, -35, 55, 35, 0, 0]), 2)))
+    if initial_arm_offset is not None:
+        offset = np.asarray(initial_arm_offset, dtype=float)
+        if offset.shape != (12,) or not np.isfinite(offset).all() or np.max(np.abs(offset)) > np.deg2rad(1):
+            raise ValueError("initial arm perturbation must be finite and at most 1 degree")
+        if np.any(offset[[5, 11]]):
+            raise ValueError("initial perturbation cannot change grippers")
+        command += offset
+        command = np.clip(command, model.actuator_ctrlrange[:, 0], model.actuator_ctrlrange[:, 1])
     apply_control_as_pose(model, data, command)  # Only runtime pose initialization.
     output.mkdir(parents=True, exist_ok=False)
     trace, plans = [], []
     deepest = {"depth_m": 0.0}
     phase, failure = "settle", None
+    interrupted_for_replay = False
     donor_released = False
     donor_release_started = False
     success = False
@@ -119,13 +130,18 @@ def run(args):
     viewer = None
     if args.viewer:
         from mujoco import viewer as mj_viewer
-        viewer = mj_viewer.launch_passive(model, data)
+        def key_callback(keycode):
+            if keycode in (ord("R"), ord("r")):
+                replay_requested.set()  # The physics thread performs the restart, not the GUI callback.
+        viewer = mj_viewer.launch_passive(model, data, key_callback=key_callback)
         viewer.cam.lookat[:] = [.19, 0, .14]
         viewer.cam.distance, viewer.cam.azimuth, viewer.cam.elevation = .85, 135, -30
     wall_started = time.monotonic()
 
     def tick(target):
         nonlocal recipient_only_hold_steps
+        if viewer is not None and replay_requested.is_set():
+            raise InterruptedError("viewer replay requested")
         if viewer is not None and not viewer.is_running():
             raise ValueError("viewer closed by user")
         target = np.asarray(target).copy()
@@ -135,6 +151,8 @@ def run(args):
             raise ValueError("joint command outside range")
         for side, grip in hold_commands.items():
             target[sides[side] * 6 + 5] = grip
+        if observer is not None:
+            observer(model, data, target.copy(), phase)
         data.ctrl[:] = target
         mujoco.mj_step(model, data)
         if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(w.number for w in data.warning):
@@ -170,7 +188,7 @@ def run(args):
             if viewer is not None:
                 viewer.set_texts([(mujoco.mjtFontScale.mjFONTSCALE_100, mujoco.mjtGridPos.mjGRID_TOPLEFT,
                     f"DUAL PGRIPPER | {donor} -> {recipient} | SIM ONLY",
-                    f"{phase} | {data.time:.1f}s | 4cm / 20g | NOT ACT")])
+                    f"{phase} | {data.time:.1f}s | R: restart | NOT ACT")])
                 viewer.sync()
                 time.sleep(max(0, wall_started + data.time - time.monotonic()))
         if deepest["depth_m"] > .001:
@@ -319,11 +337,13 @@ def run(args):
                     raise ValueError("released block is not settled on the table")
                 table_hold_steps += 1
             task_success = True
-    except (ValueError, RuntimeError) as error:
+    except (ValueError, RuntimeError, InterruptedError) as error:
         failure = {"phase": phase, "reason": str(error)}
+        interrupted_for_replay = isinstance(error, InterruptedError) and replay_requested.is_set()
     report = {"kind": "known-scene IK + virtual-contact SIM baseline", "donor": donor,
         "recipient": recipient, "handover_success": success, "failure": failure,
         "task_success": task_success, "handover_only": args.handover_only,
+        "interrupted_for_replay": interrupted_for_replay,
         "place_release_started": place_release_started, "table_supported_hold_s": table_hold_steps * dt,
         "task_sequence": [f"{donor} pickup", f"handover to {recipient}"]
             + ([] if args.handover_only else ["right place on table"]),
@@ -369,13 +389,26 @@ def run(args):
             renderer.close()
     if viewer is not None:
         viewer.set_texts([(mujoco.mjtFontScale.mjFONTSCALE_100, mujoco.mjtGridPos.mjGRID_TOPLEFT,
-            "SIM TASK PASS" if accepted else "SIM TASK FAILED", "Paused final state | NOT REAL VALIDATION")])
-        deadline = time.monotonic() + 1800
-        while viewer.is_running() and time.monotonic() < deadline:
+            "SIM TASK PASS" if accepted else "SIM TASK STOPPED", "R: restart | Close window: exit | SIM ONLY")])
+        while viewer.is_running() and not replay_requested.is_set():
             viewer.sync()
             time.sleep(.05)
         viewer.close()
     return 0 if accepted else 2
+
+
+def main(args):
+    replay_requested = Event()
+    attempt = 0
+    while True:
+        current = argparse.Namespace(**vars(args))
+        if attempt:
+            current.output = args.output.with_name(f"{args.output.name}-replay-{attempt:03d}")
+        replay_requested.clear()
+        code = run(current, replay_requested=replay_requested)
+        if not args.viewer or not replay_requested.is_set():
+            return code
+        attempt += 1
 
 
 if __name__ == "__main__":
@@ -387,5 +420,5 @@ if __name__ == "__main__":
     parser.add_argument("--disable-recipient-contact", action="store_true")
     parser.add_argument("--handover-only", action="store_true", help="diagnostic: stop after handover and hold")
     parser.add_argument("--render", action="store_true", help="save final physics-state images on success")
-    parser.add_argument("--viewer", action="store_true", help="show motion then pause final scene for up to 30 minutes")
-    raise SystemExit(run(parser.parse_args()))
+    parser.add_argument("--viewer", action="store_true", help="show motion; R restarts, closing the window exits")
+    raise SystemExit(main(parser.parse_args()))

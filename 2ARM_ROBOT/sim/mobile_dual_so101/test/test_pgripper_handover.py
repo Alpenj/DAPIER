@@ -18,6 +18,37 @@ from mobile_dual_so101 import resolve_so101_model
 
 
 class PGripperHandoverTest(unittest.TestCase):
+    def test_replay_outputs_and_callback(self):
+        args = SimpleNamespace(output=Path("/tmp/example-run"), viewer=True)
+        seen = []
+        def run(current, *, replay_requested):
+            self.assertFalse(replay_requested.is_set())
+            seen.append(current.output)
+            if len(seen) < 3:
+                replay_requested.set()
+            return 0
+        with patch.object(handover, "run", side_effect=run):
+            self.assertEqual(handover.main(args), 0)
+        self.assertEqual(seen, [args.output, Path("/tmp/example-run-replay-001"),
+                                Path("/tmp/example-run-replay-002")])
+        self.assertEqual(args.output, Path("/tmp/example-run"))
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            args = SimpleNamespace(output=Path(tmp) / "interrupted", viewer=True,
+                model=resolve_so101_model(), donor="left", handover_only=False,
+                render=False, disable_recipient_contact=False)
+            closed = []
+            def launch(model, data, *, key_callback):
+                return SimpleNamespace(cam=SimpleNamespace(lookat=np.zeros(3)),
+                    is_running=lambda: True, set_texts=lambda texts: None,
+                    sync=lambda: key_callback(ord("R")), close=lambda: closed.append(True))
+            with patch("mujoco.viewer.launch_passive", side_effect=launch):
+                self.assertEqual(handover.run(args), 2)
+            report = json.loads((args.output / "report.json").read_text())
+        self.assertTrue(report["interrupted_for_replay"])
+        self.assertFalse(report["task_success"])
+        self.assertFalse(report["donor_release_started"])
+        self.assertEqual(closed, [True])
+
     def test_exact_contact_pairs_and_invalid_forces(self):
         contacts = [(0, 10), (11, 0), (10, 0), (0, 12), (13, 0), (99, 10), (12, 11), (0, 10)]
         data = SimpleNamespace(contact=[SimpleNamespace(geom1=a, geom2=b) for a, b in contacts])
