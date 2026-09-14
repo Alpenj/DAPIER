@@ -72,14 +72,25 @@ Codex cloud에서 원격 브랜치를 작업하고 로컬 command-line Codex에�
 
 ```bash
 cd ~/DAPIER
+scripts/cowork doctor
 scripts/cowork start shoe-task-ux
 scripts/cowork prompt shoe-task-ux
 ```
 
-첫 명령은 다음 두 항목을 만든다.
+`doctor`는 origin, Git worktree, primary checkout의 dirty 상태, Python/NumPy,
+GitHub CLI 인증, repository ruleset과 active `pro/**` branch를 한 번에 점검한다.
+경고는 작업을 막지 않지만 `FAIL`은 먼저 해결한다.
+
+`start`는 다음 세 항목을 만든다.
 
 - GitHub 브랜치: `pro/shoe-task-ux`
 - 격리된 로컬 worktree: `.local-workspaces/pro/shoe-task-ux`
+- Git common directory의 private handoff manifest: task, writer, base SHA,
+  expected remote SHA, required tests와 `hardware_allowed=false`
+
+Manifest는 worktree 안에 두지 않으므로 Git status와 `verify`의 clean 조건을
+오염시키지 않는다. `sync`는 expected remote SHA를 명시적으로 갱신하고 기존
+검증 기록을 비운다. `verify`가 성공해야 현재 SHA가 verified SHA로 기록된다.
 
 두 번째 명령의 출력에서 `Task` 부분을 구체적으로 채워 Codex cloud에 전달한다.
 저장소와 **기존 브랜치 이름, Starting SHA, Expected remote SHA**를 유지하고,
@@ -101,19 +112,16 @@ scripts/cowork verify shoe-task-ux
 자체 README나 테스트 명령이 있으면 그것도 해당 worktree 안에서 실행한다.
 SIM/MOCK 통과를 HW 성공으로 해석하지 않는다.
 
-결과가 괜찮으면 PR을 연다.
+결과가 괜찮으면 검증한 exact SHA로 PR을 연다.
 
 ```bash
-gh pr create \
-  --repo Alpenj/DAPIER \
-  --base main \
-  --head pro/shoe-task-ux \
-  --template .github/pull_request_template.md
+scripts/cowork pr shoe-task-ux --draft
 ```
 
-`--fill`은 commit 정보로 본문을 만들기 때문에 이 저장소의 안전 체크 항목을
-보장하지 않는다. PR을 제출하기 전에 template의 SHA, writer, SIM/MOCK/HW,
-미실행 검증과 rollback 항목을 직접 채운다.
+`pr`은 clean worktree, `HEAD == origin/pro/<task>`, manifest expected SHA와
+verified SHA의 일치를 요구한다. 변경 파일, writer, base/remote/verified SHA,
+SIM/MOCK/HW 구분과 rollback 항목을 body file로 생성해 `gh pr create`에 전달한다.
+현재 SHA에서 `verify`하지 않았거나 열린 PR이 이미 있으면 새 PR을 만들지 않는다.
 
 실패하면 로컬 Codex에 아래처럼 요청한다.
 
@@ -125,6 +133,18 @@ pro/shoe-task-ux 브랜치의 원격 커밋을 검토해 줘.
 
 수정 후 다시 같은 브랜치에 push하고 다음 writer에게 순차적으로 handoff한다.
 두 writer가 같은 브랜치를 동시에 작업하지 않는다.
+
+사람의 검토와 required checks를 거쳐 PR이 병합되면 로컬 작업을 정리한다.
+
+```bash
+scripts/cowork finish shoe-task-ux
+```
+
+`finish`는 clean·synchronized·verified 상태, task tip의 `origin/main` 포함과
+GitHub merged PR을 확인한 뒤 worktree, local branch와 manifest만 제거한다. 원격
+branch는 기본적으로 보존한다. `--delete-remote`는 모든 검사를 통과한 뒤 원격
+삭제부터 시도하며, `pro/**` deletion ruleset이 차단하면 로컬 정리를 시작하지
+않는다.
 
 ## 모드 B: ChatGPT 데스크톱 Codex Worktree/Handoff
 
