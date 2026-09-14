@@ -1,0 +1,31 @@
+{
+  "train_normalized": {
+    "min": -1.0,
+    "max": 1.0,
+    "mean": -0.13949747383594513,
+    "std": 0.6049942970275879,
+    "values_outside_display_range": 116170
+  },
+  "test_normalized": {
+    "min": -1.0,
+    "max": 1.0,
+    "mean": -0.0985446348786354,
+    "std": 0.4978838860988617,
+    "values_outside_display_range": 116835
+  },
+  "train_denormalized": {
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.43025127053260803,
+    "std": 0.30249714851379395,
+    "values_outside_display_range": 0
+  },
+  "test_denormalized": {
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.4507277011871338,
+    "std": 0.24894194304943085,
+    "values_outside_display_range": 0
+  },
+  "observation": "Normalize(0.5, 0.5) maps [0,1] pixels to approximately [-1,1]. Only the train pipeline contains stochastic crop, flip, and color jitter."
+}

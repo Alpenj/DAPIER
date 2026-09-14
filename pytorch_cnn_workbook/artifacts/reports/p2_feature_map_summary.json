@@ -1,0 +1,51 @@
+{
+  "true_label": "cat",
+  "predicted_label": "cat",
+  "layers": {
+    "conv1": {
+      "shape": [
+        1,
+        32,
+        32,
+        32
+      ],
+      "zero_fraction_after_relu": 0.4586181640625,
+      "mean": 0.400089830160141,
+      "std": 0.655414879322052
+    },
+    "conv2": {
+      "shape": [
+        1,
+        32,
+        32,
+        32
+      ],
+      "zero_fraction_after_relu": 0.744720458984375,
+      "mean": 0.11956724524497986,
+      "std": 0.30368074774742126
+    },
+    "conv3": {
+      "shape": [
+        1,
+        64,
+        16,
+        16
+      ],
+      "zero_fraction_after_relu": 0.66705322265625,
+      "mean": 0.15129448473453522,
+      "std": 0.30045685172080994
+    },
+    "conv4": {
+      "shape": [
+        1,
+        64,
+        16,
+        16
+      ],
+      "zero_fraction_after_relu": 0.80841064453125,
+      "mean": 0.07568851113319397,
+      "std": 0.21538685262203217
+    }
+  },
+  "hook_count_after_remove": 0
+}
