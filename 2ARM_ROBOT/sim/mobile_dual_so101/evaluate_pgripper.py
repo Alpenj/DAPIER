@@ -138,7 +138,7 @@ def evaluate(args):
         Path(__file__).with_name('pgripper_execution.py')]
     policy, stats, reference = None, None, None
     if args.mode == 'act':
-        from lerobot.policies.act.modeling_act import ACTPolicy
+        from dapier_act_policy import ACTPolicy
         from lerobot.configs.policies import PreTrainedConfig
         config = PreTrainedConfig.from_pretrained(args.checkpoint, local_files_only=True)
         if (set(config.input_features) != {'observation.state', *RGB_KEYS} or config.n_action_steps != 1
@@ -148,13 +148,16 @@ def evaluate(args):
             raise ValueError('action_steps must fit the trained chunk; temporal ensembling is a separate experiment')
         config.n_action_steps = args.action_steps
         config.device = 'cuda'
-        policy = ACTPolicy.from_pretrained(args.checkpoint, config=config, local_files_only=True).eval().cuda()
+        policy = ACTPolicy.from_pretrained(
+            args.checkpoint, config=config, local_files_only=True, strict=True
+        ).eval().cuda()
         stats_path = args.checkpoint.parent / 'normalization.npz'
         stats = dict(np.load(stats_path))
         for key in ('state_mean', 'state_std', 'action_mean', 'action_std'):
             if stats[key].shape != (12,) or not np.isfinite(stats[key]).all() or (key.endswith('std') and np.any(stats[key] <= 0)):
                 raise ValueError('invalid training normalization')
-        sources += [args.checkpoint / 'model.safetensors', args.checkpoint / 'config.json', stats_path]
+        sources += [Path(__file__).with_name('dapier_act_policy.py'),
+                    args.checkpoint / 'model.safetensors', args.checkpoint / 'config.json', stats_path]
     elif args.mode == 'ppo':
         from stable_baselines3 import PPO
         policy = PPO.load(args.checkpoint, device='cpu')

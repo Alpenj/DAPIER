@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SIM-only parallel demonstrations and two-wrist LeRobot ACT training.
+"""SIM-only parallel demonstrations and DAPIER-owned two-wrist ACT training.
 
 Private JPEG/NPZ staging deliberately stays separate from the real-robot dataset.
 This is a fixed-fixture initial-arm-perturbation study, not object generalization.
@@ -228,7 +228,7 @@ def train(args):
     from torch.utils.data import DataLoader
     from lerobot.configs.types import FeatureType, PolicyFeature
     from lerobot.policies.act.configuration_act import ACTConfig
-    from lerobot.policies.act.modeling_act import ACTPolicy
+    from dapier_act_policy import ACTPolicy
     if not .01 <= args.minutes <= 120:
         raise ValueError('training budget must be .01..120 minutes')
     max_steps = getattr(args, 'max_steps', None)
@@ -263,7 +263,7 @@ def train(args):
     if resume is None:
         policy = ACTPolicy(config).cuda()
     else:
-        policy = ACTPolicy.from_pretrained(resume, local_files_only=True).cuda()
+        policy = ACTPolicy.from_pretrained(resume, local_files_only=True, strict=True).cuda()
         if (policy.config.chunk_size != CHUNK or policy.config.input_features != config.input_features
                 or policy.config.output_features != config.output_features):
             raise ValueError('warm-start checkpoint does not match PGripper ACT contract')
@@ -277,7 +277,7 @@ def train(args):
     initial = initial_metrics['full_chunk_normalized_l1']
     policy.save_pretrained(args.output / 'initial')
     started, step, last_log = time.monotonic(), 0, time.monotonic()
-    record = {'kind': 'LeRobot ACT, two wrist RGB + measured state, SIM ONLY', 'train_episodes': manifest['train'],
+    record = {'kind': 'DAPIER ACT (LeRobot 0.6.0 architecture), two wrist RGB + measured state, SIM ONLY', 'train_episodes': manifest['train'],
         'holdout_episodes': manifest['holdout'], 'initial_holdout_normalized_l1': initial,
         'initial_holdout_metrics': initial_metrics, 'max_steps_requested': max_steps,
         'normalization': 'normalization.npz plus ImageNet RGB mean/std; train episodes only',

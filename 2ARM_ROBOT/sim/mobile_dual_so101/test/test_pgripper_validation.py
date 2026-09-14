@@ -82,7 +82,7 @@ class ValidationTest(unittest.TestCase):
     def test_installed_act_predictor_and_following_gradient_are_compatible(self):
         from lerobot.configs.types import FeatureType, PolicyFeature
         from lerobot.policies.act.configuration_act import ACTConfig
-        from lerobot.policies.act.modeling_act import ACTPolicy
+        from dapier_act_policy import ACTPolicy
         # Tiny synthetic env-state feature avoids downloading a vision backbone.
         config = ACTConfig(
             input_features={'observation.state': PolicyFeature(FeatureType.STATE, (12,)),
@@ -106,8 +106,11 @@ class ValidationTest(unittest.TestCase):
         batch = next(iter(loader))
         loss, _ = policy(batch)
         self.assertTrue(loss.requires_grad)
+        self.assertTrue(torch.isfinite(loss))
         loss.backward()
-        self.assertTrue(any(p.grad is not None and torch.isfinite(p.grad).all() for p in policy.parameters()))
+        gradients = [p.grad for p in policy.parameters() if p.grad is not None]
+        self.assertTrue(gradients)
+        self.assertTrue(all(torch.isfinite(gradient).all() for gradient in gradients))
 
     def test_phase_metadata_and_original_normalization_stay_separate_from_observations(self):
         with tempfile.TemporaryDirectory() as tmp:

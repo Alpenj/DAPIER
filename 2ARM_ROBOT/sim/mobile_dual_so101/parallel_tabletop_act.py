@@ -66,7 +66,7 @@ def run_worker(worker_id, episode_ids, options):
     import torch
     from PIL import Image
     from lerobot.configs.policies import PreTrainedConfig
-    from lerobot.policies.act.modeling_act import ACTPolicy
+    from dapier_act_policy import ACTPolicy
     from lerobot.policies.factory import make_pre_post_processors
 
     torch.set_num_threads(options["threads"])
@@ -228,7 +228,9 @@ def run(args):
     if fps != 15 or not 0 <= args.initial_frame < len(states):
         raise ValueError("expected 15Hz dataset and valid initialization frame")
     paths = [p for p in root.rglob("*") if p.is_file()]
-    paths += [p for p in checkpoint.rglob("*") if p.is_file()] + [args.scene, args.model]
+    paths += [p for p in checkpoint.rglob("*") if p.is_file()] + [
+        args.scene, args.model, Path(__file__).with_name("dapier_act_policy.py")
+    ]
     before = {str(p): sha256(p) for p in paths}
     output.mkdir(parents=True, exist_ok=False)
     options = {**vars(args), "dataset": str(root), "checkpoint": str(checkpoint), "output": str(output),
