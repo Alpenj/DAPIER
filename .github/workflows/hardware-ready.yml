@@ -58,7 +58,7 @@ jobs:
           sudo apt-get install --yes --no-install-recommends bats shellcheck
 
       - name: Install pinned Python dependency
-        run: python3 -m pip install --only-binary=:all: --require-hashes -r requirements-cowork.txt
+        run: "python3 -m pip install --only-binary=:all: --require-hashes -r requirements-cowork.txt"
 
       - name: Run hardware-free verification
         run: scripts/verify-hardware-free
