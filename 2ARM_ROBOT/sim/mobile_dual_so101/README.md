@@ -1,6 +1,6 @@
 # Waffle Pi + SO-101 양팔 MuJoCo 모델
 
-JDcobot200 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 기준 모델이다. 팔 하나는
+현행 기준 모델이며 JDcobot200 legacy 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 모델이다. 팔 하나는
 `shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`
 6개 actuator를 가지며, 좌우를 합친 action은 12차원이다.
 
@@ -10,11 +10,47 @@ command, hardware dispatch 경로가 없다.
 실물 계획에 맞춰 TurtleBot3 LiDAR는 기본적으로 제거한다. 원본 형상과 비교할 때만
 `--include-lidar`를 사용한다.
 
-원본 Waffle Pi의 작은 `camera_link`도 제거했다. 전면 중앙에는 AADJA1300GX가
-Orbbec Astra 계열로 관측된 사실을 바탕으로 Astra 공식 보수 외형
-(165 x 48 x 40 mm), 질량 310 g을 둔다. 정확한 외형과 optical origin을 실측하지
-않았으므로 현재 카메라 형상은 확정 CAD가 아니다. 광학 중심은 base 기준
-`(0.120, 0, 0.200) m`, 아래쪽 10도로 배치했다.
+원본 Waffle Pi의 작은 `camera_link`는 제거했다. HP-ASC-H201은 top-view 작업공간
+RGB-D, 기존 Astra S는 정면 Visual SLAM RGB-D로 역할을 분리한다. H201의 USB PID
+`0x0173`은 eYs3D 공식 코드의 HYPATIA2이고 제품 매핑은 R77이다. 공식 R77 URDF의
+collision 크기 25.5 x 90 x 25 mm, 질량 96 g, collision origin x=-8.05 mm를 사용한다.
+URDF에 FOV가 없어 H201 렌더 FOV는 실측 전 임시값이다.
+
+## 승인한 compact 배치와 mm 기준값 (2026-09-04)
+
+사용자가 MuJoCo 화면에서 승인한 compact 배치의 기준 좌표는 TurtleBot3 `base_link`
+원점이며 +X는 전방, +Y는 왼쪽, +Z는 위쪽이다. 좌·우 SO-101은 안쪽으로 기울이지
+않고 roll/pitch/yaw 모두 0도로 장착한다. 팔이 TurtleBot3 좌우 외곽보다 조금
+돌출되는 것은 허용한다.
+
+아래 값은 `COMPACT_HOME_ACTION`에서
+`compact_mobile_measurements_mm()`로 추출한 **시뮬레이션 설계값**이다. 실물 제작
+공차나 camera optical extrinsic을 측정한 값은 아니다.
+
+| 기준점 | X (mm) | Y (mm) | Z (mm) | 방향/역할 |
+|---|---:|---:|---:|---|
+| 왼팔 SO-101 base | -64.0 | +80.0 | 109.5 | roll/pitch/yaw 0도 |
+| 오른팔 SO-101 base | -64.0 | -80.0 | 109.5 | roll/pitch/yaw 0도 |
+| H201 top-view optical center | -64.0 | 0.0 | 420.0 | 아래 43도, 박스 중심 관측 |
+| Astra S front optical center | +76.0 | 0.0 | 103.0 | TurtleBot 중심축, 박스 정면 |
+| 왼손목 RGB optical center | +146.9 | +57.4 | 251.4 | home 자세, 박스 중심 관측 |
+| 오른손목 RGB optical center | +146.8 | -58.4 | 251.5 | home 자세, 박스 중심 관측 |
+| 박스 중심 | +300.0 | 0.0 | 0.0 | yaw -90도, 긴 면이 로봇을 향함 |
+
+| 두 기준점 | 직선거리 (mm) |
+|---|---:|
+| 왼팔 base ↔ 오른팔 base | 160.0 |
+| H201 ↔ 왼팔/오른팔 base | 320.6 / 320.6 |
+| H201 ↔ Astra S | 346.5 |
+| H201 ↔ 박스 중심 | 555.8 |
+| Astra S ↔ 박스 중심 | 246.5 |
+| 왼/오른 손목 RGB ↔ 박스 중심 | 299.9 / 300.2 |
+| 왼/오른 팔 base ↔ 박스 중심 | 388.4 / 388.4 |
+
+박스 외형은 282 x 210 x 105 mm, 판 두께는 1.5 mm다. 긴 면이 TurtleBot3을
+향하고 뚜껑 힌지는 로봇에서 먼 쪽에 있어 오른팔이 앞쪽 날개를 들어 바깥 방향으로
+열도록 배치한다. 실물 조립 후에는 네 카메라 optical extrinsic과 팔 base transform을
+다시 측정하며, 실측값으로 이 표를 덮어쓰지 않고 별도 calibration profile에 저장한다.
 
 ## 선택형 중앙 STEP 지지대 layout
 
@@ -39,11 +75,12 @@ plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 �
 - 사진의 SO-101 teardrop hole: `base_so101_v2.stl`의 반지름 8.5 mm 홀 중심축
 - SO-101 arm frame: `(-64, +/-93.4, 387.686186) mm`; mesh/XML/holder 회전을
   역산해 teardrop hole 중심을 holder 최상단에 맞춤
-- depth camera body center: 전용 mast 위 `(-64, 0, 550) mm`
-- camera down tilt: 27도
+- H201 top-view body center: 전용 mast 위 `(-64, 0, 550) mm`, 아래 27도
+- Astra S front-SLAM optical center: TurtleBot3 전면 카메라 고정 프레임
+  `(76, 0, 93) mm`; body center `(55, 0, 93) mm`, 정면 수평
 - 중심 광선의 바닥 교차점: 로봇 전방 약 1.035 m
 - 수직 FOV의 바닥 교차 범위: 약 0.421~7.362 m
-- 중앙 지지대 가정 질량: 1.50 kg; camera 가정 질량은 별도 0.31 kg
+- 중앙 지지대 가정 질량: 1.50 kg; H201 0.096 kg와 Astra S 0.310 kg은 별도
 
     ~/DAPIER/so101_imitation_learning/.venv/bin/python \
       mobile_dual_so101.py --mount-layout tower \
@@ -54,12 +91,15 @@ plate, base servo와 shoulder 이후 관절 체인은 원본 조립 상태로 �
 tower layout에서는 stock SO-101의 `base_so101_v2`만 제외한다. base motor holder,
 Waveshare mounting plate, base servo, `shoulder_pan`과 이후 관절 체인은 그대로 유지한다.
 MuJoCo 뷰어의 Reset도 기록된 home action으로 돌아가도록 qpos와 position target을 함께 복원한다.
-카메라는 팔 위치를 바꾸지 않고
+H201은 팔 위치를 바꾸지 않고
 중앙의 24 x 30 mm 전용 mast와 50 x 60 x 6 mm 경사 interface plate 위 Z=550 mm로
-올린다. 실제 카메라 모델이 확인되기 전까지 중앙 체결 위치는 측정 필요 datum이며,
-최종 볼트 규격·hole pattern·optical origin과 STEP 실제 재료/질량은 확정값이 아니다.
+올린다. R77 모델과 URDF hole frame은 확인했지만 실제 중앙 체결 위치는 측정 필요 datum이며,
+최종 볼트 규격·hole 사용 방식·mounted extrinsic과 STEP 실제 재료/질량은 확정값이 아니다.
+Astra S는 실물 사진처럼 TurtleBot3 전면 카메라 고정 프레임에 붙인다. 공식 Waffle Pi의
+camera RGB optical frame `(76, 0, 93) mm`에 Astra 전면 광학 중심을 맞추고 좌우 Y=0으로
+정렬한다. 실물 체결 후 정확한 optical extrinsic을 다시 잰다.
 
-현재 home 자세의 camera-arm 최소 간격은 약 136 mm다. 하지만 전체 joint range의
+현재 두 RGB-D를 포함한 home 자세의 보호 형상 최소 간격은 약 37.6 mm다. 하지만 전체 joint range의
 무작위 10,000자세에서는 18개가 30 mm clearance를 위반했으므로 unrestricted motion은
 허용하지 않는다. camera, mast와 plate는 collision guard의 keep-out 대상으로 유지한다.
 
@@ -83,6 +123,8 @@ planning `MjData`에서만 qpos를 갱신한다. 실행은 시작 자세 초기�
 (septic) trajectory의 actuator target만 `data.ctrl`에 넣고 `mj_step`으로 질량, 관성,
 중력, damping, actuator force와 접촉을 계산한다. trajectory는 시작/끝의 속도,
 가속도와 jerk가 모두 0이며 설정한 target limit에 맞춰 duration을 늘린다.
+5-DoF 팔을 6D pose로 과구속하지 않도록 필요할 때만 gripper local-X 접근축을
+`tool_axis_targets`로 추가해 위치 3축과 접근 방향 2축을 함께 푼다.
 
 실행 보고서는 target과 actual의 velocity/acceleration/jerk를 따로 기록하고, actual
 limit, torque saturation, 지지다각형, 금지 접촉과 finite state를 모두 통과해야만
@@ -327,7 +369,7 @@ domain randomization과 실물 실행도 아직 검증하지 않았다.
 
 ### MuJoCo episode와 action-chunk 경계
 
-`sim_episode.py`는 front depth camera의 RGB와 metric depth, 좌우 follower state,
+`sim_episode.py`는 전면 Astra S와 top-view H201의 RGB/metric depth, 좌우 wrist RGB, 좌우 SO-101 state,
 실제로 `data.ctrl`에 전달한 12축 target, simulation timestamp를 20 Hz의 같은 frame으로
 기록한다. 팔 action은 radian이고 gripper action은 dataset 경계에서 0~1로 정규화한다.
 원본 actuator 단위와 policy 단위의 양방향 변환은 round-trip test로 고정했다.
@@ -340,7 +382,7 @@ domain randomization과 실물 실행도 아직 검증하지 않았다.
 현재 기본 action source는 home target을 유지하는 contract fixture다. 신발 task가 실제로
 성공하지 않으면 manifest를 `accepted`로 거짓 표기하지 않고 `recorded`로 남긴다. 따라서
 이 명령만 실행해 만든 hold episode는 RGB-D writer 검증에는 쓰지만 ACT train set에는
-포함하지 않는다. 실물 leader/follower recorder도 같은 12축 순서와 unit을 사용하되
+포함하지 않는다. 실물 좌/우 SO-101 recorder도 같은 12축 순서와 unit을 사용하되
 serial 연결은 별도 human hardware gate 뒤의 후속 작업이다.
 
 `sim_policy.py`는 policy가 반환한 H-step action chunk와 MuJoCo actuator 사이의 경계다.

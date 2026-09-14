@@ -14,8 +14,11 @@ MuJoCo의 회색/파란색 mount geom은 구조를 이해하기 위한 collision
 - 좌우 mount center 간격: 0.20 m
 - TurtleBot3 LiDAR: 제거
 - TurtleBot3 기존 소형 RGB camera_link: 제거
-- 전면 RGB-D 가정: 165 x 48 x 40 mm, 0.310 kg, optical center
-  (0.120, 0, 0.200) m, 아래 10도
+- top-view RGB-D: eYs3D R77 공식 URDF 기준 25.5 x 90 x 25 mm, 0.096 kg,
+  tower 중앙 (-0.064, 0, 0.550) m, 아래 27도
+- front Visual-SLAM RGB-D: Astra S 40 x 165 x 48 mm, 0.310 kg,
+  TurtleBot3 전면 카메라 고정 프레임, optical center (0.076, 0, 0.093) m,
+  body center (0.055, 0, 0.093) m, 정면 수평
 - 출력 구조 가정 질량: 0.90 kg
 - Waffle 상판 local Z: 0.094 m
 - 8 mm deck 하단 local Z: 0.094 m (의도한 접촉, 공중 간격 없음)
@@ -156,6 +159,8 @@ layer separation이 보이면 다음 단계로 넘어가지 않는다.
 
 - ROBOTIS TurtleBot3 specifications/open hardware:
   https://emanual.robotis.com/docs/en/platform/turtlebot3/features/
+- eYs3D R77 official URDF, collision envelope, mass and mounting frames:
+  https://github.com/eYs3D/eys3d-ros2/blob/ros2-master/eys3d_camera/urdf/eys3d_R77.urdf.xacro
 - Orbbec Astra series dimensions, mass and field of view:
   https://www.orbbec.com/products/structured-light-camera/astra-series/
 - SO-101 assembly:

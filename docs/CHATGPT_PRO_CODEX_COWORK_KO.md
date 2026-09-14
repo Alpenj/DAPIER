@@ -9,6 +9,45 @@
 원격 브랜치 handoff** 전용이다. ChatGPT 데스크톱 앱의 Codex-managed Worktree와
 Handoff를 사용할 때는 이 흐름을 함께 사용하지 않는다.
 
+## main 통합 이후 작업·업로드 — 2026-09-07
+
+record_id: `DAPIER-2026-09-07-post-merge-upload-workflow`
+
+나는 #53으로 통합한 main을 새 작업의 출발점으로 사용한다. 코드·자체 작성 문서는
+`Alpenj/DAPIER`의 작업 브랜치에 올리고 PR 목적지는 항상 `main`으로 지정한다.
+Codex와 Hermes는 브랜치를 따로 사용한다. 원시 dataset, 장치 identity/calibration과
+개인 설정은 로컬에 보관하며 코드와 함께 일괄 add하지 않는다.
+
+Mode A의 새 작업 예:
+
+```bash
+cd ~/DAPIER
+scripts/cowork start dual-so101-codex-20260907 origin/main
+cd .local-workspaces/pro/dual-so101-codex-20260907
+git config branch.pro/dual-so101-codex-20260907.gh-merge-base main
+```
+
+Hermes 새 작업은 `dual-so101-hermes-20260907`처럼 writer를 바꾼 slug를 사용한다.
+`start`는 원격 작업 브랜치와 upstream까지 설정한다. 변경 파일을 선별하고 해당 영역의
+검증을 마친 뒤 같은 브랜치에서 commit과 `git push`를 수행한다. PR은 다음처럼 지정한다.
+
+```bash
+gh pr create --repo Alpenj/DAPIER --base main \
+  --head pro/dual-so101-codex-20260907 \
+  --template .github/pull_request_template.md
+```
+
+이미 작성 중이던 월요일 Hermes WIP는 새 작업과 구분해
+`pro/dual-so101-monday-prep-hermes-20260907`에 보존한다. 이 브랜치의 원래 기준은
+`3ff180a`이며, 작업 파일을 보존하기 위해 최신 main으로 강제 이동하지 않는다.
+이전 로컬 source remote는 `local-source`로 보존하고, 업로드용 `origin`은 GitHub를 가리킨다.
+WIP를 실제 commit/push하기 전 main의 converter/planner/checkpoint 수정과 겹치는 부분을
+검토해야 한다. upstream 설정이나 빈 시작 브랜치 push는 미커밋 코드의 검증·업로드가 아니다.
+
+작업 종료 후에는 main에 포함됐는지, 미푸시 커밋이 없는지, worktree가 clean인지 확인한
+브랜치만 정리한다. 작업 브랜치를 삭제한 다음 작업은 다시 최신 main에서 시작한다.
+Mode B의 Codex-managed worktree에서는 아래 별도 Handoff 절을 따른다.
+
 ## 최초 한 번: ChatGPT와 GitHub 연결
 
 1. ChatGPT에서 **Settings → Apps → GitHub**를 연다.

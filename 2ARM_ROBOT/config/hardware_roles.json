@@ -1,0 +1,73 @@
+{
+  "schema_version": "dapier.hardware-roles.v1",
+  "effective_date": "2026-09-03",
+  "platform": "SO101_dual_arm_on_turtlebot3_waffle_pi",
+  "devices": {
+    "left_arm": {
+      "model": "SO-101",
+      "stable_alias": "/dev/dapier/left_arm",
+      "identity": "controller_serial_private",
+      "hub_downstream_port": 3,
+      "motor_ids": [1, 2, 3, 4, 5, 6],
+      "calibration": "left_arm_individual"
+    },
+    "right_arm": {
+      "model": "SO-101",
+      "stable_alias": "/dev/dapier/right_arm",
+      "identity": "controller_serial_private",
+      "hub_downstream_port": 4,
+      "motor_ids": [1, 2, 3, 4, 5, 6],
+      "calibration": "right_arm_individual"
+    },
+    "left_gripper_rgb": {
+      "model": "USB UVC RGB",
+      "stable_alias": "/dev/dapier/left_wrist_rgb",
+      "identity": "hub_downstream_path",
+      "hub_downstream_port": 1,
+      "mission_role": "left_gripper_rgb"
+    },
+    "right_gripper_rgb": {
+      "model": "USB UVC RGB",
+      "stable_alias": "/dev/dapier/right_wrist_rgb",
+      "identity": "hub_downstream_path",
+      "hub_downstream_port": 2,
+      "mission_role": "right_gripper_rgb"
+    },
+    "workspace_rgbd": {
+      "model": "HP-ASC-H201",
+      "usb_id": "3438:0173",
+      "stable_alias": "/dev/dapier/workspace_rgbd",
+      "identity": "device_serial_private",
+      "mount": "tower_top_view",
+      "mission_role": "workspace_rgbd"
+    },
+    "front_rgbd": {
+      "model": "Orbbec Astra S",
+      "usb_id": "2bc5:0402",
+      "stable_alias": "/dev/dapier/front_slam_rgbd",
+      "identity": "vid_pid_single_device",
+      "mount": "turtlebot3_front_camera_bracket",
+      "mission_role": "front_rgbd"
+    },
+    "mobile_base": {
+      "model": "TurtleBot3 Waffle Pi",
+      "controller": "OpenCR",
+      "wheel_motor": "XM430-W210-T",
+      "edge_compute": "Raspberry Pi 4"
+    }
+  },
+  "compute_roles": {
+    "raspberry_pi_4": "base control, lightweight sensor IO, health and watchdog",
+    "local_laptop": "Visual SLAM placement benchmark, perception, IL policy and LLM",
+    "llm_on_raspberry_pi": false
+  },
+  "inactive_or_unverified": {
+    "lidar": "excluded from the active MuJoCo and Visual-SLAM sensor path; physical presence is not inferred",
+    "visual_slam_compute_host": "select after Raspberry Pi 4 and laptop latency/load measurement"
+  },
+  "notes": [
+    "Both arms are identical SO-101 arms for runtime commands; legacy LeRobot cache folder names do not define hardware roles.",
+    "Wrist camera left/right identity depends on fixed downstream hub ports because the cameras expose no unique serial.",
+    "No controller serial, password, calibration payload or personal device path is stored here."
+  ]
+}

@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+"""Read both SO-101 arms. Physical motion is intentionally disabled."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import os
+import stat
+from datetime import datetime
+from pathlib import Path
+
+MOTORS = {
+    "shoulder_pan": (1, "DEGREES"),
+    "shoulder_lift": (2, "DEGREES"),
+    "elbow_flex": (3, "DEGREES"),
+    "wrist_flex": (4, "DEGREES"),
+    "wrist_roll": (5, "DEGREES"),
+    "gripper": (6, "RANGE_0_100"),
+}
+READONLY_CONFIRMATION = "VISIBLE_DUAL_SO101_READONLY"
+PROFILE_SCHEMA_VERSION = "dapier.dual-so101-profile.v1"
+PROFILE_FIELDS = frozenset(("schema_version", "arms"))
+ARM_PROFILE_FIELDS = frozenset(
+    ("port", "controller_serial", "calibration_path", "calibration_sha256")
+)
+CALIBRATION_FIELDS = frozenset(
+    ("id", "drive_mode", "homing_offset", "range_min", "range_max")
+)
+RAW_POSITION_MIN = 0
+RAW_POSITION_MAX = 4095
+HEALTH_REGISTERS = (
+    "Torque_Enable",
+    "Operating_Mode",
+    "Acceleration",
+    "Goal_Time",
+    "Goal_Velocity",
+    "Torque_Limit",
+    "Present_Load",
+    "Present_Current",
+    "Present_Temperature",
+    "Present_Voltage",
+    "Status",
+    "Moving",
+    "Maximum_Velocity_Limit",
+    "Maximum_Acceleration",
+)
+REQUIRED_CONTROL_TABLE_REGISTERS = frozenset((*HEALTH_REGISTERS, "Present_Position"))
+
+
+def validate_control_table(control_table: dict[str, object]) -> None:
+    missing = sorted(REQUIRED_CONTROL_TABLE_REGISTERS - control_table.keys())
+    if missing:
+        raise RuntimeError(f"STS3215 control table is missing: {missing}")
+
+
+def _require_fields(value: object, expected: frozenset[str], label: str) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    if expected - value.keys():
+        raise ValueError(f"{label} missing field")
+    if value.keys() - expected:
+        raise ValueError(f"{label} unexpected field")
+    return value
+
+
+def _strict_json(text: str, label: str) -> object:
+    def reject_duplicate_fields(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"{label} has a duplicate JSON field")
+            result[key] = value
+        return result
+
+    try:
+        return json.loads(text, object_pairs_hook=reject_duplicate_fields)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"{label} is not valid JSON") from error
+
+
+def validate_calibration(calibration_bytes: bytes, side: str) -> dict[str, dict]:
+    try:
+        raw = _strict_json(calibration_bytes.decode("utf-8"), f"{side} calibration")
+    except UnicodeDecodeError as error:
+        raise ValueError(f"{side} calibration is not UTF-8") from error
+    calibration = _require_fields(raw, frozenset(MOTORS), f"{side} calibration")
+    for name, (expected_id, _) in MOTORS.items():
+        motor = _require_fields(
+            calibration[name], CALIBRATION_FIELDS, f"{side} {name} calibration"
+        )
+        for field in CALIBRATION_FIELDS:
+            if not isinstance(motor[field], int) or isinstance(motor[field], bool):
+                raise ValueError(f"{side} {name} {field} must be an integer")
+        if motor["id"] != expected_id:
+            raise ValueError(f"{side} {name}: expected motor {expected_id}")
+        if motor["drive_mode"] not in (0, 1):
+            raise ValueError(f"{side} {name} drive_mode is invalid")
+        if not (
+            RAW_POSITION_MIN
+            <= motor["range_min"]
+            < motor["range_max"]
+            <= RAW_POSITION_MAX
+        ):
+            raise ValueError(f"{side} {name} has unsafe configured motor limits")
+    return calibration
+
+
+def load_bus(port: str, calibration_raw: dict[str, dict]):
+    from lerobot.motors import Motor, MotorCalibration, MotorNormMode
+    from lerobot.motors.feetech import FeetechMotorsBus, MODEL_CONTROL_TABLE
+
+    validate_control_table(MODEL_CONTROL_TABLE["sts3215"])
+    return FeetechMotorsBus(
+        port=port,
+        motors={
+            name: Motor(id_, "sts3215", getattr(MotorNormMode, mode))
+            for name, (id_, mode) in MOTORS.items()
+        },
+        calibration={
+            name: MotorCalibration(**value) for name, value in calibration_raw.items()
+        },
+    )
+
+
+def validate_motion_request(
+    move_deg: float,
+    confirm: str,
+    operator_present: bool,
+) -> None:
+    if not math.isfinite(move_deg):
+        raise ValueError("--move-deg must be finite")
+    if move_deg:
+        raise ValueError(
+            "physical motion is disabled until a device-side watchdog and "
+            "connected-endpoint identity binding are independently verified"
+        )
+    if confirm != READONLY_CONFIRMATION:
+        raise ValueError(f"read-only access requires --confirm {READONLY_CONFIRMATION}")
+    if not operator_present:
+        raise ValueError("read-only access requires --operator-present")
+
+
+def _read_owner_only_profile(path: Path) -> str:
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK | os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise ValueError("trusted profile cannot be opened") from error
+    with os.fdopen(descriptor, encoding="utf-8") as stream:
+        metadata = os.fstat(stream.fileno())
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ValueError("trusted profile must be a regular file")
+        if metadata.st_uid != os.getuid():
+            raise ValueError("trusted profile must be owned by the current user")
+        if stat.S_IMODE(metadata.st_mode) & 0o077:
+            raise ValueError("trusted profile must be owner-only")
+        try:
+            return stream.read()
+        except UnicodeDecodeError as error:
+            raise ValueError("trusted profile is not UTF-8") from error
+
+
+def _read_calibration(path: Path, side: str) -> tuple[Path, bytes]:
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK | os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise ValueError(f"{side} calibration cannot be opened") from error
+    with os.fdopen(descriptor, "rb") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError(f"{side} calibration must be a regular file")
+        return path.resolve(), stream.read()
+
+
+def load_trusted_profile(path: Path) -> dict[str, dict[str, object]]:
+    profile = _require_fields(
+        _strict_json(_read_owner_only_profile(path), "trusted profile"),
+        PROFILE_FIELDS,
+        "trusted profile",
+    )
+    if profile["schema_version"] != PROFILE_SCHEMA_VERSION:
+        raise ValueError("trusted profile schema_version is unsupported")
+    arms = _require_fields(profile["arms"], frozenset(("left", "right")), "arms")
+    loaded = {}
+    for side in ("left", "right"):
+        arm = _require_fields(arms[side], ARM_PROFILE_FIELDS, f"{side} arm")
+        if any(
+            not isinstance(arm[field], str)
+            or not arm[field].strip()
+            or arm[field] != arm[field].strip()
+            for field in arm
+        ):
+            raise ValueError(f"{side} arm fields must be non-empty strings")
+        digest = arm["calibration_sha256"]
+        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise ValueError(f"{side} calibration_sha256 must be lowercase SHA-256")
+        calibration_path = Path(arm["calibration_path"])
+        if not calibration_path.is_absolute():
+            calibration_path = path.parent / calibration_path
+        calibration_path, calibration_bytes = _read_calibration(calibration_path, side)
+        if hashlib.sha256(calibration_bytes).hexdigest() != digest:
+            raise ValueError("calibration digest mismatch")
+        loaded[side] = {
+            "port": arm["port"],
+            "controller_serial": arm["controller_serial"],
+            "calibration_path": calibration_path,
+            "calibration": validate_calibration(calibration_bytes, side),
+        }
+    validate_arm_ports(loaded["left"]["port"], loaded["right"]["port"])
+    validate_expected_identities(
+        loaded["left"]["controller_serial"], loaded["right"]["controller_serial"]
+    )
+    if loaded["left"]["calibration_path"] == loaded["right"]["calibration_path"]:
+        raise ValueError("left and right calibration files must be distinct")
+    return loaded
+
+
+def validate_arm_ports(left_port: str, right_port: str) -> None:
+    if not left_port.strip() or not right_port.strip():
+        raise ValueError("arm ports must not be empty")
+    if Path(left_port).resolve() == Path(right_port).resolve():
+        raise ValueError("left and right arm ports resolve to the same device")
+
+
+def validate_expected_identities(left_serial: str | None, right_serial: str | None) -> None:
+    if not left_serial or not right_serial:
+        raise ValueError("trusted profile requires a controller serial for each arm")
+    if left_serial == right_serial:
+        raise ValueError("left and right controller serials must be distinct")
+
+
+def controller_serial(port: str) -> str:
+    tty = Path(port).resolve().name
+    try:
+        device = (Path("/sys/class/tty") / tty / "device").resolve(strict=True)
+    except FileNotFoundError as error:
+        raise RuntimeError("controller identity is unavailable") from error
+    for parent in (device, *device.parents):
+        serial_path = parent / "serial"
+        if serial_path.is_file():
+            serial = serial_path.read_text(encoding="utf-8").strip()
+            if serial:
+                return serial
+    raise RuntimeError("controller identity is unavailable")
+
+
+def verify_arm_identities(
+    ports: dict[str, str],
+    expected: dict[str, str],
+    serial_reader=controller_serial,
+) -> dict[str, bool]:
+    if not ports or ports.keys() != expected.keys():
+        raise RuntimeError("controller identity roles do not match")
+    verified = {}
+    for side, port in ports.items():
+        if serial_reader(port) != expected[side]:
+            raise RuntimeError(f"{side} controller identity mismatch")
+        verified[side] = True
+    return verified
+
+
+def health(bus) -> dict[str, dict[str, float]]:
+    return {
+        name: bus.sync_read(name, normalize=False, num_retry=2)
+        for name in HEALTH_REGISTERS
+    }
+
+
+def _open_new_log(path: Path):
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except FileExistsError as error:
+        raise ValueError("log path already exists; refusing overwrite or symlink") from error
+    except OSError as error:
+        raise ValueError("log path cannot be opened safely") from error
+    metadata = os.fstat(descriptor)
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid():
+        os.close(descriptor)
+        raise ValueError("log must be a current-user regular file")
+    os.fchmod(descriptor, 0o600)
+    return os.fdopen(descriptor, "w", encoding="utf-8")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", type=Path, required=True)
+    parser.add_argument("--move-deg", type=float, default=0.0)
+    parser.add_argument("--confirm", default="")
+    parser.add_argument("--operator-present", action="store_true")
+    parser.add_argument("--log", type=Path, default=Path("/tmp/dapier-dual-so101-smoke.json"))
+    args = parser.parse_args()
+    try:
+        validate_motion_request(args.move_deg, args.confirm, args.operator_present)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    if not (os.isatty(0) and os.isatty(1)):
+        raise SystemExit("physical access requires an interactive TTY")
+
+    try:
+        profile = load_trusted_profile(args.profile)
+        ports = {side: arm["port"] for side, arm in profile.items()}
+        identities = {side: arm["controller_serial"] for side, arm in profile.items()}
+        verify_arm_identities(ports, identities, serial_reader=controller_serial)
+        buses = {
+            side: load_bus(arm["port"], arm["calibration"])
+            for side, arm in profile.items()
+        }
+        log_stream = _open_new_log(args.log)
+    except (ValueError, RuntimeError) as error:
+        raise SystemExit(str(error)) from error
+    except BaseException as error:
+        raise SystemExit(f"bus setup failed: {type(error).__name__}") from None
+
+    record: dict[str, object] = {
+        "schema_version": "dapier.dual-so101-smoke.v0.4",
+        "started_at": datetime.now().astimezone().isoformat(),
+        "motion_requested_deg": 0.0,
+        "motion_enabled": False,
+        "user_witnessed": args.operator_present,
+        "hardware_execution": False,
+        "motion_completed": False,
+        "trusted_profile_verified": True,
+        "controller_identity_revalidated": {"left": False, "right": False},
+        "connected_endpoint_identity_bound": False,
+        "arms": {},
+    }
+    failure: BaseException | None = None
+    disconnect_errors = []
+    try:
+        for side, bus in buses.items():
+            verify_arm_identities(
+                {side: ports[side]}, {side: identities[side]}, serial_reader=controller_serial
+            )
+            bus.connect()
+            verify_arm_identities(
+                {side: ports[side]}, {side: identities[side]}, serial_reader=controller_serial
+            )
+            record["controller_identity_revalidated"][side] = True
+        starts = {
+            side: bus.sync_read("Present_Position", normalize=False, num_retry=2)
+            for side, bus in buses.items()
+        }
+        snapshots = {side: health(bus) for side, bus in buses.items()}
+        for side in buses:
+            record["arms"][side] = {"position_raw_tick": starts[side], "health": snapshots[side]}
+    except BaseException as error:
+        record["error"] = type(error).__name__
+        failure = error
+    finally:
+        for side, bus in buses.items():
+            try:
+                if bus.is_connected:
+                    bus.disconnect(disable_torque=False)
+            except BaseException as error:
+                disconnect_errors.append(f"{side}: {type(error).__name__}")
+        if disconnect_errors:
+            record["disconnect_errors"] = disconnect_errors
+        record["finished_at"] = datetime.now().astimezone().isoformat()
+        with log_stream:
+            json.dump(record, log_stream, ensure_ascii=False, indent=2)
+            log_stream.write("\n")
+
+    if failure is not None:
+        raise RuntimeError("read-only hardware smoke failed; inspect the private log") from None
+    if disconnect_errors:
+        raise RuntimeError("failed to disconnect cleanly; inspect the private log")
+    print(json.dumps(record, ensure_ascii=False, indent=2))
+    print("private_log_written=true")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

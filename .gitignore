@@ -1,6 +1,7 @@
 .env
 **/.env
 **/*.env.local
+**/*.local.env
 **/__pycache__/
 **/.ruff_cache/
 casino_dealer/build/
@@ -25,3 +26,4 @@ turtlebot3_ws/src/DynamixelSDK/
 turtlebot3_ws/src/turtlebot3/
 turtlebot3_ws/src/turtlebot3_msgs/
 turtlebot3_ws/src/turtlebot3_simulations/
+*.oni

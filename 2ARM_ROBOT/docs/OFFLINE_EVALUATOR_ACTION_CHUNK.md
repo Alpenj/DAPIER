@@ -1,5 +1,7 @@
 ﻿# Offline evaluator · action chunk/padding 계약
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../config/hardware_roles.json`](../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-21
 단계: 4/5
 범위: held-out ACT prediction chunk의 split·padding·joint/group error·failure inspection 검증

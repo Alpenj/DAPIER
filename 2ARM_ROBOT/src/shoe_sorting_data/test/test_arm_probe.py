@@ -79,14 +79,14 @@ class ArmProbeProtocolTest(unittest.TestCase):
             },
         )
         self.assertEqual(
-            decode_calibration(bytes([0x34, 0x12, 0x00])),
+            decode_calibration(bytes([0x34, 0x02, 0x00])),
             {
-                "position_offset_raw": 0x1234,
-                "position_offset_tick": 0x1234,
+                "position_offset_raw": 0x0234,
+                "position_offset_tick": 0x0234,
                 "operating_mode_raw": 0,
             },
         )
-        self.assertEqual(decode_calibration(bytes([0xE7, 0xFC, 0]))["position_offset_tick"], -793)
+        self.assertEqual(decode_calibration(bytes([0xE7, 0x0C, 0]))["position_offset_tick"], -1255)
         payload = bytes([1, 5, 0, 8, 0, 0, 100, 0, 0xE8, 0x03])
         decoded = decode_control_state(payload)
         self.assertTrue(decoded["torque_enabled"])

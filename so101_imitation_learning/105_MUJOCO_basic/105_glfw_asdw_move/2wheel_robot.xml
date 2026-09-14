@@ -1,0 +1,45 @@
+<mujoco>
+    <option gravity="0 0 -9.81" />
+    <visual>
+        <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+        <rgba haze="0.15 0.25 0.35 1"/>
+        <global azimuth="-130" elevation="-20"/>
+    </visual>
+    <worldbody>
+        <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
+		<!--<geom type="plane" size="5 5 0.1" rgba=".9 .9 .9 1"/>-->
+        <body name="chassis" pos="0 0 0.2">
+            <joint type="free"/>
+            <inertial pos="0 0 0" mass="1.0" diaginertia="0.0167 0.0567 0.0667"/>
+            
+            <geom type="box" size="0.8 0.4 0.1" mass = "0.5" rgba=".9 .9 0 1"/>
+            <geom name="ballcast" type="sphere" size="0.05" pos="0.5 0 -0.15" rgba="0.2 0.2 0.2 1" contype="1" conaffinity="1"/>
+            
+            <body name="left-tire" pos="-0.25 0.45 0" euler='90 0 0'>
+                <joint name="left-wheel" type="hinge" axis="0 0 -1"/>
+                <inertial pos="0 0 0" mass="0.1" diaginertia="0.00106 0.00106 0.002"/>
+                
+                <geom type="cylinder" size=".2 0.05" friction="2 1.0 1.0" rgba="0 .9 0 1"/>
+                <site name="x_axis" pos="1 0 0" size="0.05" rgba="1 0 0 1"/>
+                <site name="y_axis" pos="0 0.5 0" size="0.05" rgba="0 1 0 1"/>
+                <site name="z_axis" pos="0 0 1.0" size="0.05" rgba="0 0 1 1"/>
+            </body>
+            
+            <body name="right-tire" pos="-0.25 -0.45 0" euler='90 0 0'>
+                <joint name="right-wheel" type="hinge" axis="0 0 -1"/>
+                <inertial pos="0 0 0" mass="0.1" diaginertia="0.00106 0.00106 0.002"/>
+                
+                <geom type="cylinder" size=".2 0.05" friction="2 1.0 1.0" rgba="0 .9 0 1"/>
+            </body>
+        </body>
+    </worldbody>
+    
+    <sensor>
+        <framepos objtype="geom" objname="ballcast"/>
+    </sensor>
+    
+    <actuator>
+        <velocity name="left-velocity-servo" joint="left-wheel" kv="10"  forcelimited="true" forcerange="-1.0 1.0"/>
+        <velocity name="right-velocity-servo" joint="right-wheel" kv="10" forcelimited="true" forcerange="-1.0 1.0"/>
+    </actuator>
+</mujoco>

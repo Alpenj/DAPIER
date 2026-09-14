@@ -1,5 +1,7 @@
 ﻿# Dataset v3 round-trip · ACT DataLoader smoke
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../config/hardware_roles.json`](../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-21
 단계: 3/5
 범위: native LeRobot Dataset v3 writer 결과를 다시 열어 시간축·episode 경계·padding mask·ACT 입력 계약까지 검증

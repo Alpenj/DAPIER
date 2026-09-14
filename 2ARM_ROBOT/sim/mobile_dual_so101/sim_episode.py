@@ -4,20 +4,23 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 from dataclasses import dataclass
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 from typing import Callable, Mapping, Sequence
 
 import mujoco
-import numpy as np
 
 from mobile_dual_so101 import actuator_targets_from_qpos
+from mission_modules.camera import CameraRole
+from mujoco_mission_adapters import MuJoCoMultiCameraAdapter, build_mobile_shoe_mission_model
 from shoe_task import ShoeTaskEnv, ground_truth_observation, task_metrics
 from sim_policy import actuator_targets_to_policy_action
 
@@ -38,6 +41,20 @@ from shoe_sorting_data.contract import (  # noqa: E402
 
 
 ActionSource = Callable[[int, Mapping[str, object]], Sequence[float]]
+CAMERA_PREFIXES = {
+    CameraRole.FRONT_RGBD: "front",
+    CameraRole.WORKSPACE_RGBD: "workspace",
+    CameraRole.LEFT_GRIPPER_RGB: "left_gripper",
+    CameraRole.RIGHT_GRIPPER_RGB: "right_gripper",
+}
+CAMERA_STREAMS = (
+    "front_rgb",
+    "front_depth",
+    "workspace_rgb",
+    "workspace_depth",
+    "left_gripper_rgb",
+    "right_gripper_rgb",
+)
 
 
 @dataclass(frozen=True)
@@ -86,6 +103,20 @@ def _state_streams(observation: Mapping[str, object]) -> dict[str, list[float]]:
     }
 
 
+def _continuous_carry_success(
+    frame_carry_supported: Sequence[bool], terminal_success: bool
+) -> bool:
+    first_carry = next(
+        (index for index, carried in enumerate(frame_carry_supported) if carried),
+        None,
+    )
+    return (
+        terminal_success
+        and first_carry is not None
+        and all(frame_carry_supported[first_carry:])
+    )
+
+
 def _write_samples(path: Path, samples: Sequence[Mapping[str, object]]) -> str:
     payload = "".join(
         json.dumps(sample, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -100,22 +131,56 @@ def _write_samples(path: Path, samples: Sequence[Mapping[str, object]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _render_rgbd(
-    renderer: mujoco.Renderer,
-    data: mujoco.MjData,
-) -> tuple[np.ndarray, np.ndarray]:
-    renderer.disable_depth_rendering()
-    renderer.update_scene(data, camera="front_depth_camera")
-    rgb = np.asarray(renderer.render(), dtype=np.uint8).copy()
-    renderer.enable_depth_rendering()
-    renderer.update_scene(data, camera="front_depth_camera")
-    depth = np.asarray(renderer.render(), dtype=np.float32).copy()
-    renderer.disable_depth_rendering()
-    if rgb.ndim != 3 or rgb.shape[2] != 3 or depth.shape != rgb.shape[:2]:
-        raise RuntimeError("MuJoCo RGB-D render shape is inconsistent")
-    if not np.isfinite(depth).all():
-        raise RuntimeError("MuJoCo depth render contains non-finite values")
-    return rgb, depth
+def write_sim_camera_sample(
+    root: Path,
+    camera: MuJoCoMultiCameraAdapter,
+    index: int,
+) -> tuple[dict[str, object], dict[str, int], dict[str, int]]:
+    camera_records: dict[str, object] = {}
+    camera_timestamps: dict[str, int] = {}
+    camera_receipts: dict[str, int] = {}
+    for frame in camera.capture().frames:
+        prefix = CAMERA_PREFIXES[frame.role]
+        streams = [(f"{prefix}_rgb", "rgb8", frame.width * 3, frame.rgb)]
+        if frame.depth_m_le_f32 is not None:
+            streams.append(
+                (
+                    f"{prefix}_depth",
+                    "32FC1",
+                    frame.width * 4,
+                    frame.depth_m_le_f32,
+                )
+            )
+        for stream, encoding, step, payload in streams:
+            timestamp_ns = (
+                frame.rgb_timestamp_ns
+                if encoding == "rgb8"
+                else int(frame.depth_timestamp_ns)
+            )
+            camera_records[stream] = {
+                "timestamp_ns": timestamp_ns,
+                "received_monotonic_ns": frame.received_monotonic_ns,
+                "frame_id": frame.frame_id,
+                "valid": frame.valid,
+                "optical_frame": frame.optical_frame,
+                "calibration_id": frame.calibration_id,
+                "payload": write_camera_payload(
+                    root,
+                    stream,
+                    index,
+                    CameraFramePayload(
+                        width=frame.width,
+                        height=frame.height,
+                        encoding=encoding,
+                        is_bigendian=0,
+                        step=step,
+                        data=payload,
+                    ),
+                ),
+            }
+            camera_timestamps[stream] = timestamp_ns
+            camera_receipts[stream] = frame.received_monotonic_ns
+    return camera_records, camera_timestamps, camera_receipts
 
 
 def record_sim_episode(
@@ -134,8 +199,21 @@ def record_sim_episode(
     root = Path(
         tempfile.mkdtemp(prefix=f".{target.name}.staging-", dir=target.parent)
     )
+    try:
+        return _record_sim_episode(root, target, config, action_source)
+    except BaseException:
+        shutil.rmtree(root, ignore_errors=True)
+        raise
 
-    env = ShoeTaskEnv()
+
+def _record_sim_episode(
+    root: Path,
+    target: Path,
+    config: SimEpisodeConfig,
+    action_source: ActionSource | None,
+) -> Path:
+
+    env = ShoeTaskEnv(model=build_mobile_shoe_mission_model())
     observation, reset_info = env.reset(seed=config.seed)
     if reset_info.get("hardware_execution") is not False:
         raise RuntimeError("simulation episode unexpectedly reported hardware execution")
@@ -152,11 +230,12 @@ def record_sim_episode(
     source = action_source or (lambda _index, _observation: initial_targets)
     samples: list[dict[str, object]] = []
 
-    with mujoco.Renderer(
+    with closing(MuJoCoMultiCameraAdapter(
         env.model,
+        env.data,
         height=config.height,
         width=config.width,
-    ) as renderer:
+    )) as camera:
         for index in range(config.sample_count):
             requested = tuple(float(value) for value in source(index, observation))
             if len(requested) != env.model.nu or not all(
@@ -173,34 +252,9 @@ def record_sim_episode(
                         f"action source target {actuator_id} is outside actuator range"
                     )
             timestamp_ns = round(float(env.data.time) * 1_000_000_000)
-            rgb, depth = _render_rgbd(renderer, env.data)
             frame_metrics = task_metrics(env.model, env.data)
-            rgb_payload = write_camera_payload(
-                root,
-                "workspace_rgb",
-                index,
-                CameraFramePayload(
-                    width=config.width,
-                    height=config.height,
-                    encoding="rgb8",
-                    is_bigendian=0,
-                    step=config.width * 3,
-                    data=rgb.tobytes(order="C"),
-                ),
-            )
-            depth_bytes = depth.astype("<f4", copy=False).tobytes(order="C")
-            depth_payload = write_camera_payload(
-                root,
-                "workspace_depth",
-                index,
-                CameraFramePayload(
-                    width=config.width,
-                    height=config.height,
-                    encoding="32FC1",
-                    is_bigendian=0,
-                    step=config.width * 4,
-                    data=depth_bytes,
-                ),
+            camera_records, camera_timestamps, camera_receipts = (
+                write_sim_camera_sample(root, camera, index)
             )
             stream_times = {
                 name: timestamp_ns
@@ -211,10 +265,11 @@ def record_sim_episode(
                     "right_joint_action",
                     "base_velocity",
                     "base_command",
-                    "workspace_rgb",
-                    "workspace_depth",
                 )
             }
+            stream_times.update(camera_timestamps)
+            stream_receipts = dict(stream_times)
+            stream_receipts.update(camera_receipts)
             policy_action = actuator_targets_to_policy_action(env.model, requested)
             samples.append(
                 {
@@ -223,29 +278,21 @@ def record_sim_episode(
                         "anchor_timestamp_ns": timestamp_ns,
                         "sync_delta_ns": 0,
                         "stream_timestamps_ns": stream_times,
-                        "stream_received_monotonic_ns": dict(stream_times),
+                        "stream_received_monotonic_ns": stream_receipts,
                     },
                     "state": _state_streams(observation),
                     "action": _split_policy_action(policy_action),
-                    "cameras": {
-                        "workspace_rgb": {
-                            "timestamp_ns": timestamp_ns,
-                            "received_monotonic_ns": timestamp_ns,
-                            "frame_id": index,
-                            "valid": True,
-                            "payload": rgb_payload,
-                        },
-                        "workspace_depth": {
-                            "timestamp_ns": timestamp_ns,
-                            "received_monotonic_ns": timestamp_ns,
-                            "frame_id": index,
-                            "valid": True,
-                            "payload": depth_payload,
-                        },
-                    },
+                    "cameras": camera_records,
                     "simulation": {
                         "hardware_execution": False,
                         "task_success": bool(frame_metrics["success"]),
+                        "carry_supported": bool(frame_metrics["carry_supported"]),
+                        "bilateral_gripper_contact": bool(
+                            frame_metrics["bilateral_gripper_contact"]
+                        ),
+                        "shoe_gripper_attachment": bool(
+                            frame_metrics["shoe_gripper_attachment"]
+                        ),
                         "reward": float(frame_metrics["reward"]),
                     },
                 }
@@ -258,7 +305,10 @@ def record_sim_episode(
             observation = ground_truth_observation(env.model, env.data)
 
     digest = _write_samples(root / "samples.jsonl", samples)
-    success = bool(samples[-1]["simulation"]["task_success"])
+    success = _continuous_carry_success(
+        [bool(sample["simulation"]["carry_supported"]) for sample in samples],
+        bool(samples[-1]["simulation"]["task_success"]),
+    )
     manifest = build_manifest(
         episode_id=config.episode_id,
         sample_count=config.sample_count,
@@ -278,6 +328,7 @@ def record_sim_episode(
         recording_span_id=f"mujoco_span_{config.seed}",
         attempt_id=f"mujoco_attempt_{config.seed}",
         camera_payload_mode="required",
+        camera_streams=CAMERA_STREAMS,
     )
     manifest["robot"] = {
         "platform": "SO101_dual_arm_on_turtlebot3_waffle_pi",

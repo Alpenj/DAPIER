@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Render a dual_so101_smoke trace as a dependency-free HTML report."""
+
+from __future__ import annotations
+
+import argparse
+from html import escape
+import json
+import math
+from pathlib import Path
+import statistics
+
+
+SIDES = ("left", "right")
+METRICS = ("goal", "observed", "present_load_raw", "present_current_raw", "present_velocity_raw")
+POST_HEALTH_METRICS = (
+    "Torque_Enable",
+    "Status",
+    "Moving",
+    "Present_Temperature",
+    "Present_Voltage",
+)
+
+
+def _trace(record: dict[str, object]) -> list[dict[str, object]]:
+    trace = record.get("trace")
+    if not isinstance(trace, list) or not trace:
+        raise ValueError("smoke log has no motion trace")
+    for index, sample in enumerate(trace):
+        if not isinstance(sample, dict) or not math.isfinite(float(sample.get("monotonic_s", math.nan))):
+            raise ValueError(f"trace[{index}] has invalid monotonic_s")
+        for metric in METRICS:
+            values = sample.get(metric)
+            if not isinstance(values, dict):
+                raise ValueError(f"trace[{index}] has no {metric}")
+            for side in SIDES:
+                if side not in values or not math.isfinite(float(values[side])):
+                    raise ValueError(f"trace[{index}].{metric}.{side} is invalid")
+    return trace
+
+
+def _chart(title: str, times: list[float], series: dict[str, list[float]]) -> str:
+    width, height, pad = 760, 230, 42
+    values = [value for line in series.values() for value in line]
+    low, high = min(values), max(values)
+    if math.isclose(low, high):
+        low, high = low - 1.0, high + 1.0
+    span_x = max(times[-1] - times[0], 1e-9)
+    span_y = high - low
+
+    def point(time_s: float, value: float) -> str:
+        x = pad + (time_s - times[0]) / span_x * (width - 2 * pad)
+        y = height - pad - (value - low) / span_y * (height - 2 * pad)
+        return f"{x:.1f},{y:.1f}"
+
+    colors = ("#2563eb", "#dc2626", "#059669")
+    lines = "".join(
+        f'<polyline fill="none" stroke="{colors[index]}" stroke-width="2" '
+        f'points="{" ".join(point(t, v) for t, v in zip(times, values))}"/>'
+        for index, values in enumerate(series.values())
+    )
+    legend = " ".join(
+        f'<span style="color:{colors[index]}">● {escape(name)}</span>'
+        for index, name in enumerate(series)
+    )
+    return (
+        f'<section><h3>{escape(title)}</h3><div>{legend}</div>'
+        f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{escape(title)}">'
+        f'<line x1="{pad}" y1="{height-pad}" x2="{width-pad}" y2="{height-pad}" stroke="#777"/>'
+        f'<line x1="{pad}" y1="{pad}" x2="{pad}" y2="{height-pad}" stroke="#777"/>'
+        f'{lines}<text x="4" y="{pad}">{high:.2f}</text>'
+        f'<text x="4" y="{height-pad}">{low:.2f}</text>'
+        f'<text x="{width-pad-35}" y="{height-8}">{times[-1]:.2f}s</text></svg></section>'
+    )
+
+
+def _post_health_rows(record: dict[str, object]) -> str:
+    arms = record.get("arms")
+    rows = []
+    for side in SIDES:
+        health = None
+        if isinstance(arms, dict) and isinstance(arms.get(side), dict):
+            health = arms[side].get("health_after_torque_off")
+        if health is None:
+            summaries = ["not recorded"] * len(POST_HEALTH_METRICS)
+        elif not isinstance(health, dict):
+            raise ValueError(f"arms.{side}.health_after_torque_off is invalid")
+        else:
+            summaries = []
+            for metric in POST_HEALTH_METRICS:
+                values = health.get(metric)
+                if not isinstance(values, dict) or not values:
+                    raise ValueError(f"arms.{side}.health_after_torque_off.{metric} is invalid")
+                parsed = [float(value) for value in values.values()]
+                if not all(math.isfinite(value) for value in parsed):
+                    raise ValueError(f"arms.{side}.health_after_torque_off.{metric} is invalid")
+                low, high = min(parsed), max(parsed)
+                summaries.append(f"{low:g}" if low == high else f"{low:g}–{high:g}")
+        rows.append(
+            f"<tr><td>{side}</td>"
+            + "".join(f"<td>{escape(value)}</td>" for value in summaries)
+            + "</tr>"
+        )
+    return "".join(rows)
+
+
+def _boolean_field(record: dict[str, object], name: str) -> str:
+    if name not in record:
+        return "not recorded"
+    value = record[name]
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be boolean")
+    return str(value).lower()
+
+
+def build_report(record: dict[str, object]) -> str:
+    trace = _trace(record)
+    origin = float(trace[0]["monotonic_s"])
+    times = [float(sample["monotonic_s"]) - origin for sample in trace]
+    intervals = [later - earlier for earlier, later in zip(times, times[1:])]
+    if any(interval < 0 for interval in intervals):
+        raise ValueError("trace monotonic_s must be non-decreasing")
+
+    rows, charts = [], []
+    for side in SIDES:
+        goal = [float(sample["goal"][side]) for sample in trace]
+        observed = [float(sample["observed"][side]) for sample in trace]
+        load = [float(sample["present_load_raw"][side]) for sample in trace]
+        current = [float(sample["present_current_raw"][side]) for sample in trace]
+        velocity = [float(sample["present_velocity_raw"][side]) for sample in trace]
+        rows.append(
+            "<tr>"
+            f"<td>{side}</td><td>{max(abs(a-b) for a, b in zip(goal, observed)):.3f}°</td>"
+            f"<td>{max(map(abs, load)):.0f}</td><td>{max(map(abs, current)):.0f}</td>"
+            f"<td>{max(map(abs, velocity)):.0f}</td></tr>"
+        )
+        charts.append(_chart(f"{side} shoulder_pan position (degree)", times, {"goal": goal, "observed": observed}))
+        charts.append(_chart(f"{side} motor raw telemetry", times, {"load": load, "current": current, "velocity": velocity}))
+
+    p50_ms = statistics.median(intervals) * 1000 if intervals else 0.0
+    p95_ms = (sorted(intervals)[math.ceil(len(intervals) * 0.95) - 1] * 1000) if intervals else 0.0
+    error = escape(str(record.get("error", "none")))
+    return f"""<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>DAPIER dual SO-101 trace</title>
+<style>body{{font:15px system-ui;max-width:960px;margin:auto;padding:24px;color:#222}}table{{border-collapse:collapse}}th,td{{border:1px solid #bbb;padding:7px}}section{{margin:28px 0}}svg{{width:100%;background:#fafafa}}.warn{{background:#fff3cd;padding:12px}}</style>
+<h1>DAPIER dual SO-101 trace</h1>
+<p class="warn">이 보고서는 계측 trace 시각화이며 실물 동작 승인 또는 commissioning 완료 증거가 아닙니다.</p>
+<p>samples={len(trace)}, duration={times[-1]:.3f}s, interval p50={p50_ms:.2f}ms, p95={p95_ms:.2f}ms, error={error}</p>
+<p>user_witnessed={_boolean_field(record, 'user_witnessed')}, hardware_execution={_boolean_field(record, 'hardware_execution')}, motion_completed={_boolean_field(record, 'motion_completed')}</p>
+<table><tr><th>arm</th><th>max tracking error</th><th>peak |load| raw</th><th>peak |current| raw</th><th>peak |velocity| raw</th></tr>{''.join(rows)}</table>
+<h2>Post-motion torque-off health</h2>
+<table><tr><th>arm</th><th>torque</th><th>status</th><th>moving</th><th>temperature °C</th><th>voltage raw</th></tr>{_post_health_rows(record)}</table>
+{''.join(charts)}
+</html>
+"""
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("smoke_log", type=Path)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    record = json.loads(args.smoke_log.read_text(encoding="utf-8"))
+    args.output.write_text(build_report(record), encoding="utf-8")
+    print(args.output)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

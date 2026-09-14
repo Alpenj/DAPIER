@@ -1,5 +1,7 @@
 ﻿# 최신 LeRobot Dataset v3 Native Encoder 조사 — 2ARM_ROBOT
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../../config/hardware_roles.json`](../../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-21
 대상: JDcobot 양팔·Orbbec Astra Pro·ROS2 recorder·RTX 5050·4인 6주·추가 예산 0원
 

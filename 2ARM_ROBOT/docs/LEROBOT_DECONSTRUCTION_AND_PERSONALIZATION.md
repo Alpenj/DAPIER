@@ -3,10 +3,11 @@
 > 상태: Stage 1·2 및 ACT interchange 1차 구현 완료
 > 공식 소스 기준: `huggingface/lerobot@d451fe4f1f1b00a812f95aa9534389b5e42ab155`
 > 프로젝트 기준: `DAPIER@27ca01573851a8a288cddda5c7c06ec5953675ad`
+> 현행 장비 정본: [`../config/hardware_roles.json`](../config/hardware_roles.json)
 
 ## 이 문서의 목적
 
-LeRobot을 그대로 복사하거나 무조건 도입하지 않는다. 공식 코드가 로봇 장치, 데이터, Processor, 정책, 실행 루프를 어떤 계약으로 연결하는지 확인한 뒤, JDcobot 양팔·TurtleBot3·Orbbec Astra Pro 기반 신발 정리 시스템에 필요한 부분만 선택 적용한다.
+LeRobot을 그대로 복사하거나 무조건 도입하지 않는다. 공식 코드가 로봇 장치, 데이터, Processor, 정책, 실행 루프를 어떤 계약으로 연결하는지 확인한 뒤, SO-101 양팔·TurtleBot3·전면 Astra S·top-view HP-ASC-H201·좌우 wrist RGB 기반 신발 정리 시스템에 필요한 부분만 선택 적용한다.
 
 각 단계는 다음 순서로 기록한다.
 
@@ -135,7 +136,7 @@ ACT는 한 시점에 action 하나가 아니라 `(batch, chunk_size, action_dim)
 | 영역 | 결정 | 프로젝트 적용 |
 |---|---|---|
 | CLI/config/factory 패턴 | 선택 적용 | hardware profile과 ACT export config를 명시적으로 분리 |
-| Robot/Camera/Teleoperator 계약 | 어댑터 | JDcobot ROS2 topic/service와 Astra RGB-D를 감싸는 adapter 작성 |
+| Robot/Camera/Teleoperator 계약 | 어댑터 | SO-101 장치 경계와 전면/top-view RGB-D·좌우 wrist RGB를 감싸는 adapter 작성 |
 | Dataset feature·episode·metadata | 재사용 | 기존 DYNA-lite episode를 LeRobot/ACT 계약으로 변환 |
 | Processor/normalization | 재사용+확장 | 좌/우 팔 joint 순서, 단위, image/depth key 변환 |
 | ACT | 공식 구현 재사용 | 12개 arm/gripper action 기준선부터 시작 |
@@ -255,8 +256,8 @@ CLI 회귀 테스트를 추가하는 과정에서 새 test method가 기존 meth
 
 ## 다음 개발 우선순위
 
-1. Astra Pro RGB/Depth 픽셀 payload 저장 계약
+1. 전면 Astra S·top-view HP-ASC-H201·좌우 wrist RGB 픽셀 payload 저장 계약
 2. native LeRobot Dataset v3 encoder를 optional dependency로 분리
 3. 작은 Dataset v3 round-trip과 공식 ACT dataloader smoke test
 4. offline evaluator와 action chunk/padding 검증
-5. JDcobot ROS2 rollout adapter와 독립 safety supervisor
+5. SO-101 rollout adapter와 독립 safety supervisor

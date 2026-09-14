@@ -1,5 +1,7 @@
 # JDcobot200 원본 자산 고지
 
+> Legacy 자산 고지: 이 자산은 현행 SO-101 실물·명령·MuJoCo 기준 모델에 사용하지 않는다.
+
 ## 출처
 
 - 저장소: <https://github.com/JD-edu/jdcobot200_imitation_learning>

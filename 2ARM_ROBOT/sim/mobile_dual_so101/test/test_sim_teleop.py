@@ -40,6 +40,7 @@ from sim_teleop import (
     KEYPAD_1,
     SimTeleopController,
     apply_teleop_targets,
+    run_sim_teleop,
     synchronize_stop_hold,
     synchronize_control_panel,
 )
@@ -57,6 +58,25 @@ class SimTeleopControllerTest(unittest.TestCase):
             step_rad=math.radians(2.0),
             min_key_interval_s=0.05,
         )
+        first_joint_id = int(self.model.actuator_trnid[0, 0])
+        self.first_actuated_qpos_address = int(
+            self.model.jnt_qposadr[first_joint_id]
+        )
+
+    @staticmethod
+    def safe_assessment() -> CollisionAssessment:
+        return CollisionAssessment(
+            safe=True,
+            reason="protected clearance satisfied",
+            minimum_clearance_m=0.03,
+            required_clearance_m=0.03,
+            path_fraction=1.0,
+            checked_samples=2,
+            first_body="left_arm",
+            second_body="right_arm",
+            first_geom_id=1,
+            second_geom_id=2,
+        )
 
     def test_initial_status_is_simulation_only_and_deterministic(self) -> None:
         status = self.controller.status()
@@ -69,11 +89,24 @@ class SimTeleopControllerTest(unittest.TestCase):
         self.assertFalse(status["hardware_dispatch_authorized"])
         self.assertFalse(status["hardware_execution"])
 
+    def test_recording_rate_rejects_invalid_values_before_viewer_launch(self) -> None:
+        for value in (0, -1, True, 20.0):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                run_sim_teleop(
+                    self.model,
+                    initial_action=HUMANOID_HOME_ACTION,
+                    record_fps=value,
+                )
+
     def test_arm_joint_selection_increment_and_rate_limit(self) -> None:
         self.assertTrue(self.controller.handle_key(KEY_RIGHT_ARM, now_ns=1).accepted)
         self.assertTrue(self.controller.handle_key(ord("2"), now_ns=2).accepted)
         before = self.controller.targets
-        update = self.controller.handle_key(KEY_INCREASE, now_ns=1_000_000_000)
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ):
+            update = self.controller.handle_key(KEY_INCREASE, now_ns=1_000_000_000)
         self.assertTrue(update.accepted)
         self.assertEqual(update.action_name, "right_shoulder_lift")
         self.assertAlmostEqual(
@@ -89,6 +122,21 @@ class SimTeleopControllerTest(unittest.TestCase):
         self.assertIn("rate limit", repeated.reason)
         self.assertEqual(self.controller.targets, update.targets)
 
+    def test_named_obstacles_reach_shared_collision_guard(self) -> None:
+        controller = SimTeleopController(
+            self.model,
+            initial_action=HUMANOID_HOME_ACTION,
+            obstacle_geom_names=("box_floor",),
+        )
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ) as guard:
+            self.assertTrue(controller.handle_key(KEY_INCREASE, now_ns=1).accepted)
+        self.assertEqual(
+            guard.call_args.kwargs["obstacle_geom_names"], ("box_floor",)
+        )
+
     def test_glfw_keypad_and_arrow_fallbacks_drive_the_same_contract(self) -> None:
         self.assertTrue(
             self.controller.handle_key(KEY_RIGHT_ARROW, now_ns=1).accepted
@@ -97,7 +145,11 @@ class SimTeleopControllerTest(unittest.TestCase):
             self.controller.handle_key(KEYPAD_1 + 1, now_ns=2).accepted
         )
         before = self.controller.targets
-        update = self.controller.handle_key(KEY_UP_ARROW, now_ns=1_000_000_000)
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ):
+            update = self.controller.handle_key(KEY_UP_ARROW, now_ns=1_000_000_000)
         self.assertTrue(update.accepted)
         self.assertEqual(update.action_name, "right_shoulder_lift")
         self.assertGreater(self.controller.targets[7], before[7])
@@ -313,7 +365,7 @@ class SimTeleopControllerTest(unittest.TestCase):
         data = mujoco.MjData(self.model)
         apply_control_as_pose(self.model, data, HUMANOID_HOME_ACTION)
         self.controller.handle_key(KEY_STOP, now_ns=1)
-        data.qpos[0] += 0.01
+        data.qpos[self.first_actuated_qpos_address] += 0.01
         mujoco.mj_forward(self.model, data)
 
         stopped = synchronize_stop_hold(
@@ -324,7 +376,7 @@ class SimTeleopControllerTest(unittest.TestCase):
         )
         self.assertTrue(stopped)
         latched = self.controller.targets
-        data.qpos[0] += 0.02
+        data.qpos[self.first_actuated_qpos_address] += 0.02
         mujoco.mj_forward(self.model, data)
 
         stopped = synchronize_stop_hold(
@@ -364,16 +416,24 @@ class SimTeleopControllerTest(unittest.TestCase):
         data = mujoco.MjData(self.model)
         apply_control_as_pose(self.model, data, HUMANOID_HOME_ACTION)
         before = data.qpos.copy()
-        update = self.controller.handle_key(
-            KEY_INCREASE,
-            now_ns=1_000_000_000,
-        )
+        with patch(
+            "sim_teleop.check_bimanual_path",
+            return_value=self.safe_assessment(),
+        ):
+            update = self.controller.handle_key(
+                KEY_INCREASE,
+                now_ns=1_000_000_000,
+            )
         self.assertTrue(update.accepted)
         control_targets = self.controller.advance(0.02)
         apply_teleop_targets(self.model, data, control_targets)
         self.assertEqual(tuple(data.qpos), tuple(before))
         mujoco.mj_step(self.model, data)
-        self.assertNotEqual(float(data.qpos[0]), float(before[0]))
+        qpos_address = self.first_actuated_qpos_address
+        self.assertNotEqual(
+            float(data.qpos[qpos_address]),
+            float(before[qpos_address]),
+        )
         self.assertTrue(all(math.isfinite(float(value)) for value in data.qpos))
 
     def test_main_teleop_flag_calls_sim_runner_with_bounded_settings(self) -> None:
@@ -416,10 +476,10 @@ class SimTeleopControllerTest(unittest.TestCase):
             ("--teleop", "--teleop-step-deg", "0"),
             ("--teleop", "--teleop-min-key-interval-ms", "-1"),
             ("--teleop", "--teleop-clearance-m", "0"),
-        )
-        for extra_arguments in invalid_arguments:
             ("--teleop", "--teleop-max-speed-deg-s", "0"),
             ("--teleop", "--teleop-accel-deg-s2", "0"),
+        )
+        for extra_arguments in invalid_arguments:
             with self.subTest(arguments=extra_arguments):
                 with redirect_stderr(StringIO()):
                     with self.assertRaises(SystemExit):

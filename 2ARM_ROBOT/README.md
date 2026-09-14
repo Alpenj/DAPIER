@@ -1,26 +1,42 @@
 ﻿# 2ARM_ROBOT — 이동형 양팔 신발 정리 로봇
 
-JDcobot200 양팔, TurtleBot3 Waffle Pi, Orbbec Astra 계열 RGB-D 카메라를 이용해 무작위로
-놓인 신발 30켤레를 짝지어 정렬하거나 신발장에 넣는 DAPIER 팀 프로젝트다.
+SO-101 두 팔과 TurtleBot3 Waffle Pi를 결합해 박스가 있는 위치까지 이동하고, 오른팔로
+박스를 열고 왼팔로 신발을 꺼낸 뒤 출발 위치로 운반·배치하는 DAPIER 팀 프로젝트다.
 
-현재 구현은 Phase 0 데이터 계약에 실물 하드웨어 발견 결과를 연결하는 단계다. 양팔 12개
-STS3215의 읽기 전용 telemetry, TurtleBot3 stationary baseline과 들린 바퀴 속도 응답은
-확인했다. 실제 신발 episode, 카메라 depth stream, 팔 동작·토크 캘리브레이션 또는 ACT
-성능을 검증했다는 의미는 아니다.
+현재 장비 정본은 [`config/hardware_roles.json`](config/hardware_roles.json)이다. H201은
+기둥 상단 작업공간 top-view RGB-D, Astra S는 TurtleBot3 전면 Visual SLAM RGB-D이며,
+좌우 SO-101에는 각각 RGB wrist camera가 있다. Raspberry Pi 4는 base·경량 I/O·안전 감시를,
+로컬 노트북은 perception·IL policy·LLM과 Visual SLAM 배치 비교를 담당한다. LLM은 Pi에서
+실행하지 않는다.
+
+> **2026-09-04 안전 상태:** 이 저장소의 physical motion과 camera streaming은
+> local safety integration이 끝날 때까지 비활성화한다. `dual_so101_smoke`는
+> `--move-deg 0` 읽기 전용만 남기고 torque를 켜지 않으며, Astra `poll`/`viewer`는
+> 항상 fail-closed한다. 과거 실측 기록은 현재 실행 허가나 안전 보장이 아니다.
+
+MuJoCo 양팔·카메라·접촉 모델과 과거 ±3도 실측 로그 비교는 준비됐지만, 왼쪽 손가락 접촉은
+CPU에 따라 양측 또는 한쪽 경계에 있고 양측일 때도 법선이 직교해 협지가 아니다. 따라서
+박스-신발 전체 물리 성공은 아직 아니다. 과거 팔 로그도 사용자가 화면으로 확인한 commissioning은
+아니다. 다음 실물 시험 일정은 잡지 않았으며 위 local safety integration 완료 뒤 다시 판단한다.
 
 ## 현재 구성
 
 ```text
 2ARM_ROBOT/
+├── config/
+│   └── hardware_roles.json      # 현재 하드웨어 역할 정본(비밀값 제외)
 ├── src/
-│   └── shoe_sorting_data/       # ROS 2 ament_python 패키지
+│   └── shoe_sorting_data/       # 초기 JDcobot Phase 0 계약; 데이터 유틸만 선택 재사용
 ├── sim/
-│   ├── jdcobot200_dual/         # 원본 200 기반 MuJoCo 양팔 기준 모델
+│   ├── mobile_dual_so101/       # 현재 Waffle Pi + SO-101 양팔 MuJoCo 모델
+│   ├── jdcobot200_dual/         # legacy reference
 │   ├── turtlebot3_waffle_pi/    # 공식 Waffle Pi URDF/mesh와 MuJoCo 변환
-│   └── mobile_dual_arm/         # Waffle Pi base_link + 양팔 조합 모델
+│   └── mobile_dual_arm/         # legacy JDcobot 조합 모델
 ├── docs/                         # 요구사항, 팀 결정, 조사 참고자료
 ├── scripts/
-│   └── verify_ubuntu_ros2.sh     # 설치 없이 환경·테스트·빌드 검증
+│   ├── dual_so101_smoke          # 승인형 양팔 read-only 계측; motion 비활성
+│   ├── capture_usb_snapshot      # 승인형 read-only USB 전후 기록
+│   └── run_astra_openni2_color  # 전면 Astra S 정적 runtime 검사만 허용
 └── README.md
 ```
 
@@ -44,15 +60,14 @@ JDcobot200 전용 URDF 생성·MJCF 변환·그리퍼 자료는
 [JDcobot200 URDF 가이드](docs/WIKIDOCS_20199_JDCOBOT200_URDF_GUIDE.md)에서 확인한다.
 비식별 실측 원본과 요약은 [hardware evidence](docs/evidence/HARDWARE_EVIDENCE.md)에서 확인할 수 있다.
 
-강사에게 사용·개인화 허가를 확인한 JDcobot200 원본 URDF/MJCF/STL과 DAPIER 양팔 조합기는
-[JDcobot200 양팔 MuJoCo 모델](sim/jdcobot200_dual/README.md)에 분리했다. 현재는 12차원
-action 순서, 좌우 namespace, coarse primitive collision과 headless 정지 시뮬레이션까지
-검증했다. TurtleBot3 상판 장착 좌표와 동역학 수치는 아직 실측 전이다.
+JDcobot200 원본 모델과 초기 ROS 2 패키지는 학습·회귀용 legacy 자료다. 현재 실물 명령 또는
+하드웨어 역할의 근거로 사용하지 않는다. 현재 12차원 action, 좌우 namespace, camera role,
+IK·접촉·충돌 검증은 [SO-101 이동형 양팔 모델](sim/mobile_dual_so101/README.md)을 기준으로 한다.
 
 ROBOTIS 공식 Waffle Pi 자산과 MuJoCo 변환은
-[Waffle Pi 기준 모델](sim/turtlebot3_waffle_pi/README.md), Waffle Pi base_link에 양팔을
-장착한 모델은 [이동형 양팔 조합 모델](sim/mobile_dual_arm/README.md)에 둔다. 조합 모델은
-base 고정, wheel actuator 없음, 양팔 actuator 12개인 stationary manipulation 기준이다.
+[Waffle Pi 기준 모델](sim/turtlebot3_waffle_pi/README.md)에 보존한다. 현재 조합 모델은
+`sim/mobile_dual_so101`이며 wheel-level 명령은 내부 base adapter에만 두고 공개 이동 계약은
+선속도·각속도와 docking goal을 사용한다.
 
 ## Ubuntu ROS 2 교육 PC에서 시작
 
@@ -77,24 +92,50 @@ ROS 환경을 사용하고, 아직 source되지 않았다면 `/opt/ros/jazzy`와
 
 ## 실물 장비를 연결했을 때 가장 먼저 할 일
 
-현재 저장소에는 읽기 전용 관절 snapshot과 바퀴 characterization은 있지만, 실제 카메라 frame,
-rosbag 또는 신발을 집은 실물 episode는 없다. 따라서 아직 검증하지 않은 joint sign이나 카메라
-topic 이름을 추측해 코드에 확정하지 않는다. 장비 driver를
-실행한 뒤 아래 스크립트로 읽기 전용 snapshot부터 만든다.
+현재 저장소에는 과거 읽기 전용 관절 snapshot, 제한된 양팔 ±3도 로그와 바퀴 characterization이
+있다. 그러나 사용자가 화면으로 확인한 양팔 commissioning, 동시 4카메라 부하, 실제 신발
+episode는 없다. 따라서 현재 장비 역할은 `config/hardware_roles.json`에서 읽고, driver topic,
+캘리브레이션·안전 limit은 아래 읽기 전용 snapshot과 현장 측정 뒤 확정한다.
 
 ```bash
 cd ~/DAPIER/2ARM_ROBOT
 bash scripts/capture_ros2_hardware_snapshot.sh \
-  output/hardware_snapshots/first_connected
+  output/hardware_snapshots/first_connected \
+  --confirm VISIBLE_ROS2_SNAPSHOT_READONLY
 ```
 
 이 스크립트는 node/topic/type, endpoint QoS, `JointState`, `CameraInfo`, base
 velocity/odometry의 첫 message를 저장한다. `Image`는 픽셀을 저장하지 않고
-header만 수집한다. 어떤 motion command도 publish하지 않으며 출력 폴더가 비어
-있지 않으면 덮어쓰지 않고 중단한다.
+header만 수집한다. 사용자가 현장에서 read-only graph 접근을 승인한 exact token이
+없거나 stdin/stdout이 interactive TTY가 아니면 ROS 2를 호출하지 않는다. 어떤 motion command도 publish하지 않으며 Git에서
+제외된 `output/` 아래 새 폴더만 허용하고 기존 경로는 덮어쓰지 않는다.
 
 현재 장비 node가 하나도 실행되지 않았다면 exit 2와 `NO_CANDIDATE_TOPICS`를
 반환한다. snapshot을 확인한 뒤에만 mock topic mapping을 실제 이름으로 교체한다.
+
+비공개 udev 규칙은 저장소의 고정 경로 `config/99-dapier-hardware.rules`에만 두며 이
+파일은 Git에서 제외된다. 설치기는 다른 입력 경로를 받지 않고, 파일 권한과 staging 전후
+digest가 같을 때만 현장 승인 아래 진행한다.
+
+사용자가 현장에 있고 read-only 확인을 승인한 뒤, 카메라 실행 전과 양팔 시험 후 USB 상태를
+각각 새 디렉터리에 기록한다. 결과는 Git에서 제외되는 `output/` 아래에만 생성된다.
+
+```bash
+2ARM_ROBOT/scripts/capture_usb_snapshot \
+  2ARM_ROBOT/output/usb_snapshots/before \
+  --confirm VISIBLE_USB_SNAPSHOT_READONLY
+
+2ARM_ROBOT/scripts/capture_usb_snapshot \
+  2ARM_ROBOT/output/usb_snapshots/after \
+  --confirm VISIBLE_USB_SNAPSHOT_READONLY
+
+diff -u 2ARM_ROBOT/output/usb_snapshots/{before,after}/lsusb-tree.txt
+diff -u 2ARM_ROBOT/output/usb_snapshots/{before,after}/kernel-usb-events.txt
+```
+
+이 도구는 USB/V4L2 목록과 reset·disconnect·timeout 관련 kernel event만 읽고 장치 stream이나
+serial port를 열지 않는다. 전체 snapshot 디렉터리는 그대로 Git에 올리지 않고 비식별 요약만
+commissioning 근거로 정리한다.
 
 수동 실행 시:
 
@@ -178,6 +219,7 @@ ros2 run shoe_sorting_data shoe_episode query \
 ## 확정된 개발 방향
 
 - ACT 기준선을 먼저 완성한다.
+- 이동의 학습 정책(IL)과 근접 파지·경로 보정(IK)을 결합하되 둘 다 safety gate를 우회하지 않는다.
 - DYNA-lite 데이터 계약과 quality gate를 사용한다.
 - 4주차 이후 IDM/FDM/EMA 보조학습은 go/no-go ablation으로 판단한다.
 - LLM/VLM은 신발 짝, 목표 슬롯, 스킬과 실패 복구를 결정한다.
@@ -192,13 +234,10 @@ checkpoint/API가 없으므로 GEN-1.5 자체를 실행하지 않으며, local �
 상세 인수인계는 [`docs/PHASE0_HANDOFF.md`](docs/PHASE0_HANDOFF.md), 요구사항
 원장은 [`docs/requirements-ledger.md`](docs/requirements-ledger.md)를 본다.
 
-## 다음 코드 작업
+## 다음 작업
 
-실물 없이 계속 가능한 순서는 다음과 같다.
-
-1. Phase 0 episode를 ACT/LeRobot 입력으로 변환하는 adapter
-2. ACT용 train/validation split과 offline evaluator
-3. 실제 신발 crop embedding/API adapter와 mock 서버
-
-실물 확보 후에는 joint name/order/unit, gripper 차원, Astra Pro timestamp,
-calibration version, base 정지 신호를 확인해 placeholder를 교체한다.
+1. MuJoCo에서 오른팔 뚜껑 접촉과 왼팔 양지 파지·friction-only lift gate 통과
+2. H201 top-view와 Astra front-SLAM의 실제 depth·CameraInfo·extrinsic 검증
+3. 좌우 wrist RGB를 포함한 4카메라 동시 FPS/drop/USB reset 측정
+4. connected-endpoint identity binding과 독립 device-side watchdog을 local safety integration에서 검증
+5. 실측 STS3215 내부 profile·velocity·load/current로 MuJoCo actuator 보정

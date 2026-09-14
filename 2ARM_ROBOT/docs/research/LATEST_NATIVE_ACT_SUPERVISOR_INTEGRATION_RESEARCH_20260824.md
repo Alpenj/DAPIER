@@ -1,5 +1,7 @@
 ﻿# Native ACT proposal → independent supervisor → ROS2 dry-run 통합 조사
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../../config/hardware_roles.json`](../../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-24
 
 범위: DAPIER-native ACT(LeRobot runtime 의존 없음), JDcobot 양팔 12-DoF, Astra Pro, ROS2, 4인·6주·RTX 5050·추가 예산 0원

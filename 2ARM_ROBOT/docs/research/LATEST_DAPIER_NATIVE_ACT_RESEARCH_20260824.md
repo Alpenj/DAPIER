@@ -1,5 +1,7 @@
 ﻿# DAPIER-native ACT 런타임 조사 — LeRobot 의존성 없이 구현할 최소 계약
 
+> 장비 주의 (2026-09-03): 본문의 JDcobot/Astra Pro 표기는 당시 분석 가정이다. 현행 실물 역할은 [`../../config/hardware_roles.json`](../../config/hardware_roles.json)을 따른다.
+
 확인일: 2026-08-24
 
 범위: JDcobot 양팔 12-DoF, Astra Pro RGB-D 원본 계약, ROS2 rollout/safety supervisor, 4인·6주, RTX 5050, 추가 예산 0원

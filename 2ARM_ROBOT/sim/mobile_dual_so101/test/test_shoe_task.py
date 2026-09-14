@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -22,12 +23,18 @@ from shoe_task import (
     ShoeTaskConfig,
     ShoeTaskEnv,
     UnsafeActionError,
+    check_bimanual_path,
+    _shoe_gripper_attachment_active,
     ground_truth_observation,
     task_metrics,
     task_reachability,
     validate_shoe_task,
 )
-from mobile_dual_so101 import HUMANOID_HOME_ACTION, apply_control_as_pose
+from mobile_dual_so101 import (
+    HUMANOID_HOME_ACTION,
+    actuator_targets_from_qpos,
+    apply_control_as_pose,
+)
 
 
 UNSAFE_BIMANUAL_TARGET = (
@@ -124,11 +131,34 @@ class ShoeTaskTest(unittest.TestCase):
         self.assertEqual(float(self.env.data.time), before_time)
         self.assertEqual(tuple(float(value) for value in self.env.data.ctrl), before_ctrl)
 
+    def test_collision_path_starts_from_measured_actuator_positions(self) -> None:
+        measured = tuple(
+            actuator_targets_from_qpos(self.env.model, self.env.data.qpos)
+        )
+        self.env.data.ctrl[0] += 0.01
+
+        with patch(
+            "shoe_task.check_bimanual_path", wraps=check_bimanual_path
+        ) as guard:
+            self.env.apply_action(measured, physics_steps=1)
+
+        self.assertEqual(tuple(guard.call_args.args[1]), measured)
+
+    def test_invalid_measured_actuator_positions_fail_closed(self) -> None:
+        joint_id = int(self.env.model.actuator_trnid[0, 0])
+        self.env.data.qpos[int(self.env.model.jnt_qposadr[joint_id])] = math.nan
+        before_time = float(self.env.data.time)
+
+        with self.assertRaisesRegex(ValueError, "measured actuator qpos"):
+            self.env.apply_action(HUMANOID_HOME_ACTION, physics_steps=1)
+
+        self.assertEqual(float(self.env.data.time), before_time)
+
     def test_invalid_action_dimension_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "expected 12 actions"):
             self.env.step([0.0] * 11)
 
-    def test_success_requires_lift_near_a_gripper(self) -> None:
+    def test_teleported_lift_near_a_gripper_is_not_success(self) -> None:
         apply_control_as_pose(
             self.env.model,
             self.env.data,
@@ -149,7 +179,105 @@ class ShoeTaskTest(unittest.TestCase):
         metrics = task_metrics(self.env.model, self.env.data)
         self.assertTrue(metrics["lifted"])
         self.assertTrue(metrics["near_gripper"])
-        self.assertTrue(metrics["success"])
+        self.assertGreater(metrics["gripper_contact_count"]["left"], 0)
+        self.assertEqual(metrics["gripper_contact_count"]["right"], 0)
+        self.assertFalse(metrics["bilateral_gripper_contact"])
+        self.assertFalse(metrics["success"])
+
+        with patch(
+            "shoe_task._shoe_gripper_contacts",
+            return_value={"left": 1, "right": 1},
+        ):
+            supported = task_metrics(self.env.model, self.env.data)
+        self.assertTrue(supported["bilateral_gripper_contact"])
+        self.assertTrue(supported["success"])
+
+    def test_active_gripper_attachment_is_affirmative_support(self) -> None:
+        model = mujoco.MjModel.from_xml_string(
+            """
+            <mujoco>
+              <worldbody>
+                <body name="left_gripper">
+                  <geom type="sphere" size=".01"/>
+                </body>
+                <body name="right_gripper" pos="1 0 0">
+                  <geom type="sphere" size=".01"/>
+                </body>
+                <body name="shoe">
+                  <freejoint/>
+                  <geom type="sphere" size=".01"/>
+                </body>
+              </worldbody>
+              <equality>
+                <weld body1="shoe" body2="left_gripper"/>
+              </equality>
+            </mujoco>
+            """
+        )
+        data = mujoco.MjData(model)
+        self.assertTrue(_shoe_gripper_attachment_active(model, data))
+        data.eq_active[0] = 0
+        self.assertFalse(_shoe_gripper_attachment_active(model, data))
+
+    def test_site_attachment_maps_sites_to_their_bodies(self) -> None:
+        model = mujoco.MjModel.from_xml_string(
+            """
+            <mujoco>
+              <worldbody>
+                <body name="left_gripper">
+                  <body name="left_finger"><site name="finger_site"/></body>
+                </body>
+                <body name="right_gripper"/>
+                <body name="shoe">
+                  <freejoint/><geom type="sphere" size=".01"/><site name="shoe_site"/>
+                </body>
+              </worldbody>
+              <equality><weld site1="shoe_site" site2="finger_site"/></equality>
+            </mujoco>
+            """
+        )
+
+        self.assertTrue(_shoe_gripper_attachment_active(model, mujoco.MjData(model)))
+
+    def test_site_id_body_id_coincidence_cannot_fake_attachment(self) -> None:
+        model = mujoco.MjModel.from_xml_string(
+            """
+            <mujoco>
+              <worldbody>
+                <body name="shoe"><freejoint/><geom type="sphere" size=".01"/></body>
+                <body name="left_gripper"/>
+                <body name="right_gripper"/>
+                <body name="unrelated">
+                  <site name="filler_site"/>
+                  <site name="unrelated_site_1"/>
+                  <site name="unrelated_site_2"/>
+                </body>
+              </worldbody>
+              <equality>
+                <weld site1="unrelated_site_1" site2="unrelated_site_2"/>
+              </equality>
+            </mujoco>
+            """
+        )
+
+        self.assertFalse(_shoe_gripper_attachment_active(model, mujoco.MjData(model)))
+
+    def test_unsupported_attachment_object_type_fails_closed(self) -> None:
+        model = mujoco.MjModel.from_xml_string(
+            """
+            <mujoco>
+              <worldbody>
+                <body name="shoe"><freejoint/><geom type="sphere" size=".01"/></body>
+                <body name="left_gripper"/>
+                <body name="right_gripper"/>
+              </worldbody>
+              <equality><weld body1="shoe" body2="left_gripper"/></equality>
+            </mujoco>
+            """
+        )
+        model.eq_objtype[0] = mujoco.mjtObj.mjOBJ_GEOM
+
+        self.assertFalse(_shoe_gripper_attachment_active(model, mujoco.MjData(model)))
 
     def test_invalid_configuration_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "frame_skip"):
@@ -157,14 +285,11 @@ class ShoeTaskTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mount_layout"):
             ShoeTaskEnv(ShoeTaskConfig(mount_layout="unknown"))
 
-    def test_headless_smoke(self) -> None:
-        report = validate_shoe_task(smoke_steps=50)
-        self.assertTrue(report["finite_observation"])
-        self.assertTrue(report["ground_truth"])
-        self.assertTrue(report["state_imitation_contract_ready"])
-        self.assertFalse(report["default_floor_shoe_reachable"])
-        self.assertEqual(report["mount_layout"], "tower")
-        self.assertFalse(report["hardware_execution"])
+    def test_headless_smoke_fails_closed_on_exact_same_arm_contact(self) -> None:
+        with self.assertRaises(UnsafeActionError) as raised:
+            validate_shoe_task(smoke_steps=50)
+        self.assertEqual(raised.exception.assessment.minimum_clearance_m, 0.0)
+        self.assertIn("same-arm collision", str(raised.exception))
 
 
 if __name__ == "__main__":

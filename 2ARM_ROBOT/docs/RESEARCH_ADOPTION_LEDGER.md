@@ -2,6 +2,7 @@
 
 > 목적: 각 단계에서 무엇을 읽었고, 어떤 주장만 채택했으며, 코드·테스트에 어떻게 반영했는지 추적한다.
 > 원칙: 논문 성능 수치를 그대로 기대효과로 주장하지 않는다. 장비·데이터·평가 조건이 다른 내용은 실험 후보 또는 보류로 분리한다.
+> 장비 주의 (2026-09-03): 과거 JDcobot/Astra Pro 기반 항목은 당시 연구 가정이다. 현행 실물 역할은 [`../config/hardware_roles.json`](../config/hardware_roles.json)을 따른다.
 
 ## 연구 채택 gate
 
@@ -139,3 +140,21 @@ temporal ensemble, VLA/world model은 동일 split·예산의 측정 가능한 g
 
 `n_action_steps>1`, temporal ensemble, vendor command publisher, 실제 joint limit 가정과 VLA/world model은
 같은 task/checkpoint/safety 조건의 측정 또는 현장 정본이 생길 때까지 보류한다.
+
+## Stage 8 · 이동형 양팔 SO-101 박스 열기·신발 추출
+
+상세 조사·일정: [`research/LATEST_MOBILE_DUAL_SO101_BOX_SHOE_MISSION_RESEARCH_20260902.md`](research/LATEST_MOBILE_DUAL_SO101_BOX_SHOE_MISSION_RESEARCH_20260902.md)
+
+| 자료 | 저자/기관·연도 | 원문 | 확인 내용 | DAPIER 결정 | 코드·테스트 증거 | 확인일 |
+|---|---|---|---|---|---|---|
+| N²M² | Freiburg, 2023 | [프로젝트](https://mobile-rl.cs.uni-freiburg.de/) | learned mobile motion과 IK arm solution 결합 | **실험 후보**: local approach/base placement 학습. 장거리 SLAM 대체는 보류 | PR #40 mobility/manipulator contract | 2026-09-02 |
+| ReLMoGen | Stanford, 2021 | [프로젝트](https://svl.stanford.edu/projects/relmogen/) | RL subgoal과 low-level motion generator 분리 | **참고 반영**: learned proposal과 deterministic execution 분리 | orchestrator/transport boundary | 2026-09-02 |
+| Error-Aware IL | Wong et al., 2022 | [PMLR](https://proceedings.mlr.press/v164/wong22a.html) | multi-stage failure detection/recovery | **즉시 반영**: phase/failure label과 recovery event | mission state, event log 계획 | 2026-09-02 |
+| AnyGrasp | Fang et al., 2023 | [DOI](https://doi.org/10.1109/TRO.2023.3281153) | dense 6/7-DoF grasp candidate 생성 | **실험 후보**: cuboid baseline 뒤 grasp candidate 비교 | `grasp_planner.py` | 2026-09-02 |
+| cuRobo | NVIDIA, 2023 | [원문](https://research.nvidia.com/publication/2023-05_curobo-parallelized-collision-free-robot-motion-generation) | IK, collision check, planner, trajectory optimization 결합 | **즉시 판정**: IK 단독으로 완료 주장 금지 | collision/contact release gate | 2026-09-02 |
+| Mobile ALOHA | Fu et al., 2024 | [프로젝트](https://mobile-aloha.github.io/) | whole-body imitation learning과 target demonstrations | **실험 후보**: 충분한 실기 demonstration 뒤 IL | dataset preprocessing 계획 | 2026-09-02 |
+| OK-Robot | Columbia, 2024 | [프로젝트](https://ok-robot.github.io/) | modular navigation/grasp의 실제 pose/hardware failure | **즉시 반영**: 모듈형 baseline과 실기 gate | 149/151 suite + contact failure 공개 | 2026-09-02 |
+| HomeRobot OVMM | Meta/Georgia Tech, 2023 | [프로젝트](https://ovmm.github.io/) | 실제 mobile manipulation 성능 격차 | **즉시 반영**: sim 성공률을 실기 성공률로 외삽 금지 | sim-to-real matrix | 2026-09-02 |
+
+현재 판정은 `visual SLAM/classical navigation baseline + 제한적 local approach 학습 + collision-aware IK/motion generation + tactile closed loop`다.
+`IR`의 의미가 RL/IL/IL+RL 중 무엇인지는 강사 확인 전까지 확정하지 않는다.

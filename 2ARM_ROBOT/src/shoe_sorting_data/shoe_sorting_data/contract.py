@@ -17,6 +17,15 @@ SUPPORTED_EPISODE_SCHEMA_VERSIONS = {
     EPISODE_SCHEMA_VERSION,
 }
 OUTCOME_STATUSES = {"recorded", "accepted", "rejected", "aborted"}
+LEGACY_CAMERA_STREAMS = ("workspace_rgb", "workspace_depth")
+CURRENT_CAMERA_STREAMS = (
+    "front_rgb",
+    "front_depth",
+    "workspace_rgb",
+    "workspace_depth",
+    "left_gripper_rgb",
+    "right_gripper_rgb",
+)
 
 
 def _utc_now() -> str:
@@ -49,6 +58,7 @@ def build_manifest(
     recording_span_id: str = "span_unknown",
     attempt_id: str = "attempt_unknown",
     camera_payload_mode: str | None = None,
+    camera_streams: Sequence[str] = LEGACY_CAMERA_STREAMS,
 ) -> dict[str, Any]:
     """Build one manifest; dimensions are explicit until hardware introspection."""
     state_streams = {
@@ -84,7 +94,7 @@ def build_manifest(
             "sample_count": sample_count,
             "clock": "episode_monotonic_ns",
             "expected_period_ns": 50_000_000,
-            "camera_streams": ["workspace_rgb", "workspace_depth"],
+            "camera_streams": list(camera_streams),
             "camera_payload": {
                 "contract_version": CAMERA_PAYLOAD_CONTRACT_VERSION,
                 "mode": resolved_camera_payload_mode,
@@ -201,8 +211,8 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
         raise ValueError("recording.camera_streams must be an array")
     if not all(isinstance(name, str) for name in cameras):
         raise ValueError("recording.camera_streams entries must be strings")
-    if set(cameras) != {"workspace_rgb", "workspace_depth"}:
-        raise ValueError("recording.camera_streams must contain workspace_rgb and workspace_depth")
+    if tuple(cameras) not in (LEGACY_CAMERA_STREAMS, CURRENT_CAMERA_STREAMS):
+        raise ValueError("recording.camera_streams must use the legacy workspace pair or current four-camera streams")
     if manifest["schema_version"] == EPISODE_SCHEMA_VERSION:
         camera_payload = _require_mapping(recording, "camera_payload")
         if camera_payload.get("contract_version") != CAMERA_PAYLOAD_CONTRACT_VERSION:
