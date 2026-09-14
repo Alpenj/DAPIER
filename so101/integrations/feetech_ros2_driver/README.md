@@ -14,7 +14,7 @@
 - license: `LICENSE.bsd-3-clause.txt`
 
 이 patch는 serial protocol과 hardware interface를 바꾸므로 DAPIER의
-[`so101_ros2`](../../../so101_ros2/README.md)에 자동으로 합치지 않는다. 먼저
+[`so101/ros2_ws`](../../ros2_ws/README.md)에 자동으로 합치지 않는다. 먼저
 mock/build 검증을 반복하고, 실제 장비는 별도 safety Gate와 승인 뒤에만 다룬다.
 
 깨끗한 submodule checkout에서 복원할 때는 다음처럼 적용한다.

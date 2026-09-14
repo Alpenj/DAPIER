@@ -32,7 +32,7 @@ visible pad/cube contact와 1 mm gate를 추가한 뒤 같은 v2 정책을 다�
 | 위치 | 역할 | 주의할 점 |
 |---|---|---|
 | [`../dapier_sim_first`](../dapier_sim_first/README.md) | ROS 2와 실기체 없이 관절·단위·frame 계약과 G0/G1 Gate를 검증 | LeRobot runtime이나 실물 driver가 아니다. |
-| [`../so101_ros2`](../so101_ros2/README.md) | DAPIER가 직접 소유하는 ROS 2 Jazzy core와 mock 안전 teleop | 실제 motor bus, torque control, policy bridge는 아직 없다. |
+| [`ros2_ws`](ros2_ws/README.md) | DAPIER가 직접 소유하는 ROS 2 Jazzy core와 mock 안전 teleop | 실제 motor bus, torque control, policy bridge는 아직 없다. |
 | [`integrations/lerobot_v0_6_so101_mujoco`](integrations/lerobot_v0_6_so101_mujoco/README.md) | LeRobot v0.6.0 checkout에 적용하는 MuJoCo overlay와 patch 보존본 | 독립 Python package가 아니며 upstream revision과 asset hash를 맞춰야 한다. |
 | [`hardware_tools`](hardware_tools/README.md) | read-only inventory와 calibration·복구 도구 | `read_only`도 serial port를 연다. `writes_hardware`는 EEPROM을 바꿀 수 있다. |
 | [`../casino_dealer`](../casino_dealer/README.md) | CardBench 계약, blackjack planner, episode manifest, one-card 기구학 baseline | 현재 SO-101 실물 실행 패키지가 아니다. |
@@ -40,7 +40,7 @@ visible pad/cube contact와 1 mm gate를 추가한 뒤 같은 v2 정책을 다�
 | [`../project-planning/2026-08-07-so101-sim-to-real-foundation.md`](../project-planning/2026-08-07-so101-sim-to-real-foundation.md) | Gate별 증거 수준과 중단 조건 | simulation metric을 physical threshold로 복사하지 않는다. |
 | [`../project-planning/2026-08-11-robot-control-stack-concept-adoption.md`](../project-planning/2026-08-11-robot-control-stack-concept-adoption.md) | 동기식 step, post-action readback, offline digital-twin metric 설계 | 외부 runtime을 가져온 것이 아니라 필요한 개념만 독립 구현했다. |
 
-`dapier_sim_first`와 `so101_ros2`는 합치지 않는다. 앞쪽은 MuJoCo 기반의 순수
+`dapier_sim_first`와 `so101/ros2_ws`는 합치지 않는다. 앞쪽은 MuJoCo 기반의 순수
 검증 경로이고, 뒤쪽은 ROS message와 안전 경계를 다루는 경로다.
 `dapier_sim_first/digital_twin.py`도 두 runtime을 제어하는 계층이 아니라,
 각 경로에서 내보낸 trace를 읽기 전용으로 비교하는 평가기다.
@@ -118,12 +118,13 @@ checkout 위치를 확인한다.
 ```text
 $HOME/DAPIER/
 ├── dapier_sim_first/                 # sim-first 정본
-├── so101/                            # 이 허브, integrations, records, hardware tools
-├── so101_ros2/                       # ROS 2 정본
+├── so101/                            # 개인 SO-101 코드 허브
+│   ├── ros2_ws/src/                  # 자체 ROS 2 패키지와 colcon workspace
+│   ├── hardware_tools/               # 읽기 전용 진단 / 쓰기 도구
+│   ├── integrations/                 # 외부 patch와 overlay
+│   ├── docs/                         # 자체 ROS 2 설계 문서
+│   └── records/                      # 날짜별 검증 기록
 └── .local-workspaces/so101/lerobot/  # Git에서 제외한 upstream 실행 checkout
-
-$HOME/so101_ros2_ws/                  # colcon build/install/log 작업장
-└── src/dapier-so101-ros2 -> $HOME/DAPIER/so101_ros2
 ```
 
 LeRobot upstream 전체, `.venv`, `build/install/log`, 원시 Dataset v3, 영상,

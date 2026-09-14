@@ -27,12 +27,11 @@ demonstration, 정책 학습·평가, ROS 2 adapter, 시리얼 연결과 실물 
 |---|---|---|
 | `$HOME/so101` | LeRobot 0.6.0 checkout, 별도 venv, 커밋하지 않은 `so101_mujoco`, 진단 dataset | 코드를 수정하지 않고 MuJoCo venv와 기존 모델만 읽기 전용 입력으로 사용 |
 | `$HOME/so101_ros2_ws` | `build/install/log`가 있는 colcon workspace | 빌드하거나 launch하지 않음 |
-| `DAPIER/so101_ros2` | DAPIER가 소유하는 ROS 2 core와 안전 teleop의 정식 소스 | 수정하지 않음 |
+| `DAPIER/so101/ros2_ws` | DAPIER가 소유하는 ROS 2 core와 안전 teleop의 정식 소스 | 수정하지 않음 |
 | `DAPIER-lerobot-ros2-lab` | 2026-08-06 연구 계획용 별도 Git worktree | 계획과 현재 환경 경계만 읽고 수정하지 않음 |
 
-`$HOME/so101_ros2_ws/src/dapier-so101-ros2`는 `DAPIER/so101_ros2`를 가리키는
-symlink다. 별도 lab worktree 안의 `so101_ros2`도 현재 정식 소스와 같고,
-확인된 차이는 생성된 `__pycache__`뿐이었다.
+예전 `$HOME/so101_ros2_ws/src/dapier-so101-ros2` symlink 대신 현재는
+`DAPIER/so101/ros2_ws` 자체를 colcon workspace로 사용한다.
 
 ## 환경 매트릭스 대조
 
