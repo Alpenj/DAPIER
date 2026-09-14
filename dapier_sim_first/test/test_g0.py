@@ -56,6 +56,10 @@ class EmbodimentContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside the declared bounds"):
             self.spec.action_to_sim(values)
 
+    def test_calibration_id_requires_a_real_sha256_hex_digest(self) -> None:
+        with self.assertRaisesRegex(ValueError, "sha256:<64-hex>"):
+            so101_new_calibration_spec("sha256:" + "z" * 64)
+
 
 class FrameContractTest(unittest.TestCase):
     def setUp(self) -> None:

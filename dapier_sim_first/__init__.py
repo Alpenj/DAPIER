@@ -1,6 +1,13 @@
 """DAPIER-owned contracts for the SO-101 sim-first learning path."""
 
-from .embodiment import SO101_CHANNEL_NAMES, EmbodimentSpec, so101_new_calibration_spec
+from .embodiment import (
+    SO101_ARM_ROLES,
+    SO101_CHANNEL_NAMES,
+    BimanualEmbodimentSpec,
+    EmbodimentSpec,
+    so101_bimanual_new_calibration_spec,
+    so101_new_calibration_spec,
+)
 from .digital_twin import (
     DigitalTwinContractError,
     JointTrace,
@@ -10,15 +17,18 @@ from .digital_twin import (
 from .protocols import Frame, FrameContractError, Leader, validate_frame
 
 __all__ = [
+    "BimanualEmbodimentSpec",
     "EmbodimentSpec",
     "DigitalTwinContractError",
     "Frame",
     "FrameContractError",
     "Leader",
     "JointTrace",
+    "SO101_ARM_ROLES",
     "SO101_CHANNEL_NAMES",
     "TwinThresholds",
     "evaluate_digital_twin",
+    "so101_bimanual_new_calibration_spec",
     "so101_new_calibration_spec",
     "validate_frame",
 ]
