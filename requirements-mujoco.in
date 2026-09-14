@@ -3,5 +3,5 @@
 #   uv pip compile --python-version 3.12 --generate-hashes \
 #     requirements-mujoco.in -o requirements-mujoco.txt
 mujoco==3.3.7
-numpy==2.2.6
+numpy==2.5.2
 pillow==12.3.0
