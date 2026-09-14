@@ -1,0 +1,30 @@
+<mujoco model="jdcobot100_scene">
+  <!-- 로봇 본체는 별도 파일로 두고 조명/바닥/스카이박스만 여기서 정의한다.
+       교재 5장: 변환 직후 XML만 띄우면 화면이 어둡고 바닥이 없어 자세를 못 읽는다. -->
+  <include file="jdcobot100.xml"/>
+
+  <statistic center="0 0 0.08" extent="0.35"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.35 0.35 0.35" specular="0.1 0.1 0.1"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="140" elevation="-25" offwidth="960" offheight="720"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0"
+             width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge"
+             rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8"
+             width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true"
+              texrepeat="8 8" reflectance="0.15"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0.3 -0.3 0.8" dir="-0.3 0.3 -0.8" directional="true"/>
+    <!-- 팔 전체가 15 cm 남짓이라 바닥 격자도 그 스케일에 맞춘다. -->
+    <geom name="floor" size="0 0 0.02" pos="0 0 0" type="plane" material="groundplane"/>
+    <camera name="side" pos="0.42 -0.30 0.22" xyaxes="0.6 0.8 0 -0.28 0.21 0.94"/>
+  </worldbody>
+</mujoco>

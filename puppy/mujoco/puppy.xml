@@ -1,0 +1,144 @@
+<mujoco model="puppy">
+  <compiler angle="radian" meshdir="meshes/"/>
+
+  <option timestep="0.002" integrator="implicitfast"/>
+
+  <default>
+    <!-- 다리 관절 동특성. 최상위 body의 childclass로 8개 관절에 상속된다. -->
+    <default class="puppy_joint">
+      <joint damping="0.02" frictionloss="0.002" armature="0.0015"/>
+    </default>
+
+    <!-- position actuator 게인 -->
+    <default class="puppy_servo">
+      <position kp="5.0" dampratio="1" forcerange="-0.5 0.5"/>
+    </default>
+
+    <!-- 발 끝: 유일하게 바닥과 접촉하는 geom -->
+    <default class="foot">
+      <geom contype="1" conaffinity="1" friction="1.0 0.02 0.001"
+            solref="0.008 1" solimp="0.9 0.95 0.001" rgba="0.85 0.2 0.2 1"/>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="lidar_Link" content_type="model/stl" file="lidar_Link.STL"/>
+    <mesh name="base_link" content_type="model/stl" file="base_link.STL"/>
+    <mesh name="lb_link1" content_type="model/stl" file="lb_link1.STL"/>
+    <mesh name="lb_link2" content_type="model/stl" file="lb_link2.STL"/>
+    <mesh name="rb_link1" content_type="model/stl" file="rb_link1.STL"/>
+    <mesh name="rb_link2" content_type="model/stl" file="rb_link2.STL"/>
+    <mesh name="rf_link1" content_type="model/stl" file="rf_link1.STL"/>
+    <mesh name="rf_link2" content_type="model/stl" file="rf_link2.STL"/>
+    <mesh name="lf_link1" content_type="model/stl" file="lf_link1.STL"/>
+    <mesh name="lf_link2" content_type="model/stl" file="lf_link2.STL"/>
+    <mesh name="camera_link" content_type="model/stl" file="camera_link.STL"/>
+  </asset>
+
+  <worldbody>
+    <body name="base_footprint" childclass="puppy_joint">
+      <freejoint name="root"/>
+      <body name="base_link" pos="0 0 0.11">
+        <body name="base_dummy" quat="0.707388 0 0 0.706825">
+          <inertial pos="-0.000281314 -0.00232094 0.0187443" quat="0.487495 0.512122 -0.512201 0.487575" mass="0.0656002" diaginertia="0.000137791 0.000101564 4.70815e-05"/>
+          <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.25 0.55 0.85 1" mesh="base_link"/>
+          <geom contype="0" conaffinity="0" type="mesh" rgba="0.25 0.55 0.85 1" mesh="base_link"/>
+          <body name="lb_link1" pos="0.0420106 0.0778693 0.015988" quat="0.930141 -0.367203 0 0">
+            <inertial pos="0.0139911 0.0129617 -0.0150641" quat="0.681953 0.285067 -0.259509 0.621555" mass="0.0101535" diaginertia="5.0547e-06 4.74867e-06 7.53492e-07"/>
+            <joint name="lb_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.75 0.2 1" mesh="lb_link1"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.9 0.75 0.2 1" mesh="lb_link1"/>
+            <body name="lb_link2" pos="0.0120499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="lb_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.75 0.78 0.82 1" mesh="lb_link2"/>
+              <geom contype="0" conaffinity="0" type="mesh" rgba="0.75 0.78 0.82 1" mesh="lb_link2"/>
+              <body name="lb_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                  <site name="lb_foot" pos="0.0032 0 0.001" size="0.004" rgba="1 1 0 1"/>
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom class="foot" size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="rb_link1" pos="-0.0420106 0.0778693 0.015988" quat="0.930141 -0.367203 0 0">
+            <inertial pos="-0.0139912 0.0129616 -0.0150641" quat="0.621547 0.25951 -0.285066 0.681961" mass="0.0101536" diaginertia="5.05471e-06 4.74867e-06 7.53497e-07"/>
+            <joint name="rb_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.75 0.2 1" mesh="rb_link1"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.9 0.75 0.2 1" mesh="rb_link1"/>
+            <body name="rb_link2" pos="-0.0185499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="rb_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.75 0.78 0.82 1" mesh="rb_link2"/>
+              <geom contype="0" conaffinity="0" type="mesh" rgba="0.75 0.78 0.82 1" mesh="rb_link2"/>
+              <body name="rb_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                  <site name="rb_foot" pos="0.0032 0 0.001" size="0.004" rgba="1 1 0 1"/>
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom class="foot" size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="rf_link1" pos="-0.0420105 -0.0778693 0.0106513" quat="0.930141 -0.367203 0 0">
+            <inertial pos="-0.0139912 0.0129616 -0.0150641" quat="0.621547 0.25951 -0.285066 0.681961" mass="0.0101536" diaginertia="5.05471e-06 4.74867e-06 7.53497e-07"/>
+            <joint name="rf_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.75 0.2 1" mesh="rf_link1"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.9 0.75 0.2 1" mesh="rf_link1"/>
+            <body name="rf_link2" pos="-0.0185499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="rf_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.75 0.78 0.82 1" mesh="rf_link2"/>
+              <geom contype="0" conaffinity="0" type="mesh" rgba="0.75 0.78 0.82 1" mesh="rf_link2"/>
+              <body name="rf_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                  <site name="rf_foot" pos="0.0032 0 0.001" size="0.004" rgba="1 1 0 1"/>
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom class="foot" size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="lf_link1" pos="0.0420105 -0.0778693 0.0106513" quat="0.930141 -0.367203 0 0">
+            <inertial pos="0.0139911 0.0129616 -0.0150641" quat="0.681953 0.285067 -0.259509 0.621556" mass="0.0101536" diaginertia="5.05473e-06 4.74868e-06 7.53497e-07"/>
+            <joint name="lf_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.75 0.2 1" mesh="lf_link1"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0.9 0.75 0.2 1" mesh="lf_link1"/>
+            <body name="lf_link2" pos="0.0120499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="lf_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.75 0.78 0.82 1" mesh="lf_link2"/>
+              <geom contype="0" conaffinity="0" type="mesh" rgba="0.75 0.78 0.82 1" mesh="lf_link2"/>
+              <body name="lf_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                  <site name="lf_foot" pos="0.0032 0 0.001" size="0.004" rgba="1 1 0 1"/>
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom class="foot" size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="camera_link" pos="0 -0.100687 0.0171095" quat="0.999853 0.017126 0 0">
+            <inertial pos="7.88163e-12 0.00830783 -1.10275e-09" quat="0.5 0.5 -0.5 0.5" mass="0.0025559" diaginertia="8.93985e-08 8.07505e-08 7.57696e-08"/>
+            <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="camera_link"/>
+            <geom contype="0" conaffinity="0" type="mesh" rgba="0 0 0 1" mesh="camera_link"/>
+          </body>
+        </body>
+        <body name="lidar_frame" pos="-0.012242 -8.533e-05 0.092501">
+          <inertial pos="8.65086e-05 9.02625e-05 -0.0183546" quat="-0.240675 0.665063 0.24282 0.663931" mass="0.0405423" diaginertia="8.2565e-06 5.16844e-06 4.85549e-06"/>
+          <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="lidar_Link"/>
+          <geom contype="0" conaffinity="0" type="mesh" rgba="0 0 0 1" mesh="lidar_Link"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <position class="puppy_servo" name="act_lf_joint1" joint="lf_joint1" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_lf_joint2" joint="lf_joint2" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_rf_joint1" joint="rf_joint1" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_rf_joint2" joint="rf_joint2" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_lb_joint1" joint="lb_joint1" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_lb_joint2" joint="lb_joint2" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_rb_joint1" joint="rb_joint1" ctrlrange="-2 2"/>
+    <position class="puppy_servo" name="act_rb_joint2" joint="rb_joint2" ctrlrange="-2 2"/>
+  </actuator>
+  <keyframe>
+    <key name="stand" qpos="0.000000 0.000000 -0.000297 1.000000 0.000000 0.000000 0.000000 0.654898 0.215520 0.654898 0.215520 0.709944 0.105968 0.709944 0.105968"
+         ctrl="0.709944 0.105968 0.709944 0.105968 0.654898 0.215520 0.654898 0.215520"/>
+    <key name="sit" qpos="0.000000 0.000000 -0.030297 1.000000 0.000000 0.000000 0.000000 0.931914 -0.335056 0.931914 -0.335056 0.975315 -0.421071 0.975315 -0.421071"
+         ctrl="0.975315 -0.421071 0.975315 -0.421071 0.931914 -0.335056 0.931914 -0.335056"/>
+  </keyframe>
+</mujoco>
