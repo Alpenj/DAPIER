@@ -5,3 +5,9 @@
 mujoco==3.3.7
 numpy==2.2.6
 pillow==12.3.0
+pyarrow==24.0.0
+stable-baselines3==2.7.1
+lerobot==0.6.0
+# The CI runner is Linux x86_64 / Python 3.12; contract tests need CPU Torch, not CUDA.
+torch @ https://download.pytorch.org/whl/cpu/torch-2.11.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.26.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
