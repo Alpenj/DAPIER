@@ -77,7 +77,7 @@ def capture_dapier_vision_plan(
         env.data,
         width=width,
         height=height,
-        camera_name="front_depth_camera",
+        camera_name="workspace_depth_camera",
         target_body_name="tb3_base_link",
     )
     start_action = tuple(float(value) for value in env.data.ctrl)
@@ -111,7 +111,7 @@ def write_vision_artifacts(
         env.data,
         width=width,
         height=height,
-        camera_name="front_depth_camera",
+        camera_name="workspace_depth_camera",
         target_body_name="tb3_base_link",
     )
     detection = DAPIER_VISION_DETECTOR.detect(frame.rgb)

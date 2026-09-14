@@ -45,9 +45,9 @@ class VisionGuidedDapierSceneTest(unittest.TestCase):
             env.data,
             width=320,
             height=240,
-            camera_name="front_depth_camera",
             target_body_name="tb3_base_link",
         )
+        self.assertEqual(frame.camera_frame, "workspace_depth_camera_optical")
         estimate = estimate_shoe_from_frame(
             frame,
             detector=DAPIER_VISION_DETECTOR,
@@ -56,7 +56,7 @@ class VisionGuidedDapierSceneTest(unittest.TestCase):
         camera_id = mujoco.mj_name2id(
             env.model,
             mujoco.mjtObj.mjOBJ_CAMERA,
-            "front_depth_camera",
+            "workspace_depth_camera",
         )
         rotation = env.data.cam_xmat[camera_id].reshape(3, 3)
         forward = -rotation[:, 2]

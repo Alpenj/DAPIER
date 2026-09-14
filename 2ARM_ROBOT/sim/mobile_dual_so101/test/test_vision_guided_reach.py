@@ -183,6 +183,7 @@ class VisionGuidedReachTest(unittest.TestCase):
             converged=True,
             iterations=4,
             residual_m_by_side={"left": 0.0002},
+            tool_axis_error_rad_by_side={},
             planning_qpos_writes=5,
         )
         with (

@@ -4,7 +4,7 @@
 다음 경로로 접근 좌표를 만든다.
 
 ```text
-front_depth_camera RGB
+workspace_depth_camera RGB
   -> image detector mask
 aligned metric depth
   -> ROS optical-frame visible-surface points
@@ -26,7 +26,7 @@ simulation fixture다. geom/body ID나 segmentation image를 사용하지 않지
 `dapier_vision_demo.py`는 기본 신발을 실제 RGB-D frustum 안에 넣기 위한 **35° 하향
 simulation profile**을 별도로 사용한다.
 
-이 각도는 시뮬레이션에서 검증된 provisional 값이다. 실제 Astra 장착 각도와 optical
+이 각도는 시뮬레이션에서 검증된 provisional 값이다. 실제 작업영역 H201 장착 각도와 optical
 origin을 측정하기 전에는 실물 calibration 값으로 간주하지 않는다. 프로필은 모델
 생성 중에만 적용되고 기존 27° 상수를 변경하거나 다른 테스트에 누출하지 않는다.
 
@@ -97,7 +97,7 @@ segmentation 기반 runtime target 경로를 두지 않는다.
 - 그리퍼 RGB 카메라의 PnP/multi-view 또는 image-based visual servoing
 - base docking 이후 실제 reachable pose와 연속 재계획
 - 최종 접촉·파지·미끄럼 검증
-- 실제 Astra intrinsics/extrinsics calibration
+- 실제 작업영역 H201 intrinsics/extrinsics calibration
 - C++ hardware dispatch와 실물 로봇 실행
 
 따라서 이 단계는 **sensor-derived coarse target과 안전한 IK 제안 경로**이며 실제

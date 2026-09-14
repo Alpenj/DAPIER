@@ -237,7 +237,7 @@ def frame_from_rendered_rgbd(
     *,
     rgb: np.ndarray,
     depth_m: np.ndarray,
-    camera_name: str = "front_depth_camera",
+    camera_name: str = "workspace_depth_camera",
     target_body_name: str | None = "tb3_base_link",
 ) -> RenderedRgbdFrame:
     """Attach portable calibration metadata to an already rendered RGB-D pair."""
@@ -302,7 +302,7 @@ def render_rgbd_frame(
     *,
     width: int = 160,
     height: int = 120,
-    camera_name: str = "front_depth_camera",
+    camera_name: str = "workspace_depth_camera",
     target_body_name: str | None = "tb3_base_link",
 ) -> RenderedRgbdFrame:
     if width <= 0 or height <= 0:
