@@ -44,7 +44,7 @@ class LearningContractTest(unittest.TestCase):
             self.assertEqual(int(batch['action_is_pad'].sum()), CHUNK - 1)
             self.assertEqual(set(batch), {'observation.state', 'action', 'action_is_pad',
                 'observation.images.left_wrist', 'observation.images.right_wrist'})
-            episodes = [{'episode': i, 'task_success': True} for i in range(4)]
+            episodes = [{'episode': i, 'task_success': True, 'canonical_full_task_success': True} for i in range(4)]
             episodes.append({'episode': 9, 'task_success': False})
             finalize(SimpleNamespace(output=root), episodes)
             manifest = json.loads((root / 'manifest.json').read_text())

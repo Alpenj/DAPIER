@@ -9,6 +9,8 @@ import mujoco
 import numpy as np
 from mobile_dual_so101 import apply_control_as_pose, resolve_so101_model
 from pgripper import home_action
+from pgripper_execution import (COMMAND_DT_S, TaskProgress, contact_pairs, evidence,
+    target_pad_forces, table_support_force, configure_physics, step_physics, execution_metadata)
 from collision_guard import _collision_geoms_for_arm, _same_arm_geom_pairs
 from physics_ik import plan_septic_joint_trajectory, solve_bimanual_position_ik
 from replay_recorded_episode import build_tabletop_spec, inspect_contacts, physics_settings, sha256
@@ -28,40 +30,83 @@ WAYPOINTS = {
 }
 
 
-def target_pad_forces(model, data, pairs):
-    """Count exact block/pad pairs; table or opposite-arm contacts cannot pass."""
-    forces = np.zeros(4)
-    for index, contact in enumerate(data.contact):
-        pad = pairs.get(frozenset((contact.geom1, contact.geom2)))
-        if pad is not None:
-            wrench = np.zeros(6)
-            mujoco.mj_contactForce(model, data, index, wrench)
-            if not np.isfinite(wrench).all():
-                raise ValueError("non-finite contact wrench")
-            forces[pad] += max(0.0, wrench[0])
-    return forces.reshape(2, 2)
-
-
 def finite_list(values):
     """Keep a failure report writable even after invalid simulator state."""
     values = np.asarray(values)
     return np.where(np.isfinite(values), values, None).tolist()
 
 
-def table_support_force(model, data):
-    pair = {model.geom("table").id, model.geom("red_block_geom").id}
-    total = 0.0
-    for index, contact in enumerate(data.contact):
-        if {contact.geom1, contact.geom2} == pair:
-            wrench = np.zeros(6)
-            mujoco.mj_contactForce(model, data, index, wrench)
-            if not np.isfinite(wrench).all():
-                raise ValueError("non-finite table support force")
-            total += max(0.0, wrench[0])
-    return total
+def contract_vector(model, value, inverse=False):
+    result = np.asarray(value, dtype=np.float64).copy()
+    if result.shape != (12,) or not np.isfinite(result).all():
+        raise ValueError('expected finite left-six/right-six vector')
+    lo, hi = model.actuator_ctrlrange[[5, 11]].T
+    result[[5, 11]] = result[[5, 11]] * (hi - lo) + lo if inverse else (result[[5, 11]] - lo) / (hi - lo)
+    return result.astype(np.float32)
 
 
-def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
+class PolicyTargetExecutor:
+    """SIM per-frame target ramp and slew, shared by expert and policy; no device I/O."""
+    def __init__(self, model, target_hz, *, command_dt_s=COMMAND_DT_S, range_policy='project'):
+        self.model = model
+        self.dt = float(command_dt_s)
+        if (not np.isfinite(self.dt) or self.dt <= 0 or range_policy not in ('project', 'reject')
+                or not np.isfinite(model.opt.timestep) or model.opt.timestep <= 0
+                or not np.isclose(round(self.dt / model.opt.timestep) * model.opt.timestep, self.dt)):
+            raise ValueError('invalid command/physics clock or raw range policy')
+        self.range_policy = range_policy
+        if not np.isfinite(target_hz) or target_hz <= 0:
+            raise ValueError('invalid target frequency')
+        self.interval = round(1 / target_hz / self.dt)
+        if self.interval < 1 or not np.isclose(self.interval * self.dt, 1 / target_hz):
+            raise ValueError('target clock must divide the command clock')
+        self.reset()
+
+    def reset(self):
+        self.steps = 0
+        self.target = None
+        self.step_limit = None
+        self.range_events = []
+        self.hold_events = []
+
+    def hold(self, current):
+        """Safety rule cancels the cached approach immediately; keep the target clock."""
+        current = np.asarray(current, dtype=float)
+        if (current.shape != (12,) or not np.isfinite(current).all()
+                or np.any(current < self.model.actuator_ctrlrange[:, 0])
+                or np.any(current > self.model.actuator_ctrlrange[:, 1])):
+            raise ValueError('invalid hold control')
+        self.target = current.copy()
+        self.step_limit = np.zeros(12)
+        self.hold_events.append({'command_step': self.steps, 'target': current.tolist()})
+
+    def step(self, current, proposal):
+        target = contract_vector(self.model, proposal, inverse=True)
+        current = np.asarray(current, dtype=float)
+        if current.shape != (12,) or not np.isfinite(current).all():
+            raise ValueError('invalid current control')
+        if self.steps % self.interval == 0:
+            low, high = self.model.actuator_ctrlrange.T.copy()
+            low[[5, 11]], high[[5, 11]] = 0., 1.
+            raw = np.asarray(proposal, dtype=float)
+            excess = np.where(raw < low, raw-low, np.where(raw > high, raw-high, 0.))
+            axes = np.flatnonzero(excess)
+            if len(axes):
+                self.range_events.append({'command_step': self.steps, 'axes': axes.tolist(),
+                    'raw': raw.tolist(), 'signed_excess': excess.tolist(),
+                    'maximum_excess': float(np.max(np.abs(excess)))})
+                if self.range_policy == 'reject':
+                    raise ValueError('raw policy output outside declared actuator range')
+            self.target = np.clip(target, *self.model.actuator_ctrlrange.T)
+            # Spread each policy target over its frame instead of pulsing the servo.
+            self.step_limit = np.minimum(np.abs(self.target - current) / self.interval, .6 * self.dt)
+        self.steps += 1
+        return current + np.clip(self.target - current, -self.step_limit, self.step_limit)
+
+
+def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None,
+        policy_target_hz=None, max_sim_seconds=None, command_observer=None,
+        physics_substeps=1, command_dt_s=COMMAND_DT_S, initial_state=None):
     replay_requested = replay_requested if replay_requested is not None else Event()
     if args.donor != "left" and not args.handover_only:
         raise ValueError("the full task is left pickup -> right receive -> right place; use --handover-only for reverse")
@@ -69,7 +114,8 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
     if output.exists():
         raise ValueError("use a new output directory")
     sources = [Path(__file__), Path(__file__).with_name("pgripper.py"),
-               Path(__file__).with_name("physics_ik.py"), Path(__file__).with_name("tabletop_replay.json")]
+               Path(__file__).with_name("physics_ik.py"), Path(__file__).with_name("tabletop_replay.json"),
+               Path(__file__).with_name("pgripper_execution.py")]
     hashes = {p.name: sha256(p) for p in sources}
     profile = json.loads(Path(__file__).with_name("tabletop_replay.json").read_text())
     if (not np.allclose(profile["reference_block_center_m"], [.20, 0, .02])
@@ -78,6 +124,7 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
             or profile["arm_yaw_deg"] != [0.0, 0.0]):
         raise ValueError("offline handover waypoints require the documented 4cm/20g fixed scene")
     model = build_tabletop_spec(resolve_so101_model(args.model), profile, grippers="both").compile()
+    configure_physics(model, physics_substeps, command_dt_s)
     # Reduce soft-contact tangential drift, without changing friction or adding attachments.
     model.opt.impratio = 10
     donor = args.donor
@@ -111,7 +158,17 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
         command += offset
         command = np.clip(command, model.actuator_ctrlrange[:, 0], model.actuator_ctrlrange[:, 1])
     apply_control_as_pose(model, data, command)  # Only runtime pose initialization.
+    if initial_state is not None:
+        state = np.asarray(initial_state, dtype=float)
+        if (state.shape != (mujoco.mj_stateSize(model, mujoco.mjtState.mjSTATE_INTEGRATION),)
+                or not np.isfinite(state).all() or state[0] != 0):
+            raise ValueError('initial state must be a finite frame-zero integration state')
+        mujoco.mj_setState(model, data, state, mujoco.mjtState.mjSTATE_INTEGRATION)
+        mujoco.mj_forward(model, data)
+        command = data.ctrl.copy()
     output.mkdir(parents=True, exist_ok=False)
+    initial_integration = np.empty(mujoco.mj_stateSize(model, mujoco.mjtState.mjSTATE_INTEGRATION))
+    mujoco.mj_getState(model, data, initial_integration, mujoco.mjtState.mjSTATE_INTEGRATION)
     trace, plans = [], []
     deepest = {"depth_m": 0.0}
     phase, failure = "settle", None
@@ -126,7 +183,11 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
     grip_confirmations = {}
     recipient_only_hold_steps = 0
     force_peak = np.zeros((2, 2))
-    dt = float(model.opt.timestep)
+    dt = command_dt_s
+    progress, substep_peaks = TaskProgress(), {}
+    executor = PolicyTargetExecutor(model, policy_target_hz, command_dt_s=dt) if policy_target_hz is not None else None
+    if max_sim_seconds is not None and (not np.isfinite(max_sim_seconds) or not 0 < max_sim_seconds <= 120):
+        raise ValueError('diagnostic bound must be in (0, 120] simulation seconds')
     viewer = None
     if args.viewer:
         from mujoco import viewer as mj_viewer
@@ -140,6 +201,8 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
 
     def tick(target):
         nonlocal recipient_only_hold_steps
+        if max_sim_seconds is not None and data.time + dt > max_sim_seconds + 1e-9:
+            raise ValueError('bounded diagnostic simulation timeout')
         if viewer is not None and replay_requested.is_set():
             raise InterruptedError("viewer replay requested")
         if viewer is not None and not viewer.is_running():
@@ -151,14 +214,26 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
             raise ValueError("joint command outside range")
         for side, grip in hold_commands.items():
             target[sides[side] * 6 + 5] = grip
+        sent = target
+        if executor is not None:
+            sent = executor.step(data.ctrl, contract_vector(model, target))
+            target = executor.target.copy()  # Record requested held target, before slew limiting.
         if observer is not None:
             observer(model, data, target.copy(), phase)
-        data.ctrl[:] = target
-        mujoco.mj_step(model, data)
+        if command_observer is not None:
+            command_observer(model, data, target.copy(), np.asarray(sent).copy(), phase)
+        data.ctrl[:] = sent
+        step_physics(model, data, physics_substeps, command_dt_s=dt, peaks=substep_peaks, pairs=pairs)
         if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(w.number for w in data.warning):
             raise ValueError("invalid physics or MuJoCo warning")
         inspect_contacts(model, data, deepest, len(trace))
         forces = target_pad_forces(model, data, pairs)
+        if not args.handover_only:
+            progress.update(dt, float(data.time), *evidence(model, data, pairs))
+            if progress.failure:
+                raise ValueError(progress.failure)
+        if substep_peaks.get('maximum_pad_force_N', 0) > 10 or substep_peaks.get('maximum_penetration_m', 0) > .001:
+            raise ValueError('substep force or penetration limit exceeded')
         np.maximum(force_peak, forces, out=force_peak)
         if forces.max() > 10:
             raise ValueError(f"virtual pad overload in {phase}: {forces.tolist()}")
@@ -309,6 +384,8 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
                 tick(target)
                 if table_support_force(model, data) >= .1:
                     command = data.ctrl.copy()
+                    if executor is not None:
+                        executor.hold(command)
                     supported = True
                     break
             if not supported:
@@ -336,7 +413,9 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
                         or not .019 <= height <= .022 or speed > .01):
                     raise ValueError("released block is not settled on the table")
                 table_hold_steps += 1
-            task_success = True
+            task_success = 'placed' in progress.events and progress.failure is None
+            if not task_success:
+                raise ValueError('canonical full-task placement not verified (including 3mm goal XY)')
     except (ValueError, RuntimeError, InterruptedError) as error:
         failure = {"phase": phase, "reason": str(error)}
         interrupted_for_replay = isinstance(error, InterruptedError) and replay_requested.is_set()
@@ -358,6 +437,11 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
             @ (data.body("red_block").xpos - data.site(f"{donor}_cube_grasp").xpos)),
         "plans": plans, "simulation_seconds": float(data.time) if np.isfinite(data.time) else None,
         "physics": physics_settings(model), "source_hashes": hashes,
+        "execution": execution_metadata(model, physics_substeps, policy_target_hz, dt),
+        "substep_peaks": substep_peaks, "canonical_full_task_success": task_success,
+        "canonical_events": progress.events, "canonical_failure": progress.failure,
+        "hold_events": executor.hold_events if executor is not None else [],
+        "policy_target_hz": policy_target_hz, "diagnostic_max_sim_seconds": max_sim_seconds,
         "source_hashes_unchanged": hashes == {p.name: sha256(p) for p in sources},
         "warning_counts": [int(w.number) for w in data.warning], "runtime_qpos_writes_after_initialization": 0,
         "object_pose_writes_or_attachments": False, "object_pose_used_for_control": False,
@@ -368,6 +452,10 @@ def run(args, *, replay_requested=None, observer=None, initial_arm_offset=None):
             "Mount/camera calibration and motor/material parameters are not physically verified.",
             "Collision checks cover existing housing/fingertip proxies, not full rack/camera geometry.",
             "Contact solver impratio=10 reduces numerical drift; friction remains unmeasured."]}
+    final_integration = np.empty_like(initial_integration)
+    mujoco.mj_getState(model, data, final_integration, mujoco.mjtState.mjSTATE_INTEGRATION)
+    np.savez_compressed(output / 'integration-states.npz', initial=initial_integration, final=final_integration,
+        qpos=data.qpos, qvel=data.qvel, ctrl=data.ctrl, qacc_warmstart=data.qacc_warmstart)
     (output / "trace.json").write_text(json.dumps(trace, indent=2, allow_nan=False) + "\n")
     (output / "report.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
     accepted = success if args.handover_only else task_success
