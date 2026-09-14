@@ -32,6 +32,7 @@ setup(
             "shoe_wheel_test = shoe_sorting_data.wheel_test_ros:main",
             "shoe_wheel_analyze = shoe_sorting_data.wheel_characterization:main",
             "shoe_dapier_act = shoe_sorting_data.dapier_native_act:main",
+            "shoe_jitter_prep = shoe_sorting_data.temporal_ensemble:main",
             "shoe_mock_publisher = shoe_sorting_data.mock_ros:publisher_main",
             "shoe_mock_recorder = shoe_sorting_data.mock_ros:recorder_main",
             "shoe_mock_demo = shoe_sorting_data.mock_ros:demo_main",
