@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ResNet Dataset Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">STEP 1 · LOCAL DATA COLLECTION</p>
+      <h1>ResNet Dataset Studio</h1>
+      <p class="subtitle">웹캠 이미지를 4개 클래스별 1,000장씩 수집합니다.</p>
+    </div>
+    <div class="privacy-badge">외부 업로드 없음 · 로컬 저장</div>
+  </header>
+
+  <main class="workspace">
+    <section class="camera-panel" aria-labelledby="camera-title">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">01 · CAMERA</p>
+          <h2 id="camera-title">촬영 화면</h2>
+        </div>
+        <span id="cameraStatus" class="status-pill status-idle">카메라 꺼짐</span>
+      </div>
+
+      <div class="preview-shell">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="roi-guide" aria-hidden="true">
+          <span>객체를 이 안에 크게 배치</span>
+        </div>
+        <div class="preview-placeholder">
+          <strong>카메라를 시작하세요</strong>
+          <span>브라우저 권한 창에서 카메라 사용을 허용합니다.</span>
+        </div>
+      </div>
+
+      <div class="camera-actions">
+        <button id="startCameraBtn" class="button button-primary" type="button">카메라 시작</button>
+        <button id="switchCameraBtn" class="button button-secondary" type="button">카메라 전환</button>
+        <label class="toggle"><input id="mirrorToggle" type="checkbox" checked> 좌우 반전 저장</label>
+      </div>
+    </section>
+
+    <aside class="control-panel" aria-label="데이터 수집 설정">
+      <section class="control-section">
+        <p class="step-label">02 · STORAGE</p>
+        <h2>저장 폴더</h2>
+        <button id="chooseFolderBtn" class="button button-primary full top-gap" type="button">데이터 폴더 준비</button>
+        <p id="folderName" class="helper">서버가 사용할 로컬 저장 위치를 확인합니다.</p>
+      </section>
+
+      <section class="control-section">
+        <div class="section-heading compact">
+          <div>
+            <p class="step-label">03 · LABELS</p>
+            <h2>클래스와 진행률</h2>
+          </div>
+          <label class="target-field">목표 <input id="targetInput" type="number" min="1" max="10000" value="1000"></label>
+        </div>
+        <div id="classList" class="class-list"></div>
+      </section>
+
+      <section class="control-section">
+        <p class="step-label">04 · CAPTURE</p>
+        <h2>촬영 제어</h2>
+        <div class="capture-settings top-gap">
+          <label>촬영 간격 <span><input id="intervalInput" type="number" min="80" max="5000" step="10" value="150"> ms</span></label>
+          <label>흐림 기준 <span><input id="blurInput" type="number" min="0" max="500" value="35"></span></label>
+          <label class="toggle"><input id="blurToggle" type="checkbox" checked> 흐린 사진 제외</label>
+          <label class="toggle"><input id="duplicateToggle" type="checkbox" checked> 연속 중복 제외</label>
+        </div>
+
+        <button id="holdCaptureBtn" class="button button-record full top-gap" type="button">누르고 있는 동안 촬영</button>
+        <div class="split-actions">
+          <button id="autoCaptureBtn" class="button button-secondary" type="button">자동 촬영 시작</button>
+          <button id="singleCaptureBtn" class="button button-secondary" type="button">1장 촬영</button>
+        </div>
+        <p class="helper">Space: 1장 촬영 · 목표 달성 시 다음 미완료 클래스로 이동</p>
+      </section>
+    </aside>
+  </main>
+
+  <section class="status-bar" aria-live="polite">
+    <span id="statusMessage">카메라와 저장 폴더를 준비하면 촬영할 수 있습니다.</span>
+    <span id="sessionStats">저장 0 · 제외 0</span>
+  </section>
+
+  <canvas id="captureCanvas" width="224" height="224" hidden></canvas>
+  <canvas id="qualityCanvas" width="32" height="32" hidden></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
