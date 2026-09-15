@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -208,6 +209,58 @@ int main()
     forged_threw = true;
   }
   expect(forged_threw, "mock sink must reject hardware-execution claims");
+
+  for (bool base : {false, true}) {
+    SafetyController ttl_controller(config());
+    ttl_controller.set_estop_healthy(true);
+    ttl_controller.set_operator_enabled(true);
+    const auto timed = ttl_controller.evaluate(
+      base ? base_intent(1) : arm_intent(1), measured(1000000000),
+      base ? base_context : arm_context(), 1000000000);
+    expect(timed.decision == SafetyDecision::kDispatch, "TTL fixture must dispatch");
+    expect(!ttl_controller.tick(measured(1199999999), 1199999999),
+      "command remains live immediately before TTL boundary");
+    const auto expired = ttl_controller.tick(measured(1200000000), 1200000000);
+    expect(expired && expired->decision == SafetyDecision::kSafeStop,
+      "arm and base commands must stop at TTL before the longer watchdog");
+  }
+
+  auto short_watchdog = config();
+  short_watchdog.command_watchdog_ns = 50000000;
+  SafetyController watchdog_first(short_watchdog);
+  watchdog_first.set_estop_healthy(true);
+  watchdog_first.set_operator_enabled(true);
+  (void)watchdog_first.evaluate(
+    arm_intent(1), measured(1000000000), arm_context(), 1000000000);
+  const auto early_stop = watchdog_first.tick(measured(1050000001), 1050000001);
+  expect(early_stop && early_stop->reason == "command watchdog expired",
+    "shorter watchdog still stops motion before TTL");
+
+  SafetyController renewed(config());
+  renewed.set_estop_healthy(true);
+  renewed.set_operator_enabled(true);
+  (void)renewed.evaluate(arm_intent(1), measured(1000000000), arm_context(), 1000000000);
+  (void)renewed.evaluate(arm_intent(2), measured(1100000000), arm_context(), 1100000000);
+  expect(!renewed.tick(measured(1200000000), 1200000000),
+    "accepted replacement command updates expiry");
+  (void)renewed.evaluate(hold_intent(3), measured(1200000000), arm_context(), 1200000000);
+  expect(!renewed.tick(measured(1500000000), 1500000000),
+    "explicit hold disarms the previous motion deadline");
+
+  for (double invalid : {std::numeric_limits<double>::quiet_NaN(),
+      std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()})
+  {
+    for (bool angular : {false, true}) {
+      SafetyController invalid_state(config());
+      invalid_state.set_estop_healthy(true);
+      invalid_state.set_operator_enabled(true);
+      auto bad_state = measured(1000000000);
+      (angular ? bad_state.base_angular_rad_s : bad_state.base_linear_mps) = invalid;
+      const auto rejected = invalid_state.evaluate(
+        arm_intent(1), bad_state, arm_context(), 1000000000);
+      expect(!rejected.dispatch_allowed, "non-finite measured base speed must reject");
+    }
+  }
 
   if (failures != 0) {
     std::cerr << failures << " safety controller checks failed\n";

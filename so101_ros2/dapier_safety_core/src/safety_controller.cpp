@@ -202,12 +202,17 @@ SafeCommand SafetyController::evaluate(
 
   try {
     const auto measured_positions = ordered_positions(measured);
+    if (!finite(measured.base_linear_mps) || !finite(measured.base_angular_rad_s)) {
+      return reject("measured base velocity must be finite", intent.sequence);
+    }
     if (!is_state_fresh(
         measured, receiver_monotonic_ns, config_.measured_state_timeout_ns))
     {
       return latch_safe_stop(measured, "measured robot state is stale");
     }
     if (intent.kind == dapier_so101_core::ResearchIntentKind::kHold) {
+      motion_armed_ = false;
+      active_command_expires_at_ns_.reset();
       last_accepted_sequence_ = intent.sequence;
       last_dispatch_monotonic_ns_ = receiver_monotonic_ns;
       return hold_from_measured(
@@ -297,6 +302,7 @@ SafeCommand SafetyController::evaluate(
     last_accepted_sequence_ = intent.sequence;
     last_dispatch_monotonic_ns_ = receiver_monotonic_ns;
     motion_armed_ = true;
+    active_command_expires_at_ns_ = command.expires_at_monotonic_ns;
     return command;
   } catch (const std::exception & error) {
     return reject(std::string("invalid measured state or command: ") + error.what(), intent.sequence);
@@ -322,6 +328,11 @@ std::optional<SafeCommand> SafetyController::tick(
   {
     return latch_safe_stop(measured, "measured-state watchdog expired");
   }
+  if (active_command_expires_at_ns_ &&
+    receiver_monotonic_ns >= *active_command_expires_at_ns_)
+  {
+    return latch_safe_stop(measured, "command TTL expired");
+  }
   if (receiver_monotonic_ns < *last_dispatch_monotonic_ns_ ||
     receiver_monotonic_ns - *last_dispatch_monotonic_ns_ > config_.command_watchdog_ns)
   {
@@ -341,6 +352,7 @@ void SafetyController::acknowledge_safe_stop()
   safe_stop_latched_ = false;
   motion_armed_ = false;
   last_dispatch_monotonic_ns_.reset();
+  active_command_expires_at_ns_.reset();
 }
 
 bool SafetyController::operator_enabled() const noexcept

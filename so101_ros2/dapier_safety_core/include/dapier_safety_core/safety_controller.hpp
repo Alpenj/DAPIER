@@ -129,6 +129,7 @@ private:
   bool motion_armed_{false};
   std::optional<std::uint64_t> last_accepted_sequence_;
   std::optional<std::int64_t> last_dispatch_monotonic_ns_;
+  std::optional<std::int64_t> active_command_expires_at_ns_;
 };
 
 class RecordingMockCommandSink
