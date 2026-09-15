@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import sys
 import unittest
 from unittest.mock import patch
+
+import numpy as np
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
@@ -18,6 +21,7 @@ from collision_guard import (
     _collision_geoms_for_arm,
     bimanual_geom_pairs,
     check_bimanual_path,
+    certified_separation_lower_bound,
     minimum_protected_clearance,
     protected_geom_pairs,
 )
@@ -47,19 +51,41 @@ RESTORED_BASE_CAMERA_CLEARANCE_M = 0.10
 
 
 class CollisionGuardTest(unittest.TestCase):
+    def test_saved_false_zero_poses(self) -> None:
+        from shoe_task import ShoeTaskEnv
+        fixture = json.loads((Path(__file__).parent / "fixtures/mesh_false_zero.json").read_text())
+        model = ShoeTaskEnv().model
+        for pose in fixture["poses"]:
+            with self.subTest(time=pose["time_s"]):
+                data = mujoco.MjData(model)
+                data.qpos[:] = pose["qpos"]
+                mujoco.mj_forward(model, data)
+                pair = pose["pair"]
+                native = mujoco.mj_geomDistance(model, data, *pair, .03, None)
+                self.assertEqual(native, pose["native_distance_m"])
+                bound = certified_separation_lower_bound(model, data, *pair)
+                self.assertGreaterEqual(bound, pose["world_z_separation_m"] - 1e-12)
+                self.assertGreater(minimum_protected_clearance(model, data, [pair])[0], 0)
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.model, _ = build_model(arm_mount_height_m=0.30)
 
-    def test_exact_contact_in_legacy_home_is_rejected(self) -> None:
+    def test_certified_separated_legacy_home_is_safe(self) -> None:
+        data = mujoco.MjData(self.model)
+        apply_control_as_pose(self.model, data, HUMANOID_HOME_ACTION)
+        zero_pairs = [pair for pair in protected_geom_pairs(self.model)
+                      if mujoco.mj_geomDistance(self.model, data, *pair, .03, None) == 0]
+        self.assertTrue(zero_pairs)
+        for pair in zero_pairs:
+            self.assertGreater(certified_separation_lower_bound(self.model, data, *pair), 0)
         result = check_bimanual_path(
             self.model,
             HUMANOID_HOME_ACTION,
             HUMANOID_HOME_ACTION,
         )
-        self.assertFalse(result.safe)
-        self.assertEqual(result.minimum_clearance_m, 0.0)
-        self.assertIn("same-arm collision", result.reason)
+        self.assertTrue(result.safe)
+        self.assertGreaterEqual(result.minimum_clearance_m, .03)
         self.assertFalse(result.control_authorized)
         self.assertFalse(result.hardware_execution)
 
@@ -114,6 +140,66 @@ class CollisionGuardTest(unittest.TestCase):
         self.assertFalse(result.safe)
         self.assertEqual(result.minimum_clearance_m, 0.0)
         self.assertIn("same-arm collision", result.reason)
+
+    def test_separated_wrist_and_jaw_after_physics_are_not_contact(self) -> None:
+        from shoe_task import ShoeTaskEnv
+        from mobile_dual_so101 import actuator_targets_from_qpos
+
+        env = ShoeTaskEnv()
+        env.reset(seed=100)
+        hold = actuator_targets_from_qpos(env.model, env.data.qpos)
+        env.apply_action(hold, physics_steps=34)
+        measured = actuator_targets_from_qpos(env.model, env.data.qpos)
+        posed = mujoco.MjData(env.model)
+        apply_control_as_pose(env.model, posed, measured)
+        geoms = []
+        for mesh_name in ("left_sts3215_03a_no_horn_v1", "left_moving_jaw_so101_v1"):
+            mesh_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_MESH, mesh_name)
+            candidates = [i for i in _collision_geoms_for_arm(env.model, "left")
+                          if env.model.geom_dataid[i] == mesh_id
+                          and env.model.body(int(env.model.geom_bodyid[i])).name
+                          in ("left_wrist", "left_moving_jaw_so101_v1")]
+            self.assertEqual(len(candidates), 1)
+            geoms.append(candidates[0])
+        vertices = []
+        for geom_id in geoms:
+            mesh_id = int(env.model.geom_dataid[geom_id])
+            start = env.model.mesh_vertadr[mesh_id]
+            end = start + env.model.mesh_vertnum[mesh_id]
+            vertices.append(env.model.mesh_vert[start:end] @ posed.geom_xmat[geom_id].reshape(3, 3).T
+                            + posed.geom_xpos[geom_id])
+        # Independent geometry evidence: every wrist vertex is above every jaw
+        # vertex, even though MuJoCo 3.3.7 sometimes reports zero distance.
+        separation = float(vertices[0][:, 2].min() - vertices[1][:, 2].max())
+        self.assertGreater(separation, 0.011)
+        clearance, _, _ = minimum_protected_clearance(env.model, posed, [tuple(geoms)])
+        self.assertGreater(clearance, 0.0)
+        self.assertTrue(check_bimanual_path(env.model, measured, hold).safe)
+
+    def test_mesh_bound_does_not_erase_touching_or_penetration(self) -> None:
+        model = mujoco.MjModel.from_xml_string("""
+          <mujoco><asset><mesh name="cube" maxhullvert="4" vertex="
+            -1 -1 -1  -1 -1 1  -1 1 -1  -1 1 1
+             1 -1 -1   1 -1 1   1 1 -1   1 1 1"/></asset>
+            <worldbody><geom type="mesh" mesh="cube"/>
+              <body><freejoint/><geom type="mesh" mesh="cube"/></body>
+            </worldbody></mujoco>""")
+        data = mujoco.MjData(model)
+        for x, returned in ((3.0, 0.0), (2.0, 0.0), (1.5, -0.5)):
+            with self.subTest(x=x):
+                data.qpos[0] = x
+                mujoco.mj_forward(model, data)
+                if x <= 2:
+                    self.assertEqual(certified_separation_lower_bound(model, data, 0, 1), 0)
+                    self.assertLessEqual(
+                        minimum_protected_clearance(model, data, [(0, 1)])[0], 0)
+                with patch("collision_guard.mujoco.mj_geomDistance", return_value=returned):
+                    distance, _, _ = minimum_protected_clearance(model, data, [(0, 1)])
+                if x > 2:
+                    self.assertGreater(distance, 0.99)
+                    self.assertLessEqual(distance, 1.0)
+                else:
+                    self.assertEqual(distance, returned)
 
     def test_floor_is_protected_from_every_arm_geom(self) -> None:
         floor_id = mujoco.mj_name2id(

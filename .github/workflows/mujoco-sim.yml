@@ -5,6 +5,7 @@ on:
     paths:
       - "2ARM_ROBOT/sim/mobile_dual_so101/**"
       - "2ARM_ROBOT/sim/turtlebot3_waffle_pi/**"
+      - "so101/integrations/lerobot_v0_6_so101_mujoco/overlay/**"
       - "scripts/setup-mujoco-sim"
       - "scripts/verify-mujoco-headless"
       - "requirements-mujoco.in"
@@ -43,7 +44,11 @@ jobs:
           sudo apt-get install --yes --no-install-recommends libegl1 libgl1-mesa-dri
 
       - name: Install pinned MuJoCo dependencies
-        run: "python3 -m pip install --only-binary=:all: --require-hashes -r requirements-mujoco.txt"
+        run: |
+          python3 -m pip install --only-binary=:all: --require-hashes -r requirements-mujoco.txt
+          # This local environment is not part of the upstream LeRobot wheel.
+          cp -R so101/integrations/lerobot_v0_6_so101_mujoco/overlay/src/lerobot/envs/so101_mujoco \
+            "$(python3 -c 'import lerobot.envs; print(lerobot.envs.__path__[0])')/"
 
       - name: Fetch and verify pinned SO-101 assets
         run: |

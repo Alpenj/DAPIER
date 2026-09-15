@@ -58,6 +58,8 @@ URDF/MuJoCo/Gazebo 자산과 sim-to-real 순서는
 [로봇 모델 자산 감사](docs/ROBOT_MODEL_ASSET_AUDIT.md)에 기록했다. WikiDocs 20199의
 JDcobot200 전용 URDF 생성·MJCF 변환·그리퍼 자료는
 [JDcobot200 URDF 가이드](docs/WIKIDOCS_20199_JDCOBOT200_URDF_GUIDE.md)에서 확인한다.
+최신 강사 레포의 실물 제어·합성 데이터·ACT를 비교한 내용과 양팔 적용 실습은
+[JDcobot200→SO-101 sim-to-real 검토](docs/JDCOBOT200_SIM2REAL_REVIEW_20260914.md)에 기록했다.
 비식별 실측 원본과 요약은 [hardware evidence](docs/evidence/HARDWARE_EVIDENCE.md)에서 확인할 수 있다.
 
 JDcobot200 원본 모델과 초기 ROS 2 패키지는 학습·회귀용 legacy 자료다. 현재 실물 명령 또는

@@ -1,11 +1,29 @@
 # Waffle Pi + SO-101 양팔 MuJoCo 모델
 
-현행 기준 모델이며 JDcobot200 legacy 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 모델이다. 팔 하나는
+## 현재 기준 배치 — 2026-09-15
+
+사용자가 최종 확인한 이동형·책상 모델은 [INTEGRATION_SCENES.md](INTEGRATION_SCENES.md)를 따른다.
+`integration_scenes.py --scene mobile --viewer` 또는 `--scene desk --viewer`로 연다.
+제공 CAD 스탠드, 뒤쪽 체결 홀 보정, 책상 끝단 정렬을 반영했다.
+아래의 tower/tabletop/teacher는 기존 baseline이다. 이전 HOME·IK·성공률을 새 배치의 근거로 재사용하지 않는다.
+
+JDcobot200 legacy 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 모델이다. 팔 하나는
 `shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`
 6개 actuator를 가지며, 좌우를 합친 action은 12차원이다.
 
 이 코드는 MuJoCo 안에서만 동작한다. serial port를 열지 않으며 ROS 2 publisher, 모터
 command, hardware dispatch 경로가 없다.
+
+## 2026-09-08 그리퍼 교체 상태
+
+현재 실물은 **왼팔 기본형 + 오른팔 NORMA PGripper**이며 양팔 모두 교체할 예정이다.
+기존 손목 카메라 세트는 유지한다. [PGripper 반영·실행·백업 기록](PGRIPPER_20260908.md)의
+`pgripper_sim.py`는 오른팔 교체가 기본이고 `--grippers both`는 향후 구성의 SIM 미리보기다.
+기존 mobile/compact builder도 `grippers="right"` 또는 `"both"`를 받는다.
+
+이전 녹화·ACT·RoboTwin 실험과 아래 기존 수치는 **기본 SO-101 그리퍼 기준**이다.
+기존 실행기의 stock 기본값·원본 자산·데이터·보정은 보존한다. 새 PGripper 형상의
+개폐·모델 재열기는 확인했지만 실제 장착 변환·파지·정책 성능은 아직 검증하지 않았다.
 
 실물 계획에 맞춰 TurtleBot3 LiDAR는 기본적으로 제거한다. 원본 형상과 비교할 때만
 `--include-lidar`를 사용한다.

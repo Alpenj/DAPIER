@@ -14,6 +14,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from control_loop_guard import ControlLoopGuard, guard_loop
+
 
 PANEL_SIZE = (320, 240)
 CAMERAS = (
@@ -256,9 +258,14 @@ def main() -> int:
         robot.left_arm.cameras["top_h201"] = camera
         robot._top_level_cam_keys.update({"top_h201", "top_h201_depth"})
         robot.cameras["top_h201"] = camera
+        robot._dapier_control_guard = ControlLoopGuard(
+            robot, timeout_s=float(os.environ.get("DAPIER_CONTROL_TIMEOUT_S", "1.0"))
+        )
         return robot
 
     target.make_robot_from_config = make_robot_with_h201
+    loop_name = "teleop_loop" if mode == "teleop" else "record_loop"
+    setattr(target, loop_name, guard_loop(getattr(target, loop_name)))
     original_log_say = target.log_say
 
     def log_say_with_status(message, *args, **kwargs):

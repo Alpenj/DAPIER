@@ -33,10 +33,16 @@ SO101_MOTOR_NAMES = (
 )
 
 
-class SO101RightArmAdapter:
-    """Translate one approved 12-D policy action to the physical right arm."""
+class SO101ArmAdapter:
+    """Translate calibrated robot-frame actions; NOT a SIM joint calibration map."""
 
-    def __init__(self, *, left_hold_tolerance: float = 1e-6) -> None:
+    def __init__(self, *, side: str = "right", left_hold_tolerance: float = 1e-6) -> None:
+        if side not in ("left", "right"):
+            raise ValueError("side must be left or right")
+        self.side = side
+        self.active = slice(0, 6) if side == "left" else slice(6, 12)
+        self.held = slice(6, 12) if side == "left" else slice(0, 6)
+        self.held_name = "right" if side == "left" else "left"
         if not math.isfinite(left_hold_tolerance) or left_hold_tolerance < 0:
             raise ValueError("left_hold_tolerance must be finite and non-negative")
         self.left_hold_tolerance = left_hold_tolerance
@@ -65,16 +71,16 @@ class SO101RightArmAdapter:
             raise SafetyContractError("SO-101 actions must be finite")
         if any(
             abs(float(target) - float(current)) > self.left_hold_tolerance
-            for target, current in zip(action[:6], measured_action[:6], strict=True)
+            for target, current in zip(action[self.held], measured_action[self.held], strict=True)
         ):
-            raise SafetyContractError("right-arm phase requires the left arm to hold its measured pose")
-        gripper = float(action[11])
+            raise SafetyContractError(f"{self.side}-arm phase requires the {self.held_name} arm to hold its measured pose")
+        gripper = float(action[self.active][-1])
         if not 0.0 <= gripper <= 1.0:
-            raise SafetyContractError("right gripper action must be normalized to [0, 1]")
+            raise SafetyContractError(f"{self.side} gripper action must be normalized to [0, 1]")
         command = {
             name: (math.degrees(float(value)) if index < 5 else gripper * 100.0)
             for index, (name, value) in enumerate(
-                zip(SO101_MOTOR_NAMES, action[6:12], strict=True)
+                zip(SO101_MOTOR_NAMES, action[self.active], strict=True)
             )
         }
         if bus is None:
@@ -91,10 +97,12 @@ class SO101RightArmAdapter:
         return {
             "status": "DISPATCHED",
             "published": True,
-            "reason": "supervisor_authorized_right_arm_step",
+            "reason": f"supervisor_authorized_{self.side}_arm_step",
             "executed_action": list(action),
             "written": {"register": "Goal_Position", "values": command},
         }
+
+SO101RightArmAdapter = SO101ArmAdapter  # Existing callers retain the right-arm default.
 
 
 def checkpoint_sha256(path: str | Path) -> str:
@@ -119,13 +127,21 @@ def evaluate_native_act_rollout(
     proposal_sequence: int,
     item: int = 0,
     device: str = "cpu",
+    execute_arm: str = "right",
 ) -> dict[str, Any]:
     """Infer action 0, then submit it unchanged to an active dry-run supervisor."""
 
+    adapter = SO101ArmAdapter(side=execute_arm)
     if supervisor.state != "ACTIVE":
         raise SafetyContractError("native ACT rollout requires an already ACTIVE safety supervisor")
     if isinstance(proposal_sequence, bool) or proposal_sequence < 0:
         raise ValueError("proposal_sequence must be non-negative")
+    # Freeze source metadata before inference; current safety timestamps remain separate.
+    snapshot = dict(snapshot)
+    source = snapshot.get("policy_source_observation")
+    if isinstance(source, Mapping):
+        source = dict(source)
+        snapshot["policy_source_observation"] = source
     inference = infer(dataset_root, checkpoint_path, item=item, device=device)
     if inference.get("control_authorized") is not False:
         raise ValueError("native ACT inference must remain a non-authorizing proposal")
@@ -136,7 +152,8 @@ def evaluate_native_act_rollout(
     if len(measured_action) != 12:
         raise ValueError("right-arm rollout requires a 12-DoF measured action")
     raw_policy_action = list(action_chunk[0])
-    phase_action = measured_action[:6] + raw_policy_action[6:]
+    phase_action = list(measured_action)
+    phase_action[adapter.active] = raw_policy_action[adapter.active]
     created_monotonic_ns = time.monotonic_ns()
     checkpoint_hash = checkpoint_sha256(checkpoint_path)
     episode_id = inference["episode_id"]
@@ -154,18 +171,18 @@ def evaluate_native_act_rollout(
         "policy_reset_generation": supervisor.policy_reset_generation,
         "source_observation_id": f"{episode_id}:{inference['frame_index']}",
         "source_frame_index": inference["frame_index"],
-        "source_observation_monotonic_ns": snapshot.get("observation_monotonic_ns"),
+        "source_observation_monotonic_ns": source.get("capture_monotonic_ns") if isinstance(source, Mapping) else None,
         "created_monotonic_ns": created_monotonic_ns,
         "action": phase_action,
         "raw_policy_action": raw_policy_action,
-        "phase_mask": "hold_left_execute_right",
+        "phase_mask": f"hold_{adapter.held_name}_execute_{execute_arm}",
     }
     snapshot_for_supervision = dict(snapshot)
     # ``now`` is the supervisor evaluation clock, not a sensor timestamp.  Set
     # it after inference so proposal freshness cannot be evaluated in the past.
     snapshot_for_supervision["now_monotonic_ns"] = created_monotonic_ns
     decision = supervisor.evaluate(proposal, snapshot_for_supervision)
-    adapter_result = SO101RightArmAdapter().dispatch(
+    adapter_result = adapter.dispatch(
         decision,
         measured_action,
     )
@@ -217,6 +234,13 @@ def run_native_act_rollout_smoke(output_root: str | Path) -> dict[str, Any]:
         snapshot={
             "now_monotonic_ns": now_ns,
             "observation_monotonic_ns": now_ns - 1_000_000,
+            "policy_source_observation": {
+                "version": 1,
+                "observation_id": f"{preview['episode_id']}:{preview['frame_index']}",
+                "frame_index": preview["frame_index"],
+                "capture_monotonic_ns": now_ns - 1_000_000,
+                "receive_monotonic_ns": now_ns - 1_000_000,
+            },
             "feedback_monotonic_ns": now_ns - 1_000_000,
             "measured_action": action,
             "base_velocity": [0.0, 0.0],

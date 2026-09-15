@@ -148,7 +148,13 @@ def _required_collision_geoms_for_arm(
 ) -> tuple[int, ...]:
     geoms = _collision_geoms_for_arm(model, side)
     observed = Counter(_body_name_for_geom(model, geom_id) for geom_id in geoms)
-    for suffix, expected_count in REQUIRED_ARM_COLLISION_GEOM_COUNTS.items():
+    required = REQUIRED_ARM_COLLISION_GEOM_COUNTS
+    if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_pgripper_gear") >= 0:
+        required = {**required, "gripper": 1, "pgripper_jaw_1": 1, "pgripper_jaw_2": 1}
+        del required["moving_jaw_so101_v1"]
+        for suffix in ("pgripper_housing", "pgripper_pad_1", "pgripper_pad_2"):
+            _required_active_geom_id(model, f"{side}_{suffix}")
+    for suffix, expected_count in required.items():
         body_name = f"{side}_{suffix}"
         if observed[body_name] < expected_count:
             raise RuntimeError(
@@ -279,6 +285,43 @@ def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
     return tuple(dict.fromkeys(pairs))
 
 
+def certified_separation_lower_bound(
+    model: mujoco.MjModel, data: mujoco.MjData, first: int, second: int
+) -> float:
+    """Conservative hull separation on nine unit axes; not an exact distance."""
+    if any(model.geom_type[g] != mujoco.mjtGeom.mjGEOM_MESH for g in (first, second)):
+        return 0.0
+    rotations = [data.geom_xmat[g].reshape(3, 3) for g in (first, second)]
+    axes = np.vstack((np.eye(3), rotations[0].T, rotations[1].T))
+    norms = np.linalg.norm(axes, axis=1)
+    if not np.all(np.isfinite(norms)) or np.any(norms == 0):
+        return 0.0
+    axes = axes / norms[:, None]
+    intervals = []
+    for g, rotation in zip((first, second), rotations):
+        mesh = int(model.geom_dataid[g])
+        start = int(model.mesh_vertadr[mesh])
+        vertices = model.mesh_vert[start:start + int(model.mesh_vertnum[mesh])]
+        graph_start = int(model.mesh_graphadr[mesh])
+        # Native CCD uses all vertices for meshes smaller than 10 vertices,
+        # even when maxhullvert produced a smaller graph (MuJoCo 3.3.7).
+        if graph_start >= 0 and len(vertices) >= 10:
+            graph = model.mesh_graph[graph_start:]
+            count = int(graph[0])
+            vertices = vertices[graph[2 + count:2 + 2 * count]]
+        # Compiled vertices already include asset scale/recentering.
+        world = vertices @ rotation.T + data.geom_xpos[g]
+        projection = world @ axes.T
+        if not np.all(np.isfinite(projection)):
+            return 0.0
+        intervals.append((projection.min(axis=0), projection.max(axis=0)))
+    a, b = intervals
+    gap = float(np.max(np.maximum(a[0] - b[1], b[0] - a[1])))
+    # Subtract roundoff allowance so numerical touching cannot certify separation.
+    magnitude = max(1.0, *(float(np.max(np.abs(x))) for bounds in intervals for x in bounds))
+    return max(0.0, gap - 64 * np.finfo(float).eps * magnitude)
+
+
 def minimum_protected_clearance(
     model: mujoco.MjModel,
     data: mujoco.MjData,
@@ -317,6 +360,10 @@ def minimum_protected_clearance(
             model.geom_rbound[int(first)] + model.geom_rbound[int(second)]
         )
         distance = max(narrowphase_distance, sphere_lower_bound)
+        if narrowphase_distance <= 0.0:
+            certificate = certified_separation_lower_bound(model, data, int(first), int(second))
+            if certificate > 0.0:
+                distance = max(distance, certificate)
         if distance < best_distance:
             best_distance = distance
             best_pair = (int(first), int(second))

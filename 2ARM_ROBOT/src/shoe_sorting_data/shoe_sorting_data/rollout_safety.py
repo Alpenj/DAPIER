@@ -73,8 +73,9 @@ def validate_safety_config(config: Mapping[str, Any]) -> dict[str, Any]:
         "max_proposal_age_ms",
     ):
         value = config.get(field)
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) <= 0:
-            raise SafetyContractError(f"{field} must be positive")
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(value) or value <= 0):
+            raise SafetyContractError(f"{field} must be finite and positive")
     if config.get("reject_instead_of_clip") is not True:
         raise SafetyContractError("supervisor must reject unsafe actions instead of silently clipping")
     _require_sha256(config.get("expected_hardware_profile_sha256"), "expected_hardware_profile_sha256")
@@ -120,12 +121,53 @@ def supervise_action(
         ("snapshot.feedback_monotonic_ns", feedback_ns),
         ("proposal.created_monotonic_ns", proposal_ns),
     ):
-        if not isinstance(value, int) or value < 0:
+        if type(value) is not int or value < 0:
             raise SafetyContractError(f"{field} must be a non-negative integer")
     observation_age_ms = (now_ns - observation_ns) / 1_000_000
     feedback_age_ms = (now_ns - feedback_ns) / 1_000_000
     proposal_age_ms = (now_ns - proposal_ns) / 1_000_000
     reasons: list[str] = []
+
+    # v1 binds the immutable query source, not the latest safety observation.
+    source = snapshot.get("policy_source_observation")
+    if not isinstance(source, Mapping) or type(source.get("version")) is not int or source.get("version") != 1:
+        reasons.append("invalid_source_observation_binding")
+    else:
+        source_id = proposal.get("source_observation_id")
+        source_frame = proposal.get("source_frame_index")
+        source_ns = proposal.get("source_observation_monotonic_ns")
+        capture_ns = source.get("capture_monotonic_ns")
+        receive_ns = source.get("receive_monotonic_ns")
+        valid = (
+            isinstance(source_id, str) and bool(source_id.strip())
+            and isinstance(source.get("observation_id"), str) and bool(source["observation_id"].strip())
+            and all(type(value) is int and value >= 0 for value in (
+                source_frame, source.get("frame_index"), source_ns, capture_ns, receive_ns
+            ))
+        )
+        if not valid:
+            reasons.append("invalid_source_observation_metadata")
+        else:
+            if source_id != source["observation_id"]:
+                reasons.append("source_observation_id_mismatch")
+            if source_frame != source["frame_index"]:
+                reasons.append("source_frame_index_mismatch")
+            if source_ns != capture_ns:
+                reasons.append("source_capture_time_mismatch")
+            # Episode + frame is the existing native producer's identity namespace.
+            episode_id = proposal.get("episode_id")
+            if (not isinstance(episode_id, str) or not episode_id.strip()
+                    or source_id != f"{episode_id}:{source_frame}"
+                    or source["observation_id"] != f"{episode_id}:{source['frame_index']}"):
+                reasons.append("source_observation_identity_collision")
+            if capture_ns > receive_ns:
+                reasons.append("source_capture_after_receive")
+            if receive_ns > proposal_ns:
+                reasons.append("source_received_after_proposal")
+            if capture_ns > now_ns:
+                reasons.append("source_observation_in_future")
+            elif (now_ns - capture_ns) / 1_000_000 > float(config["max_observation_age_ms"]):
+                reasons.append("stale_source_observation")
 
     if observation_age_ms < 0:
         reasons.append("observation_timestamp_in_future")
@@ -251,21 +293,29 @@ class SafetySupervisor:
                 "lifecycle_state": self.state,
                 "policy_reset_generation": self.policy_reset_generation,
             }
-        sequence = proposal.get("proposal_sequence")
-        if not isinstance(sequence, int) or sequence <= self.last_proposal_sequence:
-            reasons = ["replay_or_out_of_order"]
-            decision = None
-        elif proposal.get("episode_id") != self.active_episode_id:
-            reasons = ["episode_identity_mismatch"]
-            decision = None
-        elif proposal.get("human_approval_id") != self.human_approval_id:
-            reasons = ["human_approval_identity_mismatch"]
-            decision = None
-        else:
-            enriched_snapshot = dict(snapshot)
-            enriched_snapshot["expected_policy_reset_generation"] = self.policy_reset_generation
-            decision = supervise_action(self.config, proposal, enriched_snapshot)
-            reasons = list(decision["reason_codes"])
+        try:
+            if not isinstance(proposal, Mapping) or not isinstance(snapshot, Mapping):
+                raise SafetyContractError("proposal and snapshot must be mappings")
+            sequence = proposal.get("proposal_sequence")
+            if not isinstance(sequence, int) or sequence <= self.last_proposal_sequence:
+                reasons = ["replay_or_out_of_order"]
+                decision = None
+            elif proposal.get("episode_id") != self.active_episode_id:
+                reasons = ["episode_identity_mismatch"]
+                decision = None
+            elif proposal.get("human_approval_id") != self.human_approval_id:
+                reasons = ["human_approval_identity_mismatch"]
+                decision = None
+            else:
+                enriched_snapshot = dict(snapshot)
+                enriched_snapshot["expected_policy_reset_generation"] = self.policy_reset_generation
+                decision = supervise_action(self.config, proposal, enriched_snapshot)
+                reasons = list(decision["reason_codes"])
+        except (ValueError, TypeError, OverflowError):
+            # Invalidate queued proposals before preserving the contract exception API.
+            self.state = "FAULT_LATCHED"
+            self.policy_reset_generation += 1
+            raise
         if decision is None:
             decision = {
                 "schema_version": ROLLOUT_SAFETY_SCHEMA_VERSION,
@@ -391,6 +441,13 @@ def _base_snapshot(now_ns: int) -> dict[str, Any]:
     return {
         "now_monotonic_ns": now_ns,
         "observation_monotonic_ns": now_ns - 20_000_000,
+        "policy_source_observation": {
+            "version": 1,
+            "observation_id": "episode_fixture_001:0",
+            "frame_index": 0,
+            "capture_monotonic_ns": now_ns - 25_000_000,
+            "receive_monotonic_ns": now_ns - 20_000_000,
+        },
         "feedback_monotonic_ns": now_ns - 15_000_000,
         "measured_action": [0.0] * 5 + [0.5] + [0.0] * 5 + [0.5],
         "base_velocity": [0.0, 0.0],
@@ -430,6 +487,9 @@ def run_rollout_safety_smoke(output_path: str | Path) -> dict[str, Any]:
             "policy_checkpoint_sha256": config["approved_policy_checkpoint_sha256"],
             "policy_reset_generation": supervisor.policy_reset_generation,
             "created_monotonic_ns": now_ns - 10_000_000,
+            "source_observation_id": "episode_fixture_001:0",
+            "source_frame_index": 0,
+            "source_observation_monotonic_ns": now_ns - 25_000_000,
             "action": list(safe_action),
         }
         snapshot = _base_snapshot(now_ns)

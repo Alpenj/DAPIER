@@ -21,6 +21,31 @@ from shoe_sorting_data.rollout_safety import SafetySupervisor, build_rollout_saf
     "optional DAPIER-native ACT ML environment is not installed",
 )
 class NativeACTRolloutTest(unittest.TestCase):
+    def test_left_arm_dry_run_and_rejection_boundaries(self):
+        adapter = rollout.SO101ArmAdapter(side="left")
+        measured = [.1] * 5 + [.5] + [.2] * 5 + [.6]
+        decision = {"safety_passed": True, "approved_action": list(measured)}
+        result = adapter.dispatch(decision, measured)
+        self.assertFalse(result["published"])
+        self.assertAlmostEqual(result["would_write"]["values"]["shoulder_pan"], .1 * 180 / 3.141592653589793)
+        self.assertEqual(result["would_write"]["values"]["gripper"], 50.)
+        with self.assertRaisesRegex(ValueError, "authorize"):
+            adapter.dispatch(decision, measured, bus=object())
+        decision["approved_action"][6] += .01
+        with self.assertRaisesRegex(ValueError, "right arm"):
+            adapter.dispatch(decision, measured)
+        with self.assertRaises(ValueError):
+            rollout.SO101ArmAdapter(side="both")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            raw, checkpoint, preview, supervisor, snapshot = self._fixture(Path(temp_dir))
+            trace = evaluate_native_act_rollout(raw, checkpoint, supervisor=supervisor,
+                snapshot=snapshot, proposal_sequence=0, execute_arm="left")
+            self.assertTrue(trace["decision"]["safety_passed"])
+            self.assertFalse(trace["adapter_result"]["published"])
+            self.assertEqual(trace["proposal"]["action"][:6], preview["action_chunk"][0][:6])
+            self.assertEqual(trace["proposal"]["action"][6:], snapshot["measured_action"][6:])
+            self.assertEqual(trace["proposal"]["phase_mask"], "hold_right_execute_left")
+
     def _fixture(self, root: Path, *, approved_hash: str | None = None):
         receipt = run_smoke(root / "act")
         checkpoint = root / "act" / receipt["checkpoint"]["path"]
@@ -42,6 +67,13 @@ class NativeACTRolloutTest(unittest.TestCase):
         snapshot = {
             "now_monotonic_ns": now_ns,
             "observation_monotonic_ns": now_ns - 1_000_000,
+            "policy_source_observation": {
+                "version": 1,
+                "observation_id": f"{preview['episode_id']}:{preview['frame_index']}",
+                "frame_index": preview["frame_index"],
+                "capture_monotonic_ns": now_ns - 1_000_000,
+                "receive_monotonic_ns": now_ns - 1_000_000,
+            },
             "feedback_monotonic_ns": now_ns - 1_000_000,
             "measured_action": action,
             "base_velocity": [0.0, 0.0],
