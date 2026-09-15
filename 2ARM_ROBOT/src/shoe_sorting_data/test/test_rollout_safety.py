@@ -29,11 +29,21 @@ class RolloutSafetyTest(unittest.TestCase):
             "policy_checkpoint_sha256": self.config["approved_policy_checkpoint_sha256"],
             "policy_reset_generation": 0,
             "created_monotonic_ns": self.now_ns - 10_000_000,
+            "source_observation_id": "episode_001:0",
+            "source_frame_index": 0,
+            "source_observation_monotonic_ns": self.now_ns - 25_000_000,
             "action": [0.05] * 5 + [0.55] + [-0.05] * 5 + [0.45],
         }
         self.snapshot = {
             "now_monotonic_ns": self.now_ns,
             "observation_monotonic_ns": self.now_ns - 20_000_000,
+            "policy_source_observation": {
+                "version": 1,
+                "observation_id": "episode_001:0",
+                "frame_index": 0,
+                "capture_monotonic_ns": self.now_ns - 25_000_000,
+                "receive_monotonic_ns": self.now_ns - 20_000_000,
+            },
             "feedback_monotonic_ns": self.now_ns - 15_000_000,
             "measured_action": [0.0] * 5 + [0.5] + [0.0] * 5 + [0.5],
             "base_velocity": [0.0, 0.0],
@@ -98,6 +108,69 @@ class RolloutSafetyTest(unittest.TestCase):
         config["hardware_enabled"] = True
         with self.assertRaisesRegex(SafetyContractError, "verified physical gates"):
             validate_safety_config(config)
+
+    def test_scalar_ttl_and_stop_tolerances_must_be_finite_and_positive(self):
+        for field in (
+            "base_linear_tolerance_mps", "base_angular_tolerance_radps",
+            "max_observation_age_ms", "max_feedback_age_ms", "max_proposal_age_ms",
+        ):
+            for value in (float("nan"), float("inf"), -float("inf"), 0, -1, True, "1", None):
+                with self.subTest(field=field, value=value):
+                    with self.assertRaisesRegex(SafetyContractError, field):
+                        validate_safety_config(dict(self.config, **{field: value}))
+            for value in (1, 0.001):
+                validate_safety_config(dict(self.config, **{field: value}))
+
+    def test_malformed_contract_latches_and_invalidates_queued_generation(self):
+        cases = [
+            (dict(self.proposal, action=[float("nan")] * 12), self.snapshot, SafetyContractError),
+            (dict(self.proposal, action=[float("inf")] * 12), self.snapshot, SafetyContractError),
+            (dict(self.proposal, action=[]), self.snapshot, SafetyContractError),
+            (dict(self.proposal, created_monotonic_ns=True), self.snapshot, SafetyContractError),
+            (self.proposal, dict(self.snapshot, measured_action=None), SafetyContractError),
+            (self.proposal, dict(self.snapshot, recent_base_command=[0]), SafetyContractError),
+            (self.proposal, dict(self.snapshot, now_monotonic_ns="bad"), SafetyContractError),
+            (self.proposal, None, SafetyContractError),
+            (None, self.snapshot, SafetyContractError),
+            (dict(self.proposal, action=[10 ** 400] * 12), self.snapshot, OverflowError),
+        ]
+        for index, (proposal, snapshot, error_type) in enumerate(cases):
+            with self.subTest(case=index):
+                supervisor = SafetySupervisor(self.config)
+                supervisor.configure(self.config["expected_hardware_profile_sha256"])
+                supervisor.arm(episode_id="episode_001", human_approval_id="approval_001")
+                supervisor.activate()
+                self.assertTrue(supervisor.evaluate(self.proposal, self.snapshot)["safety_passed"])
+                queued = dict(self.proposal, proposal_sequence=2)
+                if proposal is not None:
+                    proposal = dict(proposal, proposal_sequence=1)
+                with self.assertRaises(error_type):
+                    supervisor.evaluate(proposal, snapshot)
+                self.assertEqual(supervisor.state, "FAULT_LATCHED")
+                self.assertEqual(supervisor.policy_reset_generation, 1)
+                self.assertEqual(supervisor.last_proposal_sequence, 0)
+
+                blocked = supervisor.evaluate(queued, self.snapshot)
+                self.assertEqual(blocked["reason_codes"], ["lifecycle_not_active:FAULT_LATCHED"])
+                self.assertEqual(supervisor.policy_reset_generation, 1)
+                supervisor.reset_fault()
+                supervisor.arm(episode_id="episode_001", human_approval_id="approval_001")
+                supervisor.activate()
+                stale = supervisor.evaluate(queued, self.snapshot)
+                self.assertIn("stale_chunk_generation", stale["reason_codes"])
+                for decision in (blocked, stale):
+                    self.assertFalse(decision["hardware_dispatch_authorized"])
+                    self.assertFalse(decision["mock_dispatch_authorized"])
+                    self.assertIsNone(decision["approved_action"])
+                    result = JDcobotRos2DryRunAdapter(self.config).dispatch(decision)
+                    self.assertEqual(result["status"], "NOT_DISPATCHED")
+                    self.assertFalse(result["published"])
+
+                supervisor.reset_fault()
+                supervisor.arm(episode_id="episode_001", human_approval_id="approval_001")
+                supervisor.activate()
+                fresh = dict(queued, policy_reset_generation=supervisor.policy_reset_generation)
+                self.assertTrue(supervisor.evaluate(fresh, self.snapshot)["safety_passed"])
 
     def test_fault_latches_and_requires_rearm_with_new_generation(self):
         supervisor = SafetySupervisor(self.config)

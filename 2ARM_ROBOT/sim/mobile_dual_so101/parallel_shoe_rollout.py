@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 import json
 import math
 import multiprocessing
@@ -14,7 +14,7 @@ import time
 from typing import Sequence
 
 from mobile_dual_so101 import ACTION_NAMES, actuator_targets_from_qpos
-from shoe_task import OBSERVATION_NAMES, ShoeTaskConfig, ShoeTaskEnv, UnsafeActionError
+from shoe_task import OBSERVATION_NAMES, MOBILE_BLOCK_CONFIG, ShoeTaskConfig, ShoeTaskEnv, UnsafeActionError
 from sim_policy import (
     ActionChunkExecutor,
     EXECUTION_MODES,
@@ -32,8 +32,11 @@ class ParallelRolloutConfig:
     execution_mode: str = "receding_horizon"
     chunk_size: int = 4
     n_action_steps: int = 1
+    master_seed: int = 0
 
     def validate(self) -> None:
+        if isinstance(self.master_seed, bool) or not isinstance(self.master_seed, int) or self.master_seed < 0:
+            raise ValueError("master_seed must be a nonnegative integer")
         if self.workers <= 0:
             raise ValueError("workers must be positive")
         if self.episodes <= 0:
@@ -50,12 +53,13 @@ class ParallelRolloutConfig:
 
 def _rollout_worker(
     worker_id: int,
-    episode_count: int,
+    episode_ids: tuple[int, ...],
     steps_per_episode: int,
     shoe_config: ShoeTaskConfig,
     execution_mode: str,
     chunk_size: int,
     n_action_steps: int,
+    master_seed: int,
 ) -> dict[str, object]:
     env = ShoeTaskEnv(shoe_config)
     transitions = 0
@@ -65,10 +69,13 @@ def _rollout_worker(
     final_shoe_y = 0.0
     policy_queries = 0
     unsafe_rejections = 0
-    for episode_index in range(episode_count):
-        observation, reset_info = env.reset(
-            seed=worker_id * 100_000 + episode_index
-        )
+    initial_states = []
+    for episode_id in episode_ids:
+        observation, reset_info = env.reset(seed=master_seed + episode_id)
+        initial_states.append({"episode_id": episode_id, "reset": reset_info,
+                               "observation": observation,
+                               "qpos": env.data.qpos.tolist(),
+                               "qvel": env.data.qvel.tolist(), "time": float(env.data.time)})
         hardware_execution = hardware_execution or bool(
             reset_info["hardware_execution"]
         )
@@ -107,7 +114,8 @@ def _rollout_worker(
     return {
         "worker_id": worker_id,
         "pid": os.getpid(),
-        "episodes": episode_count,
+        "episodes": len(episode_ids),
+        "initial_states": initial_states,
         "transitions": transitions,
         "policy_queries": policy_queries,
         "unsafe_rejections": unsafe_rejections,
@@ -127,22 +135,11 @@ def run_parallel_rollouts(
     shoe_config: ShoeTaskConfig | None = None,
 ) -> dict[str, object]:
     config.validate()
-    base_config = shoe_config or ShoeTaskConfig()
+    base_config = shoe_config or MOBILE_BLOCK_CONFIG
     base_config.validate()
     worker_count = min(config.workers, config.episodes)
-    episode_counts = [config.episodes // worker_count] * worker_count
-    for index in range(config.episodes % worker_count):
-        episode_counts[index] += 1
-
-    jobs = []
-    for worker_id, episode_count in enumerate(episode_counts):
-        y_offset = (worker_id - (worker_count - 1) / 2.0) * 0.01
-        x, y, z = base_config.shoe_position_m
-        worker_config = replace(
-            base_config,
-            shoe_position_m=(x, y + y_offset, z),
-        )
-        jobs.append((worker_id, episode_count, worker_config))
+    jobs = [(worker_id, tuple(range(worker_id, config.episodes, worker_count)))
+            for worker_id in range(worker_count)]
 
     started = time.perf_counter()
     context = multiprocessing.get_context("spawn")
@@ -154,14 +151,15 @@ def run_parallel_rollouts(
             executor.submit(
                 _rollout_worker,
                 worker_id,
-                episode_count,
+                episode_ids,
                 config.steps_per_episode,
-                worker_config,
+                base_config,
                 config.execution_mode,
                 config.chunk_size,
                 config.n_action_steps,
+                config.master_seed,
             )
-            for worker_id, episode_count, worker_config in jobs
+            for worker_id, episode_ids in jobs
         ]
         workers = [future.result() for future in futures]
     wall_seconds = time.perf_counter() - started
@@ -182,10 +180,13 @@ def run_parallel_rollouts(
         raise RuntimeError("parallel simulation reported hardware execution")
     return {
         "parallel_backend": "spawned_processes",
+        "target_object": base_config.object_kind,
         "workers_requested": config.workers,
         "workers_used": worker_count,
         "worker_pids": sorted(pids),
         "episodes": config.episodes,
+        "master_seed": config.master_seed,
+        "episode_seed_rule": "master_seed + global_episode_id",
         "steps_per_episode": config.steps_per_episode,
         "transitions": transitions,
         "policy_adapter": "hold_chunk_fixture",
@@ -211,6 +212,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--episodes", type=int, default=8)
     parser.add_argument("--steps", type=int, default=100)
+    parser.add_argument("--master-seed", type=int, default=0)
     parser.add_argument(
         "--execution-mode",
         choices=EXECUTION_MODES,
@@ -224,6 +226,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             workers=args.workers,
             episodes=args.episodes,
             steps_per_episode=args.steps,
+            master_seed=args.master_seed,
             execution_mode=args.execution_mode,
             chunk_size=args.chunk_size,
             n_action_steps=args.n_action_steps,

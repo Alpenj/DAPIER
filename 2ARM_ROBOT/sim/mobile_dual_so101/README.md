@@ -1,5 +1,12 @@
 # Waffle Pi + SO-101 양팔 MuJoCo 모델
 
+## 현재 기준 배치 — 2026-09-15
+
+사용자가 최종 확인한 이동형·책상 모델은 [INTEGRATION_SCENES.md](INTEGRATION_SCENES.md)를 따른다.
+`integration_scenes.py --scene mobile --viewer` 또는 `--scene desk --viewer`로 연다.
+제공 CAD 스탠드, 뒤쪽 체결 홀 보정, 책상 끝단 정렬을 반영했다.
+아래의 tower/tabletop/teacher는 기존 baseline이다. 이전 HOME·IK·성공률을 새 배치의 근거로 재사용하지 않는다.
+
 JDcobot200 legacy 코드를 삭제하지 않고 별도 경로에 만든 SO-101 양팔 모델이다. 팔 하나는
 `shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`
 6개 actuator를 가지며, 좌우를 합친 action은 12차원이다.

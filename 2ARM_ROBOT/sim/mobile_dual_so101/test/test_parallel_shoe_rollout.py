@@ -16,6 +16,7 @@ except ModuleNotFoundError as error:
     ) from error
 
 from parallel_shoe_rollout import ParallelRolloutConfig, run_parallel_rollouts
+from shoe_task import ShoeTaskConfig
 
 
 class ParallelShoeRolloutTest(unittest.TestCase):
@@ -37,7 +38,8 @@ class ParallelShoeRolloutTest(unittest.TestCase):
                 workers=2,
                 episodes=2,
                 steps_per_episode=5,
-            )
+            ),
+            shoe_config=ShoeTaskConfig(),  # Preserve the legacy rollout regression.
         )
         self.assertEqual(report["workers_used"], 2)
         self.assertEqual(len(report["worker_pids"]), 2)
@@ -47,10 +49,10 @@ class ParallelShoeRolloutTest(unittest.TestCase):
         self.assertEqual(report["mount_layout"], "tower")
         self.assertEqual(report["observation_dimension"], 21)
         self.assertEqual(report["action_dimension"], 12)
-        self.assertEqual(report["transitions"], 4)
-        self.assertEqual(report["unsafe_rejections"], 2)
+        self.assertEqual(report["transitions"], 10)
+        self.assertEqual(report["unsafe_rejections"], 0)
         self.assertEqual(report["execution_mode"], "receding_horizon")
-        self.assertEqual(report["policy_queries"], 6)
+        self.assertEqual(report["policy_queries"], 10)
         self.assertEqual(report["policy_adapter"], "hold_chunk_fixture")
 
     def test_action_queue_reuses_only_the_configured_chunk_prefix(self) -> None:
@@ -62,11 +64,12 @@ class ParallelShoeRolloutTest(unittest.TestCase):
                 execution_mode="action_queue",
                 chunk_size=4,
                 n_action_steps=2,
-            )
+            ),
+            shoe_config=ShoeTaskConfig(),
         )
-        self.assertEqual(report["transitions"], 2)
-        self.assertEqual(report["unsafe_rejections"], 1)
-        self.assertEqual(report["policy_queries"], 2)
+        self.assertEqual(report["transitions"], 5)
+        self.assertEqual(report["unsafe_rejections"], 0)
+        self.assertEqual(report["policy_queries"], 3)
         self.assertEqual(report["n_action_steps"], 2)
 
 

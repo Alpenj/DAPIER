@@ -285,11 +285,23 @@ class ShoeTaskTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mount_layout"):
             ShoeTaskEnv(ShoeTaskConfig(mount_layout="unknown"))
 
-    def test_headless_smoke_fails_closed_on_exact_same_arm_contact(self) -> None:
-        with self.assertRaises(UnsafeActionError) as raised:
-            validate_shoe_task(smoke_steps=50)
-        self.assertEqual(raised.exception.assessment.minimum_clearance_m, 0.0)
-        self.assertIn("same-arm collision", str(raised.exception))
+    def test_headless_hold_completes_100_steps(self) -> None:
+        result = validate_shoe_task(smoke_steps=100)
+        self.assertTrue(result["finite_observation"])
+        self.assertFalse(result["terminated"])
+        self.assertFalse(result["hardware_execution"])
+
+    def test_reset_replays_identical_hold_trajectory(self) -> None:
+        trajectories = []
+        for _ in range(2):
+            self.env.reset(seed=100)
+            hold = actuator_targets_from_qpos(self.env.model, self.env.data.qpos)
+            states = [(self.env.data.time, self.env.data.qpos.tolist(), self.env.data.qvel.tolist())]
+            for step in range(10):
+                self.env.apply_action(hold, physics_steps=34 if step % 3 == 0 else 33)
+                states.append((self.env.data.time, self.env.data.qpos.tolist(), self.env.data.qvel.tolist()))
+            trajectories.append(states)
+        self.assertEqual(trajectories[0], trajectories[1])
 
 
 if __name__ == "__main__":

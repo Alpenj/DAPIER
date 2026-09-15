@@ -10,20 +10,25 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from pathlib import Path
 import json
 import math
 from typing import Sequence
 
 import mujoco
+import numpy as np
 
 from collision_guard import (
     DEFAULT_CLEARANCE_M,
     CollisionAssessment,
     check_bimanual_path,
+    minimum_protected_clearance,
 )
 from mobile_dual_so101 import (
     ACTION_NAMES,
     ARM_CONTROL_NAMES,
+    HUMANOID_HOME_ACTION,
+    apply_control_as_pose,
     MOUNT_LAYOUTS,
     TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M,
     TOWER_RECOMMENDED_ARM_MOUNT_SEPARATION_M,
@@ -65,6 +70,8 @@ OBSERVATION_NAMES = (
 
 @dataclass(frozen=True)
 class ShoeTaskConfig:
+    # Legacy API names are retained; object_kind identifies the actual target.
+    object_kind: str = "legacy_shoe"
     shoe_position_m: tuple[float, float, float] = DEFAULT_SHOE_POSITION_M
     shoe_yaw_rad: float = DEFAULT_SHOE_YAW_RAD
     arm_mount_height_m: float = DEFAULT_ARM_MOUNT_HEIGHT_M
@@ -74,8 +81,17 @@ class ShoeTaskConfig:
     success_height_m: float = SUCCESS_HEIGHT_M
     success_gripper_distance_m: float = SUCCESS_GRIPPER_DISTANCE_M
     required_clearance_m: float = DEFAULT_CLEARANCE_M
+    shoe_xy_range_m: float = 0.0
+    shoe_yaw_range_rad: float = 0.0
+    initial_home_pose: bool = False
 
     def validate(self) -> None:
+        if self.object_kind not in ("legacy_shoe", "block"):
+            raise ValueError("object_kind must be legacy_shoe or block")
+        for name in ("shoe_xy_range_m", "shoe_yaw_range_rad"):
+            value = getattr(self, name)
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be finite and nonnegative")
         if len(self.shoe_position_m) != 3 or not all(
             math.isfinite(float(value)) for value in self.shoe_position_m
         ):
@@ -98,6 +114,15 @@ class ShoeTaskConfig:
             raise ValueError("success_gripper_distance_m must be positive")
         if not math.isfinite(self.required_clearance_m) or self.required_clearance_m <= 0:
             raise ValueError("required_clearance_m must be finite and positive")
+
+
+# Current manipulation profile. Legacy defaults remain available for regressions.
+MOBILE_BLOCK_CONFIG = ShoeTaskConfig(
+    # One millimetre above the floor avoids a roundoff-sensitive exact contact.
+    object_kind="block", shoe_position_m=(-.220, .220, .021),
+    initial_home_pose=True,
+    shoe_xy_range_m=.002, shoe_yaw_range_rad=math.radians(.5),
+)
 
 
 class UnsafeActionError(RuntimeError):
@@ -158,6 +183,25 @@ def _add_primitive_shoe(
     )
 
 
+def _add_block(spec: mujoco.MjSpec, config: ShoeTaskConfig) -> None:
+    """Reuse only measured block geometry/material; preserve the mobile scene."""
+    profile = json.loads(Path(__file__).with_name("tabletop_replay.json").read_text())
+    block = spec.worldbody.add_body(
+        name=SHOE_BODY_NAME, pos=list(config.shoe_position_m),
+        quat=list(_yaw_quaternion(config.shoe_yaw_rad)),
+    )
+    # Compatibility body/joint names; the physical object is a single block.
+    block.add_freejoint(name=SHOE_FREE_JOINT_NAME)
+    block.add_geom(
+        name="block_geom", type=mujoco.mjtGeom.mjGEOM_BOX,
+        size=np.asarray(profile["reference_block_size_m"]) / 2,
+        mass=profile["block_mass_kg"], friction=profile["block_friction"],
+        contype=1, conaffinity=1, condim=4,
+        solref=profile["contact_solref"], solimp=[.95, .99, .001, .5, 2.],
+        rgba=[.65, .03, .025, 1.],
+    )
+
+
 def build_shoe_task_model(config: ShoeTaskConfig | None = None) -> mujoco.MjModel:
     resolved = config or ShoeTaskConfig()
     resolved.validate()
@@ -166,11 +210,12 @@ def build_shoe_task_model(config: ShoeTaskConfig | None = None) -> mujoco.MjMode
         arm_mount_separation_m=resolved.arm_mount_separation_m,
         mount_layout=resolved.mount_layout,
     )
-    _add_primitive_shoe(
-        spec,
-        position_m=resolved.shoe_position_m,
-        yaw_rad=resolved.shoe_yaw_rad,
-    )
+    if resolved.object_kind == "block":
+        _add_block(spec, resolved)
+    else:
+        _add_primitive_shoe(
+            spec, position_m=resolved.shoe_position_m, yaw_rad=resolved.shoe_yaw_rad,
+        )
     return spec.compile()
 
 
@@ -246,6 +291,10 @@ def ground_truth_observation(
         "schema_version": SCHEMA_VERSION,
         "frame": "map_sim_world",
         "ground_truth": True,
+        **({"target_object": "block", "block": {
+                "position_map_m": shoe_position, "yaw_map_rad": shoe_yaw},
+            "legacy_target_alias": "shoe"}
+           if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "block_geom") >= 0 else {}),
         "shoe": {
             "position_map_m": shoe_position,
             "yaw_map_rad": shoe_yaw,
@@ -296,7 +345,7 @@ def _shoe_gripper_contacts(model: mujoco.MjModel, data: mujoco.MjData) -> dict[s
 
 
 def _shoe_gripper_attachment_active(
-    model: mujoco.MjModel, data: mujoco.MjData
+    model: mujoco.MjModel, data: mujoco.MjData, *, gripper_only: bool = True
 ) -> bool:
     shoe_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME)
     gripper_ids = tuple(
@@ -329,7 +378,7 @@ def _shoe_gripper_attachment_active(
             other = first
         else:
             continue
-        if any(
+        if not gripper_only or any(
             _body_is_descendant(model, other, gripper_id)
             for gripper_id in gripper_ids
         ):
@@ -344,6 +393,8 @@ def task_metrics(
     success_height_m: float = SUCCESS_HEIGHT_M,
     success_gripper_distance_m: float = SUCCESS_GRIPPER_DISTANCE_M,
 ) -> dict[str, object]:
+    if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "block_geom") >= 0:
+        return block_metrics(model, data)
     shoe_id = _object_id(model, mujoco.mjtObj.mjOBJ_BODY, SHOE_BODY_NAME)
     shoe_position = data.xpos[shoe_id]
     distances = {}
@@ -377,6 +428,48 @@ def task_metrics(
         "carry_supported": carry_supported,
         "reward": reward,
     }
+
+
+def block_metrics(model: mujoco.MjModel, data: mujoco.MjData, *, reference_bottom_m: float = 0.0) -> dict[str, object]:
+    """Block-only snapshot; final success requires continuous physics evidence."""
+    block = model.geom("block_geom").id
+    block_body = int(model.geom_bodyid[block])
+    fingers = set()
+    forbidden_contact = False
+    deepest = 0.0
+    for i, contact in enumerate(data.contact):
+        pair = (int(contact.geom1), int(contact.geom2))
+        if block not in pair:
+            continue
+        other = pair[1] if pair[0] == block else pair[0]
+        deepest = max(deepest, -float(contact.dist))
+        force = np.zeros(6)
+        mujoco.mj_contactForce(model, data, i, force)
+        if force[0] <= 0:
+            continue
+        mesh_id = int(model.geom_dataid[other])
+        mesh_name = (model.mesh(mesh_id).name
+                     if model.geom_type[other] == mujoco.mjtGeom.mjGEOM_MESH else "")
+        if mesh_name == "left_wrist_roll_follower_so101_v1":
+            fingers.add("fixed")
+        elif mesh_name == "left_moving_jaw_so101_v1":
+            fingers.add("moving")
+        else:
+            forbidden_contact = True
+    rotation = data.geom_xmat[block].reshape(3, 3)
+    bottom = float(data.geom_xpos[block, 2] - np.abs(rotation[2]) @ model.geom_size[block])
+    attached = _shoe_gripper_attachment_active(model, data, gripper_only=False)
+    supported = (fingers == {"fixed", "moving"} and not forbidden_contact
+                 and not attached and int(model.body_mocapid[block_body]) < 0
+                 and deepest <= .001)
+    lifted = bottom >= max(0.0, reference_bottom_m) + .030
+    return {"target_object": "block", "block_position_m": data.xpos[block_body].tolist(),
+            "block_bottom_height_m": bottom, "lifted": lifted,
+            "left_finger_contacts": sorted(fingers), "grasp_supported": supported,
+            "forbidden_block_contact": forbidden_contact, "attachment_active": attached,
+            "maximum_block_penetration_m": deepest, "lift_supported": lifted and supported,
+            "success": False, "success_requires_continuous_hold_s": 3.0,
+            "reward": max(0.0, bottom) + float(lifted and supported)}
 
 
 def task_reachability(
@@ -417,24 +510,117 @@ class ShoeTaskEnv:
         self.config = config or ShoeTaskConfig()
         self.config.validate()
         self.model = model or build_shoe_task_model(self.config)
+        has_block = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "block_geom") >= 0
+        if has_block != (self.config.object_kind == "block"):
+            raise ValueError("object_kind does not match the compiled target geometry")
         self.data = mujoco.MjData(self.model)
+        self._block_hold_s = 0.0
+        self.settle_info = None
+        self._reset_valid = self.config.object_kind != "block"
 
     def reset(self, *, seed: int | None = None) -> tuple[dict[str, object], dict[str, object]]:
-        del seed  # Deterministic in phase 1; randomization is a later pipeline stage.
+        self._reset_valid = False
+        seed = 0 if seed is None else seed
+        if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+            raise ValueError("seed must be a nonnegative integer")
+        randomized = self.config.shoe_xy_range_m > 0 or self.config.shoe_yaw_range_rad > 0
+        position = list(self.config.shoe_position_m)
+        yaw = self.config.shoe_yaw_rad
+        if randomized:
+            rng = np.random.default_rng(seed)
+            position[:2] = np.asarray(position[:2]) + rng.uniform(
+                -self.config.shoe_xy_range_m, self.config.shoe_xy_range_m, size=2
+            )
+            yaw += float(rng.uniform(-self.config.shoe_yaw_range_rad, self.config.shoe_yaw_range_rad))
         mujoco.mj_resetData(self.model, self.data)
+        self.settle_info = None
+        if self.config.initial_home_pose:
+            # SIM actuator joint angles (radians), mapped through transmission IDs.
+            apply_control_as_pose(self.model, self.data, HUMANOID_HOME_ACTION)
+        self._block_hold_s = 0.0
         joint_id = _object_id(
             self.model, mujoco.mjtObj.mjOBJ_JOINT, SHOE_FREE_JOINT_NAME
         )
         qpos_address = int(self.model.jnt_qposadr[joint_id])
-        self.data.qpos[qpos_address : qpos_address + 3] = self.config.shoe_position_m
+        self.data.qpos[qpos_address : qpos_address + 3] = position
         self.data.qpos[qpos_address + 3 : qpos_address + 7] = _yaw_quaternion(
-            self.config.shoe_yaw_rad
+            yaw
         )
         self.data.ctrl[:] = actuator_targets_from_qpos(self.model, self.data.qpos)
         mujoco.mj_forward(self.model, self.data)
+        validation = {}
+        if randomized or self.config.object_kind == "block":
+            for joint in range(self.model.njnt):
+                if self.model.jnt_limited[joint]:
+                    value = self.data.qpos[self.model.jnt_qposadr[joint]]
+                    lower, upper = self.model.jnt_range[joint]
+                    if not lower <= value <= upper:
+                        raise ValueError("randomized reset violates joint limits")
+            action = actuator_targets_from_qpos(self.model, self.data.qpos)
+            assessment = check_bimanual_path(
+                self.model, action, action, required_clearance_m=self.config.required_clearance_m
+            )
+            if not assessment.safe:
+                raise UnsafeActionError(assessment)
+            reach = task_reachability(self.model, self.data)
+            if reach["shoulder_distance_m"]["left"] >= reach["reach_envelope_m"]:
+                raise ValueError("randomized reset outside left-arm reach envelope")
+            shoe_geoms = tuple(g for g in range(self.model.ngeom)
+                               if self.model.geom_bodyid[g] == self.model.body(SHOE_BODY_NAME).id)
+            others = [g for g in range(self.model.ngeom)
+                      if g not in shoe_geoms and self.model.geom_contype[g]
+                      and self.model.geom_conaffinity[g]]
+            pairs = [(shoe, other) for shoe in shoe_geoms for other in others
+                     if self.model.geom_type[other] != mujoco.mjtGeom.mjGEOM_PLANE]
+            clearance, _, _ = minimum_protected_clearance(self.model, self.data, pairs)
+            floor_pairs = [(shoe, other) for shoe in shoe_geoms for other in others
+                           if self.model.geom_type[other] == mujoco.mjtGeom.mjGEOM_PLANE]
+            # An infinite plane has no enclosing sphere. Query its signed
+            # native distance directly; the finite-geom sphere bound is invalid.
+            floor_clearance = min(
+                (float(mujoco.mj_geomDistance(self.model, self.data, a, b, 2., None))
+                 for a, b in floor_pairs), default=math.inf,
+            )
+            if clearance < self.config.required_clearance_m or floor_clearance < 0:
+                raise ValueError(
+                    f"randomized reset violates target collision clearance: seed={seed}, "
+                    f"target={clearance:.17g} m, floor={floor_clearance:.17g} m"
+                )
+            validation = {"collision_guard": assessment.as_report(), "reachability": reach,
+                          "target_clearance_m": clearance,
+                          "floor_nonpenetrating": floor_clearance >= 0, "joint_limits": True}
+            if self.config.object_kind == "block":
+                arm_floor = [
+                    (float(mujoco.mj_geomDistance(self.model, self.data, arm, floor, 2., None)), arm, floor)
+                    for arm in others
+                    if self.model.body(int(self.model.geom_bodyid[arm])).name.startswith(("left_", "right_"))
+                    for floor in others
+                    if self.model.geom_type[floor] == mujoco.mjtGeom.mjGEOM_PLANE
+                ]
+                if arm_floor:
+                    distance, arm, floor = min(arm_floor)
+                    if distance < self.config.required_clearance_m:
+                        raise ValueError(
+                            f"mobile block reset violates arm-floor clearance: seed={seed}, "
+                            f"pair=({arm},{floor}), distance={distance:.17g} m, "
+                            f"required={self.config.required_clearance_m} m; initial robot pose unchanged"
+                        )
+                    validation["arm_floor_clearance_m"] = distance
+        self._reset_valid = True
         return ground_truth_observation(self.model, self.data), {
             "hardware_execution": False,
-            "randomized": False,
+            "randomized": randomized,
+            "seed": seed,
+            "target_object": self.config.object_kind,
+            "initial_joint_pose": "HUMANOID_HOME_ACTION" if self.config.initial_home_pose else "model_default",
+            "initial_conditions": {"target_position_m": [float(v) for v in position],
+                                   "target_yaw_rad": yaw},
+            "randomization": {"distribution": "uniform", "generator": "numpy.PCG64",
+                              "target_xy_range_m": self.config.shoe_xy_range_m,
+                              "target_yaw_range_rad": self.config.shoe_yaw_range_rad,
+                              "center_position_m": self.config.shoe_position_m,
+                              "center_yaw_rad": self.config.shoe_yaw_rad},
+            "validation": validation,
         }
 
     def step(
@@ -444,12 +630,7 @@ class ShoeTaskEnv:
             action,
             physics_steps=self.config.frame_skip,
         )
-        metrics = task_metrics(
-            self.model,
-            self.data,
-            success_height_m=self.config.success_height_m,
-            success_gripper_distance_m=self.config.success_gripper_distance_m,
-        )
+        metrics = self.metrics()
         observation = ground_truth_observation(self.model, self.data)
         return observation, float(metrics["reward"]), bool(metrics["success"]), False, {
             **metrics,
@@ -457,6 +638,59 @@ class ShoeTaskEnv:
             "collision_guard": assessment.as_report(),
             "hardware_execution": False,
         }
+
+    def metrics(self) -> dict[str, object]:
+        metrics = task_metrics(
+            self.model,
+            self.data,
+            success_height_m=self.config.success_height_m,
+            success_gripper_distance_m=self.config.success_gripper_distance_m,
+        )
+        if self.config.object_kind == "block":
+            metrics = block_metrics(self.model, self.data, reference_bottom_m=(
+                self.settle_info["block_bottom_height_m"] if self.settle_info else 0.0))
+            metrics["continuous_hold_s"] = self._block_hold_s
+            metrics["success"] = bool(metrics["lift_supported"] and self._block_hold_s >= 3.0)
+        return metrics
+
+    def settle(self) -> dict[str, object]:
+        """Explicit SIM RESET -> SETTLE -> PREGRASP gate; reset itself stays at t=0."""
+        if self.config.object_kind != "block" or not self.config.initial_home_pose:
+            raise ValueError("settle requires the mobile block home profile")
+        hold = tuple(self.data.ctrl)
+        block = self.model.geom("block_geom").id
+        floor = self.model.geom("floor").id
+        dof = int(self.model.joint(SHOE_FREE_JOINT_NAME).dofadr[0])
+        arms = [g for g in range(self.model.ngeom)
+                if self.model.geom_contype[g] and self.model.geom_conaffinity[g]
+                and self.model.body(int(self.model.geom_bodyid[g])).name.startswith(("left_", "right_"))]
+        stable_steps = 0
+        self.settle_info = None
+        for _ in range(100):
+            self.apply_action(hold, physics_steps=1)
+            mujoco.mj_forward(self.model, self.data)
+            floor_gap = min(float(mujoco.mj_geomDistance(
+                self.model, self.data, arm, floor, 2., None)) for arm in arms)
+            block_gap = minimum_protected_clearance(
+                self.model, self.data, [(arm, block) for arm in arms])[0]
+            if min(floor_gap, block_gap) < self.config.required_clearance_m:
+                self._reset_valid = False
+                raise ValueError("settling violates arm-floor/block clearance")
+            contact = any({int(c.geom1), int(c.geom2)} == {block, floor}
+                          for c in self.data.contact)
+            slow = np.max(np.abs(self.data.qvel[dof:dof + 6])) < 1e-4
+            stable_steps = stable_steps + 1 if contact and slow else 0
+        if stable_steps < 10:
+            self._reset_valid = False
+            raise ValueError("block did not settle: require 10 consecutive contact/low-velocity steps")
+        self.settle_info = {
+            "phase": "PREGRASP", "physics_steps": 100, "time_s": float(self.data.time),
+            "block_bottom_height_m": block_metrics(self.model, self.data)["block_bottom_height_m"],
+            "stable_steps": stable_steps, "velocity_threshold": 1e-4,
+            "arm_floor_clearance_m": floor_gap, "arm_block_clearance_m": block_gap,
+            "hardware_execution": False,
+        }
+        return dict(self.settle_info)
 
     def apply_action(
         self,
@@ -466,6 +700,8 @@ class ShoeTaskEnv:
     ) -> tuple[tuple[float, ...], CollisionAssessment]:
         """Guard and execute one simulator action for an explicit step count."""
 
+        if self.config.object_kind == "block" and not self._reset_valid:
+            raise ValueError("block physics requires a successfully validated reset")
         if len(action) != len(ACTION_NAMES):
             raise ValueError(
                 f"expected {len(ACTION_NAMES)} actions, received {len(action)}"
@@ -503,6 +739,11 @@ class ShoeTaskEnv:
         self.data.ctrl[:] = bounded
         for _ in range(physics_steps):
             mujoco.mj_step(self.model, self.data)
+            if self.config.object_kind == "block":
+                evidence = block_metrics(self.model, self.data, reference_bottom_m=(
+                    self.settle_info["block_bottom_height_m"] if self.settle_info else 0.0))
+                self._block_hold_s = (self._block_hold_s + float(self.model.opt.timestep)
+                                      if evidence["lift_supported"] else 0.0)
         return bounded, assessment
 
 
