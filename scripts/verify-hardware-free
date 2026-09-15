@@ -6,7 +6,7 @@ fail() {
   exit 1
 }
 
-for required_command in bash shellcheck bats python3; do
+for required_command in bash shellcheck bats python3 c++; do
   command -v "$required_command" >/dev/null 2>&1 ||
     fail "$required_command is required for hardware-free verification"
 done
@@ -16,6 +16,12 @@ script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)" ||
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" ||
   fail "verification script is not inside the DAPIER repository"
 cd -- "$repo_root" || fail "cannot enter repository root: $repo_root"
+
+tmp_dir="$(mktemp -d)" || fail "cannot create temporary verification directory"
+cleanup() {
+  rm -rf -- "$tmp_dir"
+}
+trap cleanup EXIT
 
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONHASHSEED=0
@@ -27,8 +33,92 @@ bash -n scripts/cowork scripts/verify-hardware-free
 printf '==> ShellCheck\n'
 shellcheck scripts/cowork scripts/verify-hardware-free
 
+# Keep cowork's path-resolution contract ahead of repository-specific checks.
+# Its fixture intentionally exits before Python or additional scripts run.
 printf '==> Cowork integration tests\n'
 bats test/cowork.bats test/cowork-verify-path.bats
+
+printf '==> Architecture boundary checks\n'
+scripts/verify-architecture-boundaries
+
+printf '==> Python research contract tests\n'
+python3 -m unittest discover -s 2ARM_ROBOT/research/test -v
+
+printf '==> Localization replay failure matrix\n'
+python3 scripts/replay-localization-scenarios \
+  --output "$tmp_dir/localization-failure-matrix.json"
+python3 - "$tmp_dir/localization-failure-matrix.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("hardware_execution") is not False:
+    raise SystemExit("localization replay unexpectedly reported hardware execution")
+required = {
+    "none",
+    "low_texture",
+    "motion_blur",
+    "occlusion",
+    "frame_drop",
+    "duplicate",
+    "out_of_order",
+    "timestamp_skew",
+    "wrong_tf",
+    "recently_lost",
+    "lost",
+    "relocalized",
+    "map_restart",
+}
+if set(report.get("reports", {})) != required:
+    raise SystemExit("localization replay failure matrix is incomplete")
+print("localization replay failure matrix passed")
+PY
+
+printf '==> C++ real-time contract smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_so101_core/include \
+  so101_ros2/dapier_so101_core/src/realtime_control.cpp \
+  so101_ros2/dapier_so101_core/test/realtime_control_contract_smoke.cpp \
+  -o "$tmp_dir/realtime-control-contract-smoke"
+"$tmp_dir/realtime-control-contract-smoke"
+
+printf '==> C++ localization contract smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_localization_core/include \
+  so101_ros2/dapier_localization_core/src/localization_runtime.cpp \
+  so101_ros2/dapier_localization_core/test/localization_runtime_contract_smoke.cpp \
+  -o "$tmp_dir/localization-contract-smoke"
+"$tmp_dir/localization-contract-smoke"
+
+printf '==> C++ localization recovery monitor smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_localization_core/include \
+  so101_ros2/dapier_localization_core/src/localization_runtime.cpp \
+  so101_ros2/dapier_localization_core/src/localization_monitor.cpp \
+  so101_ros2/dapier_localization_core/test/localization_monitor_smoke.cpp \
+  -o "$tmp_dir/localization-monitor-smoke"
+"$tmp_dir/localization-monitor-smoke"
+
+printf '==> ORB-SLAM3 state adapter smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_localization_core/include \
+  so101_ros2/dapier_localization_core/src/orbslam3_bridge.cpp \
+  so101_ros2/dapier_localization_core/test/orbslam3_bridge_smoke.cpp \
+  -o "$tmp_dir/orbslam3-bridge-smoke"
+"$tmp_dir/orbslam3-bridge-smoke"
+
+printf '==> C++ safety controller and mock sink smoke\n'
+c++ -std=c++17 -Wall -Wextra -Wpedantic \
+  -Iso101_ros2/dapier_safety_core/include \
+  -Iso101_ros2/dapier_so101_core/include \
+  -Iso101_ros2/dapier_localization_core/include \
+  so101_ros2/dapier_so101_core/src/realtime_control.cpp \
+  so101_ros2/dapier_localization_core/src/localization_runtime.cpp \
+  so101_ros2/dapier_safety_core/src/safety_controller.cpp \
+  so101_ros2/dapier_safety_core/test/safety_controller_smoke.cpp \
+  -o "$tmp_dir/safety-controller-smoke"
+"$tmp_dir/safety-controller-smoke"
 
 printf '==> dapier_sim_first unit tests\n'
 python3 -m unittest discover -s dapier_sim_first/test -v

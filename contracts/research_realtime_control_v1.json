@@ -1,0 +1,42 @@
+{
+  "schema_version": "dapier.research-realtime-control.v1",
+  "clock_domain": "source_monotonic_trace_plus_receiver_local_ttl",
+  "max_intent_ttl_ns": 250000000,
+  "max_arm_joint_count": 12,
+  "allowed_intent_kinds": [
+    "hold",
+    "arm_joint_position",
+    "base_twist"
+  ],
+  "research_may_authorize_hardware": false,
+  "units": {
+    "arm_joint_position": "radian",
+    "arm_joint_max_velocity": "radian_per_second",
+    "base_linear_x": "meter_per_second",
+    "base_angular_z": "radian_per_second",
+    "ttl": "nanosecond"
+  },
+  "ownership": {
+    "python_research": [
+      "perception",
+      "mapping",
+      "policy_inference",
+      "task_planning",
+      "simulation",
+      "dataset_generation",
+      "offline_evaluation",
+      "control_intent_creation"
+    ],
+    "cpp_realtime": [
+      "receiver_local_timestamp",
+      "schema_and_sequence_validation",
+      "command_arbitration",
+      "joint_and_base_limits",
+      "rate_and_acceleration_limits",
+      "watchdog",
+      "safe_stop",
+      "hardware_io",
+      "measured_state_publication"
+    ]
+  }
+}

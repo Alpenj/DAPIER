@@ -14,6 +14,7 @@ find_package(yaml-cpp REQUIRED)
 
 add_library(dapier_so101_core SHARED
   src/joint_model.cpp
+  src/realtime_control.cpp
 )
 target_include_directories(dapier_so101_core
   PUBLIC
@@ -38,6 +39,7 @@ ament_export_libraries(dapier_so101_core)
 ament_export_dependencies(yaml-cpp)
 
 if(BUILD_TESTING)
+  enable_testing()
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_joint_model test/test_joint_model.cpp)
   if(TARGET test_joint_model)
@@ -45,6 +47,16 @@ if(BUILD_TESTING)
     target_compile_definitions(
       test_joint_model PRIVATE TEST_CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/config")
   endif()
+
+  add_executable(
+    test_realtime_control_contract
+    test/realtime_control_contract_smoke.cpp
+  )
+  target_link_libraries(test_realtime_control_contract dapier_so101_core)
+  add_test(
+    NAME test_realtime_control_contract
+    COMMAND test_realtime_control_contract
+  )
 endif()
 
 ament_package()

@@ -1,0 +1,16 @@
+{
+  "schema_version": "dapier.localization-estimate.v1",
+  "source_timestamp_semantics": "trace_only_cross_host_not_compared",
+  "receiver_ttl_clock_domain": "monotonic",
+  "max_estimate_ttl_ns": 250000000,
+  "max_identifier_length": 128,
+  "allowed_tracking_states": [
+    "initializing",
+    "tracking",
+    "recently_lost",
+    "lost",
+    "relocalized"
+  ],
+  "localization_may_authorize_hardware": false,
+  "simulator_truth_allowed_for_runtime": false
+}
