@@ -41,6 +41,26 @@ These rules add to the repository root `AGENTS.md` for this directory.
   local env file and SSH key authentication.
 - Do not add a self-hosted runner or make CI discover attached hardware.
 
+## Engineering learning and portfolio record rules
+
+Before substantive 2ARM_ROBOT work, read
+`docs/ENGINEERING_LEARNING_RECORD_KO.md` and apply its record contract.
+
+- For non-obvious safety, geometry, frame/unit, transmission, numerical-tolerance, or
+  simulator/sensor boundary logic, leave a concise 1–3 line source comment explaining
+  **why the invariant exists**, not a line-by-line description of what the code does.
+- For meaningful debugging or design changes, preserve enough evidence to explain
+  `Problem → Evidence → Decision → Validation → Result → Lesson / Next`. Prefer a
+  regression fixture or negative test when the failure can recur.
+- Keep long debugging narratives out of source comments. Put reproducible commands,
+  tests, artifacts, limitations, and the first failed phase in Markdown or the PR body.
+  Private learning notes and screenshots belong in Notion, not in public repository URLs.
+- When the work is visually meaningful, provide a viewer/render/plot/progress path so the
+  user can watch the real execution. Distinguish kinematic preview from actual physics or
+  hardware execution in both the UI and report.
+- Final reports must distinguish SIM/MOCK/HW evidence, state the actual final phase, and
+  name unverified follow-up work. A passing regression is not task success.
+
 ## Code Review Rules
 
 - Flag new mobile-base or arm command paths that lack an explicit human gate,
