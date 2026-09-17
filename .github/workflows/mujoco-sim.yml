@@ -55,6 +55,20 @@ jobs:
           asset_path="$(scripts/setup-mujoco-sim --dest "$RUNNER_TEMP/so101-assets")"
           echo "DAPIER_SO101_MJCF=$asset_path" >> "$GITHUB_ENV"
 
+      - name: Record compiled model evidence
+        run: |
+          python3 2ARM_ROBOT/sim/mobile_dual_so101/model_reproducibility.py \
+            --repo "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/mujoco-artifacts/reproducibility"
+
+      - name: Upload compiled model evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mujoco-model-evidence-${{ env.DAPIER_SOURCE_HEAD_SHA }}
+          path: ${{ runner.temp }}/mujoco-artifacts/reproducibility
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Run headless tests and canonical renders
         env:
           MUJOCO_GL: egl
@@ -62,6 +76,7 @@ jobs:
         run: scripts/verify-mujoco-headless --artifact-dir "$RUNNER_TEMP/mujoco-artifacts"
 
       - name: Upload MuJoCo review artifacts
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mobile-dual-so101-mujoco-${{ env.DAPIER_SOURCE_HEAD_SHA }}
