@@ -61,6 +61,38 @@ Before substantive 2ARM_ROBOT work, read
 - Final reports must distinguish SIM/MOCK/HW evidence, state the actual final phase, and
   name unverified follow-up work. A passing regression is not task success.
 
+## End-of-turn GitHub and Notion sync
+
+Treat one **turn** as one substantive Codex work cycle that produces a validated change,
+new reproducible evidence, or a clearly identified next blocker. At the end of every such
+turn, perform the record/sync steps below unless doing so would destroy unrelated work or
+publish unvalidated/unsafe changes.
+
+- Update the existing engineering learning record with the current
+  `Problem → Evidence → Decision → Validation → Result → Lesson / Next`. Do not create a
+  duplicate log for the same investigation.
+- Run the smallest relevant regression set plus `git diff --check`; state anything not
+  executed and why.
+- Commit only this writer's validated, self-contained changes to the current named branch
+  and normal-push it. Preserve unrelated dirty work and never reset, clean, force-push, or
+  silently absorb another writer's changes.
+- Open or update a PR whose base is `main`. If the turn's changes are self-contained,
+  regression-clean, and safe to integrate, merge the PR into `main` and report the PR URL
+  and resulting main SHA. Overall task incompleteness is allowed when the merged change is
+  independently valid; clearly record the next blocker. Do not merge failing, ambiguous,
+  hardware-unsafe, or partially edited code merely to satisfy this rule.
+- After the GitHub result is known, update the private Notion DAPIER learning record with
+  the same concise engineering summary plus branch/PR/merge SHA, actual reached phase,
+  evidence, limitations, and next blocker. Never put private Notion URLs or IDs into the
+  public repository.
+- If the current Codex environment has no authenticated Notion write path, do not claim
+  that Notion was updated. Instead, finish the local/GitHub record and emit a compact
+  `NOTION_SYNC_PAYLOAD` containing the exact summary needed for ChatGPT or the user to
+  write into the existing DAPIER Notion record.
+- A turn is not considered fully handed off until the final report states the GitHub
+  status (`merged to main`, `PR open`, or `not safe to merge`) and the Notion status
+  (`updated` or `sync payload produced`).
+
 ## Code Review Rules
 
 - Flag new mobile-base or arm command paths that lack an explicit human gate,
