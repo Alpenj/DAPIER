@@ -693,8 +693,30 @@ Block은 최초 접촉 대비 약 [-0.651825, +0.110135, +0.003552] mm 이동했
 ## Validation
 새 post-contact fixture에서 unilateral→bilateral 물리 접촉, reference drift 0, full-state copy 미오염, 기존 pose/clearance/penetration gate를 검사했다.
 `python -m unittest test_post_contact_close test_close_reference test_measured_state test_manipulation_policy test_near_support`: 20 tests PASS / 266.030 s.
-기존 14.948 s live state와 원본 close-reference-live.json을 보존한 뒤, 새 후보의 실제 HOME부터 재실행을 시작했다. 이 시점 실제 후속 phase 결과는 아직 대기 중이며 아래에 확정 결과를 기록한다.
+기존 14.948 s live state와 원본 close-reference-live.json을 보존한 뒤 새 후보를 HOME부터 실제 재실행했다. 확정 결과는 아래와 같다.
 
 ## Result / Lesson / Next
 복사 A/B는 contact가 생겼다는 사실만으로 measured arm q를 hold target으로 다시 삼을 근거가 되지 않음을 보였다. 물리 접촉은 유지하면서 explicit reference를 고정하니 block이 반대 finger 쪽으로 이동해 양쪽 접촉을 만들었다. 이는 SIM center 조건의 증거이며 실물·다중 초기조건 검증이 아니다.
 실제 재실행은 동일 controller/scene으로 첫 새 blocker 또는 CENTER SUCCESS에서 종료한다. Hardware/OS30A/multi-seed/ACT는 실행하지 않는다.
+
+
+### 실제 Result
+HOME→RESET→SETTLE→SAFE_STAGE→ALIGN_HIGH→PREGRASP_NEAR→APPROACH_COARSE→APPROACH_FINE→CLOSE 16단계→GRASP_CONFIRM 실제 physics PASS. CLOSE 16개 모두 copied preflight/live full integration state가 bitwise 동일했다.
+CLOSE 끝 SIM 17.372 s: planned TCP 0.098970 mm / measured 0.154260 mm, finger force 0.097001/0.113431 N, general clearance 48.707895 mm.
+GRASP_CONFIRM 끝 SIM 17.472 s: measured TCP 0.154982 mm, 양 force 0.070893/0.072187 N 유지.
+LIFT_5MM 첫 physics step인 SIM 17.474 s에서 양 finger force가 0 N이 되어 기존 bilateral-contact gate가 거부했다. 실패 이유는 `bilateral finger contact lost during lift/hold`다. General clearance는 48.701514 mm였다. 5 mm lift 목표까지 아직 이동하지 않은 첫 step의 position error를 endpoint 실패로 해석하지 않는다.
+최종 phase=FAILURE at LIFT_5MM. CENTER SUCCESS=false, HOLD=0 s. Viewer를 실제 17.474 s 상태에서 정지·보존했다. 다음 물리 blocker는 CLOSE hold에서 LIFT로 전환할 때 command continuity와 contact response를 분리하는 것이다. 이번 턴에서는 이를 해결하려고 추가 threshold/control 변경을 하지 않았다.
+원본 증거: post-contact-diagnostic-v2.json/.log, post-contact-regression.log, post-contact-live.json/.log (기존 KIT local-validation). 실행 시작 provenance는 534c4a6 dirty이며 실행한 코드 내용은 후속 source commit 5fbb836에 보존했다. Model SHA ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368 유지.
+
+### GitHub handoff와 CI 제한
+Source 및 필요한 기존 검증 SIM 의존성을 commit 5fbb836으로 normal push하고 main 대상 PR https://github.com/Alpenj/DAPIER/pull/62 를 생성했다. 별도의 REAL_SCENE_GEOMETRY_AUDIT.md는 기존 untracked 상태로 유지했고 KIT raw 로그는 커밋하지 않았다.
+Hardware-free CI 2개는 PASS. MuJoCo CI https://github.com/Alpenj/DAPIER/actions/runs/35181539006 는 340 tests / 486.592 s, failures=3 / errors=15로 FAIL했다. 시간 초과가 아니다.
+- 일부 새 테스트의 standalone discovery import 경로 누락.
+- viewer 문자열 assertion이 이전 문구 NOT IK preview를 요구함.
+- CI compiled model SHA 228e9754026cbbe769296798938bc593ba8cc7ac67e18497b9be738ea034716c 와 로컬 fixture SHA 불일치.
+- manipulation compiled geometry identity gate도 CI에서 거부. 단순 플랫폼 차이인지 실제 geometry 차이인지는 미확정.
+- legacy sim_episode recording 3개가 protected clearance gate에서 거부.
+
+따라서 regression-clean 병합 조건을 충족하지 않으며 PR을 draft/open으로 보존한다. Hash를 CI 값으로 바꾸거나 geometry gate를 무력화하지 않는다. Main에 병합하지 않았다. 확인한 main SHA는 d75aa89b690d721065cc1ca55f0c170455fc14ba이며 이 턴의 merge SHA가 아니다.
+다음 통합 blocker는 CI/local compiled geometry 및 legacy fixture 재현성 조사다. Local 20 PASS와 실제 center progress를 전체 CI PASS로 확대하지 않는다. `git diff --check`는 PASS했다.
+Notion 동기화는 기존 비공개 DAPIER 학습 원장에 PR/미병합 상태, 실제 LIFT 첫 실패 및 이 CI 제한을 추가한다. 비공개 URL/ID는 저장소에 기록하지 않는다.
