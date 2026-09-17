@@ -932,6 +932,7 @@ def apply_control_as_pose(
     model: mujoco.MjModel,
     data: mujoco.MjData,
     action: Sequence[float] | None = None,
+    *, preserve_raw_pose: bool = False,
 ) -> None:
     """Kinematically apply simulator sliders; this never dispatches hardware."""
 
@@ -958,7 +959,8 @@ def apply_control_as_pose(
                     f"{ACTION_NAMES[actuator_id]}={target} is outside "
                     f"{float(lower)}..{float(upper)}"
                 )
-            target = min(float(upper), max(float(lower), target))
+            if not preserve_raw_pose:
+                target = min(float(upper), max(float(lower), target))
         data.ctrl[actuator_id] = target
         joint_id = int(model.actuator_trnid[actuator_id, 0])
         data.qpos[int(model.jnt_qposadr[joint_id])] = target

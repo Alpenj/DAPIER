@@ -1,0 +1,118 @@
+{
+  "scene_id": "integration_desk",
+  "grippers": "both",
+  "mujoco_version": "3.3.7",
+  "model_sha256": "ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368",
+  "qpos": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.2,
+    0.0,
+    0.02,
+    1.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "qvel": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "ctrl": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028
+  ],
+  "pair": [
+    48,
+    0
+  ],
+  "mesh_asset": "right_rotation_pitch_so101_v1",
+  "box_name": "table",
+  "native_distance_m": 0.0,
+  "original_final_distance_m": 0.0,
+  "expected_positive_separation_lower_bound_min_m": 0.01619999,
+  "independent_geometry": {
+    "axis_world": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "box_top_projection_m": 0.0,
+    "compiled_raw": {
+      "vertex_count": 8800,
+      "gap_m": 0.01619999809756375,
+      "lowest_vertex_world_m": [
+        0.0010826752086806474,
+        -0.14768736401823787,
+        0.01619999809756375
+      ],
+      "box_top_witness_world_m": [
+        0.0010826752086806612,
+        -0.14768736401823787,
+        0.0
+      ],
+      "projection_inside_box_top": true,
+      "exact_positive_distance_m": 0.01619999809756375
+    },
+    "compiled_hull": {
+      "vertex_count": 2370,
+      "gap_m": 0.01619999821424034,
+      "lowest_vertex_world_m": [
+        -0.0022924185663397087,
+        -0.14805234082344357,
+        0.01619999821424034
+      ],
+      "box_top_witness_world_m": [
+        -0.0022924185663397156,
+        -0.14805234082344357,
+        0.0
+      ],
+      "projection_inside_box_top": true,
+      "exact_positive_distance_m": 0.01619999821424034
+    }
+  }
+}

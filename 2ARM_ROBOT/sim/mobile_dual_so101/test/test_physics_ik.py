@@ -35,6 +35,21 @@ from physics_ik import (
 
 
 class PhysicsIKTest(unittest.TestCase):
+    def test_iteration_observer_preserves_result(self):
+        model, _ = build_model(arm_mount_height_m=TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M, mount_layout="tower")
+        data = mujoco.MjData(model)
+        apply_control_as_pose(model, data, HUMANOID_HOME_ACTION)
+        start = data.ctrl.copy()
+        target = data.site("left_gripperframe").xpos.copy() + [0.005, 0., 0.]
+        before = data.qpos.copy()
+        observed = []
+        plain = solve_bimanual_position_ik(model, start, {"left": target}, max_iterations=4)
+        traced = solve_bimanual_position_ik(model, start, {"left": target}, max_iterations=4,
+            iteration_observer=lambda i, q, p: observed.append((i, q.copy())))
+        self.assertEqual(plain, traced)
+        self.assertEqual(len(observed), traced.planning_qpos_writes)
+        np.testing.assert_array_equal(data.qpos, before)
+
     def test_runtime_same_arm_non_adjacent_contact_is_forbidden(self) -> None:
         model = mujoco.MjModel.from_xml_string(
             """

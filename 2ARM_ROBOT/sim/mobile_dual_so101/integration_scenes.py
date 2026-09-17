@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static desk integration draft. No physics, teacher or hardware execution."""
+"""Approved integration geometry shared by viewer and SIM task; no hardware."""
 import argparse
 import json
 import time
@@ -21,6 +21,20 @@ ARM_MOUNT_X = -.046 - REAR_HOLE_X
 DESK_EDGE_X = ARM_MOUNT_X - .02236471
 
 
+def preserve_desk_source_profile(spec, source):
+    """Reproduce the already-validated desk model, not hardware joint limits."""
+    import hashlib
+    profile = json.loads(Path(__file__).with_name("integration_desk_source.json").read_text())
+    source_hash = hashlib.sha256(Path(source).read_bytes()).hexdigest()
+    if source_hash not in profile["accepted_source_sha256"]:
+        raise ValueError("unverified integration desk arm source; re-audit required")
+    # Live desk used a local -110 degree shoulder-lift source; stock CI uses -100.
+    # Pin that existing SIM contract here, without changing stock/HW defaults.
+    for side in ("left", "right"):
+        spec.joint(side + "_shoulder_lift").range[:] = profile["shoulder_lift_joint_range_rad"]
+        spec.actuator(side + "_shoulder_lift").ctrlrange[:] = profile["shoulder_lift_ctrlrange_rad"]
+
+
 def add_camera_plate(spec, parent, installation_z=0, camera_x=.0226408355, desk=False):
     from camera_stand_cad import add_stand
     add_stand(spec, parent, installation_z, camera_x, desk=desk)
@@ -37,14 +51,21 @@ def add_camera_plate(spec, parent, installation_z=0, camera_x=.0226408355, desk=
                         quat=[0, 0, 0, 1], fovy=45.5)
 
 
-def build_scene(kind):
+def build_scene(kind, *, grippers="both"):
+    if kind not in ("desk", "mobile"):
+        raise ValueError("unknown integration scene")
+    from pgripper import replace_gripper, selected_sides
+    sides = selected_sides(grippers)
     source = resolve_so101_model()
     if kind == "desk":
+        # MuJoCo 3.3.7 can reuse stock collision hull polygons for now-visual meshes.
+        # Rebuild the approved desk representation independent of earlier compiles.
+        mujoco.mj_clearCache(mujoco.mj_getCache())
         from replay_recorded_episode import build_tabletop_spec
         profile = json.loads(Path(__file__).with_name("tabletop_replay.json").read_text())
         profile["camera_height_above_table_m"] = .38
         profile["table_front_edge_x_m"] = DESK_EDGE_X
-        spec = build_tabletop_spec(source, profile)
+        spec = build_tabletop_spec(source, profile, grippers=grippers)
         for side in ("left", "right"):
             spec.frame(side + "_mount").pos[0] = ARM_MOUNT_X
         spec.modelname = "desk_learning_OS30A_UNVERIFIED"
@@ -54,6 +75,7 @@ def build_scene(kind):
         spec.delete(spec.geom("camera_mast"))
         # Same stand-to-arm XY layout as mobile, per latest user photo decision.
         add_camera_plate(spec, spec.worldbody, desk=True)
+        preserve_desk_source_profile(spec, source)
         return spec
     spec = build_waffle_pi_spec()
     spec.modelname = "mobile_aluminum_USER_DIMENSIONS_UNVERIFIED"
@@ -75,6 +97,8 @@ def build_scene(kind):
         # Preserve source collision meshes, filters, joint limits and actuators.
         for mesh in arm.meshes:
             mesh.file = str((source.parent / arm.meshdir / mesh.file).resolve())
+        if side in sides:
+            replace_gripper(arm)
         frame = parent.add_frame(
             name=side + "_desk_mount", pos=[ARM_MOUNT_X, sign * ARM_OFFSET, PROFILE])
         spec.attach(arm, prefix=side + "_", frame=frame)
@@ -83,6 +107,118 @@ def build_scene(kind):
     add_camera_plate(spec, parent, PROFILE)
     return spec
 
+
+
+def task_env(kind="desk", *, grippers="both"):
+    """Bind approved geometry; never rebuild the old tower task."""
+    if kind != "desk":
+        raise ValueError("mobile has no target block/work surface; mobile-to-desk transform UNVERIFIED")
+    from shoe_task import ShoeTaskConfig, ShoeTaskEnv
+    model = build_scene(kind, grippers=grippers).compile()
+    config = ShoeTaskConfig(
+        scene_id="integration_desk", grippers=grippers, object_kind="block",
+        shoe_position_m=tuple(model.body("red_block").pos),
+        initial_home_pose=False, shoe_xy_range_m=0, shoe_yaw_range_rad=0)
+    env = ShoeTaskEnv(config, model=model)
+    env.data.ctrl[:] = actuator_targets_from_qpos(model, env.data.qpos)
+    mujoco.mj_forward(model, env.data)
+    return env
+
+
+def portable_model_sha256(model):
+    """Hash compiled content including physics/options; exclude only asset path storage."""
+    import hashlib
+    digest = hashlib.sha256(("dapier-compiled-content-v1:" + mujoco.__version__).encode())
+    path_fields = {"paths", "npaths", "nbuffer", "mesh_pathadr", "tex_pathadr", "hfield_pathadr", "skin_pathadr"}
+
+    def emit(value):
+        digest.update(len(value).to_bytes(8, "little") + value)
+
+    def visit(obj, prefix=""):
+        for name in sorted(dir(obj)):
+            if name.startswith("_") or (not prefix and name in path_fields):
+                continue
+            value = getattr(obj, name)
+            if callable(value):
+                continue
+            key = prefix + name
+            emit(key.encode())
+            emit(type(value).__name__.encode())
+            if isinstance(value, np.ndarray):
+                emit(value.dtype.str.encode()); emit(str(value.shape).encode()); emit(value.tobytes())
+            elif isinstance(value, bytes):
+                emit(value)
+            elif isinstance(value, (str, int, float)):
+                emit(repr(value).encode())
+            elif key in {"opt", "stat", "vis", "vis.global_", "vis.headlight", "vis.map", "vis.quality", "vis.rgba", "vis.scale"}:
+                visit(value, key + ".")
+            else:
+                raise TypeError("unhashed compiled model field: " + key)
+            digest.update(b"\0")
+
+    # MJB includes absolute paths and their allocation size (nbuffer).
+    # Mesh/texture data and all public model dimensions/parameters
+    # remain in this fingerprint; raw MJB hash is retained separately as evidence.
+    visit(model)
+    return digest.hexdigest()
+
+
+def same_audited_desk_model(actual, reference):
+    """Compare identities without relabeling the observed compiled model hash."""
+    if actual == reference:
+        return True
+    profile=json.loads(Path(__file__).with_name("integration_desk_source.json").read_text())
+    audited=profile["audited_numeric_equivalence"]["model_sha256"]
+    return actual in audited and reference in audited
+
+
+def task_provenance(env):
+    import hashlib
+    import subprocess
+    import tempfile
+    root = Path(__file__).resolve().parents[3]
+    with tempfile.TemporaryDirectory() as tmp:
+        binary = Path(tmp) / "scene.mjb"
+        mujoco.mj_saveModel(env.model, str(binary), None)
+        model_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
+    source = resolve_so101_model()
+    arm = mujoco.MjSpec.from_file(str(source))
+    assets = {source}
+    assets.update((source.parent / arm.meshdir / mesh.file).resolve()
+                  for mesh in arm.meshes if mesh.file)
+    assets.update(Path(__file__).with_name("assets").joinpath("camera_stand").glob("*.3mf"))
+    if env.config.grippers != "stock":
+        from pgripper import ASSETS
+        assets.update(p for p in ASSETS.rglob("*") if p.is_file())
+    sources = ("pgripper.py", "integration_scenes.py", "camera_stand_cad.py", "tabletop_replay.json",
+               "replay_recorded_episode.py", "shoe_task.py", "center_block_teacher.py",
+               "collision_guard.py", "collision_diagnostics.py", "integration_desk_near_support.json", "physics_ik.py", "integration_desk_source.json")
+    digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+    return dict(
+        scene_id=env.config.scene_id, builder="integration_scenes.build_scene(desk)",
+        git_sha=subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip(),
+        source_dirty=bool(subprocess.check_output(
+            ["git", "-C", str(root), "diff", "--", "2ARM_ROBOT/sim/mobile_dual_so101"])),
+        model_sha256=model_hash,
+        portable_model_sha256=portable_model_sha256(env.model),
+        source_profile="integration-desk-existing-local-source-v1",
+        asset_sha256={p.name: digest(p) for p in sorted(assets)},
+        source_sha256={name: digest(Path(__file__).with_name(name)) for name in sources},
+        mujoco_version=mujoco.__version__,
+        gripper_revision=("NORMA PGripper both; pinned CAD + RGB camera stand"
+                          if env.config.grippers == "both" else "SO101 stock"),
+        gripper_variant=env.config.grippers,
+        wrist_rgb_camera_stand=("NORMA CameraMount_square_27mm STL + RGB optics proxy"
+                                if env.config.grippers != "stock" else "stock wrist camera"),
+        camera_extrinsics_physically_verified=False,
+        target_body="red_block", target_geom="red_block_geom",
+        support_geom="table", gripper_site="left_gripperframe", ik_site="left_cube_grasp",
+        observation_source="SIM truth for offline teacher validation only; not perception/runtime",
+        actuator_mapping=[dict(actuator=env.model.actuator(i).name,
+            joint=env.model.joint(int(env.model.actuator_trnid[i, 0])).name,
+            qpos_address=int(env.model.jnt_qposadr[int(env.model.actuator_trnid[i, 0])]))
+            for i in range(env.model.nu)],
+    )
 
 def inspect(model, data, kind):
     mujoco.mj_forward(model, data)
@@ -134,18 +270,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scene", choices=("mobile", "desk"), required=True)
     parser.add_argument("--viewer", action="store_true")
+    parser.add_argument("--grippers", choices=("stock","both"), default="both")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--render", type=Path)
     args = parser.parse_args()
-    model = build_scene(args.scene).compile()
+    model = build_scene(args.scene, grippers=args.grippers).compile()
     data = mujoco.MjData(model)
     data.ctrl[:] = actuator_targets_from_qpos(model, data.qpos)
     report = inspect(model, data, args.scene)
+    report["grippers"] = args.grippers
     report["frame"] = "desk top z=0" if args.scene == "desk" else "TurtleBot floor frame; CAD centre reused"
     if args.scene == "desk":
         report["layout_m"] = {"historical_desk_arm_offset": .15, "block_size": .04}
         report["layout_provenance"] = "Same relative arm/stand XY layout as mobile; supersedes camera20mm ahead of base requirement"
-        report["note"] += " Existing tabletop finger pad proxies retained."
+        report["note"] += (" Existing NORMA PGripper + wrist RGB stand retained."
+                           if args.grippers == "both" else " Stock tabletop finger pad proxies retained.")
     assert model.nu == 12 and data.time == 0 and np.all(data.qvel == 0)
     assert report["ctrl_qpos_max_error"] == 0
     assert np.isclose(FRAME_DEPTH - 2 * PROFILE, .072)

@@ -11,7 +11,7 @@ from mobile_dual_so101 import actuator_targets_from_qpos
 
 class CenterTeacherTest(unittest.TestCase):
     def test_failed_pregrasp_uses_settled_input_and_never_closes_or_lifts(self):
-        teacher=CenterBlockTeacher()
+        teacher=CenterBlockTeacher(scene="legacy_tower")
         with patch.object(teacher,"solve",side_effect=ValueError("test unreachable pregrasp")):
             report=teacher.run()
         self.assertFalse(report["success"])
@@ -27,7 +27,7 @@ class CenterTeacherTest(unittest.TestCase):
         self.assertEqual(report["maximum_lift_above_settled_bottom_m"],0)
 
     def test_full_path_rejection_prevents_physics(self):
-        teacher=CenterBlockTeacher()
+        teacher=CenterBlockTeacher(scene="legacy_tower")
         teacher.env.reset(seed=0)
         target=actuator_targets_from_qpos(teacher.m,teacher.d.qpos)
         before=teacher.d.qpos.copy()

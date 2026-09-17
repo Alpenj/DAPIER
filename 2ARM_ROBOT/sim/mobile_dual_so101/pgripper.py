@@ -176,6 +176,8 @@ def replace_gripper(arm):
     first, second = [(p.min(0) + p.max(0)) / 2 for p in pads]
     first[0], second[0] = pads[0][:, 0].max(), pads[1][:, 0].min()
     midpoint = (first + second) / 2
+    # Keep the CAD pinch midpoint, not the stock jaw offset. In this frame
+    # site +X is gripper-body -Z (approach), site +Z is body +X (jaw travel).
     arm.site("gripperframe").pos = midpoint
     root.add_site(name="cube_grasp", pos=midpoint, quat=arm.site("gripperframe").quat,
                   size=[.002] * 3, group=3)

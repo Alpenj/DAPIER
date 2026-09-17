@@ -51,6 +51,32 @@ RESTORED_BASE_CAMERA_CLEARANCE_M = 0.10
 
 
 class CollisionGuardTest(unittest.TestCase):
+    def test_infinite_plane_signed_distance_ignores_lateral_offset(self) -> None:
+        model = mujoco.MjModel.from_xml_string("""
+          <mujoco><worldbody>
+            <geom name="plane" type="plane" size="0 0 .1"/>
+            <body pos="10 20 .11"><freejoint/>
+              <geom name="box" type="box" size=".1 .1 .1" mass="1"/>
+            </body>
+          </worldbody></mujoco>""")
+        data = mujoco.MjData(model)
+        for z, expected in ((.11, .01), (.10, 0.), (.09, -.01)):
+            data.qpos[2] = z
+            mujoco.mj_forward(model, data)
+            for pair in ((0, 1), (1, 0)):
+                with self.subTest(z=z, pair=pair):
+                    native = mujoco.mj_geomDistance(model, data, *pair, 2., None)
+                    self.assertAlmostEqual(native, expected, places=12)
+                    details = []
+                    minimum_protected_clearance(model, data, [pair], diagnostics=details)
+                    self.assertFalse(details[0]["bounding_sphere_eligible"])
+                    self.assertIsNone(details[0]["bounding_sphere_lower_bound_m"])
+                    self.assertFalse(details[0]["mesh_certificate_eligible"])
+                    self.assertAlmostEqual(details[0]["final_distance_m"], expected, places=12)
+                    self.assertAlmostEqual(
+                        minimum_protected_clearance(model, data, [pair])[0],
+                        native, places=12)
+
     def test_saved_false_zero_poses(self) -> None:
         from shoe_task import ShoeTaskEnv
         fixture = json.loads((Path(__file__).parent / "fixtures/mesh_false_zero.json").read_text())
@@ -141,17 +167,23 @@ class CollisionGuardTest(unittest.TestCase):
         self.assertEqual(result.minimum_clearance_m, 0.0)
         self.assertIn("same-arm collision", result.reason)
 
-    def test_separated_wrist_and_jaw_after_physics_are_not_contact(self) -> None:
-        from shoe_task import ShoeTaskEnv
+    def test_saved_postphysics_wrist_gap_does_not_hide_invalid_floor_pose(self) -> None:
+        from shoe_task import ShoeTaskEnv, UnsafeActionError
         from mobile_dual_so101 import actuator_targets_from_qpos
 
         env = ShoeTaskEnv()
         env.reset(seed=100)
         hold = actuator_targets_from_qpos(env.model, env.data.qpos)
-        env.apply_action(hold, physics_steps=34)
-        measured = actuator_targets_from_qpos(env.model, env.data.qpos)
+        # This historical zero pose is not a valid physics start. Preserve the
+        # original postphysics evidence without bypassing the repaired plane gate.
+        with self.assertRaises(UnsafeActionError):
+            env.apply_action(hold, physics_steps=34)
+        self.assertEqual(env.data.time, 0)
+        fixture = json.loads((Path(__file__).parent / "fixtures/mesh_false_zero.json").read_text())
         posed = mujoco.MjData(env.model)
-        apply_control_as_pose(env.model, posed, measured)
+        posed.qpos[:] = next(p["qpos"] for p in fixture["poses"] if abs(p["time_s"] - .068) < 1e-12)
+        mujoco.mj_forward(env.model, posed)
+        measured = actuator_targets_from_qpos(env.model, posed.qpos)
         geoms = []
         for mesh_name in ("left_sts3215_03a_no_horn_v1", "left_moving_jaw_so101_v1"):
             mesh_id = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_MESH, mesh_name)
@@ -174,7 +206,7 @@ class CollisionGuardTest(unittest.TestCase):
         self.assertGreater(separation, 0.011)
         clearance, _, _ = minimum_protected_clearance(env.model, posed, [tuple(geoms)])
         self.assertGreater(clearance, 0.0)
-        self.assertTrue(check_bimanual_path(env.model, measured, hold).safe)
+        self.assertFalse(check_bimanual_path(env.model, measured, hold).safe)
 
     def test_mesh_bound_does_not_erase_touching_or_penetration(self) -> None:
         model = mujoco.MjModel.from_xml_string("""

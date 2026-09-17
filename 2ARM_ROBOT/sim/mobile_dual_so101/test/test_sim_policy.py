@@ -16,7 +16,7 @@ except ModuleNotFoundError as error:
     ) from error
 
 from mobile_dual_so101 import actuator_targets_from_qpos
-from shoe_task import ShoeTaskEnv
+from shoe_task import ShoeTaskEnv, ShoeTaskConfig
 from sim_policy import (
     ActionChunkExecutor,
     HoldChunkPolicy,
@@ -95,7 +95,7 @@ class SimPolicyTest(unittest.TestCase):
         self.assertEqual(queued.policy_queries, 4)
 
     def test_navigation_resets_stale_arm_chunk_and_requires_settled_base(self) -> None:
-        env = ShoeTaskEnv()
+        env = ShoeTaskEnv(ShoeTaskConfig(initial_home_pose=True))
         observation, _ = env.reset(seed=0)
         current = actuator_targets_from_qpos(env.model, env.data.qpos)
         hold = actuator_targets_to_policy_action(

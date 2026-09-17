@@ -54,7 +54,9 @@ UNSAFE_BIMANUAL_TARGET = (
 
 class ShoeTaskTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.env = ShoeTaskEnv()
+        # Positive motion tests need a valid pose after repairing plane distance.
+        # The legacy zero-pose rejection is covered by collision/reset tests.
+        self.env = ShoeTaskEnv(ShoeTaskConfig(initial_home_pose=True))
         self.observation, self.reset_info = self.env.reset(seed=7)
 
     def test_model_contains_one_free_shoe(self) -> None:
@@ -149,7 +151,7 @@ class ShoeTaskTest(unittest.TestCase):
         self.env.data.qpos[int(self.env.model.jnt_qposadr[joint_id])] = math.nan
         before_time = float(self.env.data.time)
 
-        with self.assertRaisesRegex(ValueError, "measured actuator qpos"):
+        with self.assertRaisesRegex(ValueError, "measured joint state must be finite"):
             self.env.apply_action(HUMANOID_HOME_ACTION, physics_steps=1)
 
         self.assertEqual(float(self.env.data.time), before_time)
@@ -286,7 +288,7 @@ class ShoeTaskTest(unittest.TestCase):
             ShoeTaskEnv(ShoeTaskConfig(mount_layout="unknown"))
 
     def test_headless_hold_completes_100_steps(self) -> None:
-        result = validate_shoe_task(smoke_steps=100)
+        result = validate_shoe_task(smoke_steps=100, config=ShoeTaskConfig(initial_home_pose=True))
         self.assertTrue(result["finite_observation"])
         self.assertFalse(result["terminated"])
         self.assertFalse(result["hardware_execution"])

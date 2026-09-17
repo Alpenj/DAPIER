@@ -39,7 +39,7 @@ class ParallelShoeRolloutTest(unittest.TestCase):
                 episodes=2,
                 steps_per_episode=5,
             ),
-            shoe_config=ShoeTaskConfig(),  # Preserve the legacy rollout regression.
+            shoe_config=ShoeTaskConfig(initial_home_pose=True),  # Valid legacy tower pose.
         )
         self.assertEqual(report["workers_used"], 2)
         self.assertEqual(len(report["worker_pids"]), 2)
@@ -65,7 +65,7 @@ class ParallelShoeRolloutTest(unittest.TestCase):
                 chunk_size=4,
                 n_action_steps=2,
             ),
-            shoe_config=ShoeTaskConfig(),
+            shoe_config=ShoeTaskConfig(initial_home_pose=True),
         )
         self.assertEqual(report["transitions"], 5)
         self.assertEqual(report["unsafe_rejections"], 0)

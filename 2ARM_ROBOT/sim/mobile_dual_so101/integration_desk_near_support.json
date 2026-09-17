@@ -1,0 +1,20 @@
+{
+  "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+  "classification": "STRUCTURAL NEAR-SUPPORT",
+  "description": "Exact two pairs only; numerical tolerance is not a physical safety margin.",
+  "numerical_regression_tolerance_m": 1e-08,
+  "pairs": {
+    "left": {
+      "mesh_asset": "left_rotation_pitch_so101_v1",
+      "box_geom": "table",
+      "compiled_geometry_sha256": "f0d134041603dff989ab2b63904d5e46c03fa5d0d4dab744f3f8e308fe7e4376",
+      "nominal_clearance_m": 0.016199998097549538
+    },
+    "right": {
+      "mesh_asset": "right_rotation_pitch_so101_v1",
+      "box_geom": "table",
+      "compiled_geometry_sha256": "c6ae1f8db08eea964a4c480c9de30cdf9db385e2f9d2cbe01d6ed557801ac034",
+      "nominal_clearance_m": 0.016199998097549538
+    }
+  }
+}
