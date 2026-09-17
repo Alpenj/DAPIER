@@ -21,6 +21,20 @@ ARM_MOUNT_X = -.046 - REAR_HOLE_X
 DESK_EDGE_X = ARM_MOUNT_X - .02236471
 
 
+def preserve_desk_source_profile(spec, source):
+    """Reproduce the already-validated desk model, not hardware joint limits."""
+    import hashlib
+    profile = json.loads(Path(__file__).with_name("integration_desk_source.json").read_text())
+    source_hash = hashlib.sha256(Path(source).read_bytes()).hexdigest()
+    if source_hash not in profile["accepted_source_sha256"]:
+        raise ValueError("unverified integration desk arm source; re-audit required")
+    # Live desk used a local -110 degree shoulder-lift source; stock CI uses -100.
+    # Pin that existing SIM contract here, without changing stock/HW defaults.
+    for side in ("left", "right"):
+        spec.joint(side + "_shoulder_lift").range[:] = profile["shoulder_lift_joint_range_rad"]
+        spec.actuator(side + "_shoulder_lift").ctrlrange[:] = profile["shoulder_lift_ctrlrange_rad"]
+
+
 def add_camera_plate(spec, parent, installation_z=0, camera_x=.0226408355, desk=False):
     from camera_stand_cad import add_stand
     add_stand(spec, parent, installation_z, camera_x, desk=desk)
@@ -44,6 +58,9 @@ def build_scene(kind, *, grippers="both"):
     sides = selected_sides(grippers)
     source = resolve_so101_model()
     if kind == "desk":
+        # MuJoCo 3.3.7 can reuse stock collision hull polygons for now-visual meshes.
+        # Rebuild the approved desk representation independent of earlier compiles.
+        mujoco.mj_clearCache(mujoco.mj_getCache())
         from replay_recorded_episode import build_tabletop_spec
         profile = json.loads(Path(__file__).with_name("tabletop_replay.json").read_text())
         profile["camera_height_above_table_m"] = .38
@@ -58,6 +75,7 @@ def build_scene(kind, *, grippers="both"):
         spec.delete(spec.geom("camera_mast"))
         # Same stand-to-arm XY layout as mobile, per latest user photo decision.
         add_camera_plate(spec, spec.worldbody, desk=True)
+        preserve_desk_source_profile(spec, source)
         return spec
     spec = build_waffle_pi_spec()
     spec.modelname = "mobile_aluminum_USER_DIMENSIONS_UNVERIFIED"
@@ -107,6 +125,44 @@ def task_env(kind="desk", *, grippers="both"):
     return env
 
 
+def portable_model_sha256(model):
+    """Hash compiled content including physics/options; exclude only asset path storage."""
+    import hashlib
+    digest = hashlib.sha256(("dapier-compiled-content-v1:" + mujoco.__version__).encode())
+    path_fields = {"paths", "npaths", "nbuffer", "mesh_pathadr", "tex_pathadr", "hfield_pathadr", "skin_pathadr"}
+
+    def emit(value):
+        digest.update(len(value).to_bytes(8, "little") + value)
+
+    def visit(obj, prefix=""):
+        for name in sorted(dir(obj)):
+            if name.startswith("_") or (not prefix and name in path_fields):
+                continue
+            value = getattr(obj, name)
+            if callable(value):
+                continue
+            key = prefix + name
+            emit(key.encode())
+            emit(type(value).__name__.encode())
+            if isinstance(value, np.ndarray):
+                emit(value.dtype.str.encode()); emit(str(value.shape).encode()); emit(value.tobytes())
+            elif isinstance(value, bytes):
+                emit(value)
+            elif isinstance(value, (str, int, float)):
+                emit(repr(value).encode())
+            elif key in {"opt", "stat", "vis", "vis.global_", "vis.headlight", "vis.map", "vis.quality", "vis.rgba", "vis.scale"}:
+                visit(value, key + ".")
+            else:
+                raise TypeError("unhashed compiled model field: " + key)
+            digest.update(b"\0")
+
+    # MJB includes absolute paths and their allocation size (nbuffer).
+    # Mesh/texture data and all public model dimensions/parameters
+    # remain in this fingerprint; raw MJB hash is retained separately as evidence.
+    visit(model)
+    return digest.hexdigest()
+
+
 def task_provenance(env):
     import hashlib
     import subprocess
@@ -127,7 +183,7 @@ def task_provenance(env):
         assets.update(p for p in ASSETS.rglob("*") if p.is_file())
     sources = ("pgripper.py", "integration_scenes.py", "camera_stand_cad.py", "tabletop_replay.json",
                "replay_recorded_episode.py", "shoe_task.py", "center_block_teacher.py",
-               "collision_guard.py", "collision_diagnostics.py", "integration_desk_near_support.json", "physics_ik.py")
+               "collision_guard.py", "collision_diagnostics.py", "integration_desk_near_support.json", "physics_ik.py", "integration_desk_source.json")
     digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
     return dict(
         scene_id=env.config.scene_id, builder="integration_scenes.build_scene(desk)",
@@ -135,6 +191,8 @@ def task_provenance(env):
         source_dirty=bool(subprocess.check_output(
             ["git", "-C", str(root), "diff", "--", "2ARM_ROBOT/sim/mobile_dual_so101"])),
         model_sha256=model_hash,
+        portable_model_sha256=portable_model_sha256(env.model),
+        source_profile="integration-desk-existing-local-source-v1",
         asset_sha256={p.name: digest(p) for p in sorted(assets)},
         source_sha256={name: digest(Path(__file__).with_name(name)) for name in sources},
         mujoco_version=mujoco.__version__,

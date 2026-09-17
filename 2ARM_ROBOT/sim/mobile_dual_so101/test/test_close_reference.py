@@ -66,7 +66,7 @@ class CloseReferenceTest(unittest.TestCase):
         from dynamic_preflight import full_state_preflight
         f=json.loads((Path(__file__).parent/"fixtures/close_physics.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        self.assertEqual(t.report["provenance"]["model_sha256"],f["model_sha256"])
+        self.assertEqual(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"])
         t.env.settle_info=f["settle"];t.gripper_hold_reference=(f["task_open"]["reference_rad"],)*2
         state=np.array(f["initial_state"]);kind=mujoco.mjtState.mjSTATE_INTEGRATION
         mujoco.mj_setState(t.m,t.d,state,kind);mujoco.mj_forward(t.m,t.d);mujoco.mj_setState(t.m,t.d,state,kind)

@@ -1,5 +1,7 @@
 import json,math,copy
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import unittest
 import numpy as np
 import mujoco
@@ -11,7 +13,7 @@ class ApproachTrackingTest(unittest.TestCase):
     def test_observed_reserve_and_copied_endpoint(self):
         f=json.loads((Path(__file__).parent/"fixtures/approach_tracking.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        self.assertEqual(t.report["provenance"]["model_sha256"],f["model_sha256"])
+        self.assertEqual(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"])
         t.gripper_hold_reference=(f["task_open"]["reference_rad"],)*2
         t.env.settle_info=f["settle"];t.closing=np.array([1.,0,0])
         state=np.array(f["initial_state"]);kind=mujoco.mjtState.mjSTATE_INTEGRATION

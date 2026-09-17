@@ -21,7 +21,7 @@ import mujoco
 from mobile_dual_so101 import actuator_targets_from_qpos
 from mission_modules.camera import CameraRole
 from mujoco_mission_adapters import MuJoCoMultiCameraAdapter, build_mobile_shoe_mission_model
-from shoe_task import ShoeTaskEnv, ground_truth_observation, task_metrics
+from shoe_task import ShoeTaskEnv, ShoeTaskConfig, ground_truth_observation, task_metrics
 from sim_policy import actuator_targets_to_policy_action
 
 
@@ -213,7 +213,10 @@ def _record_sim_episode(
     action_source: ActionSource | None,
 ) -> Path:
 
-    env = ShoeTaskEnv(model=build_mobile_shoe_mission_model())
+    # Stock zero pose penetrates the floor: use valid HOME for synthetic recording.
+    # Keep the plane collision gate and the global default unchanged.
+    task_config = ShoeTaskConfig(initial_home_pose=True)
+    env = ShoeTaskEnv(task_config, model=build_mobile_shoe_mission_model(task_config))
     observation, reset_info = env.reset(seed=config.seed)
     if reset_info.get("hardware_execution") is not False:
         raise RuntimeError("simulation episode unexpectedly reported hardware execution")

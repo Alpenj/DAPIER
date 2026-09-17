@@ -720,3 +720,143 @@ Hardware-free CI 2개는 PASS. MuJoCo CI https://github.com/Alpenj/DAPIER/action
 따라서 regression-clean 병합 조건을 충족하지 않으며 PR을 draft/open으로 보존한다. Hash를 CI 값으로 바꾸거나 geometry gate를 무력화하지 않는다. Main에 병합하지 않았다. 확인한 main SHA는 d75aa89b690d721065cc1ca55f0c170455fc14ba이며 이 턴의 merge SHA가 아니다.
 다음 통합 blocker는 CI/local compiled geometry 및 legacy fixture 재현성 조사다. Local 20 PASS와 실제 center progress를 전체 CI PASS로 확대하지 않는다. `git diff --check`는 PASS했다.
 Notion 동기화는 기존 비공개 DAPIER 학습 원장에 PR/미병합 상태, 실제 LIFT 첫 실패 및 이 CI 제한을 추가한다. 비공개 URL/ID는 저장소에 기록하지 않는다.
+
+## 2026-09-17 — LIFT transition copied diagnostic / PR #62 CI triage
+
+record_id: DAPIER-2026-09-17-lift-transition-ci
+
+### Problem
+
+나는 실제 GRASP_CONFIRM PASS 뒤 LIFT_5MM 첫 step에서 양 finger force가 0이 된
+17.474 s failure state를 보존하고, copied full-state 진단과 전체 CI 18건을 분리해 조사했다.
+ACTIVE_WORKTREE는 기존 pro/dual-so101-codex-20260907, 시작 HEAD ffa3f2ce다.
+별도 REAL_SCENE_GEOMETRY_AUDIT.md는 수정/추적하지 않았다.
+
+### Evidence
+
+**SIM copied diagnostic / NOT LIVE TASK SUCCESS.** 실제 CLOSE 마지막 integration state에서
+50-step GRASP_CONFIRM을 복원했다. 실제 확인 종료 qpos와 첫 LIFT qpos 차이는 모두 0이다.
+A=마지막 CLOSE, B=확인 종료, C=첫 LIFT 직후의 full integration state를 보존했다.
+50 step / 0.100 s 비교 결과:
+
+| case | 최초 contact loss | 50-step 결과 | 첫 command 최대 delta |
+| --- | --- | --- | --- |
+| terminal command HOLD | 없음 | bilateral 유지 | 0 rad |
+| 기존 LIFT | 1 | 50 step 모두 bilateral gate 미충족 | 0.000578399857 rad |
+| 직전 command에서 연속 시작한 진단 LIFT | 36 | 11 step bilateral gate 미충족 | 1.58098e-10 rad |
+
+CLOSE terminal과 GRASP_CONFIRM command는 정확히 같다. LIFT의 gripper command도
+2.043112220718924 rad로 변하지 않았다. 팔은 measured q에서 trajectory를 시작하므로
+첫 command가 직전 reference와 달라졌다. 새 IK target으로 즉시 점프하는 방식은 아니지만
+trajectory 시작 reference에 불연속이 있다. Diagnostic 연속화 후보는 이 즉시 손실만 제거했다.
+
+확인 종료 jaw normal force는 0.070893238 / 0.072187220 N, table 접촉 4개와
+normal force 0.195740710 N이다. block center - TCP =
+[-0.644197, 0.055773, 0.145552] mm, block yaw=-0.014286132 rad.
+따라서 양쪽 positive force만으로 table 없이 운반할 안정 grasp가 입증된 것은 아니다.
+HOLD 마지막 force도 0.047872245 / 0.047301963 N까지 감소했다.
+
+매 step에 command/previous command/raw measured qpos/qvel/FK, contact frame의
+normal·tangential wrench, contact 위치·normal·depth, block pose·velocity·table contact,
+lift와 gate 결과를 저장한다. 실행 순서는 ctrl 설정 → mj_step → integrated-state
+mj_forward → geometry/state gate → contact 관측 → teacher contact gate다.
+현재 gate가 이전 state의 force를 읽는 D의 증거는 없다.
+[mj_forward / mj_contactForce 공식 API](https://mujoco.readthedocs.io/en/3.3.7/APIreference/APIfunctions.html)
+의 계산 시점 및 contact-frame force 의미와 대조했다.
+
+**CI 340 tests / 3 failures / 15 errors**:
+[원본 run](https://github.com/Alpenj/DAPIER/actions/runs/35181539006).
+각 traceback의 마지막 프로젝트 지점과 분류는 다음과 같다.
+
+| test | kind / source | 분류·원인 |
+| --- | --- | --- |
+| test_approach_tracking (import) | error, test_approach_tracking.py:6 | B: standalone discover parent import 누락 |
+| test_axis_direction (import) | error, test_axis_direction.py:4 | B: 위와 같음 |
+| test_box_box_certificate (import) | error, test_box_box_certificate.py:7 | B: 위와 같음 |
+| CloseReferenceTest.test_close_path_uses_raw_state_trajectory_uses_reference | error, collision_guard.py:604 | C: ancestor joint range identity 불일치 |
+| DynamicPreflightTest.setUpClass | error, test_dynamic_preflight.py:15 | C: 원본 MJB hash 불일치 |
+| ManipulationPolicyTest.test_finger_contact_phase_and_depth | error, collision_guard.py:604 | C: geometry identity 거부 |
+| ManipulationPolicyTest.test_geometry_and_positive_near | error, collision_guard.py:604 | C: 위와 같음 |
+| ManipulationPolicyTest.test_saved_tilted_approach_full_segment | error, collision_guard.py:604 | C: 위와 같음 |
+| ManipulationPolicyTest.test_support_and_housing_contact_rejected | error, collision_guard.py:604 | C: 위와 같음 |
+| ManipulationPolicyTest.test_unrelated_arm_table_still_requires_30mm_in_approach | error, collision_guard.py:604 | C: 위와 같음 |
+| ManipulationPolicyTest.test_wrong_phase_and_general_pair | error, collision_guard.py:604 | C: 위와 같음 |
+| StagingChainTest.setUpClass | error, collision_guard.py:604 | C: 위와 같음 |
+| SimEpisodeTest.test_interrupted_recording_can_retry_same_output | error, shoe_task.py:830 | E/A: valid plane gate가 기존 zero-pose 침범을 노출 |
+| SimEpisodeTest.test_records_four_synchronized_cameras_and_12_axis_executed_action | error, shoe_task.py:830 | E/A: 위와 같음 |
+| SimEpisodeTest.test_terminal_success_without_prior_carry_is_not_accepted | error, shoe_task.py:830 | E/A: 위와 같음 |
+| CloseReferenceTest.test_full_state_preflight_matches_live_without_fake_contact | failure, test_close_reference.py:69 | C: 원본 MJB hash 불일치 |
+| IntegrationTaskTest.test_viewer_observes_same_physics_state_as_headless | failure, test_integration_task.py:55 | D: 옛 viewer 문자열 assertion |
+| PostContactCloseTest.test_fixed_reference_forms_physical_bilateral_contact | failure, test_post_contact_close.py:13 | C: 원본 MJB hash 불일치 |
+
+main d75aa89의 별도 clean /tmp worktree에서 같은 interpreter와 pinned asset으로
+test_sim_episode.py 6개 PASS를 확인했다. 따라서 recorder 3건을 기존 main failure(F)라고
+부르지 않는다. PR에서 정확해진 plane guard가 드러낸 invalid initialization이며,
+synthetic recorder만 기존 valid HOME을 쓰도록 수정했다. 전역 reset 기본값은 보존했다.
+
+### Decision
+
+물리 최초 blocker는 B(phase-transition command discontinuity)로 분류한다.
+연속 command 진단에서도 36 step부터 접촉 손실이 있으므로 grasp/contact response 문제가
+추가로 남는다. 이 후보는 copied gate를 완전히 통과하지 못했다. 따라서 runtime LIFT,
+controller, timing, grip force, friction, acceptance, live state를 변경하지 않았다.
+접촉 손실 뒤의 copied 관측은 bounded diagnostic일 뿐 task PASS가 아니다.
+그 외 geometry/contact penetration/finite-state gate는 계속 적용했다.
+
+CI canonical XML은 pinned SO-ARM100 7629d2ad9853d10fb903093a33ef6114099d97e5,
+SHA d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580이다.
+기존 live XML SHA는 78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703이다.
+13개 mesh는 byte-identical이며 XML diff는 shoulder_lift joint 하한(-100°/-110°)과
+actuator 하한 두 줄뿐이다. 이를 숨기지 않고 integration_desk_source.json에 기존
+desk SIM source contract를 명시한다. Canonical 입력에서는 약 10° 확대되지만,
+현재 live 모델의 범위를 새로 넓히는 변경이 아니라 기존 모델 재현이다.
+stock/shared tabletop/mobile source와 hardware limit에는 적용하지 않는다.
+
+기존 local compiled MJB ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
+및 fixture state·pair identity는 보존한다. MJB의 절대 asset path 저장 때문에
+raw binary hash는 실행 위치에 종속된다. 별도 portable compiled identity는
+path storage/offset/allocation size만 제외하고 모든 공개 compiled 숫자·배열·bytes·문자열,
+opt/stat/vis와 MuJoCo 버전/schema를 포함한다. 알 수 없는 필드는 fail-closed한다.
+원본 MJB hash를 새 hash로 덮어쓰지 않는다.
+
+### Validation
+
+- 기존 local source: LIFT transition full-state regression 1 PASS / 29.271 s.
+- synthetic recorder 관련 6 PASS / 7.583 s.
+- clean main / pinned source: 같은 recorder 6 PASS / 7.066 s.
+- joint range, mesh vertex, actuator gain, friction, body/geom, timestep mutation은 identity mismatch여야 한다.
+- 전체 headless 및 최종 GitHub 결과는 아래 완료 기록에 추가한다.
+
+### Result
+
+현재 실제 최종 phase는 이전과 같은 LIFT_5MM failure / SIM 17.474 s이며,
+GRASP_CONFIRM까지만 실제 PASS다. CENTER SUCCESS false, HOLD 0.
+기존 live viewer/state는 보존했고 새 live 실행은 하지 않았다.
+
+### Lesson / Next
+
+양쪽 finger force > 0과 안정적인 운반 grasp는 다르다. 먼저 command 연속성과
+table 지지를 받는 grasp의 contact response를 분리해야 한다.
+다음 물리 blocker는 연속 command 후보에서 step 36부터 나타나는 contact loss다.
+30.378087 mm staging 통과는 현재 center 조건의 약 0.378 mm 여유이며,
+다중 초기조건·실물 강건성 증거가 아니다. Hardware/OS30A/ACT/multi-seed는 실행하지 않았다.
+
+#### Compile-order root cause and verification
+
+추가 source 회귀에서 stock 선행 compile → desk compile 순서가 nmeshpoly를
+255573에서 201563으로 바꾸는 현상을 찾았다. mesh_poly* 배열을 fingerprint에서
+제외하지 않았다. MuJoCo 3.3.7 cached mesh 로딩은 이전 collision hull의 polygon을
+visual-only mesh에도 복사할 수 있다.
+[공식 LoadCachedMesh / MakePolygons 구현](https://github.com/google-deepmind/mujoco/blob/3.3.7/src/user/user_mesh.cc).
+desk build 때 native asset cache만 clear하면 기존 255573과 기존 모델 identity가 복원된다.
+현재 호출자는 build_scene(...).compile()을 즉시 직렬 실행한다. 향후 지연/동시 compile
+호출자가 생기면 cache 정리와 compile을 함께 묶어야 하며 지금 병렬 compile을 보장하지 않는다.
+이것은 cache contents 정리이며 CCD/solver/timestep 설정 변경이 아니다.
+
+- 기존 local 원본 raw MJB: ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368 (불변).
+- 별도 /tmp canonical source의 raw MJB: b63af5b41a2ed004a5f2b80628d511b4be900e0b3e64941320bbd5a89be1ff79.
+- 두 입력의 portable identity: b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4 (동일).
+- source/profile/relocated-path/physics-mutation 음성 회귀: **3 PASS / 10.397 s**.
+- source fixture는 원래 binary hash와 raw state를 보존하고 portable identity만 추가했다.
+- 로컬 전체 검증 환경: Python 3.12.3, MuJoCo 3.3.7, NumPy 2.2.6, Pillow 12.3.0.
+  CI Python patch version 차이는 원격 CI로 별도 확인한다. 의존성은 바꾸지 않았다.

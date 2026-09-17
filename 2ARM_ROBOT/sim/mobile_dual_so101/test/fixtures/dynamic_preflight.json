@@ -872,5 +872,6 @@
   ],
   "failure_time_s": 5.045999999999666,
   "failure_gap_m": 0.029999496143121685,
-  "retreat_m": 0.010110785931572185
+  "retreat_m": 0.010110785931572185,
+  "portable_model_sha256": "b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4"
 }

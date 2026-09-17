@@ -11,7 +11,7 @@ class DynamicPreflightTest(unittest.TestCase):
     def setUpClass(cls):
         f=json.loads((Path(__file__).parent/"fixtures/dynamic_preflight.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        if t.report["provenance"]["model_sha256"]!=f["model_sha256"]:
+        if t.report["provenance"]["portable_model_sha256"]!=f["portable_model_sha256"]:
             raise AssertionError("dynamic fixture model changed")
         state=np.asarray(f["initial_state"])
         kind=mujoco.mjtState.mjSTATE_INTEGRATION

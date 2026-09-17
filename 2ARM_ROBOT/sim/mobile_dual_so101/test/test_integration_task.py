@@ -52,7 +52,8 @@ class IntegrationTaskTest(unittest.TestCase):
         self.assertTrue(any("Phase: SETTLE" in text for text in overlays))
         self.assertIn("STOPPED at PREGRASP", overlays[-1])
         self.assertIn("stop at pregrasp", overlays[-1])
-        self.assertIn("NOT IK preview", overlays[-1])
+        self.assertIn("SIM PHYSICS / LIVE TASK STATE", overlays[-1])
+        self.assertIn("ctrl + mj_step", overlays[-1])
 
     def test_home_pair_diagnostic_preserves_real_clearance_rejection(self):
         from collision_diagnostics import describe_pair
