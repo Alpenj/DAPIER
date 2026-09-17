@@ -881,3 +881,32 @@ desk build 때 native asset cache만 clear하면 기존 255573과 기존 모델 
 - 원격 전체 CI는 이 기록 작성 시 진행 중이다. 최신 head checks가 모두 PASS인 경우에만
   draft를 해제하고 merge한다. 최종 CI/merge SHA는 PR #62 및 비공개 학습 기록에 연결한다.
 - 기존 unrelated REAL_SCENE_GEOMETRY_AUDIT.md는 untracked로 보존한다.
+
+### 최종 원격 CI / handoff 정정 (2026-09-17)
+
+- **Problem:** 검증 head db60fd6f6ba04b9767d531a90d81daf14471c14a의 원격 run https://github.com/Alpenj/DAPIER/actions/runs/35196873279 은 **346 tests / 625.486 s, 5 failures / 10 errors**로 실패했다.
+- **Evidence:** MuJoCo 3.3.7 / NumPy 2.2.6 / Pillow 12.3.0은 local과 동일. Python CI 3.12.14 / local 3.12.3. CI portable hash 7bd67b162cc6928afe820db830e108f0c5614bc9be832a0d024858397dab1778와 local b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4가 다르다. BOX–BOX fixture native distance는 CI +0.19581108263492744 m / local 0이다.
+- **Decision:** hash gate / native 재현 assertion을 삭제하거나 fixture hash를 교체하지 않는다. 원격 compiled field 차이의 근본 원인은 미확정이다. PR #62 draft / not safe to merge 유지, main merge 없음. 로컬 source/path/cache 수정만으로 원격 문제가 모두 해결됐다는 결론을 내리지 않는다.
+- **Validation:** local research 33 + MuJoCo 353 PASS, 최종 telemetry regression 1 PASS. 원격 import 3건 / stale viewer / recorder 3건은 통과했지만 잔여 실패는 아래 표처럼 분리된다. 전체 remote FAIL을 local PASS로 대체하지 않는다.
+- **Result:** live 재실행 없음. 실제 마지막 PASS GRASP_CONFIRM; LIFT_5MM FAIL / SIM 17.474 s. Handoff 확인 시 viewer PID 163390이 종료됐고 기존 실행 세션 exit 0을 확인했다. 종료 원인은 미확정이며 화면 유지 성공으로 보고하지 않는다. 저장 full-state / diagnostic JSON은 보존됐다.
+- **Lesson / Next:** CI compiled geom/body/joint/mesh/options 및 asset hash를 field별로 local과 비교해야 한다. 아직 platform rounding으로 단정하지 않는다. 물리 다음 blocker는 command-continuous copied LIFT step 36 contact loss.
+
+최신 원격 실패 test/traceback 직접 근거:
+
+| Test | 근거 / 분류 |
+|---|---|
+| test_approach_tracking.test_observed_reserve_and_copied_endpoint | portable hash mismatch / C |
+| test_close_reference.test_full_state_preflight_matches_live_without_fake_contact | portable hash mismatch / C |
+| test_integration_source.test_approved_desk_contract_and_stock_source_preserved | portable hash mismatch / C |
+| test_post_contact_close.test_fixed_reference_forms_physical_bilateral_contact | portable hash mismatch / C |
+| test_box_box_certificate.test_saved_failure | native +0.19581108263492744 != 0 / 재현 차이, 근본 원인 미확정 |
+| test_close_reference.test_close_path_uses_raw_state_trajectory_uses_reference | manipulation geometry changed / C |
+| test_dynamic_preflight.setUpClass | dynamic fixture model changed / C |
+| test_lift_transition.test_actual_failure_and_bounded_contact_diagnostics | diagnostic model differs from actual failure model / C |
+| test_manipulation_policy.test_finger_contact_phase_and_depth | manipulation geometry changed / C |
+| test_manipulation_policy.test_geometry_and_positive_near | manipulation geometry changed / C |
+| test_manipulation_policy.test_saved_tilted_approach_full_segment | manipulation geometry changed / C |
+| test_manipulation_policy.test_support_and_housing_contact_rejected | manipulation geometry changed / C |
+| test_manipulation_policy.test_unrelated_arm_table_still_requires_30mm_in_approach | manipulation geometry changed / C |
+| test_manipulation_policy.test_wrong_phase_and_general_pair | manipulation geometry changed / C |
+| test_staging_chain.setUpClass | manipulation geometry changed / C |
