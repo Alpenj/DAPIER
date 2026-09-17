@@ -600,7 +600,10 @@ def manipulation_pair_status(model, data, phase):
     # the target during closing/carrying; unrelated pairs still use 30 mm.
     for entry in profile["pairs"]:
         a, b = (model.geom(name).id for name in entry["names"])
-        if _near_support_geometry_hash(model, (a,b)) != entry["compiled_geometry_sha256"]:
+        # Exact audited Haswell/SkylakeX CAD-roundoff signatures only; never round
+        # geometry or relax clearance. Unknown pair/hierarchy changes still fail.
+        accepted={entry["compiled_geometry_sha256"], *entry.get("audited_roundoff_variants", {}).values()}
+        if _near_support_geometry_hash(model, (a,b)) not in accepted:
             raise ValueError("manipulation geometry changed; re-audit required")
         details = []
         gap = minimum_protected_clearance(model, data, [(a,b)], diagnostics=details)[0]

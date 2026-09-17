@@ -9,11 +9,13 @@ from waypoint_block_teacher import WaypointBlockTeacher
 from mobile_dual_so101 import actuator_targets_from_qpos
 from dynamic_preflight import measured_axis_reserve,full_state_preflight,integration_state
 
+from integration_scenes import same_audited_desk_model
+
 class ApproachTrackingTest(unittest.TestCase):
     def test_observed_reserve_and_copied_endpoint(self):
         f=json.loads((Path(__file__).parent/"fixtures/approach_tracking.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        self.assertEqual(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"])
+        self.assertTrue(same_audited_desk_model(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"]))
         t.gripper_hold_reference=(f["task_open"]["reference_rad"],)*2
         t.env.settle_info=f["settle"];t.closing=np.array([1.,0,0])
         state=np.array(f["initial_state"]);kind=mujoco.mjtState.mjSTATE_INTEGRATION

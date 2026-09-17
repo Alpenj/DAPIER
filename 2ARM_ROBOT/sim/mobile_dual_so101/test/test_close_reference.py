@@ -7,6 +7,8 @@ from waypoint_block_teacher import WaypointBlockTeacher
 from mobile_dual_so101 import actuator_targets_from_qpos,apply_control_as_pose
 from dynamic_preflight import integration_state
 
+from integration_scenes import same_audited_desk_model
+
 class CloseReferenceTest(unittest.TestCase):
     def test_precontact_commands_do_not_reseed_from_measured(self):
         fixture=json.loads((Path(__file__).parent/"fixtures/approach_tracking.json").read_text())
@@ -66,7 +68,7 @@ class CloseReferenceTest(unittest.TestCase):
         from dynamic_preflight import full_state_preflight
         f=json.loads((Path(__file__).parent/"fixtures/close_physics.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        self.assertEqual(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"])
+        self.assertTrue(same_audited_desk_model(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"]))
         t.env.settle_info=f["settle"];t.gripper_hold_reference=(f["task_open"]["reference_rad"],)*2
         state=np.array(f["initial_state"]);kind=mujoco.mjtState.mjSTATE_INTEGRATION
         mujoco.mj_setState(t.m,t.d,state,kind);mujoco.mj_forward(t.m,t.d);mujoco.mj_setState(t.m,t.d,state,kind)

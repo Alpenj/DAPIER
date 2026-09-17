@@ -65,18 +65,26 @@ def replay(path):
     import time
     import mujoco.viewer
     r=json.loads(Path(path).read_text());t=WaypointBlockTeacher(r["candidate"]);m=t.m;d=mujoco.MjData(m)
-    rows=[x for policy in ("baseline","fixed") for stage in r["policies"][policy] for x in stage["telemetry"]]
+    if "provenance" in r and "portable_model_sha256" in r["provenance"]:
+        from integration_scenes import portable_model_sha256, same_audited_desk_model
+        if not same_audited_desk_model(portable_model_sha256(m),r["provenance"]["portable_model_sha256"]):
+            raise ValueError("diagnostic replay model mismatch")
+    rows=([row for case in r["cases"].values() for row in case] if "cases" in r else
+          [x for policy in ("baseline","fixed") for stage in r["policies"][policy] for x in stage["telemetry"]])
     with mujoco.viewer.launch_passive(m,d) as viewer:
         viewer.cam.lookat[:]=[.2,0,.08];viewer.cam.distance=.55
         for row in rows:
             if not viewer.is_running():return
             d.qpos[:]=row["raw_qpos"];d.qvel[:]=row["raw_qvel"];d.time=row["time_s"];mujoco.mj_forward(m,d)
-            text=(f"{MODE} / RECORDED PHYSICS REPLAY\n{row['policy']} CLOSE t={d.time:.3f}\n"
+            text=(f"{MODE} / RECORDED PHYSICS REPLAY\n{row['policy']} {row['phase']} t={d.time:.3f}\n"
                 f"TCP planned/measured {row['planned_tcp_error_m']*1000:.4f}/{row['executed_tcp_error_m']*1000:.4f} mm\n"
                 f"Reference drift {row['arm_reference_drift_rad']:.7f} rad\n"
                 f"Contact {row['contact_state']} / force {row['finger_force_N']}\n"
                 f"Opposite gap {row['opposite_finger_gap_m']} m\n"
                 f"Block yaw {math.degrees(row['block_yaw_rad']):.3f} deg")
+            if "block_table_contact_count" in row:
+                text+=(f"\nTable contacts {row['block_table_contact_count']} / force {row['block_table_normal_force_N']:.6f} N"
+                       f"\nBlock lift {row['block_lift_m']*1000:.5f} mm / center offset {row['block_center_minus_closing_center_m']} m")
             viewer.set_texts([(mujoco.mjtFont.mjFONT_NORMAL,mujoco.mjtGridPos.mjGRID_TOPLEFT,text,"")])
             viewer.sync();time.sleep(.01)
         while viewer.is_running():viewer.sync();time.sleep(.05)

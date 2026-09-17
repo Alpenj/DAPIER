@@ -910,3 +910,45 @@ desk build 때 native asset cache만 clear하면 기존 255573과 기존 모델 
 | test_manipulation_policy.test_unrelated_arm_table_still_requires_30mm_in_approach | manipulation geometry changed / C |
 | test_manipulation_policy.test_wrong_phase_and_general_pair | manipulation geometry changed / C |
 | test_staging_chain.setUpClass | manipulation geometry changed / C |
+
+
+## 2026-09-17 · 병렬 read-only 조사: LIFT 파지 안정성과 CI 수치 재현성
+
+record_id: DAPIER-2026-09-17-lift-stability-blas
+
+### Problem
+
+나는 기존 GRASP_CONFIRM PASS / LIFT_5MM 첫 step FAIL 상태를 유지한 채 두 분석을 분리했다. A는 저장 full-state 접촉 chronology, B는 clean temporary worktree의 CI/local 환경 비교를 담당했다. Source 수정은 coordinator 한 명만 했다. 시작 HEAD는 acf47cf이며 기존 untracked REAL_SCENE_GEOMETRY_AUDIT.md는 제외했다.
+
+### Evidence
+
+- A는 기존 copied run의 command/raw qpos/qvel/force/contact 및 B_confirm 상태를 bit-exact 재현했다. 추가 계측은 점 Jacobian×raw qvel이며 실제 제어를 바꾸지 않는다. Force는 contact frame의 mj_contactForce 결과다([MuJoCo 3.3.7 API](https://mujoco.readthedocs.io/en/3.3.7/APIreference/APIfunctions.html#mj-contactforce)).
+- 세 case 각각 50 physics steps / 100 ms: HOLD는 bilateral 유지; 기존 LIFT는 첫 step 양쪽 접촉 소멸; continuous-command LIFT는 step36 / +72 ms 한쪽 지지 소실, step42 / +84 ms 양쪽 Fn=0. Step42에도 한쪽 geometric contact는 남는다. **양의 지지력 소실과 geometric contact 소멸을 구분한다.**
+- 모든 case에서 table support loss T1은 50step 내 미발생이다. 따라서 남은 실패는 공중에서 떨어지는 slip이 아니라 table 이탈 전에 파지가 무너지는 경우 B다. Continuous의 양쪽 geometry 완전 분리도 관측 구간 내 미발생이다.
+- B_confirm Fn=0.070893/0.072187 N, table support=0.195741 N (20g 무게의 약99.77%), 침투1.472/1.501 µm. Contact point 높이차31.058 mm, closing-axis error11.328°, block yaw -0.818535°. Center offset [-0.642194,+0.055428,+0.145758] mm.
+- Continuous step35의 |Ft|/(μFn)=0.99399/0.98547, tangent relative speed1.068/0.595 mm/s. Step36 pad1 gap +0.586 µm, table support0.125422 N. 손은 상승하지만 물체는 테이블에 남는다. HOLD 종료 Fn0.047872/0.047302 N으로 감소해 이상적인 μΣFn 상한도 물체 무게에 미달한다. 이 상한은 실제 force/moment 여유의 보장이 아니다.
+- B의 clean worktree에서 canonical XML, repo overlay, ROS/CUDA 환경변수 제거를 각각 비교해 동일 local 모델을 확인했다. Remote artifact의 실제 libmujoco SHA, source XML·mesh·task assets·모델 코드와 옵션은 local과 같다.
+- Remote와 local의 포함된 public compiled fields20개 차이는 pose/axis/size ≤2.22e-16, inverse weights/actuator_acc0 ≤2.27e-13의 수치 차이다. OPENBLAS_CORETYPE=Zen만 선택한 local 실행이 remote portable hash7bd67b… 및 native BOX–BOX +0.19581108263492744 m를 정확히 재현했다. Default local SkylakeX는 b6dafd… 및 native0이다. Certificate는 두 경우 모두0.19581108263491326 m다.
+
+### Decision
+
+나는 성공을 만들기 위해 friction·force·geometry·controller·timing·threshold를 조정하지 않았다. Copy에서 전체 gate를 통과한 LIFT 후보가 없으므로 live 재시작도 하지 않는다. 작은 preload/엇갈린 contact/relaxation이 유력하지만 각 controller/linkage/solver 기여는 별도 분리가 필요하다.
+
+CI에는 실패 전 compiled field NPZ/MJB 및 허용된 환경 manifest를 업로드하도록 진단만 추가했다. Native false-zero 재현은 BLAS kernel에 따른 sub-ULP frame 차이에 민감하다. 지원되지 않는 SkylakeX를 AVX512 없는 CI CPU에 강제하지 않으며, hash 반올림이나 geometry assertion 삭제로 통과시키지 않는다.
+
+### Validation / Result / Lesson · 진행 상태
+
+확장한 LIFT chronology regression 1 PASS / 21.514 s. 저장 진단 replay helper에 LIFT case와 table support 표시를 연결했다. Actual physics는 이전 LIFT_5MM FAIL / SIM17.474 s이며 CENTER SUCCESS 아님. Hardware/OS30A/multi-seed/ACT는 실행하지 않았다. 수치 프로필의 이식성과 전체 회귀 결과는 아래 최종 handoff에서 구분한다.
+
+
+### CI 원인 확정 및 최소 수정
+
+직접 확인한 초기 차이는 PGripper CAD z축 norm의 0.9999997374604657(SkylakeX) 대 0.9999997374604656(Haswell)이다. 같은 local에서 Haswell로 계산하면 CI의 portable 포함 필드가 모두 byte-identical해진다(경로4개 필드만 제외). 실제 library/version 변경이나 source/asset 차이가 아니다. 지원되는 다른 kernel과 stdlib norm 가설은 기존 b6 모델을 재현하지 못해 채택하지 않았다.
+
+나는 실제 portable SHA를 바꾸어 보고하지 않고, 기존 source profile에 감사된 b6/7bd 두 exact identity의 비교만 추가했다. 제3의 digest는 거부한다. Manipulation pair의5개 원본 hash는 보존하고 각 pair의 exact Haswell hash만 추가했다. JSON key인7bd는 감사 출처이며, 매 step 전체 model을 캐시해 승인하는 장치가 아니다. 기존과 같이 호출마다 pair+ancestor 해시를 확인하고, 저장-state 경계에서는 전체 fresh model identity를 확인한다. Structural near-support 해시는 변경하지 않았다. 반올림 해시, geometry 수치, clearance/접촉 policy 변경은 없다.
+
+Haswell의 동일 saved-state diagnostic은 GRASP_CONFIRM qpos 최대차7.806255641895632e-17, 첫 LIFT3.079921910499779e-16을 보였다. 같은 identity의 fixture replay는 여전히 exact0을 요구한다. 다른 감사 identity의 과거 fixture 비교에만 float64 4epsilon(8.881784197001252e-16)을 사용하고 사건 step1/36/42와 접촉/clearance gate도 함께 검증한다. 이 값은 runtime measured tolerance·joint range와 무관하다. 동일 프로세스 copied/live 및 원본 state 불변의 array_equal 검사는 유지했다.
+
+BOX–BOX 회귀는 기존 승인 모델의 native0을 계속 확인한다. 두 번째 모델은 관측된 native 양수0.19581108263492744를 유지하며, 두 모델 모두 native0을 mock한 별도 분기로 certificate fallback을 실행한다. Exact touching/shallow/deep penetration은 계속 거부한다. 미감사 identity 및1e-12 geometry 변형 거부 회귀도 추가했다. 독립 검토자는 이 최소 경계에서 새 blocking issue를 찾지 않았으며, 전체 regression 결과는 아래에 기록한다.
+
+집중 검증: Haswell LIFT chronology 1 PASS /20.219s. 실제 LIVE 수정·재실행 없음.

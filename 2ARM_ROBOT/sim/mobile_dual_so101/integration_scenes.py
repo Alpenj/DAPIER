@@ -163,6 +163,15 @@ def portable_model_sha256(model):
     return digest.hexdigest()
 
 
+def same_audited_desk_model(actual, reference):
+    """Compare identities without relabeling the observed compiled model hash."""
+    if actual == reference:
+        return True
+    profile=json.loads(Path(__file__).with_name("integration_desk_source.json").read_text())
+    audited=profile["audited_numeric_equivalence"]["model_sha256"]
+    return actual in audited and reference in audited
+
+
 def task_provenance(env):
     import hashlib
     import subprocess

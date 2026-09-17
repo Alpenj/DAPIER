@@ -7,7 +7,7 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 from collision_guard import certified_box_box_separation_lower_bound as certificate, minimum_protected_clearance
-from integration_scenes import task_env
+from integration_scenes import task_env, portable_model_sha256, same_audited_desk_model
 
 class BoxBoxCertificateTest(unittest.TestCase):
     def test_saved_failure(self):
@@ -15,8 +15,19 @@ class BoxBoxCertificateTest(unittest.TestCase):
         e=task_env(); m,d=e.model,e.data
         d.qpos[:]=f["qpos"]; d.qvel[:]=f["qvel"]; d.ctrl[:]=f["target_q"]
         mujoco.mj_forward(m,d)
+        identity=portable_model_sha256(m)
+        reference="b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4"
+        self.assertTrue(same_audited_desk_model(identity,reference))
         for pair in (f["pair"],f["pair"][::-1]):
-            self.assertEqual(mujoco.mj_geomDistance(m,d,*pair,2.,None),0.)
+            native=mujoco.mj_geomDistance(m,d,*pair,2.,None)
+            if identity==reference:
+                self.assertEqual(native,0.)
+            else:
+                self.assertAlmostEqual(native,0.19581108263492744,places=12)
+                self.assertEqual(minimum_protected_clearance(m,d,[pair])[0],native)
+            # Native false-zero is kernel-dependent; exercise fallback on both models.
+            with patch("collision_guard.mujoco.mj_geomDistance",return_value=0.):
+                self.assertGreater(minimum_protected_clearance(m,d,[pair])[0],.03)
             bound=certificate(m,d,*pair)
             self.assertAlmostEqual(bound,f["expected_lower_bound_m"],places=10)
             self.assertGreater(minimum_protected_clearance(m,d,[pair])[0],.03)

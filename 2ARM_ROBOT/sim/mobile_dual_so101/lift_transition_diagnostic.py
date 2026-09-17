@@ -10,6 +10,24 @@ from dynamic_preflight import integration_state, record_step, contact_telemetry
 from mobile_dual_so101 import actuator_targets_from_qpos
 from physics_ik import plan_septic_joint_trajectory
 from waypoint_block_teacher import WaypointBlockTeacher
+from integration_scenes import same_audited_desk_model
+
+
+def point_velocity(t, body, point):
+    jac=np.zeros((3,t.m.nv))
+    mujoco.mj_jac(t.m,t.d,jac,None,np.asarray(point),int(body))
+    return jac @ t.d.qvel
+
+
+def contact_chronology(rows):
+    first=lambda predicate:next((r['step'] for r in rows if predicate(r)),None)
+    # Geometry contact and positive supporting force are different observations.
+    # None is right-censored by this window, not proof of future stability.
+    return dict(observed_steps=len(rows),
+        table_support_loss=first(lambda r:r['block_table_normal_force_N']<=0),
+        first_finger_support_loss=first(lambda r:not all(v>0 for v in r['finger_force_N'].values())),
+        both_finger_support_loss=first(lambda r:not any(v>0 for v in r['finger_force_N'].values())),
+        both_geometric_contacts_lost=first(lambda r:not any(r['finger_contacts'].values())))
 
 
 def observe(t, previous, reference, origin, step, case):
@@ -22,6 +40,14 @@ def observe(t, previous, reference, origin, step, case):
         row['contacts'][i]['tangential_force_N']=wrench[1:3].tolist()
         row['contacts'][i]['friction_coefficients']=c.friction.tolist()
         row['contacts'][i]['contact_dimension']=int(c.dim)
+        v1=point_velocity(t,t.m.geom_bodyid[c.geom1],c.pos)
+        v2=point_velocity(t,t.m.geom_bodyid[c.geom2],c.pos)
+        relative=c.frame.reshape(3,3) @ (v2-v1)
+        row['contacts'][i].update(relative_velocity_contact_frame_m_s=relative.tolist(),
+            relative_tangent_speed_m_s=float(np.linalg.norm(relative[1:])))
+    row['tcp_linear_velocity_world_m_s']=point_velocity(t,t.m.site_bodyid[t.site],t.d.site_xpos[t.site]).tolist()
+    table_top=t.d.geom_xpos[t.floor,2]+np.abs(t.d.geom_xmat[t.floor].reshape(3,3)[2]) @ t.m.geom_size[t.floor]
+    row['block_bottom_table_gap_m']=float(t.env.metrics()['block_bottom_height_m']-table_top)
     faces=np.array([t.d.site(f'left_pgripper_pad_{i}_inner').xpos for i in (1,2)])
     closing_center=faces.mean(axis=0)
     forces=list(row['finger_force_N'].values())
@@ -56,7 +82,7 @@ def observe(t, previous, reference, origin, step, case):
 def run(saved, steps=50):
     t=WaypointBlockTeacher(saved['candidate']);t.env.reset(seed=0)
     identity='portable_model_sha256' if 'portable_model_sha256' in saved['provenance'] else 'model_sha256'
-    if t.report['provenance'][identity]!=saved['provenance'][identity]:
+    if not same_audited_desk_model(t.report['provenance'][identity],saved['provenance'][identity]):
         raise ValueError('diagnostic model differs from actual failure model')
     t.env.settle_info=saved['settle'];t.gripper_hold_reference=(saved['task_open']['reference_rad'],)*2
     t.env.physics_observer=None;t.closing=np.array([1.,0,0])
@@ -82,6 +108,7 @@ def run(saved, steps=50):
     before=integration_state(t.m,t.d)
     target=np.asarray(saved['plans'][-1]['target_q'])
     result['lift_target']=target.tolist()
+    result['chronology']={}
     for case in ('hold','baseline_lift','command_continuous_lift'):
         clone=copy.copy(t);clone.env=copy.copy(t.env);clone.d=copy.copy(t.d);clone.env.data=clone.d
         clone.step_telemetry=[];clone.command_preview=None;clone.last_telemetry_print=None
@@ -97,10 +124,16 @@ def run(saved, steps=50):
             command=reference if case=='hold' else trajectory.sample((i+1)*clone.m.opt.timestep)[0]
             clone.env.apply_action(command,physics_steps=1)
             row=observe(clone,previous,reference,origin,i+1,case);rows.append(row)
+            derivatives=([np.zeros(clone.m.nu)]*3 if case=='hold' else
+                         trajectory.sample((i+1)*clone.m.opt.timestep)[1:])
+            row.update(command_velocity_rad_s=derivatives[0].tolist(),
+                command_acceleration_rad_s2=derivatives[1].tolist(),
+                trajectory_duration_s=trajectory.duration_s)
             if case=='baseline_lift' and i==0:
                 result['states']['C_first_lift']=integration_state(clone.m,clone.d).tolist()
                 result['first_lift_replay_max_qpos_difference']=float(np.max(np.abs(clone.d.qpos-saved['execution_telemetry'][-1]['raw_qpos'])))
         np.testing.assert_array_equal(before,integration_state(t.m,t.d))
+        result['chronology'][case]=contact_chronology(rows)
     return result
 
 

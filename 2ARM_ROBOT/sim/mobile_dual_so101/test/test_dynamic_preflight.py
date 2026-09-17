@@ -6,12 +6,14 @@ import mujoco
 from waypoint_block_teacher import WaypointBlockTeacher
 from dynamic_preflight import full_state_preflight,integration_state
 
+from integration_scenes import same_audited_desk_model
+
 class DynamicPreflightTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         f=json.loads((Path(__file__).parent/"fixtures/dynamic_preflight.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        if t.report["provenance"]["portable_model_sha256"]!=f["portable_model_sha256"]:
+        if not same_audited_desk_model(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"]):
             raise AssertionError("dynamic fixture model changed")
         state=np.asarray(f["initial_state"])
         kind=mujoco.mjtState.mjSTATE_INTEGRATION

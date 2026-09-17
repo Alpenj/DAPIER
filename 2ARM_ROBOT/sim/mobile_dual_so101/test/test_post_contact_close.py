@@ -6,11 +6,13 @@ from close_contact_diagnostic import restore
 from dynamic_preflight import full_state_preflight,integration_state
 from mobile_dual_so101 import actuator_targets_from_qpos
 
+from integration_scenes import same_audited_desk_model
+
 class PostContactCloseTest(unittest.TestCase):
     def test_fixed_reference_forms_physical_bilateral_contact(self):
         f=json.loads((Path(__file__).parent/"fixtures/post_contact_close.json").read_text())
         t=WaypointBlockTeacher(f["candidate"]);t.env.reset(seed=0)
-        self.assertEqual(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"])
+        self.assertTrue(same_audited_desk_model(t.report["provenance"]["portable_model_sha256"],f["portable_model_sha256"]))
         t.env.settle_info=f["settle"];t.gripper_hold_reference=(f["task_open"]["reference_rad"],)*2
         restore(t.m,t.d,f["start_state"])
         t.closing=np.array([1.,0,0]);t.waypoint_xyz=np.array(f["xyz"])
