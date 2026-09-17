@@ -6,7 +6,7 @@ import sys
 import unittest
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lift_transition_diagnostic import run
+from lift_transition_diagnostic import run, next_close_diagnostic
 
 
 class LiftTransitionTest(unittest.TestCase):
@@ -55,6 +55,32 @@ class LiftTransitionTest(unittest.TestCase):
                 self.assertFalse(r['non_target_protected_contacts'])
                 self.assertLessEqual(max((c['penetration_m'] for c in r['contacts']),default=0),.001)
         self.assertEqual(report['grasp_quality']['block_table_contact_count'],4)
+
+        quality=report['grasp_quality']['load_evidence']
+        self.assertFalse(quality['is_load_ready_gate'])
+        self.assertEqual(continuous[41]['load_evidence']['optimistic_vertical_upper_bound_N'],0.)
+        self.assertEqual(continuous[41]['load_evidence']['finger_vertical_force_N'],0.)
+        self.assertAlmostEqual(quality['block_weight_N'],.1962)
+        self.assertLess(quality['finger_vertical_force_N']/quality['block_weight_N'],.003)
+        self.assertAlmostEqual(quality['finger_vertical_force_N']+report['grasp_quality']['block_table_normal_force_N'],.1962,places=5)
+        self.assertLess(hold[-1]['load_evidence']['optimistic_vertical_upper_bound_N'],.1962)
+        self.assertLess(hold[-1]['grippers'][0]['jaw_opening_m'],report['grasp_quality']['grippers'][0]['jaw_opening_m'])
+        points=quality['finger_contacts']
+        self.assertLess(points[0]['block_com_local_m'][2],-.015)
+        self.assertGreater(points[1]['block_com_local_m'][2],.015)
+        self.assertGreater(np.linalg.norm(quality['finger_torque_about_com_world_Nm']),.002)
+        with contextlib.redirect_stdout(io.StringIO()):
+            candidate=next_close_diagnostic(fixture,report)
+        self.assertFalse(candidate['live_success'])
+        self.assertEqual(candidate['candidate_close_stage'],17)
+        self.assertTrue(candidate['close_preflight']['passed'])
+        self.assertTrue(candidate['close_preflight']['live_state_unchanged'])
+        self.assertTrue(all(v>0 for v in candidate['cases']['extra_close_confirm'][-1]['finger_force_N'].values()))
+        self.assertEqual(candidate['failure']['phase'],'LIFT_5MM')
+        self.assertEqual(candidate['failure']['step'],36)
+        self.assertIn('bilateral finger contact lost',candidate['failure']['reason'])
+        self.assertGreater(candidate['cases']['extra_close_continuous_lift'][-1]['block_table_normal_force_N'],0)
+
 
 
 if __name__=='__main__':unittest.main()
