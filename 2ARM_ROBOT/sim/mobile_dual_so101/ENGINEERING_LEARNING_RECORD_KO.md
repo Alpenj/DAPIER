@@ -996,7 +996,7 @@ A/B/C를 read-only로 분담했다. 동시 작업자는 최대2명으로 A/B 뒤
 - 기존50step confirmation 후 continuous-command LIFT에서 다시 step36 bilateral loss로 정지했다. 따라서 추가 CLOSE 한 단계만으로 해결되지 않으며 live 재시작 조건을 충족하지 않는다.
 - 기존 진단에 block-frame wrench/COM torque 및 optimistic vertical upper bound를 추가했다. MuJoCo contact force는 geom2에 작용하므로 block=geom1이면 부호를 반전한다. 새 값은 diagnosis 전용이며 is_load_ready_gate=false다.
 - 실행 재현: SIM 디렉터리에서 기존 venv Python으로 `lift_transition_diagnostic.py --report test/fixtures/lift_transition.json --next-close --output /tmp/next-close.json`. 기본 진단과 기존 failure fixture도 유지한다.
-- 관련 회귀와 전체 관련 suite 결과는 아래 최종 검증에 기록한다. 원시 A/B/C 산출물 및 후보 telemetry는 기존 KIT local-validation 아래 grasp-load-evidence-20260917에 보존한다.
+- 집중 LIFT 회귀 1 PASS /46.702s. 전체 local suite와 원격 CI의 최종 결과·commit/merge SHA는 [후속 PR63](https://github.com/Alpenj/DAPIER/pull/63)에 연결한다. CI PASS 전 draft/merge 금지를 유지한다. 원시 A/B/C 산출물 및 후보 telemetry는 기존 KIT local-validation 아래 grasp-load-evidence-20260917에 보존한다.
 
 ### Result
 
