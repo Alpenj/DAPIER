@@ -31,6 +31,10 @@ class LiftTransitionTest(unittest.TestCase):
             self.assertEqual(len(rows),50)
             for r in rows:
                 self.assertTrue(r['policy_safe'])
+                np.testing.assert_array_equal(r['closing_center_world_m'],np.mean(r['jaw_inner_face_centers_world_m'],axis=0))
+                for contact in r['contacts']:
+                    self.assertTrue(np.isfinite(contact['friction_coefficients']).all())
+                    self.assertEqual(len(contact['contact_frame_wrench']),6)
                 self.assertEqual(r['gripper_command_delta_from_close_rad'],0.)
                 self.assertTrue(np.isfinite(r['raw_qpos']).all())
                 self.assertTrue(np.isfinite(r['raw_qvel']).all())

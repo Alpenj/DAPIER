@@ -20,6 +20,15 @@ def observe(t, previous, reference, origin, step, case):
         wrench=np.zeros(6);mujoco.mj_contactForce(t.m,t.d,i,wrench)
         row['contacts'][i]['contact_frame_wrench']=wrench.tolist()
         row['contacts'][i]['tangential_force_N']=wrench[1:3].tolist()
+        row['contacts'][i]['friction_coefficients']=c.friction.tolist()
+        row['contacts'][i]['contact_dimension']=int(c.dim)
+    faces=np.array([t.d.site(f'left_pgripper_pad_{i}_inner').xpos for i in (1,2)])
+    closing_center=faces.mean(axis=0)
+    forces=list(row['finger_force_N'].values())
+    row.update(jaw_inner_face_centers_world_m=faces.tolist(),
+        closing_center_world_m=closing_center.tolist(),
+        block_center_minus_closing_center_m=(t.d.xpos[t.block_body]-closing_center).tolist(),
+        finger_normal_force_balance_N=float(forces[0]-forces[1]))
     table=[c for c in row['contacts'] if set(c['geom_ids'])=={t.block,t.floor}]
     row.update(mode=MODE,case=case,step=step,
         command_delta_rad=(t.d.ctrl-previous).tolist(),

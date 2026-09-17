@@ -860,3 +860,24 @@ desk build 때 native asset cache만 clear하면 기존 255573과 기존 모델 
 - source fixture는 원래 binary hash와 raw state를 보존하고 portable identity만 추가했다.
 - 로컬 전체 검증 환경: Python 3.12.3, MuJoCo 3.3.7, NumPy 2.2.6, Pillow 12.3.0.
   CI Python patch version 차이는 원격 CI로 별도 확인한다. 의존성은 바꾸지 않았다.
+
+#### 완료 검증 / handoff
+
+- Repository command `scripts/verify-mujoco-headless --artifact-dir <temporary-output>`
+  를 CI pinned asset과 기존 venv에서 실행: **exit 0**.
+- Research **33 PASS / 0.019 s**, MuJoCo **353 PASS / 1095.946 s**.
+  Canonical multi-view render와 vision artifact 생성도 완료했다.
+- 추가한 inner-face midpoint / contact friction telemetry를 포함한 최종 LIFT 회귀:
+  **1 PASS / 22.396 s**. 입력·controller·물리 궤적은 같고 metadata만 추가했다.
+- Confirm 시 실제 inner-face closing center:
+  [0.1999906731, 0.0000530874, 0.0198522245] m.
+  Block center - closing center = [-0.642194, 0.055428, 0.145758] mm.
+  Normal-force 차이 jaw_1 - jaw_2 = -0.001293982 N.
+- 원본 first LIFT는 양쪽 geometry contact entry도 없다. 연속 command candidate의
+  first loss(step 36)는 jaw_1 contact가 없고 jaw_2는 남는다. Stale force 읽기의 증거가 아니다.
+- 원래 live failure viewer/process는 유지했다. 새 live task를 실행하지 않았다.
+- Source 수정은 f2dc027 커밋으로 normal push했고 PR #62(base=main)를 갱신했다.
+  최종 read-only telemetry와 이 handoff도 같은 writer 브랜치로 올린다.
+- 원격 전체 CI는 이 기록 작성 시 진행 중이다. 최신 head checks가 모두 PASS인 경우에만
+  draft를 해제하고 merge한다. 최종 CI/merge SHA는 PR #62 및 비공개 학습 기록에 연결한다.
+- 기존 unrelated REAL_SCENE_GEOMETRY_AUDIT.md는 untracked로 보존한다.
