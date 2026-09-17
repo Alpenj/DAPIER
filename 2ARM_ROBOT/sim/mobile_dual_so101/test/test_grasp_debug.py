@@ -12,7 +12,7 @@ from grasp_debug import GraspDebug, markers, run_viewer
 class GraspDebugTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.debug=GraspDebug()
+        cls.debug=GraspDebug(scene="legacy_tower")
         cls.candidate=cls.debug.candidate(0)
 
     def test_explicit_preview_and_model_isolation(self):

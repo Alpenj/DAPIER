@@ -21,8 +21,8 @@ STATE = mujoco.mjtState.mjSTATE_INTEGRATION
 
 
 class GraspDebug:
-    def __init__(self):
-        self.teacher = CenterBlockTeacher()
+    def __init__(self, scene="desk"):
+        self.teacher = CenterBlockTeacher(scene=scene)
         self.env = self.teacher.env
         self.env.reset(seed=0)
         self.settle = self.env.settle()
@@ -33,7 +33,7 @@ class GraspDebug:
         self.preview_model = copy.copy(self.model)
         self.preview_data = mujoco.MjData(self.preview_model)
         self.restore_preview()
-        body = self.model.body("shoe").id
+        body = self.teacher.block_body
         self.position = self.data.xpos[body].copy()
         self.rotation = self.data.xmat[body].reshape(3,3).copy()
         self.home = actuator_targets_from_qpos(self.model, self.data.qpos)
@@ -72,9 +72,9 @@ class GraspDebug:
         direction=-toward*tilt_sign  # approach towards block, away from shoulder.
         angle=math.radians(tilt_deg)
         approach=down*math.cos(angle)+direction*math.sin(angle)
-        grasp=self.position-closing*.020-approach*.020
-        pregrasp=grasp-approach*.060
+        pregrasp,grasp=self.teacher.targets(self.position,closing,approach)
         ik=solve_bimanual_position_ik(self.model,self.home,{"left":pregrasp},
+             site_names={"left":self.model.site(self.teacher.site).name},
              tool_axis_targets={"left":approach},max_iterations=300)
         p=mujoco.MjData(self.model)
         mujoco.mj_setState(self.model,p,self.saved,STATE)
@@ -207,10 +207,11 @@ def main():
     parser.add_argument("--tilt-deg",type=float,default=0)
     parser.add_argument("--output",type=Path)
     parser.add_argument("--viewer-smoke-seconds",type=float,help=argparse.SUPPRESS)
+    parser.add_argument("--scene",choices=("desk","legacy_tower"),default="desk")
     args=parser.parse_args()
     if args.output and args.output.exists():
         parser.error("output exists; preserve prior report")
-    debug=GraspDebug()
+    debug=GraspDebug(scene=args.scene)
     report=debug.candidate(args.candidate,args.tilt_deg)
     if args.output:
         args.output.write_text(json.dumps(report,indent=2)+"\n")

@@ -11,7 +11,7 @@ import numpy as np
 import mujoco
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from shoe_task import ShoeTaskConfig, ShoeTaskEnv, MOBILE_BLOCK_CONFIG, block_metrics
+from shoe_task import ShoeTaskConfig, ShoeTaskEnv, MOBILE_BLOCK_CONFIG, block_metrics, UnsafeActionError
 from mobile_dual_so101 import actuator_targets_from_qpos, HUMANOID_HOME_ACTION
 from parallel_shoe_rollout import ParallelRolloutConfig, run_parallel_rollouts
 
@@ -21,8 +21,11 @@ BOUNDED_CONFIG = MOBILE_BLOCK_CONFIG
 class SeededResetTest(unittest.TestCase):
     def test_current_mobile_pose_rejects_arm_floor_and_blocks_physics(self):
         env = ShoeTaskEnv(replace(BOUNDED_CONFIG, initial_home_pose=False))
-        with self.assertRaisesRegex(ValueError, "arm-floor clearance"):
+        # Repaired common plane guard rejects before the later reset-only check.
+        with self.assertRaises(UnsafeActionError) as caught:
             env.reset(seed=0)
+        self.assertEqual(caught.exception.assessment.second_geom_id, env.model.geom("floor").id)
+        self.assertLess(caught.exception.assessment.minimum_clearance_m, 0)
         with self.assertRaisesRegex(ValueError, "successfully validated reset"):
             env.apply_action([0.] * 12, physics_steps=1)
         self.assertEqual(env.data.time, 0)
@@ -136,7 +139,7 @@ class SeededResetTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 env.reset(seed=seed)
         with self.assertRaisesRegex(ValueError, "reach envelope"):
-            ShoeTaskEnv(ShoeTaskConfig(shoe_xy_range_m=.002)).reset(seed=0)
+            ShoeTaskEnv(ShoeTaskConfig(shoe_xy_range_m=.002, initial_home_pose=True)).reset(seed=0)
         with self.assertRaisesRegex(ValueError, "collision clearance"):
             ShoeTaskEnv(replace(BOUNDED_CONFIG, shoe_position_m=(-.1,.1,.015))).reset(seed=0)
         with self.assertRaisesRegex(ValueError, "collision clearance"):

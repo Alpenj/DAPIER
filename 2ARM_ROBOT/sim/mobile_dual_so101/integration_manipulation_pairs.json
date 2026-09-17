@@ -1,0 +1,45 @@
+{
+  "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+  "pairs": [
+    {
+      "names": [
+        "left_pgripper_pad_1",
+        "table"
+      ],
+      "class": "SUPPORT_NEAR_APPROACH",
+      "compiled_geometry_sha256": "5ed95a7cc86ff1b7a01f75f53326bc3d0e904c9757a8b62ca2c35bfdfb41db3c"
+    },
+    {
+      "names": [
+        "left_pgripper_pad_2",
+        "table"
+      ],
+      "class": "SUPPORT_NEAR_APPROACH",
+      "compiled_geometry_sha256": "6897bb27dc4e92d9e02409181d5b9c6bf58ff8bcd12239d35a2a749ef5555241"
+    },
+    {
+      "names": [
+        "left_pgripper_housing",
+        "red_block_geom"
+      ],
+      "class": "TARGET_NEAR_APPROACH",
+      "compiled_geometry_sha256": "2adbcc82b2d4361f3c563598803dc89a8d7a061341ed21a9e2022309f8218fcf"
+    },
+    {
+      "names": [
+        "left_pgripper_pad_1",
+        "red_block_geom"
+      ],
+      "class": "INTENDED_FINGER_CONTACT",
+      "compiled_geometry_sha256": "c76660355273e9711bf74540445786b005ea8ff3d8c952a8e54965afdd3de8c8"
+    },
+    {
+      "names": [
+        "left_pgripper_pad_2",
+        "red_block_geom"
+      ],
+      "class": "INTENDED_FINGER_CONTACT",
+      "compiled_geometry_sha256": "46932d8068d08016e846de22461e4a1a0d235ee4d635eea6c17849a524b9cc5d"
+    }
+  ]
+}

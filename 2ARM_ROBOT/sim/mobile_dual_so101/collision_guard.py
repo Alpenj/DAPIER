@@ -208,6 +208,18 @@ def protected_geom_pairs(model: mujoco.MjModel) -> tuple[tuple[int, int], ...]:
     pairs.extend(_same_arm_geom_pairs(model, left))
     pairs.extend(_same_arm_geom_pairs(model, right))
 
+    if model.names.startswith(b"desk_learning_OS30A_UNVERIFIED\x00"):
+        # Exact approved desk builder. No tower cameras or support substitutions.
+        names = ("table", "stand_cad_bottom_1", "stand_cad_top_1",
+                 "stand_cad_top_3", "os30a_enclosure_UNVERIFIED")
+        obstacles = tuple(_required_active_geom_id(model, name) for name in names)
+        for side in ("left", "right"):
+            if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_pgripper_gear") < 0:
+                for finger in ("fixed", "moving"):
+                    _required_active_geom_id(model, f"{side}_dapier_{finger}_finger_pad")
+        pairs.extend((arm, obstacle) for arm in all_arm_geoms for obstacle in obstacles)
+        return tuple(dict.fromkeys(pairs))
+
     camera_ids = tuple(
         _required_active_geom_id(model, name)
         for name in REQUIRED_RGBD_COLLISION_GEOM_NAMES
@@ -322,12 +334,77 @@ def certified_separation_lower_bound(
     return max(0.0, gap - 64 * np.finfo(float).eps * magnitude)
 
 
+def certified_mesh_box_separation_lower_bound(
+    model: mujoco.MjModel, data: mujoco.MjData, first: int, second: int
+) -> float:
+    """Positive separation on the exact box face normals; never exact distance.
+
+    Use ALL compiled mesh vertices (a superset of the collision hull) and the
+    box's analytic support radius. Incomplete separating axes can miss a gap,
+    but cannot certify overlapping/touching convex sets as separated.
+    """
+    mesh_geom, box = first, second
+    if model.geom_type[mesh_geom] == mujoco.mjtGeom.mjGEOM_BOX:
+        mesh_geom, box = box, mesh_geom
+    if (model.geom_type[mesh_geom] != mujoco.mjtGeom.mjGEOM_MESH
+            or model.geom_type[box] != mujoco.mjtGeom.mjGEOM_BOX):
+        return 0.0
+    mesh = int(model.geom_dataid[mesh_geom])
+    start, count = int(model.mesh_vertadr[mesh]), int(model.mesh_vertnum[mesh])
+    vertices = model.mesh_vert[start:start+count].astype(float)
+    if not len(vertices):
+        return 0.0
+    box_rotation = data.geom_xmat[box].reshape(3, 3)
+    axes = box_rotation.T.copy()
+    norms = np.linalg.norm(axes, axis=1)
+    if not np.all(np.isfinite(norms)) or np.any(norms == 0):
+        return 0.0
+    axes /= norms[:, None]
+    world = (vertices @ data.geom_xmat[mesh_geom].reshape(3, 3).T
+             + data.geom_xpos[mesh_geom])
+    projection = (world - data.geom_xpos[box]) @ axes.T
+    radius = np.abs(axes @ box_rotation) @ model.geom_size[box]
+    if not np.all(np.isfinite(projection)) or not np.all(np.isfinite(radius)):
+        return 0.0
+    gap = float(np.max(np.maximum(projection.min(axis=0) - radius,
+                                 -radius - projection.max(axis=0))))
+    magnitude = max(1., float(np.max(np.abs(world))),
+                    float(np.max(np.abs(data.geom_xpos[box]))),
+                    float(np.max(radius)))
+    return float(max(0., gap - 64 * np.finfo(float).eps * magnitude))
+
+
+def certified_box_box_separation_lower_bound(model, data, first, second) -> float:
+    """OBB SAT certified lower bound on 15 axes, not Euclidean distance."""
+    if any(model.geom_type[g] != mujoco.mjtGeom.mjGEOM_BOX for g in (first, second)):
+        return 0.0
+    rotations = [data.geom_xmat[g].reshape(3, 3) for g in (first, second)]
+    centers = np.array([data.geom_xpos[g] for g in (first, second)])
+    sizes = np.array([model.geom_size[g] for g in (first, second)])
+    if (not all(np.all(np.isfinite(r)) for r in rotations)
+            or not np.all(np.isfinite(centers)) or not np.all(np.isfinite(sizes))
+            or np.any(sizes <= 0)):
+        return 0.0
+    axes = np.vstack((rotations[0].T, rotations[1].T,
+                      np.cross(rotations[0].T[:, None, :],
+                               rotations[1].T[None, :, :]).reshape(9, 3)))
+    norms = np.linalg.norm(axes, axis=1)
+    axes = axes[norms > 1e-12] / norms[norms > 1e-12, None]
+    if not len(axes):
+        return 0.0
+    radii = [np.abs(axes @ r) @ s for r, s in zip(rotations, sizes)]
+    gap = float(np.max(np.abs(axes @ (centers[0] - centers[1])) - radii[0] - radii[1]))
+    magnitude = max(1., float(np.max(np.abs(centers))), float(np.max(sizes)))
+    return float(max(0., gap - 64 * np.finfo(float).eps * magnitude))
+
+
 def minimum_protected_clearance(
     model: mujoco.MjModel,
     data: mujoco.MjData,
     pairs: Sequence[tuple[int, int]] | None = None,
     *,
     distance_cap_m: float = 2.0,
+    diagnostics: list[dict[str, object]] | None = None,
 ) -> tuple[float, int, int]:
     """Measure the closest protected geom pair at the current pose."""
 
@@ -359,15 +436,203 @@ def minimum_protected_clearance(
         sphere_lower_bound = center_distance - float(
             model.geom_rbound[int(first)] + model.geom_rbound[int(second)]
         )
+        # An infinite plane has no finite enclosing sphere (rbound is zero).
+        # In particular, lateral displacement must not hide touching/penetration.
+        if any(model.geom_type[g] == mujoco.mjtGeom.mjGEOM_PLANE
+               for g in (first, second)):
+            sphere_lower_bound = -math.inf
         distance = max(narrowphase_distance, sphere_lower_bound)
+        certificate = 0.0
+        mesh_box_certificate = 0.0
+        box_box_certificate = 0.0
         if narrowphase_distance <= 0.0:
             certificate = certified_separation_lower_bound(model, data, int(first), int(second))
             if certificate > 0.0:
                 distance = max(distance, certificate)
+            mesh_box_certificate = certified_mesh_box_separation_lower_bound(
+                model, data, int(first), int(second))
+            if mesh_box_certificate > 0.0:
+                distance = max(distance, mesh_box_certificate)
+            box_box_certificate = certified_box_box_separation_lower_bound(
+                model, data, int(first), int(second))
+            if box_box_certificate > 0.0:
+                distance = max(distance, box_box_certificate)
+        if diagnostics is not None:
+            diagnostics.append(dict(
+                pair=[int(first), int(second)], distance_cap_m=distance_cap_m,
+                native_signed_distance_m=narrowphase_distance,
+                final_distance_m=distance,
+                certified_box_box_separation_lower_bound_m=box_box_certificate,
+                box_box_certificate_eligible=narrowphase_distance <= 0 and all(
+                    model.geom_type[g] == mujoco.mjtGeom.mjGEOM_BOX for g in (first, second)),
+                bounding_sphere_eligible=math.isfinite(sphere_lower_bound),
+                bounding_sphere_lower_bound_m=(sphere_lower_bound
+                    if math.isfinite(sphere_lower_bound) else None),
+                bounding_sphere_changed_result=sphere_lower_bound > narrowphase_distance,
+                mesh_certificate_eligible=narrowphase_distance <= 0 and all(
+                    model.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH for g in (first, second)),
+                certified_separation_lower_bound_m=certificate,
+                mesh_certificate_changed_result=certificate > max(narrowphase_distance, sphere_lower_bound)
+                    and certificate > 0,
+                mesh_box_certificate_eligible=narrowphase_distance <= 0 and
+                    {int(model.geom_type[g]) for g in (first, second)} ==
+                    {int(mujoco.mjtGeom.mjGEOM_MESH), int(mujoco.mjtGeom.mjGEOM_BOX)},
+                certified_mesh_box_separation_lower_bound_m=mesh_box_certificate,
+                mesh_box_certificate_changed_result=mesh_box_certificate > max(
+                    narrowphase_distance, sphere_lower_bound, certificate) and mesh_box_certificate > 0))
         if distance < best_distance:
             best_distance = distance
             best_pair = (int(first), int(second))
     return best_distance, best_pair[0], best_pair[1]
+
+
+NEAR_SUPPORT_SCOPE = "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"
+
+
+def _near_support_geometry_hash(model, pair):
+    """Pin just these structural geometries/ancestors, never the runtime qpos."""
+    import hashlib
+    digest = hashlib.sha256()
+    for g in pair:
+        digest.update((model.geom(g).name or "<unnamed>").encode())
+        for field in ("geom_type", "geom_size", "geom_pos", "geom_quat",
+                      "geom_contype", "geom_conaffinity", "geom_margin", "geom_gap"):
+            digest.update(np.asarray(getattr(model, field)[g]).tobytes())
+        if model.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH:
+            mesh = int(model.geom_dataid[g])
+            digest.update(model.mesh(mesh).name.encode())
+            start, count = int(model.mesh_vertadr[mesh]), int(model.mesh_vertnum[mesh])
+            digest.update(model.mesh_vert[start:start+count].tobytes())
+            graph = int(model.mesh_graphadr[mesh])
+            if graph >= 0:
+                n = int(model.mesh_graph[graph])
+                digest.update(model.mesh_graph[graph:graph+2+2*n].tobytes())
+        b = int(model.geom_bodyid[g])
+        while b:
+            digest.update(model.body(b).name.encode())
+            digest.update(model.body_pos[b].tobytes())
+            digest.update(model.body_quat[b].tobytes())
+            for j in range(int(model.body_jntadr[b]), int(model.body_jntadr[b]+model.body_jntnum[b])):
+                digest.update(model.joint(j).name.encode())
+                for field in ("jnt_type", "jnt_limited", "jnt_pos", "jnt_axis", "jnt_range"):
+                    digest.update(np.asarray(getattr(model, field)[j]).tobytes())
+            b = int(model.body_parentid[b])
+    return digest.hexdigest()
+
+
+def structural_near_support_pairs(model):
+    """Exact desk pairs remain protected; unknown compiled geometry fails closed."""
+    if not model.names.startswith(b"desk_learning_OS30A_UNVERIFIED\x00"):
+        return ()
+    profile = json.loads(Path(__file__).with_name("integration_desk_near_support.json").read_text())
+    pairs = []
+    for side in ("left", "right"):
+        mesh_name = side + "_rotation_pitch_so101_v1"
+        matches = [g for g in range(model.ngeom)
+                   if model.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH
+                   and model.mesh(int(model.geom_dataid[g])).name == mesh_name
+                   and _body_name_for_geom(model, g) == side + "_shoulder"
+                   and model.geom_contype[g] and model.geom_conaffinity[g]]
+        if len(matches) != 1:
+            raise RuntimeError("structural near-support geom identity changed")
+        pair = (matches[0], _required_active_geom_id(model, "table"))
+        if _near_support_geometry_hash(model, pair) != profile["pairs"][side]["compiled_geometry_sha256"]:
+            raise RuntimeError("structural near-support compiled geometry changed; re-audit required")
+        pairs.append(pair)
+    return tuple(pairs)
+
+
+def structural_near_support_status(model, data):
+    pairs = structural_near_support_pairs(model)
+    if not pairs:
+        return []
+    profile = json.loads(Path(__file__).with_name("integration_desk_near_support.json").read_text())
+    result = []
+    for side, pair in zip(("left", "right"), pairs):
+        details = []
+        gap, _, _ = minimum_protected_clearance(model, data, [pair], diagnostics=details)
+        # Independently positive exact-box projection is required, even when native >0.
+        evidence = certified_mesh_box_separation_lower_bound(model, data, *pair)
+        contacts = [float(c.dist) for c in data.contact
+                    if {int(c.geom1), int(c.geom2)} == set(pair)]
+        nominal = profile["pairs"][side]["nominal_clearance_m"]
+        numerical_match = abs(evidence - nominal) <= profile["numerical_regression_tolerance_m"]
+        safe = (math.isfinite(gap) and gap > 0 and math.isfinite(evidence)
+                and evidence > 0 and not contacts and numerical_match
+                and math.isfinite(details[0]["native_signed_distance_m"]))
+        result.append(dict(side=side, pair=list(pair), classification="STRUCTURAL NEAR-SUPPORT",
+            scope=NEAR_SUPPORT_SCOPE, safe=bool(safe), clearance_m=gap,
+            positive_separation_evidence_m=evidence, nominal_compiled_clearance_m=nominal,
+            contacts=contacts, penetration=any(x < 0 for x in contacts),
+            compiled_geometry_verified=True, nominal_geometry_matches=numerical_match,
+            general_30mm_applies=False,
+            reason="approved exact mechanical relationship; positive separation/contact/geometry invariant"))
+    return result
+
+
+def general_support_clearance(model, data, arms, support):
+    """Keep structural checks, then measure all remaining arm/support pairs."""
+    status = structural_near_support_status(model, data)
+    if any(not row["safe"] for row in status):
+        raise RuntimeError("structural near-support invariant violated")
+    structural = {tuple(row["pair"]) for row in status}
+    pairs = [(g, support) for g in arms if (g, support) not in structural]
+    if not pairs:
+        raise RuntimeError("no general arm/support pairs remain")
+    return minimum_protected_clearance(model, data, pairs)[0]
+
+
+MANIPULATION_PHASES = frozenset(("PREGRASP_NEAR", "APPROACH_COARSE", "APPROACH_FINE",
+    "CLOSE", "GRASP_CONFIRM", "LIFT_5MM", "LIFT_15MM", "LIFT_30MM", "HOLD"))
+FINGER_CONTACT_PHASES = frozenset(("CLOSE", "GRASP_CONFIRM", "LIFT_5MM",
+    "LIFT_15MM", "LIFT_30MM", "HOLD"))
+
+
+def manipulation_pair_status(model, data, phase):
+    """Exact left-hand center-block relations; never hardware policy."""
+    if phase not in MANIPULATION_PHASES:
+        return []
+    if not bytes(model.names).startswith(b"desk_learning_OS30A_UNVERIFIED\x00"):
+        raise ValueError("manipulation policy requires integration_desk")
+    profile = json.loads((Path(__file__).with_name("integration_manipulation_pairs.json")).read_text())
+    rows = []
+    # Near approach permits proven separation, not contact. Only pads may contact
+    # the target during closing/carrying; unrelated pairs still use 30 mm.
+    for entry in profile["pairs"]:
+        a, b = (model.geom(name).id for name in entry["names"])
+        if _near_support_geometry_hash(model, (a,b)) != entry["compiled_geometry_sha256"]:
+            raise ValueError("manipulation geometry changed; re-audit required")
+        details = []
+        gap = minimum_protected_clearance(model, data, [(a,b)], diagnostics=details)[0]
+        contacts = [float(c.dist) for c in data.contact if {int(c.geom1),int(c.geom2)} == {a,b}]
+        margin = float(64*np.finfo(float).eps*max(1.,np.max(np.abs(data.geom_xpos[[a,b]]))))
+        intended = entry["class"] == "INTENDED_FINGER_CONTACT" and phase in FINGER_CONTACT_PHASES
+        safe = (math.isfinite(gap) and math.isfinite(details[0]["native_signed_distance_m"])
+                and all(math.isfinite(x) for x in contacts))
+        safe = safe and ((gap >= -.001 and all(x >= -.001 for x in contacts)) if intended
+                         else (gap > margin and not contacts))
+        rows.append(dict(pair=[a,b],names=entry["names"],classification=(
+            entry["class"] if intended or entry["class"] != "INTENDED_FINGER_CONTACT"
+            else "TARGET_NEAR_APPROACH"),phase=phase,scope=NEAR_SUPPORT_SCOPE,
+            clearance_m=gap,numerical_margin_m=margin,contacts=contacts,
+            intended_contact=intended,safe=bool(safe),compiled_geometry_verified=True,
+            penetration_limit_m=.001 if intended else 0.))
+    return rows
+
+
+def task_clearance_status(model, data, phase, required=.03):
+    """Runtime counterpart of the segment gate, using measured geometry."""
+    rows = manipulation_pair_status(model,data,phase)
+    specialized = {tuple(r["pair"]) for r in rows}
+    structural = set(structural_near_support_pairs(model))
+    arms = (*_collision_geoms_for_arm(model,"left"), *_collision_geoms_for_arm(model,"right"))
+    target = model.geom("red_block_geom").id
+    table = model.geom("table").id
+    general = [(g,table) for g in arms if (g,table) not in specialized|structural]
+    general += [(g,target) for g in arms if (g,target) not in specialized]
+    gap,a,b = minimum_protected_clearance(model,data,general)
+    return dict(general_clearance_m=gap,closest_general_pair=[a,b],pairs=rows,
+                safe=bool(gap>=required and all(r["safe"] for r in rows)))
 
 
 def check_bimanual_path(
@@ -378,6 +643,8 @@ def check_bimanual_path(
     required_clearance_m: float = DEFAULT_CLEARANCE_M,
     max_joint_step_rad: float = DEFAULT_MAX_JOINT_STEP_RAD,
     obstacle_geom_names: Sequence[str] = (),
+    task_phase: str | None = None,
+    reference_data: mujoco.MjData | None = None,
 ) -> CollisionAssessment:
     """Reject a target if its interpolated path violates protected clearance."""
 
@@ -414,16 +681,51 @@ def check_bimanual_path(
         *_same_arm_geom_pairs(model, _collision_geoms_for_arm(model, "right")),
     )
     same_arm_pair_set = set(same_arm_pairs)
+    structural_pairs = set(structural_near_support_pairs(model))
+    initial = mujoco.MjData(model)
+    if reference_data is not None:
+        initial.qpos[:] = reference_data.qpos
+    mujoco.mj_forward(model, initial)
+    task_rows = manipulation_pair_status(model, initial, task_phase)
+    task_pairs = {tuple(row["pair"]) for row in task_rows}
+    if task_phase is not None:
+        target_id = model.geom("red_block_geom").id
+        pairs.extend((g,target_id) for g in arm_geoms)
+
     clearance_pairs = tuple(
-        dict.fromkeys(pair for pair in pairs if pair not in same_arm_pair_set)
+        dict.fromkeys(pair for pair in pairs
+                      if pair not in same_arm_pair_set and pair not in structural_pairs and pair not in task_pairs)
     )
     data = mujoco.MjData(model)
+    if reference_data is not None:
+        data.qpos[:] = reference_data.qpos
     best = (math.inf, -1, -1, 0.0)
 
     for sample_index in range(intervals + 1):
         fraction = sample_index / intervals
         action = current + fraction * (target - current)
-        apply_control_as_pose(model, data, action)
+        # Interpolated measured poses must not be silently clamped to command limits.
+        apply_control_as_pose(model, data, action, preserve_raw_pose=True)
+        task_rows = manipulation_pair_status(model,data,task_phase)
+        failed_task = next((row for row in task_rows if not row["safe"]),None)
+        if failed_task:
+            a,b = failed_task["pair"]
+            return CollisionAssessment(safe=False,reason="task-specific separation/contact invariant violated",
+                minimum_clearance_m=failed_task["clearance_m"],required_clearance_m=0.,
+                path_fraction=fraction,checked_samples=sample_index+1,
+                first_body=_body_name_for_geom(model,a),second_body=_body_name_for_geom(model,b),
+                first_geom_id=a,second_geom_id=b)
+        structural = structural_near_support_status(model, data)
+        failed = next((row for row in structural if not row["safe"]), None)
+        if failed:
+            first, second = failed["pair"]
+            return CollisionAssessment(
+                safe=False, reason="SIM structural near-support invariant violated; target rejected",
+                minimum_clearance_m=failed["clearance_m"], required_clearance_m=0.,
+                path_fraction=fraction, checked_samples=sample_index+1,
+                first_body=_body_name_for_geom(model, first),
+                second_body=_body_name_for_geom(model, second),
+                first_geom_id=first, second_geom_id=second)
         self_distance, self_first, self_second = minimum_protected_clearance(
             model,
             data,

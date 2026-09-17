@@ -172,6 +172,14 @@ def _set_planning_action(
     mujoco.mj_forward(model, data)
 
 
+def axis_direction_task(u, target, angular_jacobian):
+    # A single tool-axis target constrains two orientation DoF, not full orientation.
+    # du = omega x u leaves rotation about u in the axis task's null space.
+    jacobian = np.cross(angular_jacobian.T, u).T
+    residual = target - np.dot(u, target) * u
+    return jacobian, residual
+
+
 def solve_bimanual_position_ik(
     model: mujoco.MjModel,
     start_action_rad: Sequence[float],
@@ -185,9 +193,13 @@ def solve_bimanual_position_ik(
     tolerance_m: float = 5e-4,
     max_iterations: int = 100,
     max_joint_step_rad: float = 0.05,
+    iteration_observer=None,
+    axis_formulation: str = "raw_rotation",
 ) -> IKResult:
     """Solve arm-site XYZ and optional local-X direction using bounded DLS IK."""
 
+    if axis_formulation not in ("raw_rotation", "axis_direction"):
+        raise ValueError("unknown axis formulation")
     if not targets_m or any(side not in ("left", "right") for side in targets_m):
         raise ValueError("targets_m must contain left and/or right")
     if site_names is not None and set(site_names) != set(targets_m):
@@ -286,6 +298,9 @@ def solve_bimanual_position_ik(
             )
             for side, target in axis_targets.items()
         }
+        # Diagnostics observe private planning data; runtime state is never teleported.
+        if iteration_observer is not None:
+            iteration_observer(iteration, action.copy(), planning_data)
         if max(residuals.values()) <= tolerance_m and (
             not axis_errors
             or max(axis_errors.values()) <= tool_axis_tolerance_rad
@@ -312,13 +327,16 @@ def solve_bimanual_position_ik(
             jacobian_rows.append(position_jacobian[:, selected_dofs])
             residual_rows.append(errors[side_index])
             if side in axis_targets:
-                jacobian_rows.append(
-                    tool_axis_weight_m * rotation_jacobian[:, selected_dofs]
-                )
-                residual_rows.append(
-                    tool_axis_weight_m
-                    * np.cross(current_axes[side], axis_targets[side])
-                )
+                if axis_formulation == "axis_direction":
+                    axis_jacobian, axis_residual = axis_direction_task(
+                        current_axes[side], axis_targets[side],
+                        rotation_jacobian[:, selected_dofs])
+                else:
+                    # Preserved diagnostic baseline: also penalizes angular spin about u.
+                    axis_jacobian = rotation_jacobian[:, selected_dofs]
+                    axis_residual = np.cross(current_axes[side], axis_targets[side])
+                jacobian_rows.append(tool_axis_weight_m * axis_jacobian)
+                residual_rows.append(tool_axis_weight_m * axis_residual)
         jacobian = np.vstack(jacobian_rows)
         residual = np.concatenate(residual_rows)
         regularized = jacobian @ jacobian.T + damping**2 * np.eye(len(residual))

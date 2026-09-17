@@ -1,0 +1,876 @@
+{
+  "model_sha256": "ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368",
+  "candidate": {
+    "axis": [
+      0.11658069425291079,
+      -0.04828930467042675,
+      -0.9920065951302723
+    ],
+    "best": {
+      "pregrasp": {
+        "q": [
+          0.657357459417949,
+          0.3026934746732691,
+          -0.3758508322566882,
+          1.5024947860405238,
+          -0.9420664151925142,
+          2.2027999952529758,
+          1.0490879384259579e-09,
+          0.000567478777306485,
+          0.00047910179261564527,
+          0.00013322005499829032,
+          -4.0854783511284376e-07,
+          2.2027999952529758
+        ]
+      }
+    }
+  },
+  "initial_state": [
+    0.20000000000000015,
+    1.0490879384265303e-09,
+    0.0005674787773064851,
+    0.0004791017926156452,
+    0.00013322005499829032,
+    -4.085478351128436e-07,
+    2.2027999952529758,
+    -1.3275409916310316e-06,
+    -1.3950141475093207e-06,
+    1.0490879384259579e-09,
+    0.000567478777306485,
+    0.00047910179261564527,
+    0.00013322005499829032,
+    -4.0854783511284376e-07,
+    2.2027999952529758,
+    -1.327540991631033e-06,
+    -1.3950141475093217e-06,
+    0.19999999999999762,
+    3.608554594088977e-18,
+    0.01999797730843671,
+    1.0,
+    2.8709727117660275e-18,
+    -1.2770022893730648e-19,
+    1.6250398211200338e-27,
+    -2.7878939468021065e-08,
+    -1.6867235253609967e-06,
+    4.64117131737981e-06,
+    2.0071918599553505e-06,
+    4.682459691812123e-10,
+    8.950155235280498e-09,
+    -5.193272442263933e-09,
+    -2.1848756091781614e-09,
+    -2.7878939468046258e-08,
+    -1.686723525358656e-06,
+    4.641171317378136e-06,
+    2.0071918599553505e-06,
+    4.682459691730101e-10,
+    8.9501552353002e-09,
+    -5.193272442133779e-09,
+    -2.184875609257721e-09,
+    1.5181952187569489e-18,
+    2.0844998651807663e-17,
+    -4.745623108621633e-16,
+    -9.504671250161673e-16,
+    -1.1882529431498769e-17,
+    -4.5070046658656685e-30,
+    3.2061424394924e-07,
+    6.072412525590433e-05,
+    -0.0005180865824140182,
+    -0.0001001047462709005,
+    -1.9351142684325018e-07,
+    2.605506240280697e-05,
+    -7.670850428762982e-07,
+    -9.195356290210183e-07,
+    3.2061424395704955e-07,
+    6.072412525595623e-05,
+    -0.0005180865824140216,
+    -0.00010010474627090098,
+    -1.9351142683343593e-07,
+    2.6055062402804096e-05,
+    -7.670850428323905e-07,
+    -9.195356289069613e-07,
+    6.295215564802643e-17,
+    -4.562375332676102e-15,
+    3.775298619592576e-15,
+    1.3856295514285768e-13,
+    6.882207784579559e-14,
+    2.1927974979959657e-27,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "settle_info": {
+    "phase": "PREGRASP",
+    "physics_steps": 100,
+    "time_s": 0.20000000000000015,
+    "block_bottom_height_m": -2.022691563290102e-06,
+    "stable_steps": 76,
+    "velocity_threshold": 0.0001,
+    "arm_floor_clearance_m": 0.0724000062753883,
+    "arm_block_clearance_m": 0.16722850181441548,
+    "hardware_execution": false
+  },
+  "baseline_segments": [
+    {
+      "phase": "SAFE_STAGE",
+      "xyz": [
+        0.19887740719681168,
+        0.00046499316410205445,
+        0.08955032619040812
+      ],
+      "seed_q": [
+        1.0490879384265303e-09,
+        0.0005674787773064851,
+        0.0004791017926156452,
+        0.00013322005499829032,
+        -4.085478351128436e-07,
+        2.2028,
+        1.0490879384259579e-09,
+        0.000567478777306485,
+        0.00047910179261564527,
+        0.00013322005499829032,
+        -4.0854783511284376e-07,
+        2.2028
+      ],
+      "ik": {
+        "action_rad": [
+          0.6542756971115711,
+          -0.41101272854758364,
+          0.6496495093378658,
+          0.610067757698154,
+          -0.051739956793743096,
+          2.2028,
+          1.0490879384259579e-09,
+          0.000567478777306485,
+          0.00047910179261564527,
+          0.00013322005499829032,
+          -4.0854783511284376e-07,
+          2.2028
+        ],
+        "converged": true,
+        "iterations": 14,
+        "residual_m_by_side": {
+          "left": 0.0001352847537964024
+        },
+        "tool_axis_error_rad_by_side": {},
+        "planning_qpos_writes": 15,
+        "runtime_qpos_writes": 0,
+        "hardware_execution": false
+      },
+      "position_error_m": 0.0001352847537964024,
+      "approach_error_rad": 0.5910617189112217,
+      "closing_error_rad": 0.8183911054297901,
+      "joint_margins": [
+        {
+          "name": "left_shoulder_pan",
+          "lower": 2.5741378743053325,
+          "upper": 1.2655864800821923
+        },
+        {
+          "name": "left_shoulder_lift",
+          "lower": 1.508849448646178,
+          "upper": 2.1563419805419204
+        },
+        {
+          "name": "left_elbow_flex",
+          "lower": 2.3396495093378658,
+          "upper": 1.0403504906621341
+        },
+        {
+          "name": "left_wrist_flex",
+          "lower": 2.268130607153847,
+          "upper": 1.0479949716353794
+        },
+        {
+          "name": "left_wrist_roll",
+          "lower": 2.6921073402055065,
+          "upper": 2.892946266176348
+        },
+        {
+          "name": "left_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        },
+        {
+          "name": "right_shoulder_pan",
+          "lower": 1.9198621782428495,
+          "upper": 1.9198621761446755
+        },
+        {
+          "name": "right_shoulder_lift",
+          "lower": 1.920429655971068,
+          "upper": 1.7447617732170302
+        },
+        {
+          "name": "right_elbow_flex",
+          "lower": 1.6904791017926155,
+          "upper": 1.6895208982073844
+        },
+        {
+          "name": "right_wrist_flex",
+          "lower": 1.6581960695106912,
+          "upper": 1.657929509278535
+        },
+        {
+          "name": "right_wrist_roll",
+          "lower": 2.7438468884514142,
+          "upper": 2.84120671793044
+        },
+        {
+          "name": "right_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        }
+      ],
+      "guard": {
+        "safe": true,
+        "reason": "interpolated simulator path satisfies protected clearance",
+        "minimum_clearance_m": 0.03,
+        "required_clearance_m": 0.03,
+        "path_fraction": 0.0,
+        "checked_samples": 28,
+        "first_body": "left_shoulder",
+        "second_body": "world",
+        "first_geom_id": 9,
+        "second_geom_id": 0,
+        "published": false,
+        "control_authorized": false,
+        "hardware_dispatch_authorized": false,
+        "executed_action": false,
+        "hardware_execution": false
+      },
+      "task_policy": {
+        "general_clearance_m": 0.03217675760094315,
+        "closest_general_pair": [
+          36,
+          74
+        ],
+        "pairs": [],
+        "safe": true
+      },
+      "geometric_clearances_m": {
+        "pad_block": 0.03217675760094315,
+        "pad_table": 0.07217473077093575,
+        "housing_block": 0.05768344651622113
+      },
+      "path_general_minimum_m": 0.03217675760094315,
+      "eligible": true
+    },
+    {
+      "phase": "ALIGN_HIGH",
+      "xyz": [
+        0.19887740719681168,
+        0.00046499316410205445,
+        0.08955032619040812
+      ],
+      "seed_q": [
+        0.6542756971115711,
+        -0.41101272854758364,
+        0.6496495093378658,
+        0.610067757698154,
+        -0.051739956793743096,
+        2.2028,
+        1.0490879384259579e-09,
+        0.000567478777306485,
+        0.00047910179261564527,
+        0.00013322005499829032,
+        -4.0854783511284376e-07,
+        2.2028
+      ],
+      "ik": {
+        "action_rad": [
+          0.6587135380517075,
+          0.3055968275601624,
+          -0.4516332357554296,
+          1.5754031779512765,
+          -0.9498136148307699,
+          2.2028,
+          1.0490879384259579e-09,
+          0.000567478777306485,
+          0.00047910179261564527,
+          0.00013322005499829032,
+          -4.0854783511284376e-07,
+          2.2028
+        ],
+        "converged": true,
+        "iterations": 184,
+        "residual_m_by_side": {
+          "left": 4.365212752613239e-05
+        },
+        "tool_axis_error_rad_by_side": {
+          "left": 0.034869445197572325
+        },
+        "planning_qpos_writes": 185,
+        "runtime_qpos_writes": 0,
+        "hardware_execution": false
+      },
+      "position_error_m": 4.365212752613239e-05,
+      "approach_error_rad": 0.034869445197572325,
+      "closing_error_rad": 0.14384382681285118,
+      "joint_margins": [
+        {
+          "name": "left_shoulder_pan",
+          "lower": 2.578575715245469,
+          "upper": 1.2611486391420559
+        },
+        {
+          "name": "left_shoulder_lift",
+          "lower": 2.225459004753924,
+          "upper": 1.4397324244341743
+        },
+        {
+          "name": "left_elbow_flex",
+          "lower": 1.2383667642445704,
+          "upper": 2.1416332357554295
+        },
+        {
+          "name": "left_wrist_flex",
+          "lower": 3.233466027406969,
+          "upper": 0.082659551382257
+        },
+        {
+          "name": "left_wrist_roll",
+          "lower": 1.7940336821684795,
+          "upper": 3.7910199242133746
+        },
+        {
+          "name": "left_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        },
+        {
+          "name": "right_shoulder_pan",
+          "lower": 1.9198621782428495,
+          "upper": 1.9198621761446755
+        },
+        {
+          "name": "right_shoulder_lift",
+          "lower": 1.920429655971068,
+          "upper": 1.7447617732170302
+        },
+        {
+          "name": "right_elbow_flex",
+          "lower": 1.6904791017926155,
+          "upper": 1.6895208982073844
+        },
+        {
+          "name": "right_wrist_flex",
+          "lower": 1.6581960695106912,
+          "upper": 1.657929509278535
+        },
+        {
+          "name": "right_wrist_roll",
+          "lower": 2.7438468884514142,
+          "upper": 2.84120671793044
+        },
+        {
+          "name": "right_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        }
+      ],
+      "guard": {
+        "safe": true,
+        "reason": "interpolated simulator path satisfies protected clearance",
+        "minimum_clearance_m": 0.03,
+        "required_clearance_m": 0.03,
+        "path_fraction": 0.0,
+        "checked_samples": 46,
+        "first_body": "left_shoulder",
+        "second_body": "world",
+        "first_geom_id": 9,
+        "second_geom_id": 0,
+        "published": false,
+        "control_authorized": false,
+        "hardware_dispatch_authorized": false,
+        "executed_action": false,
+        "hardware_execution": false
+      },
+      "task_policy": {
+        "general_clearance_m": 0.03415442718777447,
+        "closest_general_pair": [
+          36,
+          74
+        ],
+        "pairs": [],
+        "safe": true
+      },
+      "geometric_clearances_m": {
+        "pad_block": 0.03415442718777447,
+        "pad_table": 0.07361004265043064,
+        "housing_block": 0.0809100122241561
+      },
+      "path_general_minimum_m": 0.03013513629321801,
+      "eligible": true
+    }
+  ],
+  "sufficient_segments": [
+    {
+      "phase": "SAFE_STAGE",
+      "xyz": [
+        0.19882127755665238,
+        0.000488242822307157,
+        0.09002794363450668
+      ],
+      "seed_q": [
+        1.0490879384265303e-09,
+        0.0005674787773064851,
+        0.0004791017926156452,
+        0.00013322005499829032,
+        -4.085478351128436e-07,
+        2.2028,
+        1.0490879384259579e-09,
+        0.000567478777306485,
+        0.00047910179261564527,
+        0.00013322005499829032,
+        -4.0854783511284376e-07,
+        2.2028
+      ],
+      "ik": {
+        "action_rad": [
+          0.6543393776923563,
+          -0.41390754274838104,
+          0.6498378324739574,
+          0.6110175416989059,
+          -0.051736413284631,
+          2.2028,
+          1.0490879384259579e-09,
+          0.000567478777306485,
+          0.00047910179261564527,
+          0.00013322005499829032,
+          -4.0854783511284376e-07,
+          2.2028
+        ],
+        "converged": true,
+        "iterations": 14,
+        "residual_m_by_side": {
+          "left": 0.00013452171566211485
+        },
+        "tool_axis_error_rad_by_side": {},
+        "planning_qpos_writes": 15,
+        "runtime_qpos_writes": 0,
+        "hardware_execution": false
+      },
+      "position_error_m": 0.00013452171566211485,
+      "approach_error_rad": 0.5928149251956795,
+      "closing_error_rad": 0.8184540557059634,
+      "joint_margins": [
+        {
+          "name": "left_shoulder_pan",
+          "lower": 2.574201554886118,
+          "upper": 1.2655227995014071
+        },
+        {
+          "name": "left_shoulder_lift",
+          "lower": 1.5059546344453807,
+          "upper": 2.159236794742718
+        },
+        {
+          "name": "left_elbow_flex",
+          "lower": 2.3398378324739575,
+          "upper": 1.0401621675260424
+        },
+        {
+          "name": "left_wrist_flex",
+          "lower": 2.2690803911545987,
+          "upper": 1.0470451876346276
+        },
+        {
+          "name": "left_wrist_roll",
+          "lower": 2.6921108837146184,
+          "upper": 2.892942722667236
+        },
+        {
+          "name": "left_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        },
+        {
+          "name": "right_shoulder_pan",
+          "lower": 1.9198621782428495,
+          "upper": 1.9198621761446755
+        },
+        {
+          "name": "right_shoulder_lift",
+          "lower": 1.920429655971068,
+          "upper": 1.7447617732170302
+        },
+        {
+          "name": "right_elbow_flex",
+          "lower": 1.6904791017926155,
+          "upper": 1.6895208982073844
+        },
+        {
+          "name": "right_wrist_flex",
+          "lower": 1.6581960695106912,
+          "upper": 1.657929509278535
+        },
+        {
+          "name": "right_wrist_roll",
+          "lower": 2.7438468884514142,
+          "upper": 2.84120671793044
+        },
+        {
+          "name": "right_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        }
+      ],
+      "guard": {
+        "safe": true,
+        "reason": "interpolated simulator path satisfies protected clearance",
+        "minimum_clearance_m": 0.03,
+        "required_clearance_m": 0.03,
+        "path_fraction": 0.0,
+        "checked_samples": 28,
+        "first_body": "left_shoulder",
+        "second_body": "world",
+        "first_geom_id": 9,
+        "second_geom_id": 0,
+        "published": false,
+        "control_authorized": false,
+        "hardware_dispatch_authorized": false,
+        "executed_action": false,
+        "hardware_execution": false
+      },
+      "task_policy": {
+        "general_clearance_m": 0.032651444831021385,
+        "closest_general_pair": [
+          36,
+          74
+        ],
+        "pairs": [],
+        "safe": true
+      },
+      "geometric_clearances_m": {
+        "pad_block": 0.032651444831021385,
+        "pad_table": 0.07264942030814332,
+        "housing_block": 0.05806690734030578
+      },
+      "path_general_minimum_m": 0.032651444831021385,
+      "eligible": true
+    },
+    {
+      "phase": "ALIGN_HIGH",
+      "xyz": [
+        0.19882127755665238,
+        0.000488242822307157,
+        0.09002794363450668
+      ],
+      "seed_q": [
+        0.6543393776923563,
+        -0.41390754274838104,
+        0.6498378324739574,
+        0.6110175416989059,
+        -0.051736413284631,
+        2.2028,
+        1.0490879384259579e-09,
+        0.000567478777306485,
+        0.00047910179261564527,
+        0.00013322005499829032,
+        -4.0854783511284376e-07,
+        2.2028
+      ],
+      "ik": {
+        "action_rad": [
+          0.6587849973705049,
+          0.30596247179351005,
+          -0.45576664781888615,
+          1.5791716893806877,
+          -0.9506898627494487,
+          2.2028,
+          1.0490879384259579e-09,
+          0.000567478777306485,
+          0.00047910179261564527,
+          0.00013322005499829032,
+          -4.0854783511284376e-07,
+          2.2028
+        ],
+        "converged": true,
+        "iterations": 184,
+        "residual_m_by_side": {
+          "left": 4.365158391385075e-05
+        },
+        "tool_axis_error_rad_by_side": {
+          "left": 0.03486123588892888
+        },
+        "planning_qpos_writes": 185,
+        "runtime_qpos_writes": 0,
+        "hardware_execution": false
+      },
+      "position_error_m": 4.365158391385075e-05,
+      "approach_error_rad": 0.03486123588892888,
+      "closing_error_rad": 0.1445541541006906,
+      "joint_margins": [
+        {
+          "name": "left_shoulder_pan",
+          "lower": 2.5786471745642663,
+          "upper": 1.2610771798232585
+        },
+        {
+          "name": "left_shoulder_lift",
+          "lower": 2.2258246489872717,
+          "upper": 1.4393667802008265
+        },
+        {
+          "name": "left_elbow_flex",
+          "lower": 1.2342333521811137,
+          "upper": 2.145766647818886
+        },
+        {
+          "name": "left_wrist_flex",
+          "lower": 3.237234538836381,
+          "upper": 0.07889103995284574
+        },
+        {
+          "name": "left_wrist_roll",
+          "lower": 1.7931574342498007,
+          "upper": 3.791896172132054
+        },
+        {
+          "name": "left_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        },
+        {
+          "name": "right_shoulder_pan",
+          "lower": 1.9198621782428495,
+          "upper": 1.9198621761446755
+        },
+        {
+          "name": "right_shoulder_lift",
+          "lower": 1.920429655971068,
+          "upper": 1.7447617732170302
+        },
+        {
+          "name": "right_elbow_flex",
+          "lower": 1.6904791017926155,
+          "upper": 1.6895208982073844
+        },
+        {
+          "name": "right_wrist_flex",
+          "lower": 1.6581960695106912,
+          "upper": 1.657929509278535
+        },
+        {
+          "name": "right_wrist_roll",
+          "lower": 2.7438468884514142,
+          "upper": 2.84120671793044
+        },
+        {
+          "name": "right_gripper",
+          "lower": 2.2028,
+          "upper": 0.0
+        }
+      ],
+      "guard": {
+        "safe": true,
+        "reason": "interpolated simulator path satisfies protected clearance",
+        "minimum_clearance_m": 0.03,
+        "required_clearance_m": 0.03,
+        "path_fraction": 0.0,
+        "checked_samples": 46,
+        "first_body": "left_shoulder",
+        "second_body": "world",
+        "first_geom_id": 9,
+        "second_geom_id": 0,
+        "published": false,
+        "control_authorized": false,
+        "hardware_dispatch_authorized": false,
+        "executed_action": false,
+        "hardware_execution": false
+      },
+      "task_policy": {
+        "general_clearance_m": 0.03463328506206426,
+        "closest_general_pair": [
+          36,
+          74
+        ],
+        "pairs": [],
+        "safe": true
+      },
+      "geometric_clearances_m": {
+        "pad_block": 0.03463328506206426,
+        "pad_table": 0.07408682082688135,
+        "housing_block": 0.0813912928568329
+      },
+      "path_general_minimum_m": 0.03063625185321009,
+      "eligible": true
+    }
+  ],
+  "failure_time_s": 5.045999999999666,
+  "failure_gap_m": 0.029999496143121685,
+  "retreat_m": 0.010110785931572185
+}
