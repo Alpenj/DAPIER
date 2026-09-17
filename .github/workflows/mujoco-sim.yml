@@ -23,7 +23,8 @@ concurrency:
 jobs:
   mujoco-headless-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Full copied-physics regressions exceeded 20 minutes on a hosted runner.
+    timeout-minutes: 45
     env:
       DAPIER_SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:

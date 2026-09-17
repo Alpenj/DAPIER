@@ -952,3 +952,13 @@ Haswell의 동일 saved-state diagnostic은 GRASP_CONFIRM qpos 최대차7.806255
 BOX–BOX 회귀는 기존 승인 모델의 native0을 계속 확인한다. 두 번째 모델은 관측된 native 양수0.19581108263492744를 유지하며, 두 모델 모두 native0을 mock한 별도 분기로 certificate fallback을 실행한다. Exact touching/shallow/deep penetration은 계속 거부한다. 미감사 identity 및1e-12 geometry 변형 거부 회귀도 추가했다. 독립 검토자는 이 최소 경계에서 새 blocking issue를 찾지 않았으며, 전체 regression 결과는 아래에 기록한다.
 
 집중 검증: Haswell LIFT chronology 1 PASS /20.219s. 실제 LIVE 수정·재실행 없음.
+
+### 전체 검증 및 CI wall-clock 제한
+
+- Source commit389735edcc7133ab0c0b791890cbdd288d623147 normal push 완료. Local canonical `scripts/verify-mujoco-headless`: research33 PASS(0.018s), MuJoCo354 PASS(1091.182s), canonical render·vision artifacts PASS, process exit0. Haswell 집중 회귀: certificate4/source4/manipulation7/LIFT1 PASS. Repository-root에서 manipulation 단독 discovery는 parent import가 없어 실패했지만 해당 module directory의 표준 unittest discovery로7 PASS; 전체 repository invocation에는 임시 PYTHONPATH를 추가하지 않았다.
+- [Remote run35201807198](https://github.com/Alpenj/DAPIER/actions/runs/35201807198)는 assertion failure가 아니라 annotation `The job has exceeded the maximum execution time of 20m0s`로 CANCELLED다. Post-contact CLOSE copied replay 도중 중단됐다. 전체 PASS로 취급하지 않는다.
+- 이번 hosted runner는 Intel Xeon8573C/AVX512이며 b6dafd…/native0을 재현했다. 이전 EPYC7763는7bd67b…/native+195.811083mm였다. 고정된 ubuntu-latest 라벨이 동일 CPU 수치 경로를 보장하지 않는다. 최신 model artifact10488418168도 보존했다.
+- 전체 테스트를 삭제/단축하지 않고 CI job wall-clock cap만20→45min으로 변경했다. Local 전체18.2min와 hosted20min timeout이 근거다. Physics timestep/trajectory duration/runtime timeout/acceptance/controller에는 변화가 없다.
+- PR62 base main/draft는 새 전체CI 결과가 확정되기 전 유지한다. 최종 결과와 commit/merge SHA는 PR 및 Notion handoff에 연결한다. 이 문서/CI cap 변경 후 SIM source는389735e와 동일하므로 local 전체를 불필요하게 반복하지 않는다.
+- KIT의 기존 local-validation 아래 `lift-stability-20260917`에150-step raw/history/report를, `ci-numeric-audit-20260917`에 local/remote/Haswell manifest와 field diff를 보존했다. 별도 새 학습 원장을 만들지 않았다.
+- Diagnostic viewer는 saved physics replay로 표시한다. 기존 실제 failure state는 진행하지 않았다. Actual 마지막 PASS=GRASP_CONFIRM, LIFT_5MM FAIL/SIM17.474s, CENTER SUCCESS=false/HOLD0s. 다음 blocker는 table 이탈 전 불안정한 edge grasp/preload이며, contact-centered placement/closing 검토가 필요하다. 현재 staging30.378087mm는 기준30mm 대비0.378087mm 여유의 단일 조건 결과일 뿐 실물/다중초기조건 강건성 근거가 아니다.
