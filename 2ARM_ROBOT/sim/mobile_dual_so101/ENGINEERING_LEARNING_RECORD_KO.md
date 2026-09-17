@@ -962,3 +962,48 @@ BOX–BOX 회귀는 기존 승인 모델의 native0을 계속 확인한다. 두 
 - PR62 base main/draft는 새 전체CI 결과가 확정되기 전 유지한다. 최종 결과와 commit/merge SHA는 PR 및 Notion handoff에 연결한다. 이 문서/CI cap 변경 후 SIM source는389735e와 동일하므로 local 전체를 불필요하게 반복하지 않는다.
 - KIT의 기존 local-validation 아래 `lift-stability-20260917`에150-step raw/history/report를, `ci-numeric-audit-20260917`에 local/remote/Haswell manifest와 field diff를 보존했다. 별도 새 학습 원장을 만들지 않았다.
 - Diagnostic viewer는 saved physics replay로 표시한다. 기존 실제 failure state는 진행하지 않았다. Actual 마지막 PASS=GRASP_CONFIRM, LIFT_5MM FAIL/SIM17.474s, CENTER SUCCESS=false/HOLD0s. 다음 blocker는 table 이탈 전 불안정한 edge grasp/preload이며, contact-centered placement/closing 검토가 필요하다. 현재 staging30.378087mm는 기준30mm 대비0.378087mm 여유의 단일 조건 결과일 뿐 실물/다중초기조건 강건성 근거가 아니다.
+
+
+## 2026-09-17 — 접촉 geometry·하중·상대 운동의 병렬 분리
+
+record_id: DAPIER-2026-09-17-grasp-load-evidence
+
+### Problem
+
+나는 GRASP_CONFIRM의 bilateral contact PASS가 실제 하중 지지의 충분조건인지 확인했다. 기존 LIFT command jump를 제거한 copied 진단도 step36에서 한쪽 힘을 잃고 step42에서 양쪽 정상력이0이 된다. 실제 마지막 PASS는 GRASP_CONFIRM이고 LIFT_5MM/CENTER SUCCESS는 아직 아니다.
+
+### Evidence
+
+A/B/C를 read-only로 분담했다. 동시 작업자는 최대2명으로 A/B 뒤 C를 실행했고, coordinator만 소스를 수정했다. 동일 저장 B_confirm 및 continuous50-step 기록을 사용했다. 새 full-range sweep이나 retreat 검색은 하지 않았다.
+
+- Geometry: block COM-local contact는 pad1(-19.999264,+12.013009,-15.459300)mm, pad2(+19.999259,-19.999879,+15.595676)mm다. World Z 높이차31.057826mm, unsigned normal–closing angle10.632049°/5.784915°다. 비슷한 정상력이 대칭 face pinch를 뜻하지 않는다. Pad2는 block x+/y− edge에 있고 compiled mesh bounding-box y 경계 inset0.127230µm/z0.115269mm다. 이는 tapered pad face의 실제 edge 최단거리가 아니다. 최초 소실은 여유가 더 큰 pad1이므로 pad2 edge 이탈을 단독 원인으로 확정하지 않았다.
+- Frame 정정: 과거(-19.825,+12.297,-15.461)mm 등의 값은 world COM lever arm이다. 엄밀한 block-local 좌표는 위 값이다. Closing axis는 TCP rotation column2=(.980517309,-.168651884,.100709227), block yaw−.818535°다.
+- Force: B_confirm Fn=.070893/.072187N, 실제 finger vertical=.000459441N, table=.195740710N, block weight=.1962N이다. Table이99.77% 지지한다. Finger COM torque world=(−.000518596,−.002185022,−.001634548)Nm다.
+- HOLD50: jaw opening은8.603µm 줄지만 Fn 합은33.48% 감소한다. Motor는 벌어지지 않으며 포화도 아니다. Soft jaw-coupling preload relaxation과 contact pose 변화가 함께 관측되지만 각 기여를 단독 확정하지 않는다.
+- Elliptic contact의 접선 friction은1.6이다. 중력 방향의 낙관적 상한은 B=.228929N, HOLD50=.152279N이다. HOLD와 continuous 모두 step19부터 weight보다 작다. Contact normal 방향을 포함했으며 torque equilibrium/공유 torsional friction budget을 무시한 상한이므로 상한이 weight보다 커도 lift 가능을 증명하지 않는다.
+- Motion: step35 하향 tangent slip은1.06752/.580816mm/s, friction utilization=.993987/.985469다. 첫 finger force loss=36/72ms, 양쪽0=42/84ms. Step42에도 기하 접촉은 남는다. Table support loss는50step 창에서 없다. Step50 TCP는105.561µm 상승하지만 block COM은9.092µm 하강한다. 최대 block COM 상승3.676µm도 완전 table 이탈이 아니다.
+- T0에 이미 작은 block velocity/yaw motion이 있다. Step1은 첫 기록 변화이며 실제 운동 개시 시점이라고 단정하지 않는다.
+
+### Decision
+
+주 원인은 지속 가능한 하중 지지가 없는 약한 비대칭 파지다. Command jump는 확인된 별도 기여지만 제거만으로 해결되지 않는다. Gripper opening failure나 contact gate의 stale force만으로 설명할 근거는 없다. Geometry/friction/controller/timing/acceptance/force threshold는 변경하지 않았다.
+
+나는 기존 CLOSE schedule의 다음 한 increment만 copied state에서 시험했다. Arm은 explicit command를 유지하고 left gripper2.043112220719→2.033145819642rad(CLOSE17)로 변경했다. 새 각도/force 기준을 발명하지 않고 기존 schedule·controller·trajectory generator·runtime gate를 재사용했다. 추가 CLOSE의 minimum duration 입력은 기존.1s이고 실제 generator duration은.404s다.
+
+### Validation
+
+- CLOSE17 copied preflight PASS: TCP.155276mm, approach1.9675°/closing11.3286°, Fn=.098751/.101273N, general clearance48.707389mm. 원본 integration state array_equal 보존.
+- 기존50step confirmation 후 continuous-command LIFT에서 다시 step36 bilateral loss로 정지했다. 따라서 추가 CLOSE 한 단계만으로 해결되지 않으며 live 재시작 조건을 충족하지 않는다.
+- 기존 진단에 block-frame wrench/COM torque 및 optimistic vertical upper bound를 추가했다. MuJoCo contact force는 geom2에 작용하므로 block=geom1이면 부호를 반전한다. 새 값은 diagnosis 전용이며 is_load_ready_gate=false다.
+- 실행 재현: SIM 디렉터리에서 기존 venv Python으로 `lift_transition_diagnostic.py --report test/fixtures/lift_transition.json --next-close --output /tmp/next-close.json`. 기본 진단과 기존 failure fixture도 유지한다.
+- 집중 LIFT 회귀 1 PASS /46.702s. 전체 local suite와 원격 CI의 최종 결과·commit/merge SHA는 [후속 PR63](https://github.com/Alpenj/DAPIER/pull/63)에 연결한다. CI PASS 전 draft/merge 금지를 유지한다. 원시 A/B/C 산출물 및 후보 telemetry는 기존 KIT local-validation 아래 grasp-load-evidence-20260917에 보존한다.
+
+### Result
+
+실제 실행은 이번 턴 진행하지 않았다. 마지막 actual PASS=GRASP_CONFIRM, 기존 actual failure=LIFT_5MM/SIM17.474s, CENTER SUCCESS=false다. 추가 CLOSE/LIFT는 DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS다. 접촉 회복이나 기하 접촉 잔존을 stable grasp로 보고하지 않는다.
+
+### Lesson / Next
+
+CONTACT_CONFIRM(실제 양쪽 접촉)과 GRASP_LOAD_READY(하중 지지 근거)는 다른 의미다. 이번에는 runtime gate를 바꾸지 않았다. 현재처럼 힘이 작고 감쇠하며 table support가 남는 경우에는 bilateral force>0만으로 후자를 주장할 수 없다. 다음 blocker는 opposing-face 중심에 가까운 contact placement와 preload 유지의 원인 분리다. 마찰/힘 기준을 올리거나 닫힘 단계를 계속 추가해 통과시키지 않는다.
+
+현재 staging30.378087mm는 일반30mm 대비.378087mm 여유의 단일 조건 결과이며 다중 초기조건·실물 강건성 증거가 아니다. Hardware/OS30A/multi-seed/ACT 미실행. 기존 untracked REAL_SCENE_GEOMETRY_AUDIT.md와 실패 state를 보존했다.
