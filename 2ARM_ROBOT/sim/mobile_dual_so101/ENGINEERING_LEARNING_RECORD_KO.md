@@ -1966,3 +1966,68 @@ Raw SHA187f3264af3dbec8db48dce64f5f5b9e30487ddb118121b9937b544bcb1b18df.
 다음 SIM blocker는 arm이 만들 수 있는 contact geometry와 load-bearing 안정성이다.
 새 pose search나 physics 설정 변경은 이번 결과 없이 자동 확대하지 않았다.
 REAL calibration 결과는 이 SIM 결과와 독립적으로 기록한다.
+
+## DAPIER-2026-09-18-arm-coupling-comparison
+
+### Problem
+단독 gripper NoSlip5의 무지지 성공을 팔 장착 grasp로 일반화할 수 있는지,
+팔의 움직임과 처음부터 다른 접촉 배치를 분리했다. 실제 task는 GRASP_CONFIRM
+PASS / LIFT FAIL이고 새 live 실행은 하지 않았다.
+
+### Evidence — VERIFIED BY PHYSICS / DIAGNOSTIC ONLY
+동일한 보존 GRASP_CONFIRM full-state에서 terminal command HOLD50과 왼팔5관절
+SOFT_LOCK HOLD50, 총100step/0.2s를 복제 실행했다. 원래qpos/qvel/warmstart/ctrl를
+보존했고 per-step qpos reset은 없다. 29option/38physical arrays/기존4equalities가
+같으며 신규5 eq_active만 추가했다. SOFT_LOCK은 유한 강성이고 강체 고정이 아니다.
+최대 관절 변위2.76939e-7rad, 속도2.48973e-5rad/s이다.
+
+HOLD 최종 Fn .080839/.075044N, table .197998N; SOFT_LOCK은
+.081746/.074822N, table .196242N이다. 둘 다 양쪽 접촉을 유지하지만 table이
+중량 .1962N을 계속 받친다. 성공한 정상 OPEN→CLOSE→prescribed TEST SUPPORT
+철수→무지지3s bench는 Fn .481446/.481445N, 패드 수직합력 .1962N,
+COM torque 약3.31e-15Nm, support0이다. 이전 preformed identical-state bench와 구분했다.
+
+공통 block-COM frame 접촉 높이 차이: arm31.054978mm vs bench .017130mm.
+Arm 접촉 법선은 완전 대향에서9.251도 어긋난다. Gripper terminal command도
+arm2.043112221rad / bench1.714220985rad로 다르며 jaw opening47.385/39.967mm를
+같은 압축량으로 비교할 수 없다. Bench는 NoSlip5로 형성했고 arm은 NoSlip0으로
+형성한 상태에 NoSlip5를 적용했다. Friction/condim은 같지만 통제된 arm-only A/B는 아니다.
+
+기존 NoSlip LIFT50은 원본hash/시작state/command 동일성을 확인해 재사용했다.
+Step32 한 관측단계 table force0에서 pad Fz .172801N<weight .1962N,
+step33 첫 bilateral support loss, step37 양쪽 기하접촉 상실이다.
+Step50 남은 pad Fz -.060550N/table .314623N. 0.534920s 궤적의 .1s 진단이며
+endpoint 도달 실패나 새로운 actual execution으로 표시하지 않는다.
+
+### Decision — INFERENCE
+가장 강한 차이는 형성 이력/대각 접촉/낮은 preload와 lift 중 wrench 붕괴다.
+팔 compliance 단독 원인으로 확정하지 않는다. SOFT_LOCK은 HOLD에만 적용했으며
+locked-LIFT는 미검증이다. NoSlip runtime 채택이나 friction/mass/geometry/controller/
+timing/limits/acceptance/safety 변경을 하지 않았다.
+
+### Validation — VERIFIED BY REGRESSION
+저장-only verifier PASS: common full-state/모든 option/38arrays/원래 equality,
+100행 모든 pad force와 COM moment를 contact frame에서 독립 재합산했다.
+추가 mj_step 없음. 기존 lift_transition fixture에 대표1/25/50step과 비교값/원본hash를
+추가해 명령 불변, table support 잔류, wrench 합산, 다른 접촉배치 의미를 회귀로 보존했다.
+Focused9 PASS; fullsuite/remoteCI는 milestone 미달로 실행하지 않았다.
+MuJoCo 한 창은 RECORDED STATE PLAYBACK / NOT NEW PHYSICS라고 표시하고
+1:HOLD/2:SOFT_LOCK/3:LIFT를 비교한다. 표시용 data만 qpos를 복원한다.
+
+### Result
+Actual last PASS=GRASP_CONFIRM, LIFT FAIL, CENTER SUCCESS=false/HOLD0s 유지.
+Copied HOLD retention은 unsupported HOLD 성공이 아니다. Raw SHA
+189a8bee856647497ccab55443022cfb16a7a4a7a9b259900585decbdc70a1de.
+재현은 기존 KIT local-validation/arm-coupling-20260918의 run.py;
+저장 검증 verify.py, 표시 view_saved.py. 원본 모델/상태/manifest도 함께 보존한다.
+Focused 명령은 test 디렉터리에서 python -m unittest
+ test_lift_transition.LiftTransitionTest.test_arm_hold_retention_is_not_unsupported_grasp
+ test_lift_transition.LiftTransitionTest.test_arm_noslip_copy_does_not_establish_load_bearing
+ test_gripper_force_requirements -v 이다.
+
+### Lesson / Next — UNVERIFIED
+같은 solver라도 접촉 형성과 자세가 다르면 arm coupling 실험이 아니다.
+Bench는 pre-integration force, arm은 integrated-pose mj_forward force여서 과도응답의
+직접 인과 비교에도 한계가 있다. 다음은 검증된 접촉 배치/형성 이력을 맞춘 통제 비교다.
+현재 기준을 완화하거나 추가 CLOSE/NoSlip sweep으로 성공을 만들지 않는다.
+REAL extrinsic과 이 결과를 섞지 않고 PR67 draft를 유지한다.
