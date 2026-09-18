@@ -1243,3 +1243,47 @@ CAD의 가상 기준점 이름만으로 현장 실측을 안내하면 오해할 
 거리와 방향을 하나씩 확인한다. 현재 보드/팔/카메라 위치를 보존한다.
 Depth registration/known-distance 검증도 남아 있으며 PnP 낮은 residual만으로
 camera→arm calibration 또는20mm 비접촉 clearance를 선언하지 않는다.
+
+## DAPIER-2026-09-18-real-base-photo-correspondence
+
+### Problem
+고정 밑판의 가상 CAD 기준점/둥근 끝 설명만으로 실측을 안내해 사용자가
+정확한 위치를 짚기 어려웠다. 단순히 안내를 반복하지 않고 실제 사진을 대조했다.
+
+### Evidence
+사용자가 확인한 캘리퍼3.25mm는 밑판 앞끝과 인쇄 격자 경계의 국소 틈이다.
+꼭짓점 사이 대각선 거리로 재해석하지 않는다. 현재 보드는 받침판 없이 종이만
+책상에 붙인 상태이며, 별도 판의 높이를 가정했던 안내를 정정했다.
+사진3장의 ChArUco 검출40/42/53개, board-plane fit RMS0.151/0.239/0.218mm.
+이 값은 영상 적합 residual이고 실물 좌표 정확도가 아니다.
+
+### Decision
+원형 구멍 옆 +X 앞끝과 |Y| 최대 폭의 옆 돌출부를 구분했다.
+Pinned base CAD의 앞끝 수직면 X=64.635292mm, |Y|약24.927–30.626mm,
+Z=0–12.1mm; mounting bottom Z=-2.4mm. 상부 평면 끝은 X=61.635294mm,
+Z=15.1mm라 둥근 상단과 수직 앞면 사이 최대3mm setback이 있다.
+이는 CAD 수치이며 실제 캘리퍼 턱의 접촉점/출력오차를 확정한 값은 아니다.
+3.25mm 원값/미확정 측정불확도를 보존한다. 휴대폰 사진에 OS30A K를 적용하지
+않았고, 높이가 다른 밑판을 종이 평면 homography로 metric truth 처리하지 않았다.
+
+### Validation
+Synthetic homography 방향/단위 검증 PASS. 하나의 틈을 동일하게 유지하며
+접선 방향 위치가 달라질 수 있는 계산 PASS: 한 값으로 planar pose를 정할 수 없다.
+기존 camera_board_transform focused3tests PASS(0.027s), diffcheck 수행.
+원본 사진을 바꾸지 않은 HTML/별도 벡터 표식으로 photo/CAD를 나란히 표시했다.
+최초 /tmp xdg-open 성공만으로 화면 표시를 단정한 점을 정정했다. Downloads의
+HTML을 Firefox 새 창으로 직접 열고 X11창 제목 '밑판 측정점 대조 — 진단용' 확인.
+
+### Result
+ANALYTIC / PHOTO DIAGNOSTIC ONLY. 부품 영역 대응과 단일 실측의 의미를 좁혔다.
+정확한3D contact point, board→arm transform 및 실물 오차는 여전히 UNVERIFIED.
+카메라 재취득/모터 I/O/실제 arm motion 없음. SIM 상태와 runtime 정책 변경 없음.
+
+### Lesson / Next
+CAD 좌표 확인은 작업자가 수행하고 사용자에게 떠넘기지 않는다.
+접촉 높이에 따른 둥근 외곽 오차를 피할 고정 feature를 확인하여 위치와 방향을
+분리 측정한다. 한 개 간격이나 낮은 reprojection residual로 extrinsic을 승인하지 않는다.
+Private photos/측정행렬/증거는 로컬·비공개 학습 기록에 보존하고 Git에는 넣지 않는다.
+이번 단계는 milestone 미달이므로 fullsuite/remoteCI/main merge를 반복하지 않는다.
+
+- 후속 고정 hole datum 검사: top cap1071triangles의 경계46components를 추출했으나 완전한 원형rim 후보를 확인하지 못했다. 전체loop circle fit으로 hole center를 채택하지 않는다. 사진에서 둥글게 보이는 구멍을 CAD 원 중심으로 자동 확정하지 않았다. 다음 실측은 이 점 대응이 해결된 후에만 요청한다.
