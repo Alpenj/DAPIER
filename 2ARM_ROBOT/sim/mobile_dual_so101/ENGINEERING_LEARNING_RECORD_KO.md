@@ -2031,3 +2031,60 @@ Bench는 pre-integration force, arm은 integrated-pose mj_forward force여서 �
 직접 인과 비교에도 한계가 있다. 다음은 검증된 접촉 배치/형성 이력을 맞춘 통제 비교다.
 현재 기준을 완화하거나 추가 CLOSE/NoSlip sweep으로 성공을 만들지 않는다.
 REAL extrinsic과 이 결과를 섞지 않고 PR67 draft를 유지한다.
+
+## 2026-09-18 — 성공 상대 grasp를 팔에 매핑하고 기본 Z 동작 분리
+
+record_id: DAPIER-2026-09-18-relative-grasp-basic-motion
+
+### Problem
+
+성공한 gripper-only 접촉과 arm-mounted 접촉이 다른 이유를 먼저 확인했다. 어려운 A–D 실측은 중단하고, camera extrinsic과 독립적인 LEFT +20 mm/정지/복귀 SIM 리허설을 준비했다. 실제 motor command는 보내지 않았다.
+
+### Evidence
+
+**ANALYTIC / DIAGNOSTIC:** 정상 형성 후 무지지 HOLD 성공 bench의 `T_block_housing`과 `T_block_TCP`를 원래 pre-step qpos에서 추출했다. `T_A_B`는 B 좌표를 A로 변환한다(m/rad). TCP translation은 block 기준 약 `(0, 0.000138, -1.257583) mm`, TCP approach는 거의 block −Z, closing은 +X다. Bench contact height 차이는 .017130 mm, Fn .481446/.481445 N, support0이다. 하우징/site local transform은 팔과 exact 동일했다.
+
+기존 위치의 16개 제한된 seed/yaw 후보와 analytic wrist-axis 보정 6개를 평가했다. 선택 nominal 후보는 position .158510 mm, approach .210398°, closing .116392°이며 joint limits와 open 접근/CLOSE interpolation을 통과했다. 더 엄격한 별도 정밀 IK 자체는 .05° 목표에 수렴하지 않았으며, 기존 .5mm/2°/15° 수용과 구분했다. 전역 최소/불가능을 주장하지 않는다. Native bench-jaw state는 한쪽 접촉이므로 IK PASS를 양측 grasp로 간주하지 않았다.
+
+**VERIFIED BY PHYSICS / COPIED DIAGNOSTIC:** copied pregrasp 초기 배치 후 runtime teleport 없이 기존 ctrl/step 경로로 APPROACH→CLOSE→CONFIRM을 실행했다. HOME→staging은 이번 candidate에서 검증하지 않았다. Contact 형성 뒤 실제 높이차는 **25.158028 mm**, rigidly carried bench contact 예측은 **.178175 mm**였다. CONFIRM Fn .102269/.116904 N, table .199456 N, pad vertical resultant −.003260 N. 거의 맞는 TCP pose가 동일 native contact manifold/하중을 재현하지 못했다.
+
+기존 LIFT 첫 명령의 measured reseeding은 최대 .000616214 rad의 점프를 만들었다. 같은 CONFIRM full-state/같은 target에서 직전 verified ctrl로 정확히 연속 시작하면 첫 스텝 양측 접촉이 유지되지만 **step40 / 80ms**에 한쪽 normal force가0이 되어 기존 gate로 정지했다. Table 이탈은 step38–39 두 표본(.862/.696µm gap)에 불과했고 step40 재접촉했다. TCP 상승 .027776mm, 5mm endpoint 미도달, 무지지 HOLD 없음.
+
+**한계:** bench 형성 NoSlip5 vs arm 형성/runtime0은 혼재 조건이다. 이번에는 값을 바꾸지 않았다. 작은 pose 오차와 contact feature 선택/형성 이력이 원인 후보이며 단일 solver bug나 arm compliance로 확정하지 않는다. Native representative contact 높이차와 전체 usable surface overlap은 같은 지표가 아니다. 원본 duplicated-preflight의 custom 상세 필드4종은 잘못된 donor capture라 제외; main/continuation 실제 state와 기존 core clone/final state만 사용했다. 3226 main+6947 continued+40 continuous actual copied steps, 별도 중복 preflight2828step을 구분해 보존했다.
+
+### Decision
+
+Teacher grasp/runtime, NoSlip, friction, mass, geometry, controller, timing, limits, safety policy를 바꾸지 않았다. 성공 relative transform의 FK 수용은 가능하지만 실제 접촉 재현은 미완료다. Grasp 후보를 live task에 채택하지 않는다.
+
+기본 동작은 `basic_vertical_motion.py`에서 기존 integration scene/reset/settle, corrected axis IK, septic generator, `env.apply_action` 및 SAFE_STAGE 일반 30mm guard를 재사용한다. Measured q는 path/telemetry 시작값, 미조작 gripper/반대팔은 explicit ctrl를 유지한다. 새 hardware dispatch 경로는 없다.
+
+### Validation
+
+**VERIFIED BY PHYSICS:** 첫 +20mm 실행은 endpoint .630642mm로 거부했다. 계획 오차 .415475mm와 command FK→measured .346596mm를 분리했다. Acceptance .5mm는 유지하고 planner 내부 position tolerance만 `.5−.346596=.153404mm`로 설정했다. 단일 관측 기반 reserve이며 robustness bound가 아니다. Controller/속도/geometry는 그대로다.
+
+재실행은 SETTLE100step/.2s → 상승514step/1.028s → 비접촉 HOLD250step/.5s → 복귀514step/1.028s, 총1378step. 실제 상승19.600463mm, endpoint .400950mm/.251168°, HOLD .400876mm, 복귀 .000792mm/.000105°. General min72.400006mm, max command tracking .001003409rad. Joint/command/near-support/runtime clearance 검사 PASS. 양 gripper/오른팔 command 불변, hardware0, runtime qpos 직접 쓰기0(소스 계약). Full dynamics robustness나 실물 profile 검증으로 확대하지 않는다.
+
+**VERIFIED BY REGRESSION:** 기본 계획·저장 physics2 PASS, 접촉/LIFT/force focused10 PASS, 기존 REAL transform3 PASS. 원본 transform/FK22후보 및 복사-state chronology/hash/force 검증을 보존했다. Negative collision policy7 PASS/3.249s, near-support 음성2 PASS와 compact fixture 재검사1 PASS/3.128s, 양 worktree diffcheck PASS. 전체1378step max tracking이 기존 final .02rad보다 작음도 저장 trace에서 확인했다. Fullsuite/remoteCI 미실행.
+
+### Result
+
+실제 arm task는 여전히 GRASP_CONFIRM PASS/LIFT FAIL, CENTER SUCCESS=false/HOLD0s. Copied candidate의 continuous LIFT40step 실패를 분리했다. 기본 비접촉 SIM 상승/hold/return은 PASS이며 SIM 모델 시작 자세에서의 결과다.
+
+SIM LEFT arm 순서 pan/lift/elbow/wrist-flex/roll:
+- start/return q(rad): `[0, 0, 0, 0, 0]`
+- target q(rad): `[0.00001045348, 0.01949969385, -0.16493163968, 0.14095875590, -0.00563163025]`
+- delta(deg): `[0.0005989405, 1.11725016, -9.44988686, 8.07634180, -0.32266865]`
+- SIM gripper command2.2028rad 불변. 이를 실물 gripper0..100에 복사하지 않는다.
+- continuous septic nominal1.026733576s, timestep sampling1.028s/leg, hold.5s.
+
+재실행(SIM 폴더, 기존 venv):
+```bash
+python basic_vertical_motion.py --viewer --report /tmp/dapier-basic-vertical.json
+```
+해당 Python은 기존 MuJoCo venv를 뜻한다. 현재 검증 asset은 기존 pinned SO101 source이다. 정확한 raw/report/script는 기존 local-validation KIT에 보존한다. Viewer는 실제 동일 model/data를 관찰했고, 별도 접촉 비교 창은 RECORDED PHYSICS / NOT NEW EXECUTION으로 표시했다.
+
+### Lesson / Next
+
+거의 같은 rigid pose와 source contact를 운반한 점은 native solver contact의 동일성을 보장하지 않는다. 다음은 접촉면/형성 이력을 통제한 원인 분리이며 이번 결과로 성공이라고 쓰지 않는다.
+
+REAL extrinsic은 UNVERIFIED / BLOCKED BY DATUM METHOD. 새 측정 없이 원값 보존. BASIC에는 카메라가 필요 없지만 현재 실물 q 및 SIM↔REAL joint zero/sign/pose 대응은 아직 없다. 월요일 fresh readback→해당 실제 pose 기준 SIM 매핑/경로 검증→LEFT q/profile 제시→사용자 승인 순서다. 과거 start-pose나 위 SIM 절대 q를 현재 실물 q로 사용하지 않는다.

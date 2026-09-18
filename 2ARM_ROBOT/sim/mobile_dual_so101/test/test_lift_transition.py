@@ -11,6 +11,40 @@ from lift_transition_diagnostic import run, next_close_diagnostic
 
 
 class LiftTransitionTest(unittest.TestCase):
+    def test_successful_relative_pose_is_not_contact_or_lift_equivalence(self):
+        e = json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())['successful_relative_pose_mapping']
+        b, c = e['bench'], e['continuous_lift']
+        np.testing.assert_allclose(np.array(b['T_block_housing_body']) @ b['T_housing_body_TCP'], b['T_block_TCP'], atol=1e-12)
+        self.assertFalse(e['live_success'])
+        self.assertEqual(e['formation_noslip'], {'bench': 5, 'arm': 0})
+        self.assertEqual(b['support_contact_count'], 0)
+        self.assertEqual(b['support_Fn_N'], 0)
+        self.assertLess(np.ptp([p['position_block_m'][2] for p in b['contacts']]), .00002)
+        actual_height = np.ptp([p['position_block_COM_m'][2] for p in e['confirm']['contacts']])
+        self.assertAlmostEqual(actual_height*1000, e['comparison']['arm_confirm_actual_contactheight_mm'], places=8)
+        self.assertGreater(actual_height, .025)
+        self.assertLess(e['comparison']['arm_confirm_carried_contactheight_mm'], .2)
+        self.assertTrue(e['comparison']['same_confirm_initial_state_bitexact'])
+        self.assertTrue(e['comparison']['same_original_target_exact'])
+        self.assertFalse(e['comparison']['endpoint_reached'])
+        self.assertFalse(e['comparison']['unsupported_HOLD_proven'])
+        start, end = np.array(c['ctrl_start']), np.array(c['original_target'])
+        for row in c['rows']:
+            u = row['step']*.002/c['trajectory_duration_s']
+            blend = 35*u**4-84*u**5+70*u**6-20*u**7
+            np.testing.assert_allclose(row['target_q'], start+(end-start)*blend, atol=1e-15, rtol=0)
+            self.assertTrue(row['policy_safe'])
+            self.assertFalse(any(row['warnings']))
+            for name, force in row['finger_force_N'].items():
+                pad = 'left_pgripper_pad_'+name[-1]
+                self.assertAlmostEqual(force, sum(p['normal_force_N'] for p in row['contacts'] if pad in p['names']), places=12)
+            self.assertLessEqual(max((p['penetration_m'] for p in row['contacts']), default=0.), .001)
+        loss = next(r['step'] for r in c['rows'] if min(r['finger_force_N'].values()) <= 0)
+        self.assertEqual(loss, 40)
+        separated = [r['step'] for r in c['rows'] if r['block_table_contact_count']==0 and r['block_table_normal_force_N']==0]
+        self.assertEqual(separated, [38, 39])
+        self.assertGreater(c['rows'][-1]['block_table_normal_force_N'], 0)
+
     def test_arm_hold_retention_is_not_unsupported_grasp(self):
         f = json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())
         e = f['arm_coupling_diagnostic']
