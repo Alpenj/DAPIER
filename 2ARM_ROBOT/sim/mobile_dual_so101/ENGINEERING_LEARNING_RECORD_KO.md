@@ -1485,3 +1485,110 @@ Bench raw SHA8f2bb0c519e292e97206e7465511a4928fb3ac82803f17bf871f3c9c5338ed12.
 Public Git에는 최소 portable force fixture와 NumPy 검증기, 기존 학습 원장만 추가한다.
 집중 회귀11 PASS와 git diff --check를 확인하고 normal push로 base=main PR65를 갱신한다. [skip ci]는 사용자가 요청한
 milestone CI 주기 보존이며 main merge 허가가 아니다.
+
+## DAPIER-2026-09-18-normal-close-support-hold
+
+### Problem
+
+이전50µm precompression은 정상 CLOSE 형성이나 안정 유지의 증거가 아니다.
+이번 범위는 GRIPPER-ONLY BENCH이며 arm IK/teacher를 실행하지 않는다.
+시작 HEAD fc3304785b96be864b2fab8bbe31ea90c8769147,
+writer pro/grasp-families-codex-20260918. 기존 failure worktree는 읽기 전용으로 보존했다.
+
+### Evidence
+
+사용자가 승인한 TEST SUPPORT / NOT TASK ENVIRONMENT를 세 phase로 실행했다.
+Formation: 정상 task-open2.202574638rad에서 기존 CLOSE generator/ctrl+mj_step 사용.
+초기 finger contact/penetration0, block-support gap+1µm이며 reset 후 qpos 재배치 없음.
+Compiled gripper/block/solver163항목 bitexact. Bench 전체를 회전하여 cube를 수평으로
+놓았으므로 기존 precompressed 시험과 중력의 상대 방향이 다르다.
+힘 차이를 순수 precompression A/B로 인과 해석하지 않는다.
+
+받침은60×60×4mm frictionless condim1 plate와 수직 slide/시험용 actuator다.
+Gripper actuator 변경이 아니다. Support 자동 collision mask0, explicit block pair만
+사용하며 pad와의 독립 초기 수직 간격6.231775mm도 확인했다.
+매 step vertical normal을 검사했고 최대 수평력1.59e-18N,
+다른 block contact/solver warning0이다.
+
+CLOSE stage49/SIM20.296s에서 bilateral 형성. Terminal command1.714220985rad,
+Fn 약.503291/.503290N을 이후 고정했다. GRASP_CONFIRM50steps 뒤 받침만
+.5s/-50mm physical slide로 철수했다. 받침 지지 중 Fn은 성공 근거에 포함하지 않는다.
+Support contact count=0 AND Fn=0인 최초 force 평가20.426s부터 무지지 시간을 센다.
+초기 OPEN의 무접촉 상태에서는 이 시계를 시작하지 않았다.
+
+철수249/250step에서 이미49.536mm 떨어진 받침의6.022nm 반등으로 strict monotonic
+fixture checker가 중단했다. Block에 전달된 contact/force/impulse는0이다.
+원본 중단 trace를 보존하고 detached servo settling과 block에 가해지는 힘을 구분했다.
+동일 full integration state를 bitexact 복원해 forward/rewind 없이 남은 기존 철수
+sample과 HOLD를 이어갔다. 새로운 support contact/force/geometry overlap은 계속
+거부하며 gain/command/timing을 바꾸지 않았다.
+
+무지지1500steps×2ms=3s 관찰 완료. 마지막 force 평가23.426s, poststate23.428s.
+Support count/Fn은 계속0, continuation 최소 독립 수직 gap47.117mm.
+최종 Fn .503298/.503289N, jaw gap39.969460mm.
+Reset 대비 하강2.901827mm, 동일 pre/pre 3s 무지지 구간 하강2.862446mm,
+첫 pre에서 마지막 post까지3.002s의 하강2.864354mm를 구분했다.
+종료 Vz=-.954146mm/s. Continuation 최대 penetration17.729µm, warnings0.
+접촉력의 지속은 정지 평형이 아니다.
+
+이전50µm도 보존된.1s fullstate에서 동일ctrl로3s까지 연장했다.
+하강3.053025mm, 종료 Vz=-1.069531mm/s. 마지막1s Z 회귀-1.021770mm/s,
+평균 Fn .256427/.235969N, jaw gap39.984548–39.985202mm.
+접선 상대속도1.724985/1.792538mm/s인데 cone 사용률.400–.718/.423–.788로
+포화가 아니다. 단순 μ 부족이나 jaw가 벌어지는 원인으로 단정하지 않는다.
+모든 contact force/직접 torque/COM lever를 합산한 force residual6.30e-16N,
+torque residual2.31e-17Nm. Force 평가 prestate와 postintegration,
+free-joint angular qvel의 body-local 표현을 구분했다.
+
+### Decision
+
+분류C: 정상 CLOSE로 실제 접촉력이 형성되지만 현재 contact dynamics에서 slip이
+지속된다. 무지지 retention의 제한된 근거이며 stable grasp milestone이 아니다.
+Static feasible wrench와 실제 solver 평형, native boundary point와 overlap patch,
+resultant line과 free couple을 구분한다. Friction/geometry/mass/solver/controller/
+timing/limits/acceptance/safety/measured tolerance를 변경하지 않는다.
+
+### Validation
+
+Portable regression은 모든 contact의 force/COM torque/qacc/pre→post velocity를
+재구성하고 contact 누락, COM lever 변조, support 잔류, fake zero velocity를 거부한다.
+구간별 회귀 산술과 bilateral force 유지 중 지속 하강을 보존한다.
+이는 관측 evidence regression이며 새 runtime success gate가 아니다.
+
+### Result
+
+GRIPPER-ONLY: 정상 CLOSE 형성과 무지지3s 관찰 완료, 안정성 FAIL.
+이번 actual arm task 실행0회. 마지막 PASS=GRASP_CONFIRM, LIFT FAIL/SIM17.474s 보존,
+CENTER SUCCESS=false. Milestone 미달로 full suites/render/remote CI/main merge 없음.
+PR65 OPEN/DRAFT/base=main 유지. Skipped CI를 PASS로 세지 않는다.
+
+### Lesson / Next
+
+다음 blocker는 충분한 Fn과 지속 slip이 함께 존재하는 contact dynamics다.
+Soft regularization, boundary representation, 미소 회전의 기여는 인과 분리되지 않았다.
+Friction/preload 증가나 arm pose search로 돌아가지 않는다.
+이전/현재 bench의 중력 상대 방향도 달라 직접 성능 A/B가 아니다.
+단일 bench 증거로 실물/다중 초기조건 강건성을 주장하지 않는다.
+기존 staging30.378087mm도30mm 대비.378087mm 단일조건 여유다.
+Hardware/OS30A/multi-seed/ACT 미실행.
+Raw/model/script는 기존 KIT validation/normal-close-20260918에 보존하고
+public Git에는 최소 fixture/test/기존 학습 원장만 남긴다.
+
+Bench SHA ab282e9deb11572e56e59f746e18a353e02b3e3ab8eb055224c49a5016cea8e3.
+Stopped trace SHA40c583baab8ffec6923366b3fd85caa02817a86257ae8c1138be98bd6c8171fe.
+Continuation SHA27ddf8577a4687c726d07045e85efe14db81a7f80224360f6c8358d476b8061d.
+
+정상 CLOSE 독립 검증: 전체1501평가 source/pre/post/qacc 및 복원 일치.
+마지막1s Z 회귀-.95414955mm/s, jaw39.96943–39.96955mm, cone 사용률.527–.539.
+Instantaneous omega_z 약±.13934rad/s는2ms마다 부호가 바뀌며 yaw범위±.00806°;
+순변화 약-1.98e-8°로 지속 한방향 회전과 다르다. Force residual1.20e-15N,
+torque4.29e-17Nm. 최종 합력 Fz=.196199987N은중력과 거의 평형이지만
+Vz는0이 아니므로 정지 grasp 증거가 아니다.
+
+최종 focused13 PASS(4.219s): 기존 viewer/planner/wrench, static primal/dual,
+precompressed 및 normal CLOSE의4실제 event/all-contact dynamics와 chronology.
+최초 실행은 새 fixture의 support_Fn_N과 기존 support_force_N 명칭 차이로2error;
+field를 증거 손실 없이 통일하여 해소했다. Runtime/safety 수정 없음.
+명령: env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml
+기존 .venv/bin/python -m unittest discover -s test -p 'test_gr*e*.py' -v
+(SIM 디렉터리). git diff --check PASS. PR65 draft 갱신, normal push, main merge 없음.

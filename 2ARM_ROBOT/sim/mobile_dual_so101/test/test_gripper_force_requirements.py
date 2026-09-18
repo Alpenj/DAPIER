@@ -85,5 +85,88 @@ class GripperForceRequirementsTest(unittest.TestCase):
                             verify_requirement(bad, objective)
 
 
+
+class GripperSlipEvidenceTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        fixture = json.loads((Path(__file__).parent / 'fixtures/gripper_force_requirements.json').read_text())
+        cls.evidences = [fixture['observed_slip'], fixture['normal_close_slip']]
+
+    def check_event(self, e):
+        force, moment = np.zeros(3), np.zeros(3)
+        rotation = np.asarray(e['body_rotation_world'])
+        inertia = np.asarray(e['body_inertia_diag_kg_m2'])
+        omega_body = np.asarray(e['body_local_angular_velocity_pre'])
+        omega = rotation @ omega_body
+        np.testing.assert_allclose(rotation @ rotation.T, np.eye(3), atol=1e-9, rtol=0)
+        self.assertEqual(e['support_contact_count'], 0)
+        self.assertEqual(e['support_force_N'], 0.)
+        self.assertGreater(len(e['contacts']), 0)
+        for c in e['contacts']:
+            frame, w = np.asarray(c['frame']), np.asarray(c['contact_wrench'])
+            lever, mu = np.asarray(c['lever_COM_world_m']), np.asarray(c['mu3'])
+            self.assertTrue(np.isfinite(np.r_[frame.ravel(), w, lever, mu]).all())
+            np.testing.assert_allclose(frame @ frame.T, np.eye(3), atol=1e-9, rtol=0)
+            self.assertIn(c['sign'], (-1, 1))
+            self.assertGreater(w[0], 0.)
+            self.assertTrue(np.all(mu > 0))
+            self.assertLessEqual(np.linalg.norm(w[[1, 2, 3]] / mu), w[0] + 1e-9)
+            f = c['sign'] * frame.T @ w[:3]
+            force += f
+            moment += np.cross(lever, f) + c['sign'] * frame.T @ w[3:]
+            velocity = np.asarray(e['block_linear_velocity_world_pre']) + np.cross(omega, lever) - c['pad_velocity_world_m_s']
+            normal = c['sign'] * frame[0]
+            slip = np.linalg.norm(velocity - normal * (normal @ velocity)) * 1000
+            self.assertAlmostEqual(slip, c['claimed_tangent_relative_speed_mm_s'], places=9)
+        # A feasible static wrench does not mean the observed motion is at rest.
+        np.testing.assert_allclose(force, e['claimed_force_world_N'], atol=1e-12, rtol=0)
+        np.testing.assert_allclose(moment, e['claimed_moment_COM_Nm'], atol=1e-12, rtol=0)
+        np.testing.assert_allclose(force + e['mass_kg'] * np.asarray(e['gravity']),
+                                   e['mass_kg'] * np.asarray(e['qacc_linear_world']), atol=1e-12, rtol=0)
+        np.testing.assert_allclose(moment, rotation @ (inertia * e['qacc_angular_body_local'] +
+                                   np.cross(omega_body, inertia * omega_body)), atol=1e-12, rtol=0)
+        dt = e['post_time_s'] - e['force_evaluation_time_s']
+        self.assertGreater(dt, 0.)
+        vz = (e['block_linear_velocity_world_pre'][2] + dt * e['qacc_linear_world'][2]) * 1000
+        self.assertAlmostEqual(vz, e['post_world_vz_mm_s'], places=9)
+        self.assertLess(vz, 0.)
+
+    def test_all_contact_wrench_and_nonzero_slip(self):
+        for event in [event for evidence in self.evidences for event in evidence['events']]:
+            with self.subTest(event=event['id']):
+                self.check_event(event)
+                for mutation in ('contact', 'torque', 'support_contact', 'support_force', 'velocity'):
+                    bad = copy.deepcopy(event)
+                    if mutation == 'contact':
+                        bad['contacts'].pop()
+                    elif mutation == 'torque':
+                        bad['contacts'][0]['lever_COM_world_m'][0] += .01
+                    elif mutation == 'support_contact':
+                        bad['support_contact_count'] = 1
+                    elif mutation == 'support_force':
+                        bad['support_force_N'] = 1e-9
+                    else:
+                        bad['post_world_vz_mm_s'] = 0.
+                    with self.assertRaises(AssertionError):
+                        self.check_event(bad)
+
+    def test_persistent_slip_despite_bilateral_force(self):
+        for evidence in self.evidences:
+            chronology = evidence['chronology']
+            self.assertTrue(chronology['all_rows_bilateral'])
+            self.assertEqual(chronology['other_block_contacts_total'], 0)
+            for window in chronology['windows']:
+                moments = window['regression_centered_moments']
+                slope = moments['sum_t_centered_z_centered_mm_s'] / moments['sum_t_centered_squared_s2']
+                self.assertAlmostEqual(slope, window['claimed_z_regression_slope_mm_s'], places=12)
+                self.assertLess(slope, 0.)
+                self.assertLess(window['vz_range_mm_s'][1], 0.)
+                self.assertLess(window['end_z_mm'], window['start_z_mm'])
+                self.assertEqual(window['bilateral_count'], window['sample_count'])
+                self.assertGreater(min(window['Fn_min_N']), 0.)
+            self.assertLess(chronology['final_z_mm'], chronology['initial_z_mm'])
+            self.assertLess(chronology['final_vz_mm_s'], 0.)
+
+
 if __name__ == '__main__':
     unittest.main()
