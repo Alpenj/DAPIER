@@ -1188,3 +1188,58 @@ SDK family와 실제장치attribution을 분리해야 한다. OpenNI0은 다른v
 
 - 최신 실측 revision: 가로5칸=120mm, 세로5칸=120mm → square24.0mm 후보/XY scale.96. 이전100mm 기준선95mm/scale.95와 약1.05% 차이는 보존하며 오차 미정이다. 도구의 기준선 입력을 임의96mm로 바꾸지 않는다.
 - Read-only SDK mode DB/callback에서 depth-only640×460/15fps/index0 대응은 확인했다. UVC left640×460 crop의 raw/rectified·pixel-centre·K 대응은 확인되지 않아 half-scale K/PnP/arm pose를 생성하지 않았다. 다음 교정은 동일 영상 설정의 최소10 usable distinct ChArUco views와 명시적인24mm 후보 object points/provenance가 필요하다. Board→arm 고정 datum 측정은 별도다.
+
+- R1 actual intrinsic 수집: training15/holdout3/rejected2,20개 원본 hash unique/manifest 일치, Q 종료로 camera release. 최소12 non-collinear corner는 기존 기준,15px 영상평면 diversity는 acquisition 휴리스틱일 뿐 calibration gate가 아니다.
+- 기존 교정 도구에 --square-length-mm24.0와 measurement revision 경로만 추가하고 workspace RGB-D 역할을 명시했다. Legacy reference-line 경로는 유지했다. Focused self-test PASS: 두 provenance/translation scale/명시 square 저장 및 invalid/ambiguous 거부.
+- 첫 실제fit RMS1.178301px는 기존1px warning(exit2), holdout pose-fit RMS1.252592/1.080057/1.107578px.54corner fullboard2개가 RMS1.929/2.391px, 종이 휨이 보이나 원인 확정 아님. 삭제/모델 증가/기준 완화 없이 첫 자료 보존, 사용자 승인으로 rigid backing 별도 재수집. 아직 metric/intrinsics 채택·extrinsic·q·shadow·motion PASS가 아니다.
+
+- 사용자 승인 rigid backing 재수집(dataset-r2): training15/holdout3/rejected1.19개 원본 hash unique/manifest 일치, training/holdout disjoint, camera release. API readback1280×460/YUYV/15fps, focus/autofocus=-1 unknown; 설정쓰기 없음.
+- 동일24mm/model/criteria fit RMS.495353px/기존warnings없음, per-view.179–.866px, holdout.508803/.463835/.387512px. Focalstd1.417/1.425%, span38.697deg, coverage64.24/62.77%. 수치/재투영 후보검사 통과, 독립metric·depth정합·camera→arm·runtime채택·q/shadow/motion PASS 아님. 첫자료/모델/기준 유지했고 개선 원인을 평탄성 하나로 확정하지 않는다.
+- 다음은 고정된 실제 board의 별도 snapshot/PnP/visible selected innercorner datum 및 실측 board→left-arm-base 관계다. Handheld holdout pose를 extrinsic에 사용하지 않는다. Whole-grid 원점 유지, ID0는(24,24,0)mm 별도 offset, board+Z를gravityup으로추정하지 않는다.
+
+
+## DAPIER-2026-09-18-real-intrinsic-fixed-board
+
+### Problem
+실측24mm 보드의 실제 intrinsic과 고정 board→camera pose가 필요했다.
+Camera→arm은 보드 검출만으로 정해지지 않는다.
+
+### Evidence — VERIFIED ON REAL HARDWARE (camera-only)
+15training+3holdout 첫 촬영 RMS1.178301px는 기존1px 검토 기준을 넘었다.
+종이를 단단한 판에 고정한 별도15+3 촬영은 RMS0.495353px,
+heldout0.508803/0.463835/0.387512px로 기존 품질 검사를 통과했다.
+원본을 삭제하거나 기준/보정 모델을 바꾸지 않았다. 촬영 자세도 달라
+종이 휨 하나가 원인임을 증명한 비교로 확대하지 않는다.
+Same left640×460 mapping, packed1280×460/YUYV/15fps readback.
+Focus/autofocus는 미지원값으로 고정 여부 UNVERIFIED. 설정 쓰기는 없었다.
+
+### Decision
+24mm square와 measurement revision을 직접 입력한다.95%/96%를 평균하거나
+기준선 실측을96mm로 바꾸지 않는다. Handheld pose는 고정 extrinsic으로 사용하지 않는다.
+첫 고정 관측은4corners만 보여 측정에 채택하지 않았다. 사용자 재배치 후
+새19corner 관측의 PnP RMS0.226771px. 실제 보이는 ID15를 별도 원점으로 삼고
+grid offset(168,48,0)mm를 명시했다. Board +Z를 gravity up으로 가정하지 않았다.
+Intrinsic 계수, pose matrices, 장치/원본 영상은 비공개 로컬에만 보존한다.
+
+### Validation
+기존 calibration self-test 독립PASS: explicit24mm/legacyline 별도 provenance,
+K 불변/metric translation scale 및 invalid/ambiguous 입력 거부.
+원본해시, ID15 실제검출, rigid transform/inverse/원점합성 독립PASS.
+OpenCV float32 objectpoint offset와 정확한 decimal offset의2.256nm 차이는
+기록된 실제 입력으로 대조했다. 실물 오차 허용치를 넓힌 것이 아니다.
+Heldout PnP residual은 독립 metric accuracy 검증과 구분한다.
+Fullsuite/새remoteCI 미실행: REAL SENSOR-TO-PREGRASP milestone 미달.
+
+### Result
+Intrinsic/reprojection 후보검사 PASS. Fixed board→camera candidate 확보.
+설치base 형상 일치와 책상 직접밀착은 사용자 확인을 받았으나,
+실제 mounting datum의 측정 끝점/축을 현장에서 아직 식별하지 못했다.
+Board→left-arm transform, registered block XYZ, shadow IK, hardware motion은 미실행.
+모든 camera capture는 종료/release했으며 motor I/O는0이다.
+
+### Lesson / Next — UNVERIFIED
+CAD의 가상 기준점 이름만으로 현장 실측을 안내하면 오해할 수 있다.
+실제 왼팔 밑판 전체와 보드가 함께 보이는 사진에 측정 양끝을 표시한 뒤
+거리와 방향을 하나씩 확인한다. 현재 보드/팔/카메라 위치를 보존한다.
+Depth registration/known-distance 검증도 남아 있으며 PnP 낮은 residual만으로
+camera→arm calibration 또는20mm 비접촉 clearance를 선언하지 않는다.

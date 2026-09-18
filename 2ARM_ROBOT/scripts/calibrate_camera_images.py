@@ -12,12 +12,29 @@ import numpy as np
 from prepare_camera_board import DEFINITION, make_board
 
 
-def estimate(paths, measured_line_mm):
-    max_line_mm = 100 * min(p / b for p, b in zip(DEFINITION["paper_mm"], DEFINITION["board_mm"]))
-    if not np.isfinite(measured_line_mm) or not 0 < measured_line_mm <= max_line_mm:
-        raise ValueError("measured 100-mm reference line must be positive, finite and fit this A4 target; check mm units")
-    # ponytail: one reference line assumes uniform X/Y scaling; measure both axes before metric use.
-    print_scale = measured_line_mm / 100
+def estimate(paths, measured_line_mm=None, *, square_length_mm=None, measurement_revision=None):
+    if (measured_line_mm is None) == (square_length_mm is None):
+        raise ValueError("supply exactly one measured reference line or measured square spacing")
+    nominal_square_mm = DEFINITION["square_length_m"] * 1000
+    max_scale = min(p / b for p, b in zip(DEFINITION["paper_mm"], DEFINITION["board_mm"]))
+    if square_length_mm is not None:
+        if not np.isfinite(square_length_mm) or not 0 < square_length_mm <= nominal_square_mm * max_scale:
+            raise ValueError("measured square spacing must be positive, finite and fit this A4 target; check mm units")
+        if not isinstance(measurement_revision, str) or not measurement_revision.strip():
+            raise ValueError("record the measured square spacing provenance/revision")
+        print_scale = square_length_mm / nominal_square_mm
+        measurement = {"method": "explicit measured square spacing",
+            "measured_square_length_mm": float(square_length_mm),
+            "measurement_revision": measurement_revision.strip()}
+        scale_limitation = "Measured square spacing is supplied; X/Y agreement, measurement uncertainty and flatness need independent evidence."
+    else:
+        if not np.isfinite(measured_line_mm) or not 0 < measured_line_mm <= 100 * max_scale:
+            raise ValueError("measured 100-mm reference line must be positive, finite and fit this A4 target; check mm units")
+        # ponytail: one reference line assumes uniform X/Y scaling; measure both axes before metric use.
+        print_scale = measured_line_mm / 100
+        measurement = {"method": "printed reference line", "nominal_line_mm": 100,
+            "measured_line_mm": float(measured_line_mm)}
+        scale_limitation = "Only the reference line is supplied; uniform X/Y print scale and flatness need separate checks."
     if not 10 <= len(paths) <= 300:
         raise ValueError("provide 10..300 images from ONE unchanged camera configuration")
     board = make_board()
@@ -96,7 +113,7 @@ def estimate(paths, measured_line_mm):
         "accepted_images": accepted, "rejected_images": rejected, "input_sha256": hashes,
         "source_images_unchanged": all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == h for p, h in hashes.items()),
         "nominal_board_definition": DEFINITION, "quality_warnings": warnings,
-        "print_measurement": {"nominal_line_mm": 100, "measured_line_mm": float(measured_line_mm),
+        "print_measurement": {**measurement,
             "uniform_scale": print_scale, "uniform_xy_scale_verified": False,
             "derived_square_length_mm": DEFINITION["square_length_m"] * 1000 * print_scale,
             "derived_marker_length_mm": DEFINITION["marker_length_m"] * 1000 * print_scale,
@@ -105,7 +122,7 @@ def estimate(paths, measured_line_mm):
         "unseen_image_validation_performed": False, "camera_to_robot_calibrated": False,
         "hardware_execution": False, "runtime_calibration_updated": False,
         "limitations": ["One physical camera, fixed focus/resolution/crop/rotation must be confirmed separately.",
-            "Only the reference line is supplied; uniform X/Y print scale and flatness need separate checks.",
+            scale_limitation,
             "Per-view poses map board to optical camera, not camera to gripper/base.",
             "Do not use RGB intrinsics for H201 depth or undistort already rectified images twice."]}
 
@@ -117,7 +134,8 @@ def run(args):
     if not args.capture_notes.strip():
         raise ValueError("record camera identity, focus, raw/rectified mode, crop and rotation in capture notes")
     paths = sorted(p for p in source.iterdir() if p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg"))
-    report = estimate(paths, args.measured_line_mm)
+    report = estimate(paths, args.measured_line_mm, square_length_mm=getattr(args, "square_length_mm", None),
+                      measurement_revision=getattr(args, "measurement_revision", None))
     if not report["source_images_unchanged"]:
         raise ValueError("source images changed during calibration; output not written")
     report.update(camera_role=args.camera, capture_notes=args.capture_notes)
@@ -165,6 +183,30 @@ def self_test():
                                np.array(nominal_view["board_to_camera_tvec_m"]) * .95, rtol=1e-4, atol=1e-5)
         assert scaled["print_measurement"]["derived_square_length_mm"] == 23.75
         assert scaled["print_measurement"]["derived_board_size_mm"] == [237.5, 166.25]
+        explicit = estimate(paths, square_length_mm=24.0,
+                            measurement_revision="SYNTHETIC explicit spacing; XY five cells each120mm")
+        assert "measured_line_mm" not in explicit["print_measurement"]
+        assert explicit["print_measurement"]["measured_square_length_mm"] == 24.0
+        assert explicit["print_measurement"]["derived_square_length_mm"] == 24.0
+        assert np.allclose(explicit["camera_matrix"], actual, rtol=1e-4, atol=1e-3)
+        for nominal_view, explicit_view in zip(report["accepted_images"], explicit["accepted_images"]):
+            assert np.allclose(explicit_view["board_to_camera_tvec_m"],
+                               np.array(nominal_view["board_to_camera_tvec_m"]) * .96, rtol=1e-4, atol=1e-5)
+        for invalid_square in (0, -24, 240, float("nan"), float("inf")):
+            try:
+                estimate(paths, square_length_mm=invalid_square, measurement_revision="test")
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("invalid square spacing accepted")
+        for kwargs in ({}, {"measured_line_mm": 95, "square_length_mm": 24, "measurement_revision": "test"},
+                       {"square_length_mm": 24}, {"square_length_mm": 24, "measurement_revision": " "}):
+            try:
+                estimate(paths, **kwargs)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("missing/ambiguous measurement provenance accepted")
         assert DEFINITION["board_mm"] == [250, 175]  # Never rewrite the nominal PDF definition.
         for invalid_line in (0, -95, 950, float("nan"), float("inf")):
             try:
@@ -187,6 +229,14 @@ def self_test():
             pass
         else:
             raise AssertionError("existing output overwritten")
+        square_args = SimpleNamespace(images=root, output=Path(directory) / "square-candidate",
+            measured_line_mm=None, square_length_mm=24.0, measurement_revision="SYNTHETIC XY five cells each120mm",
+            camera="workspace_rgbd", capture_notes="SYNTHETIC fixed image configuration")
+        assert run(square_args) == 0
+        square_saved = json.loads((square_args.output / "intrinsics-candidate.json").read_text())
+        assert square_saved["print_measurement"]["method"] == "explicit measured square spacing"
+        assert square_saved["print_measurement"]["measurement_revision"] == square_args.measurement_revision
+        assert "measured_line_mm" not in square_saved["print_measurement"]
         small = root / "mixed-size.png"
         assert cv2.imwrite(str(small), np.zeros((240, 320), dtype=np.uint8))
         depth = root / "depth16.png"
@@ -200,21 +250,24 @@ def self_test():
                 raise AssertionError("insufficient/duplicate/mixed-resolution input accepted")
         print(json.dumps({"synthetic_only": True, "views": len(report["accepted_images"]),
                           "fit_rms_px": report["fit_rms_px"], "camera_matrix": actual.tolist()}))
-    print("PASS: image calibration; 95/100 print scale preserves intrinsics and scales translation; invalid input rejection; no hardware")
+    print("PASS: image calibration; reference-line and explicit24mm spacing preserve K/scale translation with separate provenance; invalid input rejection; no hardware")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--images", type=Path, help="one camera's unchanged PNG/JPEG captures")
-    parser.add_argument("--camera", choices=("left_wrist", "right_wrist"))
+    parser.add_argument("--camera", choices=("left_wrist", "right_wrist", "workspace_rgbd"))
     parser.add_argument("--capture-notes", help="physical camera/configuration identity; raw/rectified, focus, crop, rotation")
-    parser.add_argument("--measured-line-mm", type=float, help="actual length of the printed 100-mm line; assumes uniform X/Y scale")
+    spacing = parser.add_mutually_exclusive_group()
+    spacing.add_argument("--measured-line-mm", type=float, help="actual length of the printed 100-mm line; assumes uniform X/Y scale")
+    spacing.add_argument("--square-length-mm", type=float, help="actual measured square spacing in mm; requires measurement revision")
+    parser.add_argument("--measurement-revision", help="physical square-spacing measurement provenance/revision")
     parser.add_argument("--output", type=Path, help="separate new folder, never auto-applied to a runtime")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
         self_test()
-    elif any(getattr(args, k) is None for k in ("images", "camera", "capture_notes", "measured_line_mm", "output")):
-        parser.error("images, camera, capture-notes, measured-line-mm and new output are required")
+    elif any(getattr(args, k) is None for k in ("images", "camera", "capture_notes", "output")) or (args.measured_line_mm is None and args.square_length_mm is None):
+        parser.error("images, camera, capture-notes, one measured spacing and new output are required")
     else:
         raise SystemExit(run(args))
