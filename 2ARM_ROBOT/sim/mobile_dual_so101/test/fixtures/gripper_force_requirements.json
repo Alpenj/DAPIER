@@ -2163,5 +2163,365 @@
         }
       ]
     }
+  },
+  "solver_contact_diagnostic": {
+    "scope": "DIAGNOSTIC COPY / NOT TASK SUCCESS",
+    "version": "3.3.7",
+    "baseline_options": {
+      "ccd_iterations": 35,
+      "ccd_tolerance": 1e-06,
+      "cone": 1,
+      "density": 0.0,
+      "disableactuator": 0,
+      "disableflags": 0,
+      "enableflags": 0,
+      "gravity": [
+        0.0,
+        0.0,
+        -9.81
+      ],
+      "impratio": 1.0,
+      "integrator": 3,
+      "iterations": 100,
+      "jacobian": 2,
+      "ls_iterations": 50,
+      "ls_tolerance": 0.01,
+      "magnetic": [
+        0.0,
+        -0.5,
+        0.0
+      ],
+      "noslip_iterations": 0,
+      "noslip_tolerance": 1e-06,
+      "o_friction": [
+        1.0,
+        1.0,
+        0.005,
+        0.0001,
+        0.0001
+      ],
+      "o_margin": 0.0,
+      "o_solimp": [
+        0.9,
+        0.95,
+        0.001,
+        0.5,
+        2.0
+      ],
+      "o_solref": [
+        0.02,
+        1.0
+      ],
+      "sdf_initpoints": 40,
+      "sdf_iterations": 10,
+      "solver": 2,
+      "timestep": 0.002,
+      "tolerance": 1e-10,
+      "viscosity": 0.0,
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "cases": [
+      {
+        "name": "A_baseline",
+        "raw_sha256": "5c1e849d3616d73161f321a3e38f07feffec79726d28a1d9dac55f048b18ccb4",
+        "start_sha256": "62f8631095f4ee18018b85f075e44a647f93ac2e9e842cf680f0ee2db5d90dc3",
+        "model_snapshot_sha256": "5c938d99dbc1f0f974b7c334fe646257a3a42d304bfc79590b2278d515269b6d",
+        "commands_sha256": "30cb2a72e00d7a49dbbe79eafdf9ee3c991842e502d451f645e6ae65d0be41a3",
+        "options": {
+          "ccd_iterations": 35,
+          "ccd_tolerance": 1e-06,
+          "cone": 1,
+          "density": 0.0,
+          "disableactuator": 0,
+          "disableflags": 0,
+          "enableflags": 0,
+          "gravity": [
+            0.0,
+            0.0,
+            -9.81
+          ],
+          "impratio": 1.0,
+          "integrator": 3,
+          "iterations": 100,
+          "jacobian": 2,
+          "ls_iterations": 50,
+          "ls_tolerance": 0.01,
+          "magnetic": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "noslip_iterations": 0,
+          "noslip_tolerance": 1e-06,
+          "o_friction": [
+            1.0,
+            1.0,
+            0.005,
+            0.0001,
+            0.0001
+          ],
+          "o_margin": 0.0,
+          "o_solimp": [
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2.0
+          ],
+          "o_solref": [
+            0.02,
+            1.0
+          ],
+          "sdf_initpoints": 40,
+          "sdf_iterations": 10,
+          "solver": 2,
+          "timestep": 0.002,
+          "tolerance": 1e-10,
+          "viscosity": 0.0,
+          "wind": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "support_count_max": 0,
+        "support_force_max_N": 0,
+        "warnings": 0,
+        "all_bilateral": true,
+        "max_penetration_m": 1.7729237193423864e-05,
+        "terminal_vz_mm_s": -0.9541464180296343,
+        "windows": [
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.96252731098369,
+            "end_z_mm": 99.0083802574457,
+            "integrated_vz_mm": -0.9541470535380967,
+            "sum_tt": 41.91699999995353,
+            "sum_tz": -39.995042757711246,
+            "slope_mm_s": -0.9541485019862009
+          },
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.0083802574457,
+            "end_z_mm": 98.0542311920057,
+            "integrated_vz_mm": -0.9541490654399398,
+            "sum_tt": 41.91699999995354,
+            "sum_tz": -39.99508359151875,
+            "slope_mm_s": -0.9541494761448358
+          },
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 98.0542311920057,
+            "end_z_mm": 97.10008138740992,
+            "integrated_vz_mm": -0.9541498045958189,
+            "sum_tt": 41.91699999995354,
+            "sum_tz": -39.995086854751705,
+            "slope_mm_s": -0.9541495539947047
+          }
+        ]
+      },
+      {
+        "name": "B_main_solver",
+        "raw_sha256": "60d2a0c6a382f404671e7f3ef9611be9fafe7eefa45fd7df21b8765141a61d54",
+        "start_sha256": "62f8631095f4ee18018b85f075e44a647f93ac2e9e842cf680f0ee2db5d90dc3",
+        "model_snapshot_sha256": "5c938d99dbc1f0f974b7c334fe646257a3a42d304bfc79590b2278d515269b6d",
+        "commands_sha256": "30cb2a72e00d7a49dbbe79eafdf9ee3c991842e502d451f645e6ae65d0be41a3",
+        "options": {
+          "ccd_iterations": 35,
+          "ccd_tolerance": 1e-06,
+          "cone": 1,
+          "density": 0.0,
+          "disableactuator": 0,
+          "disableflags": 0,
+          "enableflags": 0,
+          "gravity": [
+            0.0,
+            0.0,
+            -9.81
+          ],
+          "impratio": 1.0,
+          "integrator": 3,
+          "iterations": 1000,
+          "jacobian": 2,
+          "ls_iterations": 50,
+          "ls_tolerance": 0.01,
+          "magnetic": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "noslip_iterations": 0,
+          "noslip_tolerance": 1e-06,
+          "o_friction": [
+            1.0,
+            1.0,
+            0.005,
+            0.0001,
+            0.0001
+          ],
+          "o_margin": 0.0,
+          "o_solimp": [
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2.0
+          ],
+          "o_solref": [
+            0.02,
+            1.0
+          ],
+          "sdf_initpoints": 40,
+          "sdf_iterations": 10,
+          "solver": 2,
+          "timestep": 0.002,
+          "tolerance": 1e-12,
+          "viscosity": 0.0,
+          "wind": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "support_count_max": 0,
+        "support_force_max_N": 0,
+        "warnings": 0,
+        "all_bilateral": true,
+        "max_penetration_m": 1.7729237193423864e-05,
+        "terminal_vz_mm_s": -0.9541464180296343,
+        "windows": [
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.96252731098369,
+            "end_z_mm": 99.0083802574457,
+            "integrated_vz_mm": -0.9541470535380967,
+            "sum_tt": 41.91699999995353,
+            "sum_tz": -39.995042757711246,
+            "slope_mm_s": -0.9541485019862009
+          },
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.0083802574457,
+            "end_z_mm": 98.0542311920057,
+            "integrated_vz_mm": -0.9541490654399398,
+            "sum_tt": 41.91699999995354,
+            "sum_tz": -39.99508359151875,
+            "slope_mm_s": -0.9541494761448358
+          },
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 98.0542311920057,
+            "end_z_mm": 97.10008138740992,
+            "integrated_vz_mm": -0.9541498045958189,
+            "sum_tt": 41.91699999995354,
+            "sum_tz": -39.995086854751705,
+            "slope_mm_s": -0.9541495539947047
+          }
+        ]
+      },
+      {
+        "name": "C_noslip5",
+        "raw_sha256": "a75d363640ab465879407361986017521ff8fb7a5b8b5649d0cf004a33d3c75c",
+        "start_sha256": "62f8631095f4ee18018b85f075e44a647f93ac2e9e842cf680f0ee2db5d90dc3",
+        "model_snapshot_sha256": "5c938d99dbc1f0f974b7c334fe646257a3a42d304bfc79590b2278d515269b6d",
+        "commands_sha256": "30cb2a72e00d7a49dbbe79eafdf9ee3c991842e502d451f645e6ae65d0be41a3",
+        "options": {
+          "ccd_iterations": 35,
+          "ccd_tolerance": 1e-06,
+          "cone": 1,
+          "density": 0.0,
+          "disableactuator": 0,
+          "disableflags": 0,
+          "enableflags": 0,
+          "gravity": [
+            0.0,
+            0.0,
+            -9.81
+          ],
+          "impratio": 1.0,
+          "integrator": 3,
+          "iterations": 100,
+          "jacobian": 2,
+          "ls_iterations": 50,
+          "ls_tolerance": 0.01,
+          "magnetic": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "noslip_iterations": 5,
+          "noslip_tolerance": 1e-06,
+          "o_friction": [
+            1.0,
+            1.0,
+            0.005,
+            0.0001,
+            0.0001
+          ],
+          "o_margin": 0.0,
+          "o_solimp": [
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2.0
+          ],
+          "o_solref": [
+            0.02,
+            1.0
+          ],
+          "sdf_initpoints": 40,
+          "sdf_iterations": 10,
+          "solver": 2,
+          "timestep": 0.002,
+          "tolerance": 1e-10,
+          "viscosity": 0.0,
+          "wind": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "support_count_max": 0,
+        "support_force_max_N": 0,
+        "warnings": 0,
+        "all_bilateral": true,
+        "max_penetration_m": 1.8853589339412436e-05,
+        "terminal_vz_mm_s": -6.926090016150009e-06,
+        "windows": [
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.96252731098369,
+            "end_z_mm": 99.96206826395529,
+            "integrated_vz_mm": -0.00045904702835818773,
+            "sum_tt": 41.91699999995353,
+            "sum_tz": -0.0005698113992212905,
+            "slope_mm_s": -1.3593802018797198e-05
+          },
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.96206826395529,
+            "end_z_mm": 99.96206133782336,
+            "integrated_vz_mm": -6.9261320018649155e-06,
+            "sum_tt": 41.91699999995354,
+            "sum_tz": -0.00029032254054332443,
+            "slope_mm_s": -6.926128791269562e-06
+          },
+          {
+            "duration_s": 0.9999999999994458,
+            "start_z_mm": 99.96206133782336,
+            "end_z_mm": 99.96205441172285,
+            "integrated_vz_mm": -6.926100363600682e-06,
+            "sum_tt": 41.91699999995354,
+            "sum_tz": -0.00029032135615188794,
+            "slope_mm_s": -6.926100535634939e-06
+          }
+        ]
+      }
+    ]
   }
 }

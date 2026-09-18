@@ -168,5 +168,57 @@ class GripperSlipEvidenceTest(unittest.TestCase):
             self.assertLess(chronology['final_vz_mm_s'], 0.)
 
 
+
+class SolverContactDiagnosticTest(unittest.TestCase):
+    def verify(self, evidence):
+        cases = evidence['cases']
+        self.assertEqual(len(cases), 3)
+        expected_changes = ({}, {'iterations': 1000, 'tolerance': 1e-12},
+                            {'noslip_iterations': 5})
+        for case, changes in zip(cases, expected_changes):
+            expected = dict(evidence['baseline_options'], **changes)
+            self.assertEqual(case['options'], expected)
+            for key in ('start_sha256', 'model_snapshot_sha256', 'commands_sha256'):
+                self.assertEqual(case[key], cases[0][key])
+            self.assertEqual(case['support_count_max'], 0)
+            self.assertEqual(case['support_force_max_N'], 0.)
+            self.assertEqual(case['warnings'], 0)
+            self.assertTrue(case['all_bilateral'])
+            self.assertTrue(np.isfinite(case['max_penetration_m']))
+            self.assertLessEqual(case['max_penetration_m'], .001)
+            self.assertAlmostEqual(sum(w['duration_s'] for w in case['windows']), 3., places=9)
+            for w in case['windows']:
+                self.assertTrue(np.isfinite(list(w.values())).all())
+                self.assertGreater(w['sum_tt'], 0)
+                self.assertAlmostEqual(w['sum_tz'] / w['sum_tt'], w['slope_mm_s'], places=10)
+                self.assertAlmostEqual(w['end_z_mm'] - w['start_z_mm'],
+                                       w['integrated_vz_mm'], places=9)
+        # Solver sensitivity is evidence about a copied bench, never a task-success gate.
+        self.assertEqual(cases[0]['windows'], cases[1]['windows'])
+        self.assertEqual(cases[0]['terminal_vz_mm_s'], cases[1]['terminal_vz_mm_s'])
+        self.assertGreater(abs(cases[0]['windows'][-1]['slope_mm_s']),
+                           abs(cases[2]['windows'][-1]['slope_mm_s']))
+        self.assertNotEqual(cases[2]['terminal_vz_mm_s'], 0.)
+
+    def test_same_state_parameter_isolation_and_observed_slip(self):
+        evidence = json.loads((Path(__file__).parent / 'fixtures/gripper_force_requirements.json').read_text())['solver_contact_diagnostic']
+        self.verify(evidence)
+        for mutation in ('state', 'command', 'model', 'option', 'support', 'integral'):
+            bad = copy.deepcopy(evidence)
+            case = bad['cases'][2]
+            if mutation in ('state', 'command', 'model'):
+                key = {'state': 'start_sha256', 'command': 'commands_sha256',
+                       'model': 'model_snapshot_sha256'}[mutation]
+                case[key] = 'corrupted'
+            elif mutation == 'option':
+                case['options']['impratio'] += 1
+            elif mutation == 'support':
+                case['support_force_max_N'] = 1e-9
+            else:
+                case['windows'][0]['integrated_vz_mm'] = 0.
+            with self.assertRaises(AssertionError):
+                self.verify(bad)
+
+
 if __name__ == '__main__':
     unittest.main()

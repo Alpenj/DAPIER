@@ -1592,3 +1592,130 @@ field를 증거 손실 없이 통일하여 해소했다. Runtime/safety 수정 �
 명령: env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml
 기존 .venv/bin/python -m unittest discover -s test -p 'test_gr*e*.py' -v
 (SIM 디렉터리). git diff --check PASS. PR65 draft 갱신, normal push, main merge 없음.
+
+## DAPIER-2026-09-18-solver-contact-sensitivity
+
+### Problem
+
+나는 정상 CLOSE 후에도 무지지 HOLD에서 약.954mm/s slip이 남은 원인을
+main solver 미수렴 / soft-friction regularization / 접촉 geometry로 분리했다.
+시작 HEAD3a6ff44924ee79e633f351db3287a1b145d0cecd, 기존 writer branch/worktree를
+그대로 사용했다. Runtime이나 teacher로 돌아가지 않고 세 prescribed copied case만 실행했다.
+
+### Evidence
+
+**VERIFIED BY PHYSICS — 동일 상태의3조건 비교**
+
+이전 raw row10213 mjSTATE_INTEGRATION을 복원하고 다음 row10214의 실제 ctrl 전환을
+적용했다. 최초 무지지 force 평가20.426s의 qpos/qvel/time/warmstart를 보존했다.
+시작 state SHA62f8631095f4ee18018b85f075e44a647f93ac2e9e842cf680f0ee2db5d90dc3.
+Restore 후 mj_forward 없이 실행했다. 남은 받침 철수 profile과 gripper terminal
+command1.7142209851885606rad는 세 case 모두 동일하다.
+Baseline1501평가 전체가 이전 raw와 bitexact, B도 A의 전체 state/qacc/contact wrench와
+bitexact 일치했다. 각 case1500×2ms=3s이며 force prestate와 postintegration을 구분한다.
+
+|항목|A baseline|B convergence|C NoSlip diagnostic|
+|---|---:|---:|---:|
+|main iterations|100|1000|100|
+|main tolerance|1e-10|1e-12|1e-10|
+|noslip_iterations|0|0|5|
+|3s 수직 변위 mm|-2.862445924|-2.862445924|-.000472899|
+|종료 Vz mm/s|-.954146418|-.954146418|-.00000692609|
+|마지막1s Z 기울기 mm/s|-.954149554|-.954149554|-.00000692610|
+|최종 Fn1/Fn2 N|.503298/.503289|동일|.521142/.521141|
+|최대 penetration µm|17.729237|동일|18.853589|
+|최대 cone 사용률|.538639|동일|.560622|
+|support count/Fn, warning|0/0,0|0/0,0|0/0,0|
+
+모든 case에서 bilateral contact, support 독립 양의 separation과 기존 penetration
+bound를 유지했다. C의 Fn은최대.521142N, A는최대.507247N이며 증가량을 숨기지 않았다.
+이3s에서 새 force-loss/비유한 상태/예상 외 contact/기존 bound 위반은 없었다.
+d.solver_niter의 최대값은A/B1,C5이나 C통계를 main-only 반복횟수로 해석하지 않는다.
+C의 native polygon margin은+.026/-.019nm로 boundary 표본이 유지된다.
+
+**ANALYTIC / DIAGNOSTIC ONLY — 현재 solver/contact 계약**
+
+아래 XML은 원래 task 입력MJCF가 아니라 MjSpec로 export한 isolated bench XML이다.
+실제 physics는 SHA검증한 MJB를 로드했다. 생략된 XML 속성을 명시값으로 쓰지 않는다.
+
+|항목|export XML/소스|실제 compiled|
+|---|---|---|
+|solver|XML 생략|Newton(enum2)|
+|cone|elliptic; tabletop_replay.json 명시|elliptic(enum1)|
+|integrator|implicitfast; builder 명시|implicitfast(enum3)|
+|timestep|XML 생략|.002s|
+|iterations|XML 생략|100|
+|tolerance|XML/profile1e-10|1e-10|
+|noslip_iterations|XML 생략|0|
+|noslip_tolerance|XML 생략|1e-6|
+|impratio|XML 생략|1|
+|pad/block condim|4|4|
+|geom friction|1.6 .02 .001|[1.6,.02,.001]|
+|contact friction|geom에서 생성|[1.6,1.6,.02,.001,.001]|
+|solref|-200000 -400|[-200000,-400]|
+|contact solreffriction|pad-block explicit pair없음|[0,0]|
+|solimp|export .95 .99; builder5값|[.95,.99,.001,.5,2]|
+
+pgripper.py의 pad설정과 replay_recorded_episode.py의 builder,
+tabletop_replay.json의 profile을 대조했다. 별도 freshdata mj_fwdPosition만으로
+최초 contact geom/point/distance를 exact 재현해 actual contact parameter를 확인했다.
+이 static probe는 physics step/force solve를 수행하거나 저장된 힘을 교체하지 않았다.
+Full non-opt compiled array fingerprint:
+1c9b054cb8113863c0923c089c01690c09f8650e11f7a8107524577f3f0f93b7.
+세 case는 동일MJB/model에 opt허용필드만 변경했다. 기록된 물리 parameter hash는
+매 case 검사했으며 full non-opt array hash 자체를매 step 수집한 것은 아니다.
+
+MuJoCo3.3.7, Python3.12 기존 so101_imitation_learning/.venv 사용.
+실제 loaded lib는 site-packages/mujoco/libmujoco.so.3.3.7,
+SHA23841520ecf60ad648405674a757f260949f7cf6b44deb284398b9851b3f061d.
+MJB SHAab282e9deb11572e56e59f746e18a353e02b3e3ab8eb055224c49a5016cea8e3.
+전체 absolute library path와 XML/compiled snapshot은 로컬 archive에 보존했다.
+
+공식3.3.7 XML reference에서 NoSlip은 main solver 이후 friction 차원의 slip/drift를
+억제하는 후처리이고, tolerance는 early-stop 기준이지 속도 bound가 아님을 확인했다.
+solreffriction[0,0]은 solref 재사용을 뜻하며 elliptic contact에 적용된다.
+[MuJoCo3.3.7 option](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#option)
+및 [contact pair](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#contact-pair).
+
+### Decision
+
+**INFERENCE — 사용자 분류A의 강한 근거.**
+B는반복한도10배/tolerance100배강화해도 동일하고 C만slip이 크게 감소했다.
+현재 조건에서는 단순main solver 미수렴보다 soft/regularized friction 처리가
+주요 contributor라는 근거다. 이는 모든 수치오차가 없다는 전역 증명은 아니다.
+C는normal force/penetration도 조금 바꾸므로 geometry·coupling의 잔여 영향을
+완전히 배제하지 않는다. Native boundary point만으로 physical pad patch 부재를
+주장하지 않는다.
+
+이미 elliptic이므로 D는 생략했다. Impratio도 그대로다.
+NoSlip은 DIAGNOSTIC COPY / NOT TASK SUCCESS이며 runtime 설정에 채택하지 않았다.
+Friction/mass/geometry/gain/성공 threshold/joint limit/safety는 변경하지 않았다.
+
+### Validation
+
+Focused14 PASS(4.303s): 기존 viewer/planner/wrench/slip과 이번 parameter-isolation
+회귀. 동일 state/model/command hash, 허용된 option delta만 존재, 3s구간의
+변위=속도적분과 회귀 기울기를 확인했다. 시작state/command/model/impratio/support/
+속도적분 변조를 거부한다. Saved-data verifier도 A의원본 replay, A/B fullstate와
+wrench 동일, 모든case support0 및 기존bound 유지 PASS. 추가physics 재실행은 없다.
+명령은 SIM에서 기존 venv Python과 pinned DAPIER_SO101_MJCF를 사용한
+-m unittest discover -s test -p 'test_gr*e*.py' -v.
+git diff --check PASS. 시간별 Z/Vz 및 log|Vz| 그래프 PNG/SVG를 저장·시각 검수했다.
+사용자 범위에 따라 full local MuJoCo/Research/render suite/remote CI는 미실행.
+
+### Result
+
+세 copied diagnostic 완료. 분류A이며 runtime/model 채택이나 stable-grasp milestone은
+아직 선언하지 않는다. 실제task는이번0회, 마지막 GRASP_CONFIRM PASS /
+LIFT FAIL(SIM17.474s), CENTER SUCCESS=false를 보존했다.
+PR65 draft/base=main 갱신, main merge 없음. SkippedCI는 PASS가 아니다.
+
+### Lesson / Next
+
+**UNVERIFIED:** NoSlip 조건에서 정상OPEN부터 CLOSE 형성 전체, 장시간/다른초기조건
+안정성, 물리적 마찰/접촉 fidelity, 실제PGripper 대응은 확인하지 않았다.
+현재는 baseline으로형성된 grasp의 동일 unsupported state에서 민감도만 비교했다.
+후속 milestone에서 solver/model 후보의 물리 의미와 형성부터의 재현성을 검토해야 한다.
+Arm IK/teacher/live/HW/OS30A/multi-seed/ACT로 이번결과를 확대하지 않는다.
+Raw/script/compiledcontract/graph는 기존KIT validation/solver-contact-20260918에 보존한다.
+Matrix SHA f14b0a9e7ed121ffe630fdcd1aaf97304cd2d222005708bdf60ec7ef68df8b8d.
