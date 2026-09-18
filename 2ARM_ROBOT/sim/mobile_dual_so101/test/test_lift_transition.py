@@ -68,6 +68,15 @@ class LiftTransitionTest(unittest.TestCase):
         points=quality['finger_contacts']
         self.assertLess(points[0]['block_com_local_m'][2],-.015)
         self.assertGreater(points[1]['block_com_local_m'][2],.015)
+        self.assertAlmostEqual(abs(points[1]['contact_world_m'][2]-points[0]['contact_world_m'][2]),.031057826,places=8)
+        expected_body_mm=([2.571241,7.059810,-41.002735],[-2.571192,-15.069648,-16.002898])
+        for point, expected in zip(points, expected_body_mm):
+            np.testing.assert_allclose(np.asarray(point['contact_pad_body_local_m'])*1000,expected,atol=1e-6,rtol=0)
+            self.assertTrue(point['pad_mesh'])
+            self.assertTrue(point['pad_body'].startswith('left_'))
+            self.assertTrue(np.isfinite(point['contact_pad_geom_local_m']).all())
+            self.assertTrue(np.isfinite(point['contact_pad_body_local_m']).all())
+            self.assertGreaterEqual(point['pad_geom_id'],0)
         self.assertGreater(np.linalg.norm(quality['finger_torque_about_com_world_Nm']),.002)
         with contextlib.redirect_stdout(io.StringIO()):
             candidate=next_close_diagnostic(fixture,report)
