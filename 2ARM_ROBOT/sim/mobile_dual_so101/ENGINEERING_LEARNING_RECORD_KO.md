@@ -1814,3 +1814,93 @@ fixture만의 정상적인 철수 절차를 검증해야 한다. 현재 checker�
 그 뒤 정상 OPEN부터 완전한 unsupported HOLD를 확인해야 NoSlip 채택을 검토할 수 있다.
 Impratio100의 남은 slip을 임의 tolerance로 안정이라고 선언하지 않는다.
 Arm IK/live teacher/HW/OS30A/multi-seed/ACT는 실행하지 않았다.
+
+## DAPIER-2026-09-18-prescribed-support-formation
+
+### Problem
+
+나는 NoSlip5 정상 CLOSE 이후 dynamic TEST SUPPORT의 반등 때문에 막힌
+unsupported HOLD를 확인했다. 사용자가 fixture에 한해 prescribed mocap 하강을
+허용했다. SIM writer는 기존 grasp-families worktree, REAL writer는 별도
+real-sensor-pregrasp worktree로 분리했다. 이 기록은 SIM만 다룬다.
+
+### Evidence — VERIFIED BY PHYSICS
+
+받침의 dynamic Z joint/servo/mass만 제거하고 mocap boundary로 교체했다.
+458개 named compiled 비교에서 gripper/block geometry, 질량·inertia,
+friction, joint/actuator, passive coupling, contact pair, options가 동일했다.
+Initial reset 뒤 block/gripper qpos 쓰기는 없고 actual ctrl+mj_step으로 CLOSE했다.
+Fixture는 TEST SUPPORT / NOT TASK ENVIRONMENT다. Block/gripper를 mocap/weld로
+부착하지 않았다.
+
+받침은 .1m/s, 50mm/.5s 일정 하강했다. Command/actual Z 일치, upward step0.
+처음에는 기존 septic withdrawal로 예비 진단했다. Baseline의 첫 count0 평가가
+pre gap+.674µm/post−.936µm여서 중단됐고, 한 sample slope 요약 오류도 수정했다.
+원본은 보존했다. 최종 비교는 사용자 요구인 constant velocity 두 case다.
+Unsupported clock은 count0/Fn0와 양의 pre/post gap을 모두 확인한 뒤 시작했다.
+
+| 항목 | NoSlip0 | NoSlip5 |
+|---|---:|---:|
+| 정상 OPEN 이후 첫 bilateral endpoint | CLOSE49 /20.296s | 동일 |
+| terminal gripper ctrl rad | 1.7142209851885606 | 동일 |
+| unsupported 시작 / 길이 |20.396s /3s|동일|
+| 3s 수직 변위 mm |−2.861901215|−.000020820|
+| 마지막1s slope mm/s |−.954149565|−.000006941|
+| 최종 Fn pad1/pad2 N |.504725407/.504719811|.481440899/.481440654|
+| 전체 Fn peak N |.506182033/.507246084|.481440899/.481440654|
+| 최대 abs dFn/dt N/s |6.994468/6.936757|13.378062/17.203264|
+| 무지지 순회전 rad |6.36529e−5|3.19518e−6|
+| 최대 penetration µm |19.12|19.12|
+| support contact/force, warning |0/0,0|0/0,0|
+
+NoSlip5의 마지막1s 최대 선속도2.166e−8m/s, 각속도1.065e−6rad/s.
+기존 dynamic-support baseline과의 차이도 확인했다: sag차이+.544709µm
+(약.019%), tail slope는 사실상 같다. 첫 bilateral COM은23.948537µm
+높아졌으나 첫 bilateral Fn 차이는 약1nN이다.
+새 fixture가 baseline slow-slip 현상 자체를 없애지는 않았다.
+
+### Decision — INFERENCE / ANALYTIC / DIAGNOSTIC ONLY
+
+분류A: NoSlip5를 이 3초 gripper-only SIM 창에서 near-stationary contact-model
+후보로 승격한다. Runtime/task 설정에 즉시 적용하지 않았다.
+수직 속도가 수학적으로 정확히0은 아니며,20.82nm 잔여변위와 힘 변화율 증가도
+그대로 기록한다. 힘 amplitude spike나 새 instability는 관측되지 않았지만
+임의 force-derivative threshold를 추가하지 않는다.
+
+분류D의 fixture 영향은 초기 높이/형성압력에 남는다. 따라서 기존 dynamic
+fixture의 형성 이력과 이번 NoSlip을 동일-state 비교라고 부르지 않는다.
+Native solver contact point는 여전히 pad polygon boundary 수준이다.
+Physical overlap patch와 discrete point interior를 구분한다.
+Mocap body의 native cvel0과 prescribed 위치의 finite-difference 속도는 다르다.
+Frictionless vertical-only test boundary의 하강을 실제 물체 운동 모델로 일반화하지 않는다.
+
+### Validation
+
+Focused17 PASS(4.410s). 받침반등/접촉잔류/zero gap/비일정속도/
+penetration초과/잘못된solveroption/command 변조를 거부하는 회귀를 추가했다.
+Same model/initial state/ctrl, 옵션차이noslip5만, 변위=속도적분,
+unsupported3s, support0 및 양의 separation 증거를 대조했다.
+Saved-only verifier PASS;458compiled checks 및 per-step force/pose contract 보존.
+Milestone 전체 검증 1회 완료: Research33 PASS, MuJoCo363 PASS(1122.395s),
+canonical render 및 vision artifact 생성 PASS, verify-mujoco-headless exit0.
+Canonical vision은 기존 tower baseline의 회귀이며 REAL calibration/현재 bench 성공과 구분한다.
+반복 후보 full CI는 실행하지 않았다.
+
+### Result
+
+최종 gripper-only phase: UNSUPPORTED HOLD3s 완료.
+SIM contact-model candidate이며 실제 arm task 성공이 아니다.
+실제 arm은 재실행하지 않았고 기존 GRASP_CONFIRM PASS/LIFT FAIL,
+CENTER SUCCESS=false/HOLD0s 상태를 보존했다.
+Raw/scripts/compiled proof/이전 실패는 기존KIT validation 아래
+prescribed-support-20260918에 보존한다.
+Final raw SHA:
+NoSlip0 6ece60726bd00ab45c794c6a841d6a6d9fef8827ae5f1edf45771603c1a8a2e7;
+NoSlip5 698bc122438c23483dbe0c6537e291d5fa48f1ef82984665a58cdcb7ac315be6.
+MODEL5af4835e39c7df7afaa4ca4669a27c2149214913bba22c88dfd53ffa78eb7e9c.
+
+### Lesson / Next — UNVERIFIED
+
+다음 SIM 단계는 copied arm-mounted grasp에서 contact-model 후보 검증이다.
+긴 시간/다중 초기조건/실기 fidelity/pad sample interior는 아직 검증하지 않았다.
+REAL perception/extrinsic/비접촉 PREGRASP는 별도 트랙이며 이 결과로 대체하지 않는다.

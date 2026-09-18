@@ -281,5 +281,53 @@ class ContactConfigurationCandidatesTest(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 self.verify_impratio(bad)
 
+
+class PrescribedSupportDiagnosticTest(unittest.TestCase):
+    def verify(self, cases):
+        self.assertEqual(len(cases), 2)
+        for case, noslip in zip(cases, (0, 5)):
+            self.assertIsNone(case['failure'])
+            self.assertEqual(case['options'], dict(cases[0]['options'], noslip_iterations=noslip))
+            for key in ('initial_sha256', 'model_sha256', 'ctrl_sha256'):
+                self.assertEqual(case[key], cases[0][key])
+            self.assertEqual(case['formation_stage'], 49)
+            self.assertAlmostEqual(case['unsupported_duration_s'], 3., places=9)
+            self.assertEqual(case['support_count_max'], 0)
+            self.assertEqual(case['support_force_max'], 0.)
+            self.assertGreater(case['support_gap_min'], 0.)
+            self.assertEqual(case['support_upward_step'], 0.)
+            self.assertEqual(case['support_position_error'], 0.)
+            np.testing.assert_allclose(case['withdraw_speed_range'], [-.1, -.1], atol=1e-14, rtol=0)
+            self.assertGreater(min(case['Fn_min']), 0.)
+            self.assertEqual(case['warnings'], 0)
+            self.assertLessEqual(case['max_penetration_m'], .001)
+            self.assertAlmostEqual(case['displacement_mm'], case['integrated_vz_mm'], places=9)
+            self.assertAlmostEqual(case['tail_slope_mm_s'], case['sum_tz'] / case['sum_tt'], places=10)
+        # A test fixture can establish unsupported bench evidence, never arm/task success.
+        self.assertLess(abs(cases[1]['displacement_mm']), abs(cases[0]['displacement_mm']))
+        self.assertLess(abs(cases[1]['tail_slope_mm_s']), abs(cases[0]['tail_slope_mm_s']))
+        self.assertNotEqual(cases[1]['terminal_vz_mm_s'], 0.)
+
+    def test_prescribed_support_and_physical_hold_evidence(self):
+        cases = json.loads((Path(__file__).parent / 'fixtures/gripper_force_requirements.json').read_text())['prescribed_support_diagnostic']['cases']
+        self.verify(cases)
+        for mutation in ('rebound', 'contact', 'gap', 'speed', 'penetration', 'option', 'command'):
+            bad = copy.deepcopy(cases)
+            case = bad[-1]
+            if mutation == 'option':
+                case['options']['impratio'] = 10.
+            elif mutation == 'command':
+                case['ctrl_sha256'] = 'wrong'
+            elif mutation == 'speed':
+                case['withdraw_speed_range'][1] = 0.
+            else:
+                key, value = {'rebound': ('support_upward_step', 1e-9),
+                              'contact': ('support_count_max', 1),
+                              'gap': ('support_gap_min', 0.),
+                              'penetration': ('max_penetration_m', .001001)}[mutation]
+                case[key] = value
+            with self.assertRaises(AssertionError):
+                self.verify(bad)
+
 if __name__ == '__main__':
     unittest.main()
