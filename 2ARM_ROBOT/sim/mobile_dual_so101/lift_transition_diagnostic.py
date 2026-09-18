@@ -56,7 +56,15 @@ def block_load_evidence(t, contacts):
             bound=max(0.,wrench[0])*(up@normal+np.linalg.norm(np.asarray(c['friction_coefficients'][:2])*(frame[1:]@up)))
             upper+=bound
         else:upper=float('nan')
-        points.append(dict(pad=t.m.geom(g2 if g1==t.block else g1).name,
+        pad=g2 if g1==t.block else g1
+        body=int(t.m.geom_bodyid[pad]);mesh=int(t.m.geom_dataid[pad])
+        # A mesh bounding box is not the usable pad boundary. Preserve the actual
+        # contact in each frame so offline surface analysis need not infer an edge.
+        points.append(dict(pad=t.m.geom(pad).name, pad_geom_id=int(pad),
+            pad_body=t.m.body(body).name, pad_mesh=t.m.mesh(mesh).name if mesh>=0 and t.m.geom_type[pad]==mujoco.mjtGeom.mjGEOM_MESH else None,
+            contact_world_m=c['position_m'],
+            contact_pad_geom_local_m=(t.d.geom_xmat[pad].reshape(3,3).T@(np.asarray(c['position_m'])-t.d.geom_xpos[pad])).tolist(),
+            contact_pad_body_local_m=(t.d.xmat[body].reshape(3,3).T@(np.asarray(c['position_m'])-t.d.xpos[body])).tolist(),
             block_com_local_m=(rotation.T@lever).tolist(),
             force_on_block_world_N=f.tolist(),force_on_block_local_N=(rotation.T@f).tolist(),
             normal_on_block_world=normal.tolist(),vertical_upper_bound_N=bound))

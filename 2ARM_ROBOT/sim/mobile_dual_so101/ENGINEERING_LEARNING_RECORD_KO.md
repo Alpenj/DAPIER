@@ -1007,3 +1007,158 @@ A/B/C를 read-only로 분담했다. 동시 작업자는 최대2명으로 A/B 뒤
 CONTACT_CONFIRM(실제 양쪽 접촉)과 GRASP_LOAD_READY(하중 지지 근거)는 다른 의미다. 이번에는 runtime gate를 바꾸지 않았다. 현재처럼 힘이 작고 감쇠하며 table support가 남는 경우에는 bilateral force>0만으로 후자를 주장할 수 없다. 다음 blocker는 opposing-face 중심에 가까운 contact placement와 preload 유지의 원인 분리다. 마찰/힘 기준을 올리거나 닫힘 단계를 계속 추가해 통과시키지 않는다.
 
 현재 staging30.378087mm는 일반30mm 대비.378087mm 여유의 단일 조건 결과이며 다중 초기조건·실물 강건성 증거가 아니다. Hardware/OS30A/multi-seed/ACT 미실행. 기존 untracked REAL_SCENE_GEOMETRY_AUDIT.md와 실패 state를 보존했다.
+
+## 2026-09-18 — 비대칭 접촉 배치와 중력 wrench 진단
+
+record_id: DAPIER-2026-09-18-contact-placement
+
+### Problem
+
+나는 LIFT를 통과시키기 전에 31.058mm 높이 차이의 접촉을 실제 하중 지지가 가능한
+접촉 배치로 바꿀 수 있는지 확인했다. PR63 이후 main
+`1c646eac01f14011d01899c2a2f65175be6d2449`에서 별도
+`pro/grasp-placement-codex-20260918` writer worktree를 만들었다.
+기존 dual-so101-codex-20260907 worktree와 untracked
+REAL_SCENE_GEOMETRY_AUDIT.md는 읽기 전용으로 보존했다.
+
+### Evidence
+
+A는 정확한 접촉 면, B는 마찰 cone과 COM 토크 평형, C는 접촉 배치 후보를 분석했다.
+동시 worker 2개 한도로 A/B를 병렬 실행하고, A 완료 thread를 C에 재사용했다.
+Source writer는 coordinator 한 명이다. 모든 후보는
+**DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS**다.
+
+- Pad1/2는 geom36/38, mesh17/19, body9/10(left PGripper jaw1/jaw2)의
+  MESH다. 실제 world contact는
+  (179.523748,12.405716,4.537328)/(219.059100,-20.174736,35.595154)mm,
+  block COM-local은
+  (-19.999264,12.013009,-15.459300)/(19.999259,-19.999879,15.595676)mm다.
+  Jaw-body-local은
+  (2.571241,7.059810,-41.002735)/(-2.571192,-15.069648,-16.002898)mm다.
+- Compiled pad vertex 각각427개에서 inward convex-face polygon을 재구성했다.
+  Closing 방향과 normal dot>0.9인 최대 planar patch 면적은671.380542/671.380201mm²,
+  face center world는
+  (176.650821,4.161000,18.708653)/(223.103605,-3.878379,23.500602)mm다.
+  Plane grouping은 normal L2<5e-6, offset<0.1µm이다.
+- Contact projection에서 **실제 polygon boundary**까지 거리는0.066917/0.075649µm다.
+  이는 grouping tolerance보다 작아 내부 안전 여유라고 주장하지 않는다.
+  AABB 여유3.46mm로 pad1이 중심 접촉이라고 해석하지 않는다.
+  Raw CAD와 convex proxy의 해당 국소 nearest points 차이는0.000771/0.000517µm다.
+  따라서31.057826mm 높이 차이는 frame 표현만의 문제가 아니다.
+  선택한 usable patch는 CAD convex-face 분석 정의이며 실물 고무 패드 실측이 아니다.
+  Nearest tip-cap/bevel triangle 하나를 유일한 하중 전달 면으로 단정하지 않는다.
+- Closing axis는(.980517309,-.168651884,.100709227).
+  Pad planar normals와 MuJoCo contact normals는 별개다.
+  Finger 합력 block frame은(.001000670,.009109266,.000459545)N,
+  COM 토크는(-.000487422,-.002192178,-.001634559)Nm다.
+  두 접촉의 block-Y 토크 -0.001094535/-0.001097643Nm가 같은 방향으로 더해진다.
+
+**Wrench feasibility:** 실제 elliptic condim4와 friction(1.6,1.6,0.02),
+접촉 위치/normal,20g,중력9.81m/s²를 사용했다. Table을 제외하고 force3+COM torque3을
+함께 평형시키며0≤Fn≤측정 Fn을 허용했다. Fn를 고정하는 것보다 낙관적인 relaxation이다.
+
+| 상태 | full wrench 지지 질량 범위(512방향 LP) | force-only 범위 |
+|---|---:|---:|
+| 기존 B_confirm | 7.791–7.864g | 23.144–23.336g |
+| 기존 추가 CLOSE17 terminal | 12.337–12.378g | 32.143g |
+| B_confirm에서 HOLD100ms 후(128방향) | 5.051–5.214g | 15.439–15.523g |
+
+단순 μΣFn>mg만으로는 토크 평형 실패를 놓친다. LP에서 얻은 covector ν를
+독립적인 elliptic support inequality에 대입해 NumPy만으로 다시 검증했다.
+각 contact wrench basis B에 대해 a=νB, α=ν·(-mg,0)>0이면
+
+`λ ≤ Σ Fn_cap·max(0,a₀+norm(a₁:)) / α`
+
+이다. B_confirm/CLOSE17의 독립 상한은 **λ0.393175904/0.618391128**,
+즉7.86352/12.36782g다. Inner feasible witness로 upper bound를 증명하지 않는다.
+Normal torsion과 COM lever arm을 포함한다. 이는 FP64 수치 부등식 검증이며
+rounding까지 포함한 형식 증명, controller 도달 가능성, dynamic 성공 gate가 아니다.
+SciPy LP는 이미 설치된 로컬 분석 환경에서만 사용했고 runtime/CI dependency는 추가하지 않았다.
+
+### Decision
+
+나는 먼저 closing-axis 수직 평면에서 analytic hand translation 두 개를 계산했다.
+Usable face midpoint→COM은(+.083453,-.138093,-1.043767)mm,
+contact midpoint→COM은(+.669253,+3.887726,-.005379)mm다.
+두 벡터는 다른 목적이므로 더하지 않았다. 기존 material contact 두 점의
+높이 차이는 rigid translation으로 줄어들지 않으며 새 feature 접촉이 생겨야 한다.
+
+현재 closing→block+X 최소 회전을 tool axis에 적용한
+(-.000822953,-.061589700,-.998101213) 방향도 검사했다.
+Position3+axis-direction2만 사용하고 별도 closing15° gate를 유지했다.
+이미 실패한 vertical IK, full-range sweep, retreat search를 다시 시작하지 않았다.
+
+### Validation
+
+같은 saved PREGRASP_NEAR full integration state에서 measured seed→coarse→fine
+previous-q continuation을 사용했다. **비교 baseline도 재계획했으므로 과거 live의
+bit-exact command replay가 아니다.** 모든 후보는 같은 추가100ms HOLD 후 continuous-command
+LIFT를 시험했다. HOME/geometry/controller/timing/task-open/limits/0.5mm·2°·15°/
+general30mm/penetration/measured tolerance를 변경하지 않았다.
+
+| 후보 | 첫 blocker | 접촉 및 하중 결과 |
+|---|---|---|
+| 재계획 baseline | LIFT32step/64ms, pad1 force loss | table support 유지 |
+| usable-face-center translation | LIFT33step/66ms, pad1 force loss | 높이차 약31.066mm, HOLD λ상한.203344 |
+| contact-midpoint translation | APPROACH_COARSE 2.003240°>2° | 접촉 전 거부, TCP.121277mm |
+| minimal-rotation axis | closing37.912678°>15° 및 경로 거부 | contact physics 실행 안 함 |
+| contact-midpoint + 기존 planner reserve | LIFT33step/66ms, pad2 force loss | table support 유지 |
+
+마지막 후보는 동일 XYZ/axis에 **기존1.94664° planner reserve만 재사용**했다.
+실행 acceptance2°는 그대로다. CONFIRM Fn=.051613/.057298N→추가 HOLD100ms 후
+.031431/.033428N, 합력40.45% 감소. 높이차30.841098→30.840343mm,
+polygon boundary margin .047070/.052400→.028708/.030556µm다.
+HOLD λ범위.190408–.197438로 전체20g 지지를 못한다.
+두 contact normals가 서로 반대여도 closing-axis와 약10.96° 어긋난다.
+LIFT 시 table4contacts/.143564N이 남고 maximum block lift는0.359µm뿐이다.
+CONFIRM/HOLD TCP 최대 약.123mm, general clearance 최소약49.015mm,
+block penetration 최대2.662µm였다. 이 수치들은 새 acceptance가 아니다.
+
+Historical donor raw hash와 현재 raw hash는 경로/source 표현이 다르므로 같다고
+보고하지 않았다. 기존 integration source profile의 unchanged-live raw 및 두 accepted XML,
+fresh portable b6dafd…/augmented B exact identity를 대조했다.
+Donor PRE time/qpos/qvel/TCP/axis/clearance 및 table4contacts 거리·Fn replay 오차0,
+각 copied preflight 원본 state 불변, 초기 batch SHA 불변을 확인했다.
+초기 reset flag 누락 harness 실패는 별도로 보존했고 task 후보 실패로 세지 않았다.
+
+기존 tilt-feasibility의33방향/66branch에서는 이번 correction에 바로 재사용할
+eligible 방향을 찾지 못했다. 다른 target/branch의 작은 closing 오차만으로
+현재 경로가 가능한 것으로 처리하지 않는다. 전역 불가능을 증명한 것은 아니다.
+
+### Result
+
+**채택한 task candidate 없음. Live 재시작 안 함.**
+실제 마지막 PASS는 여전히 GRASP_CONFIRM, 이전 actual LIFT_5MM FAIL/SIM17.474s,
+CENTER SUCCESS=false다. 이번 수정은 기존 diagnostic에 정확한 geom/body/mesh와
+contact frame 좌표를 추가하고, 저장 wrench 상한 회귀를 보존하는 범위다.
+Task target/trajectory/success gate는 변경하지 않았다.
+
+Focused/full/CI 결과는 아래 최종 검증 절과 후속 PR에 기록한다.
+Raw geometry/force/후보 full-state·telemetry·재현 scripts는 기존 KIT local-validation의
+contact-placement-20260918에 보존했다. 새 학습 원장은 만들지 않았다.
+Viewer는 대표 baseline/refine의 **RECORDED PHYSICS REPLAY**이며 새 live 실행이 아니다.
+
+### Lesson / Next
+
+주 원인은 실제 edge 접촉 배치의 COM 토크 불균형과 HOLD 중 감소하는 정상력의 복합 문제다.
+추가 CLOSE는 배치를 고치지 못하고, 작은 translation도 거의31mm 높이 차이를 남겼다.
+다음 blocker는 현재5DoF limits 안에서 opposing usable faces에 더 가까운 접촉 배치를
+만드는 orientation/position 조합이다. 현재 분석 patch와 실제 제조 패드의 차이도
+확인 대상이며 모델을 임의 수정할 근거는 아니다.
+CONTACT_CONFIRM과 GRASP_LOAD_READY는 다른 의미지만 이번에 gate를 새로 만들지 않았다.
+
+Staging30.378087mm는30mm 기준 대비.378087mm 여유의 단일 조건 결과이며,
+다중 초기조건이나 실물 강건성 근거가 아니다. Hardware/OS30A/multi-seed/ACT 미실행.
+
+### 최종 로컬 검증 / handoff
+
+- Focused 접촉·wrench·collision·MESH–BOX·BOX–BOX·near-support·manipulation:32 PASS/73.189s.
+- `scripts/verify-mujoco-headless`: Research33 PASS/0.030s,
+  MuJoCo356 PASS/1126.229s, canonical render 및 vision artifacts PASS, exit0.
+  기존 dynamic-preflight/command-state/reset/SETTLE 회귀를 전체 suite에서 유지했다.
+- `git diff --check` PASS. SIM source는 diagnostic metadata 추가뿐이며
+  실제 task 제어/target/모델/limits/정책은 그대로다.
+- 기존 viewer helper로 baseline/refine175개 저장 physics sample을 단일 창에서 재생했다.
+  정상 종료exit0; 새 actual task 성공으로 세지 않는다.
+- 원격 전체 CI가 통과하기 전에는 merge하지 않는다. 이번 부분 진척 PR의
+  CI/commit/merge SHA는 GitHub PR과 기존 Notion 학습 기록의 handoff에 연결한다.
