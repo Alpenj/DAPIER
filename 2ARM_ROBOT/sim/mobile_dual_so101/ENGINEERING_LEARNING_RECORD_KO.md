@@ -1904,3 +1904,65 @@ MODEL5af4835e39c7df7afaa4ca4669a27c2149214913bba22c88dfd53ffa78eb7e9c.
 다음 SIM 단계는 copied arm-mounted grasp에서 contact-model 후보 검증이다.
 긴 시간/다중 초기조건/실기 fidelity/pad sample interior는 아직 검증하지 않았다.
 REAL perception/extrinsic/비접촉 PREGRASP는 별도 트랙이며 이 결과로 대체하지 않는다.
+
+
+## DAPIER-2026-09-18-arm-noslip-copy
+
+### Problem
+
+Gripper-only NoSlip5 무지지 HOLD가 기존 arm-mounted 비대칭 grasp의 LIFT도
+해결하는지 확인했다. 실제 arm task는 GRASP_CONFIRM PASS / LIFT FAIL이다.
+
+### Evidence — VERIFIED BY PHYSICS / DIAGNOSTIC ONLY
+
+보존 GRASP_CONFIRM의 mjSTATE_INTEGRATION 244값과 warmstart/terminal ctrl를
+bitwise 복사했다. Portable model SHA 일치, compiled numeric fields/옵션은
+noslip_iterations 0→5 외 동일하며 donor state/model은 불변이다.
+기존 controller와 continuous-command septic LIFT의 50개 command도 baseline과 같다.
+0.534920337s 궤적 중 50step/0.100s만 관찰했다.
+
+첫 bilateral support loss는 NoSlip0 step36에서 NoSlip5 step33/66ms로 앞당겨졌다.
+Step32에서만 table contact/force0 및 bottom gap +0.392161µm가 확인됐다.
+다음 step33에는 table contact2/force0.168861N과 한쪽 finger loss가 발생했다.
+이 한 sample의 분리는 지속 load-bearing LIFT가 아니다.
+Step34–50은 실패 이후 bounded diagnostic extension이며 task PASS에 포함하지 않는다.
+최종 finger Fn0/0.254030N, table Fn0.314623N, bottom lift−0.019765mm이다.
+최대 normal-force 변화율127.015N/s, jaw1 cone utilization은 step32에서1.0이었다.
+최소 protected clearance48.707677mm, 최대 penetration26.09µm, warnings0.
+
+Force는 기존 helper의 ctrl→mj_step→integrated-pose mj_forward→contact gate
+순서로 얻은 값이며 직전 integration impulse와 구분한다.
+NoSlip0로 형성된 state에 NoSlip5를 적용한 첫 solve transient도 포함한다.
+종료 TCP error5.039mm는 진행 중인 +5mm 최종 목표까지 거리이며
+완료 endpoint acceptance 실패로 바꾸어 해석하지 않는다.
+
+### Decision — INFERENCE
+
+NoSlip이 gripper-only slow slip을 줄인 사실을 arm grasp 안정성으로 일반화할 수 없다.
+현재 비대칭 contact placement/torque 수요를 유지한 상태에서는 지속 지지가 없었다.
+NoSlip5 runtime 채택, full-path preflight와 live 재실행은 진행하지 않는다.
+Geometry/friction/mass/controller/timing/joint limits/acceptance/safety는 유지했다.
+
+### Validation
+
+저장-only 독립 verifier PASS: fullstate/ctrl/options/donor/50commands/상태연속성.
+새 LIFT negative fixture와 기존 gripper/contact/solver focused8 PASS(0.050s).
+가짜 force/support/command/success 및30mm미달 기록을 거부한다.
+이번 arm milestone은 미달이므로 fullsuite/새remoteCI는 실행하지 않는다.
+지난 gripper-only milestone의 Research33/MuJoCo363/canonical 및remote checks는
+별개로 PASS하여 PR65를 main c44d2c9dafc3cccaa088a33436750c4ff3c4bb56에 병합했다.
+
+### Result
+
+최종 copied phase LIFT_5MM FAIL(step33). 실제 live 상태는 변경하지 않았다.
+Actual last PASS GRASP_CONFIRM, CENTER SUCCESS=false, HOLD0s.
+Raw SHA187f3264af3dbec8db48dce64f5f5b9e30487ddb118121b9937b544bcb1b18df.
+재현: 보존 KIT local-validation의 arm-noslip-20260918/run.py와 exact input;
+저장 검증은 같은 폴더 verify.py. 공개 fixture는 기존 lift_transition.json에 추가했다.
+
+### Lesson / Next — UNVERIFIED
+
+한 sample의 table force0와 큰 finger force는 지속적인 무지지 grasp의 충분조건이 아니다.
+다음 SIM blocker는 arm이 만들 수 있는 contact geometry와 load-bearing 안정성이다.
+새 pose search나 physics 설정 변경은 이번 결과 없이 자동 확대하지 않았다.
+REAL calibration 결과는 이 SIM 결과와 독립적으로 기록한다.

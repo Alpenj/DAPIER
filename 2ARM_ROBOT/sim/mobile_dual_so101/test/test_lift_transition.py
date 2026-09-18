@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import io
 import json
 from pathlib import Path
@@ -10,6 +11,65 @@ from lift_transition_diagnostic import run, next_close_diagnostic
 
 
 class LiftTransitionTest(unittest.TestCase):
+    def check_arm_noslip_evidence(self, e):
+        self.assertEqual(e['mode'], 'DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS')
+        self.assertEqual(e['option_delta'], {'noslip_iterations': [0, 5]})
+        self.assertTrue(e['donor_unchanged'])
+        self.assertFalse(e['endpoint_reached'])
+        rows = e['rows']
+        self.assertEqual(len(rows), 50)
+        self.assertEqual(e['extension_steps'], list(range(34, 51)))
+        start, end = np.asarray(e['terminal_command']), np.asarray(e['target'])
+        for i, row in enumerate(rows, 1):
+            self.assertEqual(row['step'], i)
+            t = i * .002 / e['trajectory_duration_s']
+            blend = 35*t**4 - 84*t**5 + 70*t**6 - 20*t**7
+            np.testing.assert_allclose(row['target_q'], start + (end-start)*blend,
+                                       atol=1e-15, rtol=0)
+            self.assertAlmostEqual(row['time_s'] - e['initial_full_state'][0], i*.002, places=11)
+            for index in (5, 11):
+                self.assertEqual(row['target_q'][index], start[index])
+            self.assertTrue(row['policy_safe'])
+            self.assertGreaterEqual(row['measured_clearance_m'], .03)
+            self.assertLessEqual(row['maximum_penetration_m'], .001)
+            self.assertFalse(any(row['warnings']))
+            for name, force in row['finger_force_N'].items():
+                pad = 'left_pgripper_pad_' + name[-1]
+                observed = sum(c['normal_force_N'] for c in row['contacts'] if pad in c['names'])
+                self.assertAlmostEqual(force, observed, places=12)
+            table = [c for c in row['contacts'] if 'table' in c['names']]
+            self.assertEqual(row['block_table_contact_count'], len(table))
+            self.assertAlmostEqual(row['block_table_normal_force_N'],
+                                   sum(c['normal_force_N'] for c in table), places=12)
+        first_loss = next(row['step'] for row in rows if min(row['finger_force_N'].values()) <= 0)
+        self.assertEqual(first_loss, e['first_blocker_step'])
+        self.assertEqual(first_loss, 33)
+        # A single separated sample is not sustained load-bearing lift evidence.
+        separated = [row['step'] for row in rows if row['block_table_contact_count'] == 0
+                     and row['block_table_normal_force_N'] == 0 and row['block_bottom_table_gap_m'] > 0]
+        self.assertEqual(separated, [32])
+        self.assertGreater(rows[32]['block_table_normal_force_N'], 0)
+        self.assertLess(rows[-1]['block_lift_m'], 0)
+
+    def test_arm_noslip_copy_does_not_establish_load_bearing(self):
+        fixture = json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())
+        evidence = fixture['arm_noslip_diagnostic']
+        self.check_arm_noslip_evidence(evidence)
+        for mutation in ('force', 'support', 'command', 'success', 'clearance'):
+            bad = copy.deepcopy(evidence)
+            if mutation == 'force':
+                bad['rows'][32]['finger_force_N']['jaw_1'] = .1
+            elif mutation == 'support':
+                bad['rows'][32]['block_table_contact_count'] = 0
+            elif mutation == 'command':
+                bad['rows'][0]['target_q'][5] -= .001
+            elif mutation == 'success':
+                bad['endpoint_reached'] = True
+            else:
+                bad['rows'][0]['measured_clearance_m'] = .029
+            with self.assertRaises(AssertionError):
+                self.check_arm_noslip_evidence(bad)
+
     def test_actual_failure_and_bounded_contact_diagnostics(self):
         fixture=json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())
         with contextlib.redirect_stdout(io.StringIO()):
