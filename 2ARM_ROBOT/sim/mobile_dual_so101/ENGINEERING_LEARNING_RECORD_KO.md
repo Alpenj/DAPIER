@@ -1162,3 +1162,168 @@ Staging30.378087mm는30mm 기준 대비.378087mm 여유의 단일 조건 결과�
   정상 종료exit0; 새 actual task 성공으로 세지 않는다.
 - 원격 전체 CI가 통과하기 전에는 merge하지 않는다. 이번 부분 진척 PR의
   CI/commit/merge SHA는 GitHub PR과 기존 Notion 학습 기록의 handoff에 연결한다.
+
+## 2026-09-18 — Opposing-face grasp family 탐색
+
+record_id: DAPIER-2026-09-18-grasp-families
+
+### Problem
+
+기존 grasp의 접촉 높이차 31.058mm와 measured-force 기반 wrench 질량 상한
+7.864g(CLOSE17 12.368g)은 20g block을 지지하지 못했다.
+이번에는 기존 grasp 주변 translation tuning을 반복하지 않고,
+현재 PGripper의 usable opposing faces에 COM 대칭 접촉을 만드는 family를 검사한다.
+
+최신 origin/main `7ff415a707e3ea2c4e5e34452a61dab9a9dafdfb`에서
+`pro/grasp-families-codex-20260918` writer worktree를 새로 만들었다.
+기존 dual-so101 및 grasp-placement worktree/evidence와 unrelated audit는 보존한다.
+Coordinator만 repository writer이며, 최대 두 worker의 read-only 분석을
+A geometry → B kinematics → C copied physics 순서로 승인해 연결한다.
+
+### Evidence
+
+A는 settled block geometry를 offline oracle로 사용했다. Site X=approach,
+site Z=pad1→pad2 closing axis다. Usable-face midpoint의 site offset은
+(-1.260623mm, 약0, -2.208µm)이므로 ideal TCP는 block center 자체가 아니라
+`blockCenter - Q * midpointOffset`이다. Q=[approach, closing×approach, closing]는
+기하 설명용이며 full6D IK 목표가 아니다.
+
+세 opposing face pair의 signed assignment 6개와 cardinal 방향24개를 생성했다.
+±Z closing은 아래쪽 pad가 table을 약4.002mm 침범해 제외한다.
+옆면 pinch의 위에서/수평 접근12개를 B에 넘겼다.
+이상적 COM 대칭 접촉점은 실제 usable polygon 경계에서 최소11.230791mm 내부이며
+plane residual 최대0.015857µm다. 두 polygon 면적 중심은 이상적 접촉점과
+각26.265µm 다르므로 두 개념을 구분한다. 제조 pad 실측 검증은 아니다.
+A의 clearance는 distal pad만 평가한 값이고 full arm/path 안전 판정이 아니다.
+
+B는 기존 position3+axis-direction2 IK와 closing15° 후검사를 사용했다.
+위치0.5mm/axis2°/joint limits 및 기존300iteration을 유지하고,
+6개의 결정적 range-interior/branch seed를 사용했다.
+기존 solver 내부 bounded step/ctrl clipping은 유지하지만 새 clamp는 추가하지 않았다.
+그리퍼/right 채널은 고정했다. 기존 measured-derived1.94664° 내부 planner reserve를
+명시적으로 재사용한 진단이며 runtime acceptance2°는 그대로다.
+
+- Cardinal12×6 seed: 연결 PREGRASP→GRASP 통과0.
+- +X top-down은 PREGRASP7.0892mm/axis3.8006°로 실패하지만,
+  별도 GRASP_ONLY는0.3443mm/axis1.4598°/closing3.3052°로 통과했다.
+  PRE wrist-flex margin0, GRASP margin0.307576rad다.
+  GRASP_ONLY를 안전한 연결 경로로 세지 않는다.
+- 다른 signed top-down GRASP는 closing164.14°/80.93°/74.20°로 실패했다.
+- 네 signed side family에서 closing을 고정하고 접근축을 면 안에서
+  수직 대비±15/30/45/60/75°로 확장한40개도 각각6seed로 평가했다.
+  연결 통과0, 별도 GRASP_ONLY 통과0이다.
+  예: Y−/+15°의 PRE 위치0.3190mm/axis8.5451°/closing12.0019°,
+  GRASP 위치0.2958mm/axis8.0668°/closing11.7915°.
+- 이 사례 PRE rank5, 최소 singular value3.464e-5m/rad, 최소 joint margin0.1864rad다.
+  모든 실패를 joint limit/rank 소실로 단정하지 않는다.
+  bounded solver/search에서 찾지 못한 결과이며 globally unreachable 증명이 아니다.
+
+### Decision
+
+고정된60mm stand-off에서 동일 축을 요구한 실패와 실제 GRASP 끝점의 도달성을 분리한다.
+B가 통과한 +X vertical 끝점에 대해, 기존 verified PREGRASP prefix를 재사용한
+하나의 새 copied 경로만 C에 허용했다:
+기존 coarse 위치/축 → 새 usable-face-centered vertical GRASP.
+각 구간은 이전 q에서 이어 풀며 전체 collision/path gate를 먼저 적용한다.
+기존 작은 placement search를 다시 실행하지 않는다.
+
+C는 PREFIX_END에서 시작한 DIAGNOSTIC COPY이며 fresh HOME/live task PASS가 아니다.
+runtime source, model, friction, mass, controller, timing, limits와 모든 safety 기준은
+copied evidence가 충분하기 전에는 수정하지 않는다.
+
+### Validation / Result
+
+C의 새 family는 `+blockX / vertical approach`이며 실제 physics는 donor
+PREGRASP prefix 끝에서 시작했다. 기존 coarse 위치/축을 거쳐 새 fine으로 이어지는
+계획은 각각11/9 interpolation samples PASS였다.
+계획 coarse 위치0.111707mm/axis1.964057°/closing11.3222°,
+fine 위치0.316947mm/axis1.089894°/closing9.901173°로 통과했다.
+별도 GRASP_ONLY 해와 branch가 다르며 이전 q에서 이어 푼 결과다.
+Copied actual fine 위치0.487900mm/axis1.035683°/closing9.8971°도 통과했다.
+
+CLOSE22에서 first bilateral contact가 생겼고 GRASP_CONFIRM50step와
+추가100ms HOLD50step는 통과했다. 그러나 다음과 같이 **채택 기준은 실패**했다.
+
+| 항목 | CONFIRM 종료 | 추가 HOLD100ms 종료 |
+|---|---:|---:|
+| 실제 접촉 높이 차이 | 4.938480mm | 4.923809mm |
+| pad1/pad2 polygon edge margin | .01835/.00696µm | .01101/.00381µm |
+| 정상력 pad1/pad2 | .033950/.042197N | .019770/.023094N |
+| polyhedral wrench 질량 상한 | 8.913322g | 5.191015g |
+| 독립 elliptic support 부등식 상한 | **8.855380g** | **5.157271g** |
+
+접촉 높이차는 기존31.058mm에서 줄었지만 edge margin은 기존 geometry grouping
+0.1µm보다 작아 usable interior 확보로 세지 않는다. 동일한 snapshot의 force caps,
+contact normals, COM torque, elliptic friction을 포함한 정적 상한도20g 아래다.
+이는 실제 actuator가 만들 수 있는 힘의 보장이나 새 runtime gate가 아니다.
+B가 C의 두 저장 상태를 독립 NumPy 지지 부등식으로 다시 확인했으며,
+기존 `grasp_wrench.json`에 두 negative case만 추가했다. 이전 사례는 보존했다.
+
+Continuous-command diagnostic LIFT는 **step31/62ms**, SIM20.072s에
+pad1 force0 / pad2 .023502N으로 fail-closed 정지했다.
+Table4contacts/.184514N이 남아 있었고 table support 이탈은 없었다.
+LIFT 구간 최대 block bottom 변화는 약0.1003µm에 불과했다.
+5mm 또는30mm lift PASS가 아니다. 그 순간5.236mm TCP 오차는 진행 중 trajectory의
+최종+5mm 목표 대비 값이며 별도의 완료 endpoint 실패로 잘못 분류하지 않았다.
+첫 blocker는 bilateral support loss다.
+
+CONFIRM/HOLD/LIFT 구간 general clearance 최솟값52.577034mm,
+최대 contact penetration1.615407µm다. 기존30mm/1mm 조건을 유지했다.
+Full-state preflight 원본 및 단계 연결, donor/model identity,
+recorded replay의 raw qpos/qvel·forces 불변 검증은 PASS다.
+Viewer는 실제 저장 contact rows만 기존 helper로 재생하며
+`DIAGNOSTIC COPY / RECORDED PHYSICS REPLAY / NOT LIVE TASK SUCCESS`를 표시한다.
+
+**Teacher grasp target 채택 없음. Live 재시작 없음. CENTER SUCCESS=false.**
+Actual 마지막 PASS는 여전히 기존 GRASP_CONFIRM이며 보존된 actual LIFT failure는
+SIM17.474s다. 이번 copied 결과의 SIM20.072s와 혼동하지 않는다.
+높이 대칭 개선만으로 load-bearing/LIFT milestone을 선언하지 않으므로
+full local Research/MuJoCo/canonical render 및 remote full CI는 이번에 실행하지 않는다.
+
+집중 검증:
+- axis-direction finite difference / roll invariance 2 PASS(2.738s).
+- 새2case를 포함한 wrench evidence/corrupt claim/대칭 contact 검증 2 PASS(.004s).
+- 기존 actual failure/HOLD/continuous LIFT chronology 회귀 1 PASS(49.828s).
+- A cardinal24 / refined40의 frame·COM·polygon·table negative verifier PASS.
+- B cardinal12/refined40×6seed의 수용 조건 독립 재계산 PASS.
+- C copied state continuation / endpoint / safety / first blocker / 실제 replay rows verifier PASS.
+- 최초 unittest module-style invocation은 test package import에 실패했고,
+  첫 discover는 명시적 asset env 누락으로 실패했다. 프로젝트의 discover 명령과
+  기존 pinned DAPIER_SO101_MJCF로 바로잡은 뒤 위 결과를 얻었다.
+  코드·의존성 변경으로 숨기지 않았다.
+
+기존 KIT local-validation의 `grasp-families-20260918/{A,B,C}`에 전체 scripts,
+frozen targets, q/margins/SVD, copied fullstate/telemetry, replay와 SHA manifest를 보존한다.
+Raw physics JSON은 약109MiB로 Git에 추가하지 않았다.
+C raw SHA256: `666430b2b6a2a819a45c5ff7eabc82e5c9118037ce1c4cc8a6b5aa8663647e6a`.
+A cardinal/refined SHA256: `5aaaa0729a3b22b3a00477c5afc77929cae99b5e0b4b221cb221e5e99528d1fd` /
+`ed7bf3c331e9e63436dc9d6f322be169d95ac2271219eaf6e8b94485c43e1ee6`.
+
+다음 blocker는 **kinematically admissible한 접근축/closing 오차가 실제 pad interior
+접촉을 보장하지 않는 것**이다. Height symmetry 하나보다 실제 face alignment와
+접촉 lever arm/하중 지지를 함께 확인해야 한다. 이번 bounded family screen 실패는
+전역 불가능 증명이 아니며 geometry/friction/threshold 변경 근거도 아니다.
+Staging30.378087mm의 .378087mm 여유는 여전히 단일조건이며 실물 강건성 근거가 아니다.
+Hardware/OS30A/multi-seed/ACT 미실행.
+
+
+### Lesson / Next
+
+MuJoCo truth는 이번 geometry/expert 분석의 oracle다. 후속 sensor milestone에서는
+RGB-D/wrist RGB 기반 추정과 camera→arm transform으로 feasible family를 선택하고,
+body pose는 estimator 평가 ground truth로만 사용한다.
+
+Full local/remote suite는 후보마다 반복하지 않는다. 이번에 실제 load-bearing/LIFT 개선
+또는 live family 채택 milestone이 있을 때만 전체 local 및 render를 실행하고,
+main merge 직전에 원격 전체 CI를 요구한다. 미달이면 draft PR을 보존하고 merge하지 않는다.
+
+### GitHub / handoff 범위
+
+git diff --check PASS. 검증된 학습 기록과 기존 wrench fixture의 새 negative2case만
+commit/normal push한다. 이전 dirty/untracked audit와 worktree HEAD는 보존했다.
+이번 milestone 미달 commit은 [skip ci]로 PR/push 자동 전체 CI를 예약하지 않고
+base=main draft PR로 남긴다. Workflow/safety assertion은 수정하지 않는다.
+Skipped checks를 PASS로 세지 않으며 이번 PR은 merge하지 않는다.
+후속 milestone에서 skip 없는 검증 commit과 요구된 full CI PASS가 있어야 merge한다.
+GitHub의 commit skip semantics: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs
+PR/commit과 기존 Notion 기록의 최종 링크는 turn handoff에 연결한다.
