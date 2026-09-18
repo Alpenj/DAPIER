@@ -79,3 +79,42 @@ T_camera_from_grid / T_camera_from_selected_innercorner를 구분한다.
 설치base 형상/책상직접밀착은 확인했으나 CAD virtual datum을 현장 측정점으로
 아직 대응하지 못했다. 밑판 전체와 board가 함께 보이는 사진의 실제 feature를
 표시해 실측할 예정이다. Camera→arm 숫자나 shadow/hardware motion은 생성하지 않았다.
+
+## 2026-09-18 — 어려운 datum 중단 / BASIC motion 분리
+
+사용자 지시에 따라 A–D 접근 곤란 측정은 중단한다. Extrinsic 상태는
+**UNVERIFIED / BLOCKED BY DATUM METHOD**이며 accepted camera→left_arm matrix는 없다.
+기존 실측 원값과 접근 곤란/근삿값 표시는 private local evidence와 Notion에 그대로 보존한다.
+사진·개인 보정·실측 calibration 데이터는 공개 저장소에 추가하지 않는다.
+평균·CAD 보정·불확도 흡수로 맞추지 않는다. 다음 실측은 board와 같은 평면의
+접근 가능한 datum 방법이 정해질 때만 재개한다.
+
+### Camera-independent BASIC +20 mm rehearsal
+
+SIM PR67의 `basic_vertical_motion.py`는 integration_desk 모델 default RESET 자세에서
+LEFT TCP world/base +Z20mm→.5s 비접촉 hold→복귀를 실제 ctrl+mj_step으로 통과했다.
+1378physics steps, measured dz19.600463mm, endpoint error.400950mm,
+복귀 error.000792mm, general clearance minimum72.400006mm.
+0.5mm/2deg acceptance 및30mm general policy, controller/physics/geometry/limits는 유지했다.
+첫 baseline .630642mm 실패는 보존하고 관측된 FK→measured deviation .346596mm만큼
+planner 내부 position reserve를 확보했다. 이는 단일 조건 SIM 검증이다.
+
+순서: shoulder_pan / shoulder_lift / elbow_flex / wrist_flex / wrist_roll.
+SIM start/return q(rad): `[0, 0, 0, 0, 0]`.
+SIM target q(rad): `[0.00001045348, 0.01949969385, -0.16493163968, 0.14095875590, -0.00563163025]`.
+SIM delta(deg): `[0.0005989405, 1.11725016, -9.44988686, 8.07634180, -0.32266865]`.
+기존 septic/MotionLimits,1.026733576s nominal(2ms sampling1.028s)/leg,hold.5s.
+SIM PGripper command2.2028rad 고정. Real의0..100 gripper채널과 혼동하지 않는다.
+
+**실물 실행용 절대 q/profile은 아직 확정하지 않았다.** 위 숫자는 현재 실물 자세의
+측정값이 아니다. September15 start-pose 및 과거 attended hold도 fresh q가 아니다.
+기존 calibration/normalization/보호설정을 재사용하되 월요일 실행 직전 current q와
+joint zero/sign 및 모델 자세 대응을 확인하고 그 자세에서 +20mm IK/path를 다시 계산한다.
+다른 실물 시작자세에 같은 delta를 더하면 Cartesian +20mm가 보장되지 않는다.
+검증한 LEFT start/target/return q와 기존 profile, 예상clearance를 한 번 제시하고
+사용자 승인 후에만 구동한다. 현재 코드에는 hardware dispatch가 없다.
+
+카메라 intrinsic/extrinsic, board datum, block detection은 이 BASIC base-Z 동작의
+선행조건이 아니다. 새 watchdog/보호register 변경/새 calibration framework를 추가하지
+않는다. 기존 start-teleop은 leader→follower용이며 고정-q 자동 replay라고 안내하지 않는다.
+실제 팔 command/readback은 이번 턴0회. REAL SENSOR-TO-PREGRASP 성공도 아니다.

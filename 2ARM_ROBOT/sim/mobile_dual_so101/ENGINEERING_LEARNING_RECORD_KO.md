@@ -1336,3 +1336,27 @@ T_arm_camera=T_arm_board @ inverse(T_camera_board)인 기존 합성 계약을 �
 보드 종이는 책상에 직접 붙어 있고 종이두께/실물출력공차는 미확정이다.
 필수 실측이 오기 전 camera→arm shadow와 motion 승인 요청으로 넘어가지 않는다.
 Iteration이므로 fullsuite/remoteCI/main merge 없이 PR66 draft를 유지한다.
+
+## 2026-09-18 — datum 측정 중단과 BASIC SIM2REAL 분리
+
+record_id: DAPIER-2026-09-18-real-datum-stop-basic-motion
+
+### Problem
+접근 어려운 A–D를 반복해도 extrinsic을 확정할 근거가 늘지 않았다. 사용자는 이를 중단하고 camera-independent LEFT +20mm/hold/return을 준비하도록 범위를 바꿨다.
+
+### Evidence
+**UNVERIFIED:** 실측 원값과 approximate/difficult-access 표시는 private evidence에 보존했다. 독립 거리 검산과 CAD 대응이 일치하지 않는 사실을 수정/평균으로 숨기지 않았다. Current REAL q는 새로 읽지 않았고 과거 보정 snapshot을 현재 자세로 사용하지 않았다.
+
+**VERIFIED BY PHYSICS / SIM ONLY:** 별도 SIM writer PR67의 실제 +20mm/return은1378step PASS. 상승19.600463mm, endpoint.400950mm,return.000792mm,general min72.400006mm. SIM q 및 profile은 REAL_PREGRASP_PREPARATION_KO.md에 SIM provenance와 함께 기록했다. 기존 .5mm/2deg/30mm 및 controller/geometry/limits 유지. 실물 motor command0.
+
+### Decision
+Extrinsic은 **UNVERIFIED / BLOCKED BY DATUM METHOD**로 보존한다. 동일평면의 접근가능한 datum 방법 전에는 측정을 재개하지 않는다. BASIC base-Z의 선행조건에 camera/extrinsic을 넣지 않는다. 실물 현재 q와 SIM↔REAL zero/sign/pose 대응은 별도 필요한 입력이며 SIM absolute q를 실물에 복사하지 않는다.
+
+### Validation
+**VERIFIED BY REGRESSION:** 기존 camera_board_transform3 PASS/.025s. 잘못된/미측정 transform 거부 계약 보존. 새 camera/motor/device I/O 없음. Fullsuite/remoteCI는 iteration 지시에 따라 실행하지 않았다. Diffcheck 결과는 handoff에 남긴다.
+
+### Result
+접근 어려운 추가 치수 요청 없이 이번 측정을 종료했다. BASIC SIM rehearsal은 통과했지만 실물 실행 q/profile 확정 및 actual motion은 미완료다. 기록은 camera calibration 성공이나 REAL PREGRASP 성공으로 확대하지 않는다.
+
+### Lesson / Next
+월요일 current readback을 현재 calibration에 연결하고 그 실제 시작자세에서 +20mm를 검증한다. LEFT start/target/return q와 profile/clearance를 사용자에게 보여준 뒤 승인받는다. 새 보호 한계를 모터에 쓰거나 watchdog을 선행조건으로 추가하지 않는다.
