@@ -1287,3 +1287,52 @@ Private photos/측정행렬/증거는 로컬·비공개 학습 기록에 보존�
 이번 단계는 milestone 미달이므로 fullsuite/remoteCI/main merge를 반복하지 않는다.
 
 - 후속 고정 hole datum 검사: top cap1071triangles의 경계46components를 추출했으나 완전한 원형rim 후보를 확인하지 못했다. 전체loop circle fit으로 hole center를 채택하지 않는다. 사진에서 둥글게 보이는 구멍을 CAD 원 중심으로 자동 확정하지 않았다. 다음 실측은 이 점 대응이 해결된 후에만 요청한다.
+
+## DAPIER-2026-09-18-real-datum-accessibility
+
+### Problem
+앞끝의3.25mm 원값은 있지만 둥근 상단/수직면 접촉 높이와 보드 대비 앞뒤 위치·회전이
+미확정이다. 한 gap과 낮은 재투영 오차로 extrinsic을 확정하지 않는다.
+
+### Evidence — VERIFIED ON REAL HARDWARE (camera-only)
+기존 설정을 쓰는 read-only 카메라 창을 재실행했다. 유효 관측 예시는12/14corner,
+PnP RMS .250/.292px이다. 모터 I/O와 camera setting write는0이다.
+현재 취득 스트림은 BGR 컨테이너지만 한 프레임의 채널 동일 픽셀 비율 .999986으로
+사실상 흑백이었다. 색 기반 block mask 없음이 block 부재를 의미하지 않는다.
+Intrinsics revision은 rigidboard-r2 그대로이며 depth registration은 여전히 미검증이다.
+
+### Decision — ANALYTIC / DIAGNOSTIC ONLY
+사진의 둥근 나사 구멍 바로 뒤 완전한 마름모 윗면 꼭짓점을 새 datum 후보로 표시했다.
+그 점과 인쇄 격자의 바깥 모서리를 잇는 직선거리 A–C를 하나만 요청했다.
+이 값은 이전3.25mm 국소 gap과 별개이고 평면 투영거리로 취급하지 않는다.
+사용자는 캘리퍼로 C까지 접근하기 어렵다고 보고했다. 억지 측정/임의 오차 흡수 대신
+곧은 자를 대안으로 안내한 뒤 사용자 A–C=29.16mm 원값을 받았다.
+추가 원값 A–D≈59.8mm(사용자59.8x? 정도), B–C55.46mm, B–D56.01mm를 받았다.
+CAD 상면 높이17.5mm와 첫 세 거리의 photo-consistent branch에서 B–D 예측61.15999mm,
+검산 residual−5.14999mm로 불일치했다. 값을 보정하거나 accepted extrinsic으로
+승격하지 않았다. 같은 높이의 A–B 한 거리로 CAD 대응/측정 접근 문제를 분리하도록
+요청해 A–B33.77mm를 받았다. CAD34.39477mm와0.62477mm 차이가 있으며,
+네 거리에서 도출한 A–B36.85589mm와도 다르다. 양쪽 문제를 하나로 섞지 않았다.
+A–D 재확인에서 사용자가 접근 어려움/약59.78?mm로 답했다. 첫59.8과 재확인59.78을
+각각 approximate raw로 보존하고 calibrated transform 생성에 사용하지 않았다.
+현재 도구로 닿지 않는 두 높이의 측정법을 반복하지 않는다.
+정확한 도구·판독 불확도 및 사진–CAD 대응은 독립 검산 전이다. 팔/종이/카메라를 옮기도록 요구하지 않았다.
+
+### Validation — VERIFIED BY REGRESSION
+기존 camera_board_transform3tests PASS(단위/방향/inverse/미확정 datum fail-closed).
+원본 사진 위 별도 SVG 표식 안내를 Firefox에 열고 X11 title로 실제 창 생성 확인.
+화면은 REAL CALIBRATION / NO ARM MOTION, arm XYZ pending으로 표시했다.
+
+### Result
+Exact physical datum/board→arm/extrinsic 미완료. Shadow PREGRASP 및 actual arm
+motion은 실행하지 않았다. 실측을 추측하여 verified flag를 설정하지 않았다.
+Private 사진/calibration/행렬/device ID는 공개 repo에 넣지 않는다.
+
+### Lesson / Next
+수학적으로 충분한 거리라도 측정 도구가 실제 두 점에 닿아야 한다.
+다음은 같은 평면으로 옮겨 재현 가능하게 잴 수 있는 물리 datum 방법이다.
+측정법이 검증되기 전 추가 거리/각도를 추측해 채우지 않는다. T_A_B는 B좌표를 A로 보내며
+T_arm_camera=T_arm_board @ inverse(T_camera_board)인 기존 합성 계약을 유지한다.
+보드 종이는 책상에 직접 붙어 있고 종이두께/실물출력공차는 미확정이다.
+필수 실측이 오기 전 camera→arm shadow와 motion 승인 요청으로 넘어가지 않는다.
+Iteration이므로 fullsuite/remoteCI/main merge 없이 PR66 draft를 유지한다.
