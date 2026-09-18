@@ -1162,3 +1162,745 @@ Staging30.378087mm는30mm 기준 대비.378087mm 여유의 단일 조건 결과�
   정상 종료exit0; 새 actual task 성공으로 세지 않는다.
 - 원격 전체 CI가 통과하기 전에는 merge하지 않는다. 이번 부분 진척 PR의
   CI/commit/merge SHA는 GitHub PR과 기존 Notion 학습 기록의 handoff에 연결한다.
+
+## 2026-09-18 — Opposing-face grasp family 탐색
+
+record_id: DAPIER-2026-09-18-grasp-families
+
+### Problem
+
+기존 grasp의 접촉 높이차 31.058mm와 measured-force 기반 wrench 질량 상한
+7.864g(CLOSE17 12.368g)은 20g block을 지지하지 못했다.
+이번에는 기존 grasp 주변 translation tuning을 반복하지 않고,
+현재 PGripper의 usable opposing faces에 COM 대칭 접촉을 만드는 family를 검사한다.
+
+최신 origin/main `7ff415a707e3ea2c4e5e34452a61dab9a9dafdfb`에서
+`pro/grasp-families-codex-20260918` writer worktree를 새로 만들었다.
+기존 dual-so101 및 grasp-placement worktree/evidence와 unrelated audit는 보존한다.
+Coordinator만 repository writer이며, 최대 두 worker의 read-only 분석을
+A geometry → B kinematics → C copied physics 순서로 승인해 연결한다.
+
+### Evidence
+
+A는 settled block geometry를 offline oracle로 사용했다. Site X=approach,
+site Z=pad1→pad2 closing axis다. Usable-face midpoint의 site offset은
+(-1.260623mm, 약0, -2.208µm)이므로 ideal TCP는 block center 자체가 아니라
+`blockCenter - Q * midpointOffset`이다. Q=[approach, closing×approach, closing]는
+기하 설명용이며 full6D IK 목표가 아니다.
+
+세 opposing face pair의 signed assignment 6개와 cardinal 방향24개를 생성했다.
+±Z closing은 아래쪽 pad가 table을 약4.002mm 침범해 제외한다.
+옆면 pinch의 위에서/수평 접근12개를 B에 넘겼다.
+이상적 COM 대칭 접촉점은 실제 usable polygon 경계에서 최소11.230791mm 내부이며
+plane residual 최대0.015857µm다. 두 polygon 면적 중심은 이상적 접촉점과
+각26.265µm 다르므로 두 개념을 구분한다. 제조 pad 실측 검증은 아니다.
+A의 clearance는 distal pad만 평가한 값이고 full arm/path 안전 판정이 아니다.
+
+B는 기존 position3+axis-direction2 IK와 closing15° 후검사를 사용했다.
+위치0.5mm/axis2°/joint limits 및 기존300iteration을 유지하고,
+6개의 결정적 range-interior/branch seed를 사용했다.
+기존 solver 내부 bounded step/ctrl clipping은 유지하지만 새 clamp는 추가하지 않았다.
+그리퍼/right 채널은 고정했다. 기존 measured-derived1.94664° 내부 planner reserve를
+명시적으로 재사용한 진단이며 runtime acceptance2°는 그대로다.
+
+- Cardinal12×6 seed: 연결 PREGRASP→GRASP 통과0.
+- +X top-down은 PREGRASP7.0892mm/axis3.8006°로 실패하지만,
+  별도 GRASP_ONLY는0.3443mm/axis1.4598°/closing3.3052°로 통과했다.
+  PRE wrist-flex margin0, GRASP margin0.307576rad다.
+  GRASP_ONLY를 안전한 연결 경로로 세지 않는다.
+- 다른 signed top-down GRASP는 closing164.14°/80.93°/74.20°로 실패했다.
+- 네 signed side family에서 closing을 고정하고 접근축을 면 안에서
+  수직 대비±15/30/45/60/75°로 확장한40개도 각각6seed로 평가했다.
+  연결 통과0, 별도 GRASP_ONLY 통과0이다.
+  예: Y−/+15°의 PRE 위치0.3190mm/axis8.5451°/closing12.0019°,
+  GRASP 위치0.2958mm/axis8.0668°/closing11.7915°.
+- 이 사례 PRE rank5, 최소 singular value3.464e-5m/rad, 최소 joint margin0.1864rad다.
+  모든 실패를 joint limit/rank 소실로 단정하지 않는다.
+  bounded solver/search에서 찾지 못한 결과이며 globally unreachable 증명이 아니다.
+
+### Decision
+
+고정된60mm stand-off에서 동일 축을 요구한 실패와 실제 GRASP 끝점의 도달성을 분리한다.
+B가 통과한 +X vertical 끝점에 대해, 기존 verified PREGRASP prefix를 재사용한
+하나의 새 copied 경로만 C에 허용했다:
+기존 coarse 위치/축 → 새 usable-face-centered vertical GRASP.
+각 구간은 이전 q에서 이어 풀며 전체 collision/path gate를 먼저 적용한다.
+기존 작은 placement search를 다시 실행하지 않는다.
+
+C는 PREFIX_END에서 시작한 DIAGNOSTIC COPY이며 fresh HOME/live task PASS가 아니다.
+runtime source, model, friction, mass, controller, timing, limits와 모든 safety 기준은
+copied evidence가 충분하기 전에는 수정하지 않는다.
+
+### Validation / Result
+
+C의 새 family는 `+blockX / vertical approach`이며 실제 physics는 donor
+PREGRASP prefix 끝에서 시작했다. 기존 coarse 위치/축을 거쳐 새 fine으로 이어지는
+계획은 각각11/9 interpolation samples PASS였다.
+계획 coarse 위치0.111707mm/axis1.964057°/closing11.3222°,
+fine 위치0.316947mm/axis1.089894°/closing9.901173°로 통과했다.
+별도 GRASP_ONLY 해와 branch가 다르며 이전 q에서 이어 푼 결과다.
+Copied actual fine 위치0.487900mm/axis1.035683°/closing9.8971°도 통과했다.
+
+CLOSE22에서 first bilateral contact가 생겼고 GRASP_CONFIRM50step와
+추가100ms HOLD50step는 통과했다. 그러나 다음과 같이 **채택 기준은 실패**했다.
+
+| 항목 | CONFIRM 종료 | 추가 HOLD100ms 종료 |
+|---|---:|---:|
+| 실제 접촉 높이 차이 | 4.938480mm | 4.923809mm |
+| pad1/pad2 polygon edge margin | .01835/.00696µm | .01101/.00381µm |
+| 정상력 pad1/pad2 | .033950/.042197N | .019770/.023094N |
+| polyhedral wrench 질량 상한 | 8.913322g | 5.191015g |
+| 독립 elliptic support 부등식 상한 | **8.855380g** | **5.157271g** |
+
+접촉 높이차는 기존31.058mm에서 줄었지만 edge margin은 기존 geometry grouping
+0.1µm보다 작아 usable interior 확보로 세지 않는다. 동일한 snapshot의 force caps,
+contact normals, COM torque, elliptic friction을 포함한 정적 상한도20g 아래다.
+이는 실제 actuator가 만들 수 있는 힘의 보장이나 새 runtime gate가 아니다.
+B가 C의 두 저장 상태를 독립 NumPy 지지 부등식으로 다시 확인했으며,
+기존 `grasp_wrench.json`에 두 negative case만 추가했다. 이전 사례는 보존했다.
+
+Continuous-command diagnostic LIFT는 **step31/62ms**, SIM20.072s에
+pad1 force0 / pad2 .023502N으로 fail-closed 정지했다.
+Table4contacts/.184514N이 남아 있었고 table support 이탈은 없었다.
+LIFT 구간 최대 block bottom 변화는 약0.1003µm에 불과했다.
+5mm 또는30mm lift PASS가 아니다. 그 순간5.236mm TCP 오차는 진행 중 trajectory의
+최종+5mm 목표 대비 값이며 별도의 완료 endpoint 실패로 잘못 분류하지 않았다.
+첫 blocker는 bilateral support loss다.
+
+CONFIRM/HOLD/LIFT 구간 general clearance 최솟값52.577034mm,
+최대 contact penetration1.615407µm다. 기존30mm/1mm 조건을 유지했다.
+Full-state preflight 원본 및 단계 연결, donor/model identity,
+recorded replay의 raw qpos/qvel·forces 불변 검증은 PASS다.
+Viewer는 실제 저장 contact rows만 기존 helper로 재생하며
+`DIAGNOSTIC COPY / RECORDED PHYSICS REPLAY / NOT LIVE TASK SUCCESS`를 표시한다.
+
+**Teacher grasp target 채택 없음. Live 재시작 없음. CENTER SUCCESS=false.**
+Actual 마지막 PASS는 여전히 기존 GRASP_CONFIRM이며 보존된 actual LIFT failure는
+SIM17.474s다. 이번 copied 결과의 SIM20.072s와 혼동하지 않는다.
+높이 대칭 개선만으로 load-bearing/LIFT milestone을 선언하지 않으므로
+full local Research/MuJoCo/canonical render 및 remote full CI는 이번에 실행하지 않는다.
+
+집중 검증:
+- axis-direction finite difference / roll invariance 2 PASS(2.738s).
+- 새2case를 포함한 wrench evidence/corrupt claim/대칭 contact 검증 2 PASS(.004s).
+- 기존 actual failure/HOLD/continuous LIFT chronology 회귀 1 PASS(49.828s).
+- A cardinal24 / refined40의 frame·COM·polygon·table negative verifier PASS.
+- B cardinal12/refined40×6seed의 수용 조건 독립 재계산 PASS.
+- C copied state continuation / endpoint / safety / first blocker / 실제 replay rows verifier PASS.
+- 최초 unittest module-style invocation은 test package import에 실패했고,
+  첫 discover는 명시적 asset env 누락으로 실패했다. 프로젝트의 discover 명령과
+  기존 pinned DAPIER_SO101_MJCF로 바로잡은 뒤 위 결과를 얻었다.
+  코드·의존성 변경으로 숨기지 않았다.
+
+기존 KIT local-validation의 `grasp-families-20260918/{A,B,C}`에 전체 scripts,
+frozen targets, q/margins/SVD, copied fullstate/telemetry, replay와 SHA manifest를 보존한다.
+Raw physics JSON은 약109MiB로 Git에 추가하지 않았다.
+C raw SHA256: `666430b2b6a2a819a45c5ff7eabc82e5c9118037ce1c4cc8a6b5aa8663647e6a`.
+A cardinal/refined SHA256: `5aaaa0729a3b22b3a00477c5afc77929cae99b5e0b4b221cb221e5e99528d1fd` /
+`ed7bf3c331e9e63436dc9d6f322be169d95ac2271219eaf6e8b94485c43e1ee6`.
+
+다음 blocker는 **kinematically admissible한 접근축/closing 오차가 실제 pad interior
+접촉을 보장하지 않는 것**이다. Height symmetry 하나보다 실제 face alignment와
+접촉 lever arm/하중 지지를 함께 확인해야 한다. 이번 bounded family screen 실패는
+전역 불가능 증명이 아니며 geometry/friction/threshold 변경 근거도 아니다.
+Staging30.378087mm의 .378087mm 여유는 여전히 단일조건이며 실물 강건성 근거가 아니다.
+Hardware/OS30A/multi-seed/ACT 미실행.
+
+
+### Lesson / Next
+
+MuJoCo truth는 이번 geometry/expert 분석의 oracle다. 후속 sensor milestone에서는
+RGB-D/wrist RGB 기반 추정과 camera→arm transform으로 feasible family를 선택하고,
+body pose는 estimator 평가 ground truth로만 사용한다.
+
+Full local/remote suite는 후보마다 반복하지 않는다. 이번에 실제 load-bearing/LIFT 개선
+또는 live family 채택 milestone이 있을 때만 전체 local 및 render를 실행하고,
+main merge 직전에 원격 전체 CI를 요구한다. 미달이면 draft PR을 보존하고 merge하지 않는다.
+
+### GitHub / handoff 범위
+
+git diff --check PASS. 검증된 학습 기록과 기존 wrench fixture의 새 negative2case만
+commit/normal push한다. 이전 dirty/untracked audit와 worktree HEAD는 보존했다.
+이번 milestone 미달 commit은 [skip ci]로 PR/push 자동 전체 CI를 예약하지 않고
+base=main draft PR로 남긴다. Workflow/safety assertion은 수정하지 않는다.
+Skipped checks를 PASS로 세지 않으며 이번 PR은 merge하지 않는다.
+후속 milestone에서 skip 없는 검증 commit과 요구된 full CI PASS가 있어야 merge한다.
+GitHub의 commit skip semantics: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs
+PR/commit과 기존 Notion 기록의 최종 링크는 turn handoff에 연결한다.
+
+## 2026-09-18 — Gripper-only contact space와 최소 파지력 분리
+record_id: DAPIER-2026-09-18-gripper-only-feasibility
+
+### Problem
+
+기존 +X grasp는 contact 높이차를 31.058mm에서 4.924mm로 줄였지만 실제 native
+접촉점은 pad boundary이고, HOLD wrench 상한 5.157g < 20g였다.
+이번에는 arm-pose local search를 반복하지 않고 PGripper/40mm cube 자체의
+interior contact geometry와 필요한 힘, 실제 힘 유지 가능성을 분리했다.
+PR65의 기존 writer pro/grasp-families-codex-20260918 / source HEAD
+cf2b550e4e4089a5da792257001984a9395af979를 이어 사용했다. 시작 status clean.
+Coordinator만 repository writer이며 A geometry/B wrench는 scratch-only로 분석했다.
+
+### Evidence
+
+**Geometry와 discrete contact는 다른 증거다.**
+A는 compiled distal convex hull 전체를 기준으로 두 선택면이 실제 supporting
+face임을 확인했다. Supporting patch 면적은 671.380628/671.380452mm²,
+최대 내부 원 반경은 각각 12.499997mm다. COM 대칭으로 고른 opposing
+facepoint의 polygon boundary margin은 11.230793/11.247968mm다.
+두 pad 법선의 반대평행 오차는 0.0000476204°다.
+Housing/cube exact OBB SAT separation은 13.747935mm다.
+
+원본 full model의 별도 MjData에서 arm pose는 고정하고 block relative pose와
+jaw 초기값만 구성했다. Kinematic 초기 배치이며 actual task 또는 arm motion이 아니다.
+10µm per-pad 초기 압축은 native bilateral contact 각1점을 만들었지만
+그 점은 경계였다(약0/0.015528µm margin).
+Compiled MuJoCo3.3.7/native CCD/MULTICCD off/elliptic cone/condim4를 유지했다.
+Sync helper가 반대 팔 passive jaw도 동기화한 것은 qpos 변경 audit에 명시했고
+그 상태를 arm-motion/force 증거로 쓰지 않았다.
+
+면적이 있는 supporting patch와 solver가 대표하는 discrete point를 구분한다.
+MuJoCo의 general convex contact/multiple-contact 설명:
+https://mujoco.readthedocs.io/en/3.3.7/computation/index.html
+경계 sample만으로 내부 접촉면이 없다고 결론내리지 않는다. 반대로 abstract
+pressure 분포를 실제 solver contact라고 보고하지 않는다.
+
+**필요 파지력:** B는 기존 measured Fn cap을 요구조건으로 사용하지 않았다.
+Actual friction (1.6,1.6,.02)의 elliptic condim4와 접촉 위치/법선/COM을 사용해
+20g 중력 힘과 COM torque를 동시에 평형으로 만드는 최소 힘을 계산했다.
+
+| 접촉 표현 | 최소 총 Fn 하한–상한(N) | 최소 finger별 최대 합산 Fn 하한–상한(N) |
+|---|---:|---:|
+| 실제 initialized native 두 점 | .183633781–.184562375 | .102047818–.102512115 |
+| Abstract COM-center patch 두 점 | .142183339–.142724149 | .081322597–.081593002 |
+| Abstract distributed patch 12점 | .121769233–.122144776 | .071115544–.071303316 |
+
+하한은 exact elliptic-cone dual inequality로, 상한은 실제 cone 안의 force/torque
+평형 witness로 각각 독립 검증했다. 단순 mu*sum(Fn)>mg 검사가 아니다.
+실제 native 최소총힘 witness Fn은 .102512115/.082050260N이다.
+최대 force/torque residual은 3.53e-15N/6.92e-17Nm.
+무한 구동력 또는 기존 측정 force를 몰래 가정하지 않았으며, 이 정적 witness는
+controller가 그 힘을 실제로 만들고 유지한다는 증명이 아니다.
+
+### Decision
+
+원본 gripper subtree를 rigid parent에 추출하고 free 20g cube만 남긴 **별도
+gripper-only bench**에서 힘 형성/유지 가능성을 좁혀 확인했다.
+원본 arm/table/environment가 없는 의도적인 격리이며 full-task preflight가 아니다.
+Source model portable SHA b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4,
+bench SHA 3c22a004c53af9fa0069cbdc0915bcae5f74418e2c3f683589a3621d05efbae1.
+Pad meshes/geom/material contact fields, gripper actuator/equality/passive dynamics,
+body mass/inertia와 option163항목 bit-exact 일치를 확인했다.
+초기 world geom transform 차이는 1e-15 허용범위 안이다.
+팔 wrist joint/actuator와 table 제거는 이 격리에서만 적용했고 task source/model은 그대로다.
+Block 상대 orientation은 analytic pad-face 정렬이며 실제 desk reset pose 변경이 아니다.
+
+기존 geometry에서 계산한10/50µm 압축 두 초기값만 각각100ms/50physics steps
+검사했다. 기존 position actuator의 ctrl을 초기 motor reference에 유지했다.
+매 step qpos reset/강제 jaw lock/물체 attachment/weld/mocap은 없다.
+초기 압축 배치는 정상 APPROACH/CLOSE 과정으로 형성한 preload가 아니므로
+이 bench를 실제 task trajectory 통과 근거로 사용하지 않는다.
+
+### Validation
+
+| 단독 bench | 10µm 초기 압축 | 50µm 초기 압축 |
+|---|---:|---:|
+| 50poststeps bilateral 유지 | 실패(소실 후 회복) | 유지 |
+| 최소 pad1/pad2 Fn(N) | 0/0 | .215433/.193109 |
+| 종료 Fn(N) | .155904/.135752 | .259592/.235115 |
+| Block 하강량(mm) | .566323 | .101071 |
+| 종료 block world Z속도(mm/s) | -1.016524 | -.969859 |
+| 종료 jaw plane gap(mm) | 40.038016 | 39.984783 |
+| 최대 penetration(mm) | .050394 | .050010 |
+
+두 case 모두 nonfinite/warning/비pad block contact/관절 범위 위반 없음.
+기존1mm penetration bound 이내다. 50µm의 최대 soft coupling residual은
+48.996µm이며 raw state에 보존했다. 이는 새 tolerance 또는 task target이 아니다.
+Native point는 종료에도 margin .238/.193nm로 경계에 있고,
+독립 supporting-face compression overlap의 inradius12.5mm는 유지됐다.
+면 안쪽 pressure가 실제 형성됐다는 증거로 대체하지 않는다.
+
+50µm 각 step의 현재 contact geometry에서 measured-Fn cap을 별도로 넣은
+instantaneous static capacity inner lambda 최솟값1.51889, 종료 구간
+[2.503197,2.515586]이다. 필요한 힘의 계산에는 cap을 사용하지 않았고,
+이 capacity 비교에만 실제 force를 넣었다.
+종료 geometry의 최소 총 Fn은 [.185934518,.186955953]N.
+실제 종료 finger force [.00401909,-.00043647,.19625422]N와 COM torque
+[-2.14e-6,-1.44157e-4,3.52948e-4]Nm는 정적 평형이 아니며 미소 운동이 계속된다.
+특히 약.97mm/s 하강이 남아 있어 장기 안정 또는 slip-free PASS가 아니다.
+
+mj_step의 contact/force는 integration 전 평가, 저장 raw qpos/qvel은 integration
+후 상태라는 시점을 분리했다. 같은 evaluation COM과 전후 속도 변화로
+discrete dynamics residual을 확인했다(force 최대1.80e-16N, torque5.75e-18Nm).
+Free joint angular qvel은 body-local이며 world velocity로 잘못 해석하지 않는다.
+연속 가속도 검증 또는 이후 LIFT 성공이라고 주장하지 않는다.
+
+Focused regression은 기존 wrench/그리퍼 planner/viewer와 새 primal/dual 증서
+11 tests PASS(5.540s). 새 regression은3contact모델×2objective의 양의 증서,
+force/COM torque/dual/NaN/누락 witness 변조 거부를 확인한다.
+최초 broad discover에서 asset env가 빠져 viewer setup1error가 났고,
+기존 pinned DAPIER_SO101_MJCF를 명시한 동일 invocation은 전부 통과했다.
+의존성 또는 모델 assertion 변경으로 숨기지 않았다.
+실행:
+```bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+  /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+  -m unittest discover -s test -p 'test_gr*e*.py' -v
+```
+실행 디렉터리는 2ARM_ROBOT/sim/mobile_dual_so101이다.
+
+### Result
+
+**내부 접촉 patch의 기하학적 존재는 확인했지만, 요청한 actual usable-interior
+stable load-bearing grasp 전체 조건은 미확정이다.**
+A/B/C 중 A를 전체 성공으로 선언하거나 B(그런 geometry 없음)로 단정하지 않는다.
+100ms의 힘 유지 가능성과 계속되는 sag, boundary native point, 정상 CLOSE 형성
+미검증을 함께 남긴다. Jaw range가 geometry적 정렬을 차단하지 않았지만
+장기 안정성/실물 pad fidelity는 별도다.
+
+Arm mapping의 선행조건이 아직 충족되지 않았으므로 이번 arm IK/local search,
+full-task copied APPROACH/CLOSE/LIFT, live 재시작은0회다.
+Actual 마지막 PASS=GRASP_CONFIRM, 기존 LIFT FAIL/SIM17.474s 보존.
+CENTER SUCCESS=false, teacher target 채택 없음.
+Geometry/friction/mass/controller/timing/limits/acceptance/safety/measured tolerance 불변.
+Milestone이 아니므로 full local Research/MuJoCo/canonical render/remote full CI를
+실행하지 않고 PR65 draft를 유지한다. Skipped CI를 PASS로 세지 않는다.
+기존 단일 viewer는 이전 recorded copied-physics replay를 유지하며 새 live로 표시하지 않는다.
+
+### Lesson / Next
+
+접촉점 boundary라는 관측과 물리 패드의 내부 면적 부재는 같은 명제가 아니다.
+현재 blocker는 supporting patch와 native point representation의 관계 및
+정상 CLOSE에서 형성되는 preload가 slip 없이 유지되는지다.
+팔 search나 force/friction/geometry 수정으로 넘어가기 전에 이 경계를 검증한다.
+후속 arm mapping에서는 IK residual이 실제 pad-contact margin을 얼마나 소모하는지
+함께 평가해야 한다. 현재는 그 단계의 PASS evidence가 없다.
+Staging30.378087mm는30mm 대비.378087mm의 단일조건 여유로 실물 강건성 근거가 아니다.
+Hardware/OS30A/multi-seed/ACT는 미실행.
+
+A/B scratch scripts, geometry/force witnesses, rawbench/fullstate/model 및 hash manifest는
+기존 KIT local-validation/integration-task-20260916-aeg3vtmi/gripper-only-20260918에 보존한다.
+Geometry SHA232f627c8cc2df5213655402a32e0e56b13f75aea6497ab81faf58a63c0c5899.
+Bench raw SHA8f2bb0c519e292e97206e7465511a4928fb3ac82803f17bf871f3c9c5338ed12.
+Public Git에는 최소 portable force fixture와 NumPy 검증기, 기존 학습 원장만 추가한다.
+집중 회귀11 PASS와 git diff --check를 확인하고 normal push로 base=main PR65를 갱신한다. [skip ci]는 사용자가 요청한
+milestone CI 주기 보존이며 main merge 허가가 아니다.
+
+## DAPIER-2026-09-18-normal-close-support-hold
+
+### Problem
+
+이전50µm precompression은 정상 CLOSE 형성이나 안정 유지의 증거가 아니다.
+이번 범위는 GRIPPER-ONLY BENCH이며 arm IK/teacher를 실행하지 않는다.
+시작 HEAD fc3304785b96be864b2fab8bbe31ea90c8769147,
+writer pro/grasp-families-codex-20260918. 기존 failure worktree는 읽기 전용으로 보존했다.
+
+### Evidence
+
+사용자가 승인한 TEST SUPPORT / NOT TASK ENVIRONMENT를 세 phase로 실행했다.
+Formation: 정상 task-open2.202574638rad에서 기존 CLOSE generator/ctrl+mj_step 사용.
+초기 finger contact/penetration0, block-support gap+1µm이며 reset 후 qpos 재배치 없음.
+Compiled gripper/block/solver163항목 bitexact. Bench 전체를 회전하여 cube를 수평으로
+놓았으므로 기존 precompressed 시험과 중력의 상대 방향이 다르다.
+힘 차이를 순수 precompression A/B로 인과 해석하지 않는다.
+
+받침은60×60×4mm frictionless condim1 plate와 수직 slide/시험용 actuator다.
+Gripper actuator 변경이 아니다. Support 자동 collision mask0, explicit block pair만
+사용하며 pad와의 독립 초기 수직 간격6.231775mm도 확인했다.
+매 step vertical normal을 검사했고 최대 수평력1.59e-18N,
+다른 block contact/solver warning0이다.
+
+CLOSE stage49/SIM20.296s에서 bilateral 형성. Terminal command1.714220985rad,
+Fn 약.503291/.503290N을 이후 고정했다. GRASP_CONFIRM50steps 뒤 받침만
+.5s/-50mm physical slide로 철수했다. 받침 지지 중 Fn은 성공 근거에 포함하지 않는다.
+Support contact count=0 AND Fn=0인 최초 force 평가20.426s부터 무지지 시간을 센다.
+초기 OPEN의 무접촉 상태에서는 이 시계를 시작하지 않았다.
+
+철수249/250step에서 이미49.536mm 떨어진 받침의6.022nm 반등으로 strict monotonic
+fixture checker가 중단했다. Block에 전달된 contact/force/impulse는0이다.
+원본 중단 trace를 보존하고 detached servo settling과 block에 가해지는 힘을 구분했다.
+동일 full integration state를 bitexact 복원해 forward/rewind 없이 남은 기존 철수
+sample과 HOLD를 이어갔다. 새로운 support contact/force/geometry overlap은 계속
+거부하며 gain/command/timing을 바꾸지 않았다.
+
+무지지1500steps×2ms=3s 관찰 완료. 마지막 force 평가23.426s, poststate23.428s.
+Support count/Fn은 계속0, continuation 최소 독립 수직 gap47.117mm.
+최종 Fn .503298/.503289N, jaw gap39.969460mm.
+Reset 대비 하강2.901827mm, 동일 pre/pre 3s 무지지 구간 하강2.862446mm,
+첫 pre에서 마지막 post까지3.002s의 하강2.864354mm를 구분했다.
+종료 Vz=-.954146mm/s. Continuation 최대 penetration17.729µm, warnings0.
+접촉력의 지속은 정지 평형이 아니다.
+
+이전50µm도 보존된.1s fullstate에서 동일ctrl로3s까지 연장했다.
+하강3.053025mm, 종료 Vz=-1.069531mm/s. 마지막1s Z 회귀-1.021770mm/s,
+평균 Fn .256427/.235969N, jaw gap39.984548–39.985202mm.
+접선 상대속도1.724985/1.792538mm/s인데 cone 사용률.400–.718/.423–.788로
+포화가 아니다. 단순 μ 부족이나 jaw가 벌어지는 원인으로 단정하지 않는다.
+모든 contact force/직접 torque/COM lever를 합산한 force residual6.30e-16N,
+torque residual2.31e-17Nm. Force 평가 prestate와 postintegration,
+free-joint angular qvel의 body-local 표현을 구분했다.
+
+### Decision
+
+분류C: 정상 CLOSE로 실제 접촉력이 형성되지만 현재 contact dynamics에서 slip이
+지속된다. 무지지 retention의 제한된 근거이며 stable grasp milestone이 아니다.
+Static feasible wrench와 실제 solver 평형, native boundary point와 overlap patch,
+resultant line과 free couple을 구분한다. Friction/geometry/mass/solver/controller/
+timing/limits/acceptance/safety/measured tolerance를 변경하지 않는다.
+
+### Validation
+
+Portable regression은 모든 contact의 force/COM torque/qacc/pre→post velocity를
+재구성하고 contact 누락, COM lever 변조, support 잔류, fake zero velocity를 거부한다.
+구간별 회귀 산술과 bilateral force 유지 중 지속 하강을 보존한다.
+이는 관측 evidence regression이며 새 runtime success gate가 아니다.
+
+### Result
+
+GRIPPER-ONLY: 정상 CLOSE 형성과 무지지3s 관찰 완료, 안정성 FAIL.
+이번 actual arm task 실행0회. 마지막 PASS=GRASP_CONFIRM, LIFT FAIL/SIM17.474s 보존,
+CENTER SUCCESS=false. Milestone 미달로 full suites/render/remote CI/main merge 없음.
+PR65 OPEN/DRAFT/base=main 유지. Skipped CI를 PASS로 세지 않는다.
+
+### Lesson / Next
+
+다음 blocker는 충분한 Fn과 지속 slip이 함께 존재하는 contact dynamics다.
+Soft regularization, boundary representation, 미소 회전의 기여는 인과 분리되지 않았다.
+Friction/preload 증가나 arm pose search로 돌아가지 않는다.
+이전/현재 bench의 중력 상대 방향도 달라 직접 성능 A/B가 아니다.
+단일 bench 증거로 실물/다중 초기조건 강건성을 주장하지 않는다.
+기존 staging30.378087mm도30mm 대비.378087mm 단일조건 여유다.
+Hardware/OS30A/multi-seed/ACT 미실행.
+Raw/model/script는 기존 KIT validation/normal-close-20260918에 보존하고
+public Git에는 최소 fixture/test/기존 학습 원장만 남긴다.
+
+Bench SHA ab282e9deb11572e56e59f746e18a353e02b3e3ab8eb055224c49a5016cea8e3.
+Stopped trace SHA40c583baab8ffec6923366b3fd85caa02817a86257ae8c1138be98bd6c8171fe.
+Continuation SHA27ddf8577a4687c726d07045e85efe14db81a7f80224360f6c8358d476b8061d.
+
+정상 CLOSE 독립 검증: 전체1501평가 source/pre/post/qacc 및 복원 일치.
+마지막1s Z 회귀-.95414955mm/s, jaw39.96943–39.96955mm, cone 사용률.527–.539.
+Instantaneous omega_z 약±.13934rad/s는2ms마다 부호가 바뀌며 yaw범위±.00806°;
+순변화 약-1.98e-8°로 지속 한방향 회전과 다르다. Force residual1.20e-15N,
+torque4.29e-17Nm. 최종 합력 Fz=.196199987N은중력과 거의 평형이지만
+Vz는0이 아니므로 정지 grasp 증거가 아니다.
+
+최종 focused13 PASS(4.219s): 기존 viewer/planner/wrench, static primal/dual,
+precompressed 및 normal CLOSE의4실제 event/all-contact dynamics와 chronology.
+최초 실행은 새 fixture의 support_Fn_N과 기존 support_force_N 명칭 차이로2error;
+field를 증거 손실 없이 통일하여 해소했다. Runtime/safety 수정 없음.
+명령: env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml
+기존 .venv/bin/python -m unittest discover -s test -p 'test_gr*e*.py' -v
+(SIM 디렉터리). git diff --check PASS. PR65 draft 갱신, normal push, main merge 없음.
+
+## DAPIER-2026-09-18-solver-contact-sensitivity
+
+### Problem
+
+나는 정상 CLOSE 후에도 무지지 HOLD에서 약.954mm/s slip이 남은 원인을
+main solver 미수렴 / soft-friction regularization / 접촉 geometry로 분리했다.
+시작 HEAD3a6ff44924ee79e633f351db3287a1b145d0cecd, 기존 writer branch/worktree를
+그대로 사용했다. Runtime이나 teacher로 돌아가지 않고 세 prescribed copied case만 실행했다.
+
+### Evidence
+
+**VERIFIED BY PHYSICS — 동일 상태의3조건 비교**
+
+이전 raw row10213 mjSTATE_INTEGRATION을 복원하고 다음 row10214의 실제 ctrl 전환을
+적용했다. 최초 무지지 force 평가20.426s의 qpos/qvel/time/warmstart를 보존했다.
+시작 state SHA62f8631095f4ee18018b85f075e44a647f93ac2e9e842cf680f0ee2db5d90dc3.
+Restore 후 mj_forward 없이 실행했다. 남은 받침 철수 profile과 gripper terminal
+command1.7142209851885606rad는 세 case 모두 동일하다.
+Baseline1501평가 전체가 이전 raw와 bitexact, B도 A의 전체 state/qacc/contact wrench와
+bitexact 일치했다. 각 case1500×2ms=3s이며 force prestate와 postintegration을 구분한다.
+
+|항목|A baseline|B convergence|C NoSlip diagnostic|
+|---|---:|---:|---:|
+|main iterations|100|1000|100|
+|main tolerance|1e-10|1e-12|1e-10|
+|noslip_iterations|0|0|5|
+|3s 수직 변위 mm|-2.862445924|-2.862445924|-.000472899|
+|종료 Vz mm/s|-.954146418|-.954146418|-.00000692609|
+|마지막1s Z 기울기 mm/s|-.954149554|-.954149554|-.00000692610|
+|최종 Fn1/Fn2 N|.503298/.503289|동일|.521142/.521141|
+|최대 penetration µm|17.729237|동일|18.853589|
+|최대 cone 사용률|.538639|동일|.560622|
+|support count/Fn, warning|0/0,0|0/0,0|0/0,0|
+
+모든 case에서 bilateral contact, support 독립 양의 separation과 기존 penetration
+bound를 유지했다. C의 Fn은최대.521142N, A는최대.507247N이며 증가량을 숨기지 않았다.
+이3s에서 새 force-loss/비유한 상태/예상 외 contact/기존 bound 위반은 없었다.
+d.solver_niter의 최대값은A/B1,C5이나 C통계를 main-only 반복횟수로 해석하지 않는다.
+C의 native polygon margin은+.026/-.019nm로 boundary 표본이 유지된다.
+
+**ANALYTIC / DIAGNOSTIC ONLY — 현재 solver/contact 계약**
+
+아래 XML은 원래 task 입력MJCF가 아니라 MjSpec로 export한 isolated bench XML이다.
+실제 physics는 SHA검증한 MJB를 로드했다. 생략된 XML 속성을 명시값으로 쓰지 않는다.
+
+|항목|export XML/소스|실제 compiled|
+|---|---|---|
+|solver|XML 생략|Newton(enum2)|
+|cone|elliptic; tabletop_replay.json 명시|elliptic(enum1)|
+|integrator|implicitfast; builder 명시|implicitfast(enum3)|
+|timestep|XML 생략|.002s|
+|iterations|XML 생략|100|
+|tolerance|XML/profile1e-10|1e-10|
+|noslip_iterations|XML 생략|0|
+|noslip_tolerance|XML 생략|1e-6|
+|impratio|XML 생략|1|
+|pad/block condim|4|4|
+|geom friction|1.6 .02 .001|[1.6,.02,.001]|
+|contact friction|geom에서 생성|[1.6,1.6,.02,.001,.001]|
+|solref|-200000 -400|[-200000,-400]|
+|contact solreffriction|pad-block explicit pair없음|[0,0]|
+|solimp|export .95 .99; builder5값|[.95,.99,.001,.5,2]|
+
+pgripper.py의 pad설정과 replay_recorded_episode.py의 builder,
+tabletop_replay.json의 profile을 대조했다. 별도 freshdata mj_fwdPosition만으로
+최초 contact geom/point/distance를 exact 재현해 actual contact parameter를 확인했다.
+이 static probe는 physics step/force solve를 수행하거나 저장된 힘을 교체하지 않았다.
+Full non-opt compiled array fingerprint:
+1c9b054cb8113863c0923c089c01690c09f8650e11f7a8107524577f3f0f93b7.
+세 case는 동일MJB/model에 opt허용필드만 변경했다. 기록된 물리 parameter hash는
+매 case 검사했으며 full non-opt array hash 자체를매 step 수집한 것은 아니다.
+
+MuJoCo3.3.7, Python3.12 기존 so101_imitation_learning/.venv 사용.
+실제 loaded lib는 site-packages/mujoco/libmujoco.so.3.3.7,
+SHA23841520ecf60ad648405674a757f260949f7cf6b44deb284398b9851b3f061d.
+MJB SHAab282e9deb11572e56e59f746e18a353e02b3e3ab8eb055224c49a5016cea8e3.
+전체 absolute library path와 XML/compiled snapshot은 로컬 archive에 보존했다.
+
+공식3.3.7 XML reference에서 NoSlip은 main solver 이후 friction 차원의 slip/drift를
+억제하는 후처리이고, tolerance는 early-stop 기준이지 속도 bound가 아님을 확인했다.
+solreffriction[0,0]은 solref 재사용을 뜻하며 elliptic contact에 적용된다.
+[MuJoCo3.3.7 option](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#option)
+및 [contact pair](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#contact-pair).
+
+### Decision
+
+**INFERENCE — 사용자 분류A의 강한 근거.**
+B는반복한도10배/tolerance100배강화해도 동일하고 C만slip이 크게 감소했다.
+현재 조건에서는 단순main solver 미수렴보다 soft/regularized friction 처리가
+주요 contributor라는 근거다. 이는 모든 수치오차가 없다는 전역 증명은 아니다.
+C는normal force/penetration도 조금 바꾸므로 geometry·coupling의 잔여 영향을
+완전히 배제하지 않는다. Native boundary point만으로 physical pad patch 부재를
+주장하지 않는다.
+
+이미 elliptic이므로 D는 생략했다. Impratio도 그대로다.
+NoSlip은 DIAGNOSTIC COPY / NOT TASK SUCCESS이며 runtime 설정에 채택하지 않았다.
+Friction/mass/geometry/gain/성공 threshold/joint limit/safety는 변경하지 않았다.
+
+### Validation
+
+Focused14 PASS(4.303s): 기존 viewer/planner/wrench/slip과 이번 parameter-isolation
+회귀. 동일 state/model/command hash, 허용된 option delta만 존재, 3s구간의
+변위=속도적분과 회귀 기울기를 확인했다. 시작state/command/model/impratio/support/
+속도적분 변조를 거부한다. Saved-data verifier도 A의원본 replay, A/B fullstate와
+wrench 동일, 모든case support0 및 기존bound 유지 PASS. 추가physics 재실행은 없다.
+명령은 SIM에서 기존 venv Python과 pinned DAPIER_SO101_MJCF를 사용한
+-m unittest discover -s test -p 'test_gr*e*.py' -v.
+git diff --check PASS. 시간별 Z/Vz 및 log|Vz| 그래프 PNG/SVG를 저장·시각 검수했다.
+사용자 범위에 따라 full local MuJoCo/Research/render suite/remote CI는 미실행.
+
+### Result
+
+세 copied diagnostic 완료. 분류A이며 runtime/model 채택이나 stable-grasp milestone은
+아직 선언하지 않는다. 실제task는이번0회, 마지막 GRASP_CONFIRM PASS /
+LIFT FAIL(SIM17.474s), CENTER SUCCESS=false를 보존했다.
+PR65 draft/base=main 갱신, main merge 없음. SkippedCI는 PASS가 아니다.
+
+### Lesson / Next
+
+**UNVERIFIED:** NoSlip 조건에서 정상OPEN부터 CLOSE 형성 전체, 장시간/다른초기조건
+안정성, 물리적 마찰/접촉 fidelity, 실제PGripper 대응은 확인하지 않았다.
+현재는 baseline으로형성된 grasp의 동일 unsupported state에서 민감도만 비교했다.
+후속 milestone에서 solver/model 후보의 물리 의미와 형성부터의 재현성을 검토해야 한다.
+Arm IK/teacher/live/HW/OS30A/multi-seed/ACT로 이번결과를 확대하지 않는다.
+Raw/script/compiledcontract/graph는 기존KIT validation/solver-contact-20260918에 보존한다.
+Matrix SHA f14b0a9e7ed121ffe630fdcd1aaf97304cd2d222005708bdf60ec7ef68df8b8d.
+
+## DAPIER-2026-09-18-contact-configuration-candidates
+
+### Problem
+
+NoSlip5가 이미 형성된 동일 unsupported state의 slip을 줄인 뒤,
+정상 OPEN부터도 유효한 형성/철수를 거치는지(A), NoSlip 없이 impratio만으로
+slow slip을 줄이는지(B)를 분리했다. Coordinator 단일 writer,
+A/B scratch read-only-source 분석, 물리 실행은 A 다음 B 순서로 직렬화했다.
+ACTIVE_WORKTREE=grasp-families-codex-20260918, 시작 HEAD
+ea2e3f428da92dff9c240c9d90ef8cab3190f4e1 / clean.
+
+### Evidence — VERIFIED BY PHYSICS
+
+**A: NoSlip5 정상 formation.** 원래 OPEN fullstate와 command prefix를 정확히
+재사용하고 noslip_iterations만 0→5. CLOSE49 / SIM20.296s에 bilateral:
+Fn .514025/.513838N, terminal ctrl1.7142209851885606rad.
+CONFIRM50step까지 완료했으나 WITHDRAW 첫step / SIM20.398s에 중단했다.
+접촉 중 받침 실제 상향변위 +.210994µm, support contact3/Fn.227667N,
+gap−8.805812µm. 받침/손가락/중력 합력의 Z는 +1.6054e−7N으로 작으나
+접촉 중 받침 반등은 실제다. Detached6nm 사례처럼 취급하지 않았다.
+unsupported 시작 전이므로 3s HOLD와 velocity convergence는 **UNVERIFIED**.
+받침은 TEST SUPPORT / NOT TASK ENVIRONMENT다.
+
+Matched-prefix Fn peak baseline .504753/.504754→.514083/.514829N
+(+1.85/+2.00%). 최대 |dFn/dt| 6.960/6.903→27.187/17.590N/s.
+최대 penetration18.739759µm, warning/unexpected cube contact0.
+힘 peak 증가가 작다는 것과 변화율 증가를 모두 기록하며 임의 spike 허용치를
+만들어 PASS라고 하지 않는다. Jaw final gap39.973042mm.
+원시 q/qvel/힘/접촉/블록 pose는 그대로 보존했다.
+
+**B: 동일 unsupported fullstate, NoSlip0, impratio만 변경.**
+
+| impratio | 3s 하강 mm | 마지막1s Z slope mm/s | terminal Vz mm/s | final Fn pad1/pad2 N |
+|---|---:|---:|---:|---|
+| 1 기존 accepted replay | 2.862446 | −.954150 | −.954146 | .503298/.503289 |
+| 10 | .286747 | −.095444 | −.095444 | .526790/.526789 |
+| 100 | .031423 | −.010472 | −.010486 | .529672/.529598 |
+
+두 새case 각각1501평가/3s, support count/force0, bilateral 지속, warnings0.
+Slip은 약90.0%/98.9% 줄었으나 비영속도로 지속된다.
+Fn peak .605743/.617772N: baseline 대비 약20%/22% 증가.
+순힘 peak .001143→.006894/.007612N, max COM torque는 감소했다.
+최대 penetration17.692111µm로 baseline17.729237µm보다 커지지 않았다.
+Jaw는 약8.05/8.93µm 벌어진 뒤 후반 안정.
+초기 warmstart 상태에서 impedance를 바꾼 과도응답을 포함한 결과다.
+
+### Decision — INFERENCE / DIAGNOSTIC ONLY
+
+Soft friction regularization이 주요 contributor라는 기존 분류A를 추가 지지한다.
+impratio는 elliptic cone의 friction/normal constraint impedance 비율이며
+마찰계수 자체가 아니다.
+[MuJoCo3.3.7 공식 의미](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#option-impratio).
+
+Runtime 후보 채택은 보류. NoSlip5는 후속 검증 우선 후보지만 정상 formation부터의
+support withdrawal/unsupported HOLD가 미검증이다. A의 contacting support 반등을
+무시하거나 block 순힘이 작다는 이유로 시험조건을 통과시키지 않았다.
+Impratio10/100은 slip 감소와 과도응답의 tradeoff이며 stable equilibrium 증거가 아니다.
+A는 normal OPEN부터, B는 baseline으로 이미 형성된 unsupported state부터 시작하므로
+서로 동일 initial condition인 직접 A/B 비교라고 부르지 않는다.
+Geometry/friction/mass/controller/timing/safety/runtime solver 설정은 보존했다.
+
+### Validation
+
+Focused16 PASS(4.345s). 기존14개와 formation-stop/parameter-isolation 회귀2개.
+Fullstate 시작/명령 hash, option delta, displacement=velocity integral,
+slope moments, residual slip, support 부재 및 잘못된 option/command/support/
+zero-slip/integral 변조 rejection을 확인했다. Bilateral+support가 무지지 성공으로
+승격되지 않도록 failing formation evidence를 보존했다.
+Worker saved-only verification 둘 다 PASS(성공 trial을 뜻하지 않음).
+B signed contact+tangential+torsional wrench와 dynamics 최대 잔차
+force1.68e−15N / torque4.30e−17Nm. 비옵션 compiled fingerprint 전후 동일:
+1c9b054cb8113863c0923c089c01690c09f8650e11f7a8107524577f3f0f93b7.
+MuJoCo3.3.7/기존 Python3.12 venv, lib 및 model hash는 앞 기록과 동일.
+git diff --check PASS. Full local suites/render/remote CI는 요청에 따라 미실행.
+
+### Result
+
+A의 정상 CLOSE formation은 확인했으나 전체 protocol은 WITHDRAW fail-closed.
+B sensitivity 두 case 완료. Stable-grasp milestone 미달성, runtime adoption 없음.
+실제 arm task 실행0회: 마지막 GRASP_CONFIRM PASS / 기존 LIFT FAIL SIM17.474s,
+CENTER SUCCESS=false 보존. PR65 draft/base=main 갱신, main merge 없음.
+원본/scripts/verifiers와 slip plot은 기존 KIT validation/contact-candidates-20260918 보존.
+A rawSHA1c04d374ab8647d76b428e2ea836fa538a87ec57f9ce6e5b23cf22ef4e8dfad8;
+B10 aa4db2d49805fca01219ca1357db0a1b25efe46118074e382c36756616b04f48;
+B100 66aed4c3b879771eabefbf60fd74f5ecabba4f1b9c5b95fa95a87c394dd7ff91.
+
+### Lesson / Next — UNVERIFIED
+
+다음 blocker는 NoSlip 적용 시 TEST SUPPORT servo가 접촉 중 반등하는 원인과
+시험 fixture의 무가압 하향 철수 재현성이다. Gripper/controller/runtime를 바꾸기 전에
+fixture만의 정상적인 철수 절차를 검증해야 한다. 현재 checker를 완화하지 않았다.
+그 뒤 정상 OPEN부터 완전한 unsupported HOLD를 확인해야 NoSlip 채택을 검토할 수 있다.
+Impratio100의 남은 slip을 임의 tolerance로 안정이라고 선언하지 않는다.
+Arm IK/live teacher/HW/OS30A/multi-seed/ACT는 실행하지 않았다.
+
+## DAPIER-2026-09-18-prescribed-support-formation
+
+### Problem
+
+나는 NoSlip5 정상 CLOSE 이후 dynamic TEST SUPPORT의 반등 때문에 막힌
+unsupported HOLD를 확인했다. 사용자가 fixture에 한해 prescribed mocap 하강을
+허용했다. SIM writer는 기존 grasp-families worktree, REAL writer는 별도
+real-sensor-pregrasp worktree로 분리했다. 이 기록은 SIM만 다룬다.
+
+### Evidence — VERIFIED BY PHYSICS
+
+받침의 dynamic Z joint/servo/mass만 제거하고 mocap boundary로 교체했다.
+458개 named compiled 비교에서 gripper/block geometry, 질량·inertia,
+friction, joint/actuator, passive coupling, contact pair, options가 동일했다.
+Initial reset 뒤 block/gripper qpos 쓰기는 없고 actual ctrl+mj_step으로 CLOSE했다.
+Fixture는 TEST SUPPORT / NOT TASK ENVIRONMENT다. Block/gripper를 mocap/weld로
+부착하지 않았다.
+
+받침은 .1m/s, 50mm/.5s 일정 하강했다. Command/actual Z 일치, upward step0.
+처음에는 기존 septic withdrawal로 예비 진단했다. Baseline의 첫 count0 평가가
+pre gap+.674µm/post−.936µm여서 중단됐고, 한 sample slope 요약 오류도 수정했다.
+원본은 보존했다. 최종 비교는 사용자 요구인 constant velocity 두 case다.
+Unsupported clock은 count0/Fn0와 양의 pre/post gap을 모두 확인한 뒤 시작했다.
+
+| 항목 | NoSlip0 | NoSlip5 |
+|---|---:|---:|
+| 정상 OPEN 이후 첫 bilateral endpoint | CLOSE49 /20.296s | 동일 |
+| terminal gripper ctrl rad | 1.7142209851885606 | 동일 |
+| unsupported 시작 / 길이 |20.396s /3s|동일|
+| 3s 수직 변위 mm |−2.861901215|−.000020820|
+| 마지막1s slope mm/s |−.954149565|−.000006941|
+| 최종 Fn pad1/pad2 N |.504725407/.504719811|.481440899/.481440654|
+| 전체 Fn peak N |.506182033/.507246084|.481440899/.481440654|
+| 최대 abs dFn/dt N/s |6.994468/6.936757|13.378062/17.203264|
+| 무지지 순회전 rad |6.36529e−5|3.19518e−6|
+| 최대 penetration µm |19.12|19.12|
+| support contact/force, warning |0/0,0|0/0,0|
+
+NoSlip5의 마지막1s 최대 선속도2.166e−8m/s, 각속도1.065e−6rad/s.
+기존 dynamic-support baseline과의 차이도 확인했다: sag차이+.544709µm
+(약.019%), tail slope는 사실상 같다. 첫 bilateral COM은23.948537µm
+높아졌으나 첫 bilateral Fn 차이는 약1nN이다.
+새 fixture가 baseline slow-slip 현상 자체를 없애지는 않았다.
+
+### Decision — INFERENCE / ANALYTIC / DIAGNOSTIC ONLY
+
+분류A: NoSlip5를 이 3초 gripper-only SIM 창에서 near-stationary contact-model
+후보로 승격한다. Runtime/task 설정에 즉시 적용하지 않았다.
+수직 속도가 수학적으로 정확히0은 아니며,20.82nm 잔여변위와 힘 변화율 증가도
+그대로 기록한다. 힘 amplitude spike나 새 instability는 관측되지 않았지만
+임의 force-derivative threshold를 추가하지 않는다.
+
+분류D의 fixture 영향은 초기 높이/형성압력에 남는다. 따라서 기존 dynamic
+fixture의 형성 이력과 이번 NoSlip을 동일-state 비교라고 부르지 않는다.
+Native solver contact point는 여전히 pad polygon boundary 수준이다.
+Physical overlap patch와 discrete point interior를 구분한다.
+Mocap body의 native cvel0과 prescribed 위치의 finite-difference 속도는 다르다.
+Frictionless vertical-only test boundary의 하강을 실제 물체 운동 모델로 일반화하지 않는다.
+
+### Validation
+
+Focused17 PASS(4.410s). 받침반등/접촉잔류/zero gap/비일정속도/
+penetration초과/잘못된solveroption/command 변조를 거부하는 회귀를 추가했다.
+Same model/initial state/ctrl, 옵션차이noslip5만, 변위=속도적분,
+unsupported3s, support0 및 양의 separation 증거를 대조했다.
+Saved-only verifier PASS;458compiled checks 및 per-step force/pose contract 보존.
+Milestone 전체 검증 1회 완료: Research33 PASS, MuJoCo363 PASS(1122.395s),
+canonical render 및 vision artifact 생성 PASS, verify-mujoco-headless exit0.
+Canonical vision은 기존 tower baseline의 회귀이며 REAL calibration/현재 bench 성공과 구분한다.
+반복 후보 full CI는 실행하지 않았다.
+
+### Result
+
+최종 gripper-only phase: UNSUPPORTED HOLD3s 완료.
+SIM contact-model candidate이며 실제 arm task 성공이 아니다.
+실제 arm은 재실행하지 않았고 기존 GRASP_CONFIRM PASS/LIFT FAIL,
+CENTER SUCCESS=false/HOLD0s 상태를 보존했다.
+Raw/scripts/compiled proof/이전 실패는 기존KIT validation 아래
+prescribed-support-20260918에 보존한다.
+Final raw SHA:
+NoSlip0 6ece60726bd00ab45c794c6a841d6a6d9fef8827ae5f1edf45771603c1a8a2e7;
+NoSlip5 698bc122438c23483dbe0c6537e291d5fa48f1ef82984665a58cdcb7ac315be6.
+MODEL5af4835e39c7df7afaa4ca4669a27c2149214913bba22c88dfd53ffa78eb7e9c.
+
+### Lesson / Next — UNVERIFIED
+
+다음 SIM 단계는 copied arm-mounted grasp에서 contact-model 후보 검증이다.
+긴 시간/다중 초기조건/실기 fidelity/pad sample interior는 아직 검증하지 않았다.
+REAL perception/extrinsic/비접촉 PREGRASP는 별도 트랙이며 이 결과로 대체하지 않는다.
