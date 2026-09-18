@@ -2523,5 +2523,462 @@
         ]
       }
     ]
+  },
+  "contact_configuration_candidates": {
+    "scope": "DIAGNOSTIC COPY / NOT TASK SUCCESS",
+    "formation": {
+      "verification": {
+        "status": "PASS_EXPECTED_CHECKER_STOP",
+        "saved_data_only_no_newphysics": true,
+        "initial_fullstate_bitexact_source": true,
+        "only_noslip5_changed": true,
+        "fullnonopt_before_after_equal": true,
+        "matched_prefix_all_commands_bitexact_baseline": true,
+        "rawforce_derivative_comparison": {
+          "left_pgripper_pad_1": {
+            "baseline_matchedprefix_peak_N": 0.5047528205661337,
+            "trial_matchedprefix_peak_N": 0.5140827000488849,
+            "peak_ratio": 1.0184840561609676,
+            "baseline_matchedprefix_abs_derivative_peak_N_s": 6.960041183257129,
+            "trial_matchedprefix_abs_derivative_peak_N_s": 27.187046700690573
+          },
+          "left_pgripper_pad_2": {
+            "baseline_matchedprefix_peak_N": 0.5047538303128842,
+            "trial_matchedprefix_peak_N": 0.5148291690466357,
+            "peak_ratio": 1.0199608960421478,
+            "baseline_matchedprefix_abs_derivative_peak_N_s": 6.9028660863209375,
+            "trial_matchedprefix_abs_derivative_peak_N_s": 17.590183277700255
+          }
+        },
+        "firstbilateral_formation": {
+          "step": 10148,
+          "Fn_N": {
+            "left_pgripper_pad_1": 0.5140248239050056,
+            "left_pgripper_pad_2": 0.5138380484514967
+          },
+          "support_Fn_N": 0.2590926705249755,
+          "finger_force_world_N": [
+            0.00019484626070132016,
+            -2.895092526822296e-08,
+            -0.06289263744043722
+          ],
+          "finger_torque_COM_world_Nm": [
+            -0.002478711117087906,
+            0.004924433463351205,
+            -7.065839103051474e-11
+          ]
+        },
+        "confirmation_end": {
+          "Fn_N": {
+            "left_pgripper_pad_1": 0.5129034837892109,
+            "left_pgripper_pad_2": 0.5148291690466357
+          },
+          "support_Fn_N": 0.25398239436240405,
+          "finger_force_world_N": [
+            -0.0019182676859369474,
+            3.6589225249628043e-07,
+            -0.057782617891702776
+          ],
+          "finger_torque_COM_world_Nm": [
+            -0.002461604957225563,
+            0.004893839614859268,
+            -3.805937730770592e-10
+          ]
+        },
+        "checker_stop": {
+          "actual_support_upward_displacement_m": 2.1099397731000203e-07,
+          "support_velocity_pre_m_s": -7.563493626881518e-05,
+          "support_velocity_post_m_s": 0.0001054969886550007,
+          "support_Fn_N": 0.22766653079780852,
+          "support_count": 3,
+          "support_resultant_world_N": [
+            0.0,
+            0.0,
+            0.22766653079780852
+          ],
+          "finger_resultant_world_N": [
+            0.0014362236879982282,
+            -2.820215223575673e-07,
+            -0.03146637025669605
+          ],
+          "support_plus_finger_minus_gravity_world_N": [
+            0.0014362236879982282,
+            -2.820215223575673e-07,
+            1.605411124594447e-07
+          ],
+          "cube_vz_pre_m_s": -1.4555350307693866e-08,
+          "cube_vz_post_m_s": 1.4987609382506023e-09,
+          "gap_pre_m": -8.594801343839165e-06,
+          "gap_post_m": -8.805812095447063e-06
+        },
+        "unsupported_unmeasured": true,
+        "classification": "Bilateral formation measured; contacting fixture servo reversal triggers current withdrawal checker before support removal. No unsupported stability evidence for this fullformation trial. Root evaluates whether gate corresponds to prohibited block impulse; no retry/continuation by worker."
+      },
+      "stop": {
+        "step": 10199,
+        "phase": "WITHDRAW",
+        "time_s": 20.397999999999573,
+        "force_evaluation_time_s": 20.395999999999574,
+        "support_qpos_post_m": -2.4357016194172702e-05,
+        "support_velocity_post_m_s": 0.0001054969886550007,
+        "support_acceleration_evaluation_m_s2": 0.27350920663496225,
+        "support_ctrl_m": -4.4371351961600014e-10,
+        "support_contact_count": 3,
+        "support_Fn_N": 0.22766653079780852,
+        "support_resultant_on_cube_world_N": [
+          0.0,
+          0.0,
+          0.22766653079780852
+        ],
+        "support_cube_vertical_gap_pre_m": -8.594801343839165e-06,
+        "support_cube_vertical_gap_post_m": -8.805812095447063e-06,
+        "block_world_linear_velocity_pre": [
+          -5.494403080756708e-05,
+          2.6442902940127138e-08,
+          -1.4555350307693866e-08
+        ],
+        "block_world_linear_velocity_post": [
+          8.867833799224833e-05,
+          -1.759249295629589e-09,
+          1.4987609382506023e-09
+        ],
+        "qacc_evaluation": [
+          -7.243379144816764e-05,
+          -4.111284222454517e-09,
+          -4.5010434101471096e-10,
+          0.0718111843999077,
+          -1.4101076117878364e-05,
+          8.027055622861212e-06,
+          -4.878909776184768e-13,
+          -5.9600157654212525e-05,
+          7.361109789346013e-05,
+          0.27350920663496225
+        ],
+        "Fn_N": {
+          "left_pgripper_pad_1": 0.5127712871022614,
+          "left_pgripper_pad_2": 0.5113391027592735
+        },
+        "support_qpos_pre_m": -2.4568010171482704e-05,
+        "support_qvel_pre_m_s": -7.563493626881518e-05,
+        "support_normals": [
+          [
+            0.0,
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "support_direct_torque": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "impratio_cases": [
+      {
+        "options": {
+          "ccd_iterations": 35,
+          "ccd_tolerance": 1e-06,
+          "cone": 1,
+          "density": 0.0,
+          "disableactuator": 0,
+          "disableflags": 0,
+          "enableflags": 0,
+          "gravity": [
+            0.0,
+            0.0,
+            -9.81
+          ],
+          "impratio": 1.0,
+          "integrator": 3,
+          "iterations": 100,
+          "jacobian": 2,
+          "ls_iterations": 50,
+          "ls_tolerance": 0.01,
+          "magnetic": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "noslip_iterations": 0,
+          "noslip_tolerance": 1e-06,
+          "o_friction": [
+            1.0,
+            1.0,
+            0.005,
+            0.0001,
+            0.0001
+          ],
+          "o_margin": 0.0,
+          "o_solimp": [
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2.0
+          ],
+          "o_solref": [
+            0.02,
+            1.0
+          ],
+          "sdf_initpoints": 40,
+          "sdf_iterations": 10,
+          "solver": 2,
+          "timestep": 0.002,
+          "tolerance": 1e-10,
+          "viscosity": 0.0,
+          "wind": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "raw_sha256": "5c1e849d3616d73161f321a3e38f07feffec79726d28a1d9dac55f048b18ccb4",
+        "start_qpos": [
+          1.7142325829422693,
+          0.005531917899223187,
+          -0.005531918200578577,
+          3.2733224261481246e-09,
+          1.6064599376113552e-08,
+          0.09996252731098369,
+          0.999999997618021,
+          -2.1979458656958686e-08,
+          -3.949939986368366e-07,
+          6.902029358053368e-05,
+          -3.857264560246882e-05
+        ],
+        "start_qvel": [
+          -1.2439189771241405e-06,
+          -3.6891463744927502e-06,
+          3.669234207863908e-06,
+          1.2084300797511174e-06,
+          -6.667965679677828e-08,
+          -0.0009518387154065341,
+          -6.157390902836483e-06,
+          -0.00011092975514870229,
+          0.13934060195654002,
+          -0.0022995659930547035
+        ],
+        "commands_sha256": "167f1e329282265fd370f6ba87e6b634491acdb296e906742f9fcc8e778b23d3",
+        "support_count_max": 0,
+        "support_force_max_N": 0,
+        "warnings": 0,
+        "all_bilateral": true,
+        "max_penetration_m": 1.7729237193423864e-05,
+        "start_z_mm": 99.96252731098369,
+        "end_z_mm": 97.10008138740992,
+        "integrated_vz_mm": -2.8624459235722686,
+        "sum_tt": 41.91699999995354,
+        "sum_tz": -39.995086854751705,
+        "slope_mm_s": -0.9541495539947047,
+        "terminal_vz_mm_s": -0.9541464180296343
+      },
+      {
+        "options": {
+          "ccd_iterations": 35,
+          "ccd_tolerance": 1e-06,
+          "cone": 1,
+          "density": 0.0,
+          "disableactuator": 0,
+          "disableflags": 0,
+          "enableflags": 0,
+          "gravity": [
+            0.0,
+            0.0,
+            -9.81
+          ],
+          "impratio": 10.0,
+          "integrator": 3,
+          "iterations": 100,
+          "jacobian": 2,
+          "ls_iterations": 50,
+          "ls_tolerance": 0.01,
+          "magnetic": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "noslip_iterations": 0,
+          "noslip_tolerance": 1e-06,
+          "o_friction": [
+            1.0,
+            1.0,
+            0.005,
+            0.0001,
+            0.0001
+          ],
+          "o_margin": 0.0,
+          "o_solimp": [
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2.0
+          ],
+          "o_solref": [
+            0.02,
+            1.0
+          ],
+          "sdf_initpoints": 40,
+          "sdf_iterations": 10,
+          "solver": 2,
+          "timestep": 0.002,
+          "tolerance": 1e-10,
+          "viscosity": 0.0,
+          "wind": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "raw_sha256": "aa4db2d49805fca01219ca1357db0a1b25efe46118074e382c36756616b04f48",
+        "start_qpos": [
+          1.7142325829422693,
+          0.005531917899223187,
+          -0.005531918200578577,
+          3.2733224261481246e-09,
+          1.6064599376113552e-08,
+          0.09996252731098369,
+          0.999999997618021,
+          -2.1979458656958686e-08,
+          -3.949939986368366e-07,
+          6.902029358053368e-05,
+          -3.857264560246882e-05
+        ],
+        "start_qvel": [
+          -1.2439189771241405e-06,
+          -3.6891463744927502e-06,
+          3.669234207863908e-06,
+          1.2084300797511174e-06,
+          -6.667965679677828e-08,
+          -0.0009518387154065341,
+          -6.157390902836483e-06,
+          -0.00011092975514870229,
+          0.13934060195654002,
+          -0.0022995659930547035
+        ],
+        "commands_sha256": "167f1e329282265fd370f6ba87e6b634491acdb296e906742f9fcc8e778b23d3",
+        "support_count_max": 0,
+        "support_force_max_N": 0,
+        "warnings": 0,
+        "all_bilateral": true,
+        "max_penetration_m": 1.7692110549591355e-05,
+        "start_z_mm": 99.96252731098369,
+        "end_z_mm": 99.6757798545464,
+        "integrated_vz_mm": -0.2867474564372046,
+        "sum_tt": 41.91699999995354,
+        "sum_tz": -4.000733321113848,
+        "slope_mm_s": -0.0954441711267095,
+        "terminal_vz_mm_s": -0.09544377031808841
+      },
+      {
+        "options": {
+          "ccd_iterations": 35,
+          "ccd_tolerance": 1e-06,
+          "cone": 1,
+          "density": 0.0,
+          "disableactuator": 0,
+          "disableflags": 0,
+          "enableflags": 0,
+          "gravity": [
+            0.0,
+            0.0,
+            -9.81
+          ],
+          "impratio": 100.0,
+          "integrator": 3,
+          "iterations": 100,
+          "jacobian": 2,
+          "ls_iterations": 50,
+          "ls_tolerance": 0.01,
+          "magnetic": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "noslip_iterations": 0,
+          "noslip_tolerance": 1e-06,
+          "o_friction": [
+            1.0,
+            1.0,
+            0.005,
+            0.0001,
+            0.0001
+          ],
+          "o_margin": 0.0,
+          "o_solimp": [
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2.0
+          ],
+          "o_solref": [
+            0.02,
+            1.0
+          ],
+          "sdf_initpoints": 40,
+          "sdf_iterations": 10,
+          "solver": 2,
+          "timestep": 0.002,
+          "tolerance": 1e-10,
+          "viscosity": 0.0,
+          "wind": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "raw_sha256": "66aed4c3b879771eabefbf60fd74f5ecabba4f1b9c5b95fa95a87c394dd7ff91",
+        "start_qpos": [
+          1.7142325829422693,
+          0.005531917899223187,
+          -0.005531918200578577,
+          3.2733224261481246e-09,
+          1.6064599376113552e-08,
+          0.09996252731098369,
+          0.999999997618021,
+          -2.1979458656958686e-08,
+          -3.949939986368366e-07,
+          6.902029358053368e-05,
+          -3.857264560246882e-05
+        ],
+        "start_qvel": [
+          -1.2439189771241405e-06,
+          -3.6891463744927502e-06,
+          3.669234207863908e-06,
+          1.2084300797511174e-06,
+          -6.667965679677828e-08,
+          -0.0009518387154065341,
+          -6.157390902836483e-06,
+          -0.00011092975514870229,
+          0.13934060195654002,
+          -0.0022995659930547035
+        ],
+        "commands_sha256": "167f1e329282265fd370f6ba87e6b634491acdb296e906742f9fcc8e778b23d3",
+        "support_count_max": 0,
+        "support_force_max_N": 0,
+        "warnings": 0,
+        "all_bilateral": true,
+        "max_penetration_m": 1.7692110549591355e-05,
+        "start_z_mm": 99.96252731098369,
+        "end_z_mm": 99.93110469851571,
+        "integrated_vz_mm": -0.031422612467772636,
+        "sum_tt": 41.91699999995354,
+        "sum_tz": -0.43896130098089625,
+        "slope_mm_s": -0.010472154519201823,
+        "terminal_vz_mm_s": -0.010485675570096836
+      }
+    ]
   }
 }

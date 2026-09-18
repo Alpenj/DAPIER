@@ -220,5 +220,66 @@ class SolverContactDiagnosticTest(unittest.TestCase):
                 self.verify(bad)
 
 
+
+class ContactConfigurationCandidatesTest(unittest.TestCase):
+    def test_normal_formation_stop_is_not_unsupported_success(self):
+        evidence = json.loads((Path(__file__).parent / 'fixtures/gripper_force_requirements.json').read_text())['contact_configuration_candidates']
+        formation = evidence['formation']
+        proof, stop = formation['verification'], formation['stop']
+        self.assertTrue(proof['initial_fullstate_bitexact_source'])
+        self.assertTrue(proof['only_noslip5_changed'])
+        self.assertTrue(proof['fullnonopt_before_after_equal'])
+        self.assertTrue(proof['matched_prefix_all_commands_bitexact_baseline'])
+        self.assertTrue(proof['unsupported_unmeasured'])
+        self.assertGreater(stop['support_contact_count'], 0)
+        self.assertGreater(stop['support_Fn_N'], 0.)
+        displacement = stop['support_qpos_post_m'] - stop['support_qpos_pre_m']
+        self.assertGreater(displacement, 0.)
+        self.assertAlmostEqual(displacement, .002 * stop['support_velocity_post_m_s'], places=14)
+        for pad_force in stop['Fn_N'].values():
+            self.assertGreater(pad_force, 0.)
+        # Bilateral force while the fixture still supports the cube is not unsupported HOLD.
+        net = np.asarray(stop['support_resultant_on_cube_world_N']) + np.asarray(proof['checker_stop']['finger_resultant_world_N']) + [0., 0., -.1962]
+        np.testing.assert_allclose(net, .02 * np.asarray(stop['qacc_evaluation'][3:6]), atol=1e-12, rtol=0)
+
+    def verify_impratio(self, cases):
+        slopes = []
+        for case, ratio in zip(cases, (1., 10., 100.)):
+            self.assertEqual(case['options'], dict(cases[0]['options'], impratio=ratio))
+            self.assertEqual(case['options']['noslip_iterations'], 0)
+            for key in ('start_qpos', 'start_qvel', 'commands_sha256'):
+                self.assertEqual(case[key], cases[0][key])
+            self.assertEqual(case['support_count_max'], 0)
+            self.assertEqual(case['support_force_max_N'], 0.)
+            self.assertEqual(case['warnings'], 0)
+            self.assertTrue(case['all_bilateral'])
+            self.assertLessEqual(case['max_penetration_m'], .001)
+            self.assertAlmostEqual(case['end_z_mm'] - case['start_z_mm'], case['integrated_vz_mm'], places=9)
+            self.assertAlmostEqual(case['sum_tz'] / case['sum_tt'], case['slope_mm_s'], places=10)
+            self.assertLess(case['terminal_vz_mm_s'], 0.)
+            slopes.append(abs(case['slope_mm_s']))
+        self.assertGreater(slopes[0], slopes[1])
+        self.assertGreater(slopes[1], slopes[2])
+        self.assertGreater(slopes[2], 0.)
+
+    def test_impratio_isolation_and_residual_slip(self):
+        cases = json.loads((Path(__file__).parent / 'fixtures/gripper_force_requirements.json').read_text())['contact_configuration_candidates']['impratio_cases']
+        self.verify_impratio(cases)
+        for mutation in ('option', 'support', 'command', 'zero_slip', 'integral'):
+            bad = copy.deepcopy(cases)
+            c = bad[-1]
+            if mutation == 'option':
+                c['options']['noslip_iterations'] = 5
+            elif mutation == 'support':
+                c['support_force_max_N'] = 1e-9
+            elif mutation == 'command':
+                c['commands_sha256'] = 'wrong'
+            elif mutation == 'zero_slip':
+                c['terminal_vz_mm_s'] = 0.
+            else:
+                c['integrated_vz_mm'] = 0.
+            with self.assertRaises(AssertionError):
+                self.verify_impratio(bad)
+
 if __name__ == '__main__':
     unittest.main()

@@ -1719,3 +1719,98 @@ PR65 draft/base=main 갱신, main merge 없음. SkippedCI는 PASS가 아니다.
 Arm IK/teacher/live/HW/OS30A/multi-seed/ACT로 이번결과를 확대하지 않는다.
 Raw/script/compiledcontract/graph는 기존KIT validation/solver-contact-20260918에 보존한다.
 Matrix SHA f14b0a9e7ed121ffe630fdcd1aaf97304cd2d222005708bdf60ec7ef68df8b8d.
+
+## DAPIER-2026-09-18-contact-configuration-candidates
+
+### Problem
+
+NoSlip5가 이미 형성된 동일 unsupported state의 slip을 줄인 뒤,
+정상 OPEN부터도 유효한 형성/철수를 거치는지(A), NoSlip 없이 impratio만으로
+slow slip을 줄이는지(B)를 분리했다. Coordinator 단일 writer,
+A/B scratch read-only-source 분석, 물리 실행은 A 다음 B 순서로 직렬화했다.
+ACTIVE_WORKTREE=grasp-families-codex-20260918, 시작 HEAD
+ea2e3f428da92dff9c240c9d90ef8cab3190f4e1 / clean.
+
+### Evidence — VERIFIED BY PHYSICS
+
+**A: NoSlip5 정상 formation.** 원래 OPEN fullstate와 command prefix를 정확히
+재사용하고 noslip_iterations만 0→5. CLOSE49 / SIM20.296s에 bilateral:
+Fn .514025/.513838N, terminal ctrl1.7142209851885606rad.
+CONFIRM50step까지 완료했으나 WITHDRAW 첫step / SIM20.398s에 중단했다.
+접촉 중 받침 실제 상향변위 +.210994µm, support contact3/Fn.227667N,
+gap−8.805812µm. 받침/손가락/중력 합력의 Z는 +1.6054e−7N으로 작으나
+접촉 중 받침 반등은 실제다. Detached6nm 사례처럼 취급하지 않았다.
+unsupported 시작 전이므로 3s HOLD와 velocity convergence는 **UNVERIFIED**.
+받침은 TEST SUPPORT / NOT TASK ENVIRONMENT다.
+
+Matched-prefix Fn peak baseline .504753/.504754→.514083/.514829N
+(+1.85/+2.00%). 최대 |dFn/dt| 6.960/6.903→27.187/17.590N/s.
+최대 penetration18.739759µm, warning/unexpected cube contact0.
+힘 peak 증가가 작다는 것과 변화율 증가를 모두 기록하며 임의 spike 허용치를
+만들어 PASS라고 하지 않는다. Jaw final gap39.973042mm.
+원시 q/qvel/힘/접촉/블록 pose는 그대로 보존했다.
+
+**B: 동일 unsupported fullstate, NoSlip0, impratio만 변경.**
+
+| impratio | 3s 하강 mm | 마지막1s Z slope mm/s | terminal Vz mm/s | final Fn pad1/pad2 N |
+|---|---:|---:|---:|---|
+| 1 기존 accepted replay | 2.862446 | −.954150 | −.954146 | .503298/.503289 |
+| 10 | .286747 | −.095444 | −.095444 | .526790/.526789 |
+| 100 | .031423 | −.010472 | −.010486 | .529672/.529598 |
+
+두 새case 각각1501평가/3s, support count/force0, bilateral 지속, warnings0.
+Slip은 약90.0%/98.9% 줄었으나 비영속도로 지속된다.
+Fn peak .605743/.617772N: baseline 대비 약20%/22% 증가.
+순힘 peak .001143→.006894/.007612N, max COM torque는 감소했다.
+최대 penetration17.692111µm로 baseline17.729237µm보다 커지지 않았다.
+Jaw는 약8.05/8.93µm 벌어진 뒤 후반 안정.
+초기 warmstart 상태에서 impedance를 바꾼 과도응답을 포함한 결과다.
+
+### Decision — INFERENCE / DIAGNOSTIC ONLY
+
+Soft friction regularization이 주요 contributor라는 기존 분류A를 추가 지지한다.
+impratio는 elliptic cone의 friction/normal constraint impedance 비율이며
+마찰계수 자체가 아니다.
+[MuJoCo3.3.7 공식 의미](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#option-impratio).
+
+Runtime 후보 채택은 보류. NoSlip5는 후속 검증 우선 후보지만 정상 formation부터의
+support withdrawal/unsupported HOLD가 미검증이다. A의 contacting support 반등을
+무시하거나 block 순힘이 작다는 이유로 시험조건을 통과시키지 않았다.
+Impratio10/100은 slip 감소와 과도응답의 tradeoff이며 stable equilibrium 증거가 아니다.
+A는 normal OPEN부터, B는 baseline으로 이미 형성된 unsupported state부터 시작하므로
+서로 동일 initial condition인 직접 A/B 비교라고 부르지 않는다.
+Geometry/friction/mass/controller/timing/safety/runtime solver 설정은 보존했다.
+
+### Validation
+
+Focused16 PASS(4.345s). 기존14개와 formation-stop/parameter-isolation 회귀2개.
+Fullstate 시작/명령 hash, option delta, displacement=velocity integral,
+slope moments, residual slip, support 부재 및 잘못된 option/command/support/
+zero-slip/integral 변조 rejection을 확인했다. Bilateral+support가 무지지 성공으로
+승격되지 않도록 failing formation evidence를 보존했다.
+Worker saved-only verification 둘 다 PASS(성공 trial을 뜻하지 않음).
+B signed contact+tangential+torsional wrench와 dynamics 최대 잔차
+force1.68e−15N / torque4.30e−17Nm. 비옵션 compiled fingerprint 전후 동일:
+1c9b054cb8113863c0923c089c01690c09f8650e11f7a8107524577f3f0f93b7.
+MuJoCo3.3.7/기존 Python3.12 venv, lib 및 model hash는 앞 기록과 동일.
+git diff --check PASS. Full local suites/render/remote CI는 요청에 따라 미실행.
+
+### Result
+
+A의 정상 CLOSE formation은 확인했으나 전체 protocol은 WITHDRAW fail-closed.
+B sensitivity 두 case 완료. Stable-grasp milestone 미달성, runtime adoption 없음.
+실제 arm task 실행0회: 마지막 GRASP_CONFIRM PASS / 기존 LIFT FAIL SIM17.474s,
+CENTER SUCCESS=false 보존. PR65 draft/base=main 갱신, main merge 없음.
+원본/scripts/verifiers와 slip plot은 기존 KIT validation/contact-candidates-20260918 보존.
+A rawSHA1c04d374ab8647d76b428e2ea836fa538a87ec57f9ce6e5b23cf22ef4e8dfad8;
+B10 aa4db2d49805fca01219ca1357db0a1b25efe46118074e382c36756616b04f48;
+B100 66aed4c3b879771eabefbf60fd74f5ecabba4f1b9c5b95fa95a87c394dd7ff91.
+
+### Lesson / Next — UNVERIFIED
+
+다음 blocker는 NoSlip 적용 시 TEST SUPPORT servo가 접촉 중 반등하는 원인과
+시험 fixture의 무가압 하향 철수 재현성이다. Gripper/controller/runtime를 바꾸기 전에
+fixture만의 정상적인 철수 절차를 검증해야 한다. 현재 checker를 완화하지 않았다.
+그 뒤 정상 OPEN부터 완전한 unsupported HOLD를 확인해야 NoSlip 채택을 검토할 수 있다.
+Impratio100의 남은 slip을 임의 tolerance로 안정이라고 선언하지 않는다.
+Arm IK/live teacher/HW/OS30A/multi-seed/ACT는 실행하지 않았다.
