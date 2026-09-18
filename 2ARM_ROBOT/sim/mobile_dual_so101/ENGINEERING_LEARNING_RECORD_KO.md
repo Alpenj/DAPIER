@@ -1162,3 +1162,29 @@ Staging30.378087mm는30mm 기준 대비.378087mm 여유의 단일 조건 결과�
   정상 종료exit0; 새 actual task 성공으로 세지 않는다.
 - 원격 전체 CI가 통과하기 전에는 merge하지 않는다. 이번 부분 진척 PR의
   CI/commit/merge SHA는 GitHub PR과 기존 Notion 학습 기록의 handoff에 연결한다.
+
+
+## 2026-09-18 REAL read-only RGB-D / shadow PREGRASP 준비
+
+record_id: DAPIER-2026-09-18-real-sensor-pregrasp-preparation
+
+### Problem / Evidence
+
+나는 OpenNI2 enumeration0을 처음 OS30A 부재로 해석했으나 사용자가 Astra없음/OS30A연결 및 OS30A=HP-ASC-H201을 확인해 정정했다. 첫 결과는 잘못 선택한 Orbbec SDK 경로의 비검출로 보존한다. 해당 USB 제품을 대조한 camera-only 취득으로 packed stereo1280×460×3 영상과 기존 eYs3D helper의 uint16mm640×460 거리값을 확보했다. 두 취득은 순차/미정합이므로 registered3D 관측으로 쓰지 않았다.
+
+실제 board는 marker 포함 ChArUco로 기존10×7/DICT_4X4_50 후보에서 left19markers/14corners, right10markers/6corners를 검출했다. 95mm는 nominal100mm 기준선 실측이지 square 크기가 아니다. .95는 한방향scale이며 nominal25mm→23.75mm는 같은도안/XY균일 조건의 추정이다. 사용자가 제공한 원본PDF의35marker/54corner IDs와layout은 기존도안과대응했다. Block제거후새영상left20markers/20corners. 이 초기시점에는 actualsquare/반대방향scale 확인이 남았고 이후 가로·세로5칸 실측 각각120mm로 최신24.0mm 후보를 얻었다. .95 기준선 추정과.96 다중칸 추정의 약1.05% 차이 및 측정 오차는 미해결이다.
+
+### Decision
+
+기존 calibrate_camera_images.py와 prepare_camera_board.py를 그대로 재사용하고 실제 대상과 다른 plaincheckerboard 확장은 제거했다. 최소 camera_board_transform helper만 추가했다. T_camera_from_board는 OpenCV pose이며 inverse와 별도실측 T_arm_from_board로 camera→board→arm을 chain한다. Frame/revision/measurement 누락은 거부하고 candidate_only/authorizationfalse를 유지한다. 모터 보정을 camera extrinsic으로 사용하지 않았다. SIM target/orientation/nominal40mm top을 대체하지 않았다. 개인영상/overlay/adapter/보정은 로컬에만 남겼다.
+
+### Validation / Result
+
+기존 RGB-D helper8PASS/.006s(MOCK), 기존ChArUco보정 selftest20syntheticviews/.358px 및95scale/negative회귀PASS, 새최소transform3PASS/.028s. R2 PARTIAL: camera영상/SDK원시거리/markeroverlay확보, pairedregistration·rectification/모드대응·distancevalidity미검증. Factoryread는preinitnull/zero였지만 동일기존depthstream init뒤CamMat/P/Q가반환됐다. Factorypacked2560×920→current1280×460 half-scale은미검증가설이며K미채택. RawZDtable buffer는0bytes. R3 BLOCKED: measuredboard→arm/verifiedextrinsic 없음. Actualtop/noncontactorientation/armmapping·q·path·clearance미검증. **armq/shadowPREGRASP미생성, motionapproval미요청, 모터/serialopen·snapshot·torque/register·hardwaremotion 없음.** Fullsuite/CI미실행.
+
+### Lesson / Next
+
+SDK family와 실제장치attribution을 분리해야 한다. OpenNI0은 다른vendor카메라부재의 증거가 아니다. Singleboardpose와multiviewintrinsics, camera→board와board→arm실측은 다른 단계다. 다음은 도안/여러square 실측 및XY scale, fixedconfiguration multiview, factoryrectification/depthprojection/registration, board→left_arm_base 실측과독립확인이다. 실제base revision과고정CADdatum을 bind해야 하며 tabletop/footcenter/shoulderaxis를armorigin으로추정하지 않는다. 모델foot-plane관계는실물extrinsic이 아니다. 이후 실제top위20mm shadow와calibratedorientation을 검증한다. 연구 REAL_PREGRASP_PREPARATION_KO.md에 재사용과측정경로를 정리했다. GitHub/Notion동기화는총괄검토뒤수행하며실물성공기록아니다.
+
+- 최신 실측 revision: 가로5칸=120mm, 세로5칸=120mm → square24.0mm 후보/XY scale.96. 이전100mm 기준선95mm/scale.95와 약1.05% 차이는 보존하며 오차 미정이다. 도구의 기준선 입력을 임의96mm로 바꾸지 않는다.
+- Read-only SDK mode DB/callback에서 depth-only640×460/15fps/index0 대응은 확인했다. UVC left640×460 crop의 raw/rectified·pixel-centre·K 대응은 확인되지 않아 half-scale K/PnP/arm pose를 생성하지 않았다. 다음 교정은 동일 영상 설정의 최소10 usable distinct ChArUco views와 명시적인24mm 후보 object points/provenance가 필요하다. Board→arm 고정 datum 측정은 별도다.
