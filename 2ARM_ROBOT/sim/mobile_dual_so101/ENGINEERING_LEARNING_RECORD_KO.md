@@ -2327,3 +2327,99 @@ Public compact fixture `test/fixtures/preclose_arm_lock.json` preserves negative
 No new grasp/solver/friction search or runtime change. Projection is a bounded causal diagnostic with a stated mechanical limitation, not task success.
 BASIC +20mm existing PASS and Monday utility frozen: REAL starts from fresh measured q and verified mapping, never SIM absolute q.
 Actual motor command **NOT RUN**; no device I/O. PR67 remains draft/base main; no new merge SHA.
+
+## 2026-09-20 — PRE-CLOSE pad geometry audit (PARTIAL)
+
+### Problem
+
+동일 A2 CLOSE의 pad2→pad1 정상력 발생 간격 .506s를 PRE-CLOSE geometry와 실제 jaw kinematics가 설명하는지 확인했다.
+시작 HEAD `ff1b085a62dbe97cafd08acee8deb04215b0ee7d`, branch `pro/arm-noslip-diagnostic-codex-20260918`, clean.
+Coordinator만 source를 수정하고, read-only agent는 compiled coupling/log availability를 확인했다. 새 mj_step, IK/search, hardware 접근0.
+
+### Evidence — source / compiled geometry
+
+A0: prescribed-support bench NoSlip5 성공 실행의 **첫 CLOSE(step251) 직전** `raw_qpos_pre_step`, t=.500s.
+RESET 전에 놓인 pose나 unsupported HOLD pose를 PRE-CLOSE로 오인하지 않았다.
+A2: 기존 audit의 `summary.json:preclose_state` mjSTATE_INTEGRATION, t=18.324s. CLOSE 9,696행에 motor와 두 passive jaw의 measured qpos/qvel이 모두 있다.
+A0/A2는 다른 model/context의 비교이며 새로운 controlled solver 비교가 아니다.
+
+Pad geoms는 MESH, block은 BOX(half-size20mm). 기존 supporting-face polygon을 현재 `mjModel.mesh_vert` 정점에 대응시킨 뒤 사용했다.
+Pad1/2 polygon은8/4 vertices. Supporting-plane grouping residual35.98/14.59nm는 기존100nm grouping precision 안이다.
+Raw STL, geom center를 접촉면으로 쓰지 않았다. World vertex=`geom_xmat @ compiled_mesh_vertex + geom_xpos`; body/mesh offset 중복 적용 없음.
+[MuJoCo3.3.7 mesh compiler frame 문서](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#asset-mesh)를 대조했다.
+Face vertices/centroid/normal/tangents 및 양쪽 block face center/outward normal은 compact fixture에 보존했다.
+여기서 usable face는 현재 **compiled convex distal collision proxy**의 면이며, 실제 고무 압력 patch/model fidelity 검증이 아니다.
+
+### Decision — sign / overlap / prediction
+
+Block local ±X face의 **outward** normal로 양쪽 모두 gap>0=분리,0=접촉,음수=plane 침범이다.
+Pad inward normal과 반대 block outward normal의 각도를 보고한다.
+기존 bench rectangle half-plane clip4개를 재사용해 block face Y/Z bounds와 pad projection의 교집합을 계산했다.
+겹침이 없으면 effective gap=None. 겹친 polygon의 최소 gap을 쓰며 mean이나 bounds 안의 단일 vertex로 접촉을 판정하지 않는다.
+Mean은 전체 face boundary vertex의 산술평균이고 pressure-weighted centroid가 아니다.
+
+| PRE-CLOSE metric | A0 successful bench | A2 mapped arm |
+|---|---:|---:|
+| pad1 effective min / mean / max gap (mm) | 5.514048 / 5.514055 / 5.514068 | 5.629940 / 5.675393 / 5.699332 |
+| pad2 effective min / mean / max gap (mm) | 5.514047 / 5.514058 / 5.514066 | 5.328634 / 5.363327 / 5.398026 |
+| pad1−pad2 effective min difference (mm) | .000000531 | .301306312 |
+| pad1 / pad2 wedge (mm) | .00002030 / .00001890 | .06939243 / .06939227 |
+| pad1 / pad2 normal misalignment (deg) | .00005471 / .00001686 | .15908597 / .15903841 |
+| projected overlap | both yes | both yes |
+| overlap Y×Z extent, pad1 (mm) | 34.980217×25.000004 | 34.980109×25.066555 |
+| overlap Y×Z extent, pad2 (mm) | 34.980232×25.000004 | 34.980124×25.066555 |
+| jaw opening (mm) | 51.028095 | 51.028095 |
+
+Jaw opening이 같아도 각 pad/block 상대면 gap과 wedge는 같지 않다.
+
+### Validation — ANALYTIC / KINEMATIC DIAGNOSTIC
+
+`mj_kinematics()`만 사용했다. 두 measured passive slide q(t)를 독립적으로 대입하고 arm/block은 PRE-CLOSE에 고정했다.
+Motor command만으로 ideal equality를 강제하거나 constant velocity/endpoint interpolation을 만들지 않았다.
+Zero crossing은 overlap 안의 g가 positive→nonpositive인 첫 sample bracket이다. 기존±100nm 면 grouping precision의 onset band도 별도 보존했다.
+
+| Onset, PRE-CLOSE 이후(s) | pad1 | pad2 | pad1−pad2 |
+|---|---:|---:|---:|
+| fixed PRE-CLOSE + recorded jaws prediction | CLOSE 끝19.392s까지 없음 | 18.794 (bracket18.792–18.794) | **> .598s, right-censored** |
+| recorded full poses의 geometry 재계산 | 19.302 | 18.784 | .518 |
+| 기존 native geometric contact | 19.302 | 18.784 | .518 |
+| 기존 positive normal force | 19.302 | 18.796 | .506 |
+
+고정 geometry의 pad2 onset precision band는18.794–18.796s이고 pad1은±100nm에서도 crossing 없음.
+종료 시 predicted pad1 gap은 여전히+.143333mm. 미래 onset을 extrapolate하거나 임의 숫자로 채우지 않았다.
+실제 전체 pose 재계산의 두 onset이 native contact와 sample 단위로 일치하여 compiled frame/overlap 해석을 교차검증했다.
+Stored measured jaw trajectories는 접촉 후의 constraint response도 포함하므로 독립적인 contact-free causal prediction이 아니다.
+
+### Evidence — block motion / compiled coupling
+
+같은 recorded jaw+arm pose에서 **실제 block pose vs PRE-CLOSE block pose**만 비교했다.
+두 번째 접촉(step9651)에서 pad1 actual gap−.000772mm vs frozen-block+.125670mm:
+블록 움직임의 기여는 **−.126441mm**로 반대 finger의 gap을 줄인다.
+Pad2는−.003226mm vs−.129631mm, 기여 **+.126405mm**. 따라서 이 trace에서 블록 움직임은 두 번째 접촉을 가능하게/앞당기는 방향이다.
+이는 world−X 부호 해석이 아니라 직접 계산한 상대 gap 비교다. Table friction 원인 확정은 하지 않았다.
+
+Compiled actuator5→`left_gripper` hinge(qpos/dof5), joint transmission/gear1; 두 passive slide qpos/dof6,7.
+`left_pgripper_jaw_1/2_coupling`은 active `mjEQ_JOINT`, driver qpos0=2.2028rad, displacement coefficient −.0115/+ .0115m/rad.
+Equality solref [.004,1], solimp [.99,.99,.001,.5,2]. ntendon=0, passive jaws에 독립 actuator 없음.
+실제 equality 존재는 확인했지만 이번 결과만으로 'mimic softness'를 실패 원인으로 기록하지 않는다.
+
+### Result — PARTIAL / INFERENCE
+
+Initial effective gap 비대칭과 jaw kinematics는 **pad2 first-contact 순서와 큰 비대칭 경향**을 설명한다.
+하지만 fixed-block prediction은 pad1 onset 자체가 없으므로 .506s라는 finite force lag를 단독 재현하지 못한다.
+실제 block response를 포함하면 geometric lag .518s가 맞으며 force lag와12ms 차이는 force/geometry 관측 정의를 구분한다.
+**PARTIAL**: symmetric static prediction인 NO도, delay 전체를 독립적으로 설명한 YES도 아니다.
+다음 확인점은 A2 mapping/실제 PRE-CLOSE가 만든 .301306mm effective-gap 비대칭 및 접촉 중 block/jaw response이다.
+이번 턴은 여기서 종료. 새 physics/friction/table replacement/solver sweep으로 확장하지 않는다.
+
+### Validation / Lesson / Handoff
+
+Geometry focused4 + 기존 contact/audit7 = **11 PASS**. No-overlap rejection, vertex가 모두 밖인 enclosing overlap,
+overlap 밖 wedge minimum 배제, mirrored signed gap, touching/penetration, recorded native onset 일치, positive-force 구분을 검증했다.
+소스 AST에서 mj_step/mj_forward call 없음 확인. `git diff --check` PASS. Full suite/remote CI/main merge 없음.
+A0/A2 face diagram, min/mean/max/wedge/overlap table, predicted/observed timing plot을 생성했다.
+Downloads `DAPIER-preclose-geometry-20260920/report.html` 전용 Firefox 창 제목을 확인했다.
+원본/plot script/face definitions/reproduction source/hash는 기존 KIT의 `local-validation/integration-task-20260916-aeg3vtmi/preclose-geometry-20260920`에 보존.
+`preclose_geometry_audit.py --help`의 명시적 saved model/trace/face inputs로 재현한다. Raw measurements/private calibration/device ID는 공개하지 않았다.
+Actual teacher GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false 상태는 불변. BASIC+20mm/Monday utility 동결, actual motor command=NOT RUN.
+PR67 draft/base main 유지; 새 merge SHA 없음. SIM analytic evidence를 real/task success로 승격하지 않는다.
