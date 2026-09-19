@@ -2088,3 +2088,138 @@ python basic_vertical_motion.py --viewer --report /tmp/dapier-basic-vertical.jso
 거의 같은 rigid pose와 source contact를 운반한 점은 native solver contact의 동일성을 보장하지 않는다. 다음은 접촉면/형성 이력을 통제한 원인 분리이며 이번 결과로 성공이라고 쓰지 않는다.
 
 REAL extrinsic은 UNVERIFIED / BLOCKED BY DATUM METHOD. 새 측정 없이 원값 보존. BASIC에는 카메라가 필요 없지만 현재 실물 q 및 SIM↔REAL joint zero/sign/pose 대응은 아직 없다. 월요일 fresh readback→해당 실제 pose 기준 SIM 매핑/경로 검증→LEFT q/profile 제시→사용자 승인 순서다. 과거 start-pose나 위 SIM 절대 q를 현재 실물 q로 사용하지 않는다.
+
+## 2026-09-19 — Four-state provenance / one controlled CLOSE A/B / Monday BASIC audit
+
+### Problem
+
+.017 / 4.924 / 25.158 / 31.058mm는 서로 다른 실행/phase의 수치다. 개선 후보의 runtime 채택 여부,
+metric frame/force timing, NoSlip의 formation 기여를 분리했다. 새 grasp/solver sweep, LIFT, 실기 명령은 없다.
+SIM writer 시작 HEAD=8b973dada6d567e36d90be62bde987f4291b1183, branch=pro/arm-noslip-diagnostic-codex-20260918.
+시작 dirty 없음. 기존 다른 worktree/fixtures 및 REAL_SCENE_GEOMETRY_AUDIT.md 보존.
+
+### Evidence — provenance
+
+검색 범위는 현재 PR67/학습 기록/PR65 계열 diagnostic/명시된 merge만 사용했다.
+**PR63 merge=1c646eac01f14011d01899c2a2f65175be6d2449; PR64 merge=7ff415a707e3ea2c4e5e34452a61dab9a9dafdfb.**
+7ff415a를 PR65라고 부르지 않는다. 아래 미확정 필드는 `PROVENANCE PARTIALLY UNRESOLVED`로 남기며 전체 history 검색하지 않는다.
+
+| 항목 | A0 bench | A1 historical +X | A2 mapped reference | A3 baseline arm |
+|---|---|---|---|---|
+| source/record | prescribed-support-20260918/noslip5.json; 8b973da의 reference record, 원 실행 commit 일부 미확정 | physics baseline 7ff415a(PR64); record/negative fixture commit c44d2c9dafc3cccaa088a33436750c4ff3c4bb56 | physics source 8027acf; record/source handoff 8b973da | donor provenance acf47cfed3bae34eba1146b7e39434bdd658ed67 |
+| fixture/script | prescribed-bench.mjb / normal-formation saved rows | grasp-families-20260918/C/vertical-proposal.json, representative-replay.json, write_vertical_report.py; grasp_wrench.json vertical_X_plus_hold50 | success-grasp-mapping-20260918/{physics.py,continue_physics.py,physics.json,physics-continuation.json} | lift transition donor states B_confirm / grasp_quality; grasp_wrench.json B_confirm |
+| model | arm-free PGripper bench + TEST SUPPORT; separate model | integration_desk, MJB 8f486c9a… | identical original integration_desk MJB 8f486c9a… | integration_desk donor; original compiled identity/provenance preserved |
+| block initial | supported bench at nominal (0,0,.100)m | settled center (.200,0,.020)m; donor prefix initial saved in approach preflight | copied nominal (.200,0,.020)m reset before APPROACH | original settled center; exact initial/pre-CLOSE snapshot unresolved in bound |
+| block just before CLOSE | (0,0,.099996977)m | (.200,0,.019997977)m | (.200,0,.019997977)m | UNRESOLVED; no estimate substituted |
+| TCP just before CLOSE (m) | (~0,~0,.098739377) | (.199657177,.000267480,.018519520) | (.199849291,-.000074889,.018570197) | UNRESOLVED |
+| approach / closing | block -Z / +X | nominal -Z / +X; actual below | nominal bench -Z / +X; actual below | tilted ~7.2493deg, azimuth337.5; legacy candidate |
+| pre-CLOSE jaw opening | 51.028095mm | 51.028095mm | 51.028095mm | raw source remains, pre-CLOSE value unresolved |
+| CLOSE profile | normal OPEN, CLOSE49 then CONFIRM and support withdrawal | existing septic .01rad schedule, .1s minimum per stage, bilateral CLOSE22, CONFIRM50 + HOLD50 | same generator, bilateral CLOSE48, CONFIRM50 | existing arm teacher CLOSE16 + CONFIRM50 |
+| terminal gripper command | ~1.714221rad | 1.983313814rad | 1.724187386rad | ~2.043112221rad |
+| NoSlip | 5 throughout formation/HOLD | 0 | 0 historical | 0 original formation; later NoSlip5 copied LIFT is different experiment |
+| support at compared state | support contact/force0, unsupported3s | table support remains | table support remains | table support remains |
+| status | gripper-only actual ctrl+step, diagnostic | copied actual ctrl+step; NOT adopted | copied actual ctrl+step; NOT adopted | original actual teacher GRASP_CONFIRM PASS/LIFT FAIL |
+| old metric | block-frame point height | world-Z point height | block-frame point height | world-Z point height |
+
+A1 raw SHA256=666430b2b6a2a819a45c5ff7eabc82e5c9118037ce1c4cc8a6b5aa8663647e6a.
+A1 was never adopted into teacher/runtime. A1 and A2 share the nominal +X closing / downward family,
+but do not have identical transforms, jaw command, initial branch or phase. **No demonstrated 31mm regression.**
+All exact raw hashes/complete contacts/pre-CLOSE q/FK/model hash available in `test/fixtures/contact_audit.json` and local archive.
+
+A1 measured pre-CLOSE approach=(.01407745,-.01133731,-.99983663), closing=(.98511799,-.17115067,.01581092).
+A2 measured pre-CLOSE approach=(-.002775646,-.002485349,-.999993059), closing=(.999996148,-.000007116,-.002775637).
+Near-reference nominal IK .159mm/.210deg/.116deg is evidence against this particular pose being simply unreachable;
+it does not prove arbitrary 6DoF reachability. No new IK search performed.
+
+### Evidence — metric normalization
+
+**NATIVE CONTACT POINT METRIC:** first native contact per pad height, retained in both world-Z and block-COM frame.
+**GEOMETRIC CONTACT/SURFACE METRIC:** separate saved pad polygon margins; no native point interpreted as pressure patch.
+**NET WRENCH METRIC:** all native pad/block contacts, summed Fn, Fn-weighted centroid, F=sum(f), tau=sum(r cross f).
+Contact-frame intrinsic torque is separately retained; full constraint torque=tau+intrinsic.
+MuJoCo contact frame axes are rows; world wrench uses its transpose and the geom1/geom2 sign.
+[MuJoCo3.3.7 contact API](https://mujoco.readthedocs.io/en/3.3.7/programming/simulation.html#contacts).
+
+| State | phase / SIM time(s) | world height(mm) | block height(mm) | summed Fn pad1/pad2(N) | pad Fz(N) | table Fn(N) |
+|---|---|---:|---:|---:|---:|---:|
+| A0 | UNSUPPORTED_HOLD / 23.412000 | 0.017180 | 0.017130 | 0.481446 / 0.481445 | +0.196200000 | 0.000000000 |
+| A1 | HOLD / 20.010000 | 4.923809 | 4.923540 | 0.019770 / 0.023094 | -0.000388594 | 0.196588585 |
+| A2 | GRASP_CONFIRM / 37.816000 | 25.160512 | 25.158028 | 0.102269 / 0.116904 | -0.003259948 | 0.199455962 |
+| A3 | GRASP_CONFIRM / 17.472000 | 31.057826 | 31.054976 | 0.070893 / 0.072187 | +0.000459441 | 0.195740710 |
+
+All four comparison snapshots contain one native contact per pad. This is an observed count, not an assumption of the metric function.
+A0 uses saved pre-integration contact solve and matching COM/rotation. A1/A2 use existing integrated-state mj_forward observation.
+A3 force vector uses original saved wrench plus existing fixture frame: contact point and Fn matched exactly before combining.
+No forces were regenerated at an arbitrary later qpos. PRE-CLOSE FK is **ANALYTIC / DIAGNOSTIC ONLY**.
+A0 pad Fz equals block weight .1962N and full COM torque is ~3.3e-15Nm.
+A1 and A2 have downward pad resultant while table supports the weight; A3 pad Fz is only .00045944N.
+Smaller height mismatch alone is not a load-bearing criterion; wrench evidence does not rank A1 as successful.
+
+### Decision — exactly one controlled experiment
+
+Freeze historical A2 PRE-CLOSE mjSTATE_INTEGRATION including time/qpos/qvel/ctrl/passive jaws/warmstart.
+Load original MJB separately for each case; assert all model arrays equal. Only option difference noslip_iterations=0/5.
+Replay identical fixed48 CLOSE commands (.01rad schedule with existing motion limits), at most50 CONFIRM steps.
+Existing .5mm/2deg/15deg acceptance and collision/joint/penetration gates remain. No adaptive search or new force threshold.
+
+### Validation / Result — VERIFIED BY PHYSICS, DIAGNOSTIC COPY
+
+Both cases have exact initial full-state and identical command/time/stage for all **9697 common steps**.
+NoSlip0: 9746 steps, CONFIRM50 PASS; first force step9398, first bilateral9651.
+NoSlip5: 9697 steps; first force9397, no bilateral at any step; first CONFIRM rejected.
+At same terminal CLOSE48: Fn0=.087011/.130919N; Fn5=0/.334592N.
+NoSlip0 CONFIRM end reproduces A2 block-frame height25.158028mm and Fn .102269/.116904N.
+NoSlip5 first CONFIRM: only pad2 contact, Fn .338381N, F=(-.338379,.003556,-.022968)N.
+Height mismatch is **undefined with missing opposing contact**, never reported as zero/improvement.
+Maximum block contact penetration: 3.745381um (0), 17.559815um (5); both below existing1mm.
+Warnings0. No LIFT, runtime adoption, new sweep or live teacher execution.
+Full command hashes differ only because fail-closed stops case5 early; compare common prefix, not unequal-length hashes.
+Conclusion: **NoSlip changes CLOSE formation in this specific state; cannot exclude it as a contributor.**
+It does not establish that NoSlip alone explains every historical geometry mismatch or reproduces the successful bench.
+
+### Evidence — BASIC 0.631 -> 0.401mm
+
+Classification **A: planning refinement using SIM-observed reserve**, not Cartesian empirical compensation.
+Same settled start, start/target XYZ, controller/profile, solver and .020m upward delta verified from both saved reports.
+Old IK default position tolerance .0005m -> internal (.0005 - .0003465963856126189)=.00015340361438738112m.
+Maximum iterations remains300; actual convergence3 ->5; planned position error .415475 -> .085025mm.
+Measured endpoint .630641990 -> .400950417mm. Target q changes; same motion-limit generator automatically changes
+nominal duration .977269138 ->1.026733576s. Therefore these two executions are not identical-time trajectories.
+No target XYZ offset, no controller gain/timing override. Acceptance .5mm/2deg unchanged.
+First version was uncommitted within the earlier turn; do not invent a separate baseline commit. New source committed8b973da.
+The reserve is learned from this SIM run, not evidence of REAL robustness; SIM absolute q is not copied to REAL.
+
+### Focused validation
+
+Common contact metric synthetic tests (frame sign, multi-contact sum, r cross f vs intrinsic torque, NaN) and saved four-state/A-B regressions PASS.
+Existing manipulation policy7 tests PASS: wrong-phase, unrelated30mm, touching/depth/changedgeometry rejection.
+REAL offline readiness2 and existing transform3 PASS in separate PR66 writer.
+Initial collision-test invocation from repository root failed import resolution; rerun from the existing SIM module working directory passed.
+No code/environment workaround, full suite or remote CI performed. git diff --check recorded at handoff.
+
+### Lesson / Next
+
+Answering the five audit questions is complete. Current blocker is contact formation/relative motion sensitivity;
+no new grasp or solver search is authorized by this result. Teacher stays GRASP_CONFIRM PASS/LIFT FAIL/CENTER SUCCESS=false.
+Monday REAL remains no-motion: exact current encoder values/order/profile can be reported offline from an attended read-only snapshot,
+but physical sign/mechanical-zero mapping is UNVERIFIED, so model FK/IK target is refused. Camera extrinsic is independently blocked.
+No new watchdog/power/torque settings added. Existing manual teleop profile is not silently treated as a Cartesian hardware executor.
+
+### Reproduction / visible results
+
+From this SIM directory, existing interpreter:
+
+```bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python controlled_contact_audit.py --replay /tmp/dapier-controlled-audit-20260919/ab --model /tmp/dapier-arm-noslip-20260918/original-model.mjb
+```
+
+One viewer alternates saved CLOSE0/5, contacts red/yellow, forces/net torque; label `DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS`.
+It is recorded ctrl+step playback, not a new physics run or live state. X11 window creation confirmed.
+Existing BASIC actual SIM command (not rerun during this audit):
+
+```bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python basic_vertical_motion.py --viewer --report /tmp/basic-monday-review.json
+```
+
+Raw replay/results/executed-script hash preserved in local-validation/controlled-audit-20260919.
+PR67 remains draft; no milestone/full CI/main merge. Only coordinator-owned audit source/fixture/record changes committed.
