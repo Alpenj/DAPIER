@@ -1360,3 +1360,80 @@ Extrinsic은 **UNVERIFIED / BLOCKED BY DATUM METHOD**로 보존한다. 동일평
 
 ### Lesson / Next
 월요일 current readback을 현재 calibration에 연결하고 그 실제 시작자세에서 +20mm를 검증한다. LEFT start/target/return q와 profile/clearance를 사용자에게 보여준 뒤 승인받는다. 새 보호 한계를 모터에 쓰거나 watchdog을 선행조건으로 추가하지 않는다.
+
+## 2026-09-19 — Monday BASIC read-only contract audit
+
+### Problem
+
+REAL current pose cannot be replaced with SIM q=[0,0,0,0,0], and endpoint improvement in SIM is not a hardware offset.
+This turn opens no serial device, sends no motor command and performs no extrinsic measurement.
+Writer starts at74bf2687d3d6d3981626f96a4777011099e4dbb2, pro/real-sensor-pregrasp-codex-20260918; clean start.
+
+### Evidence
+
+**VERIFIED BY SOURCE AUDIT:** existing dual_so101_smoke supports only attended --move-deg0 read-only snapshot.
+Its snapshot preserves six raw Present_Position values, LEFT/right identity verification and health.
+Joint order: shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper; motor IDs1..6.
+Existing calibration gives raw range, drive_mode and captured homing_offset. These do not prove MJCF mechanical zero/sign.
+Current hardware_profile declares joint_axis_direction_status=pending_physical_validation and
+kinematic_zero_status=device_offsets_captured_not_motion_validated.
+
+Existing installed parallel-gripper profile parameters:30Hz / arm maximum-step35ticks / keep-motion-settings=true.
+These are reported existing values, not newly imposed motion limits. The saved profile was validated on RIGHT;
+its LEFT reuse note explicitly requires independent LEFT calibration and retaining motor protections.
+Current teleop is per-cycle raw goal/rate limiting initialized from measured position, not a Cartesian/septic hardware executor.
+Old commissioning20Hz/8s right-arm examples are not a verified LEFT motion contract.
+
+SIM audit PR67 establishes **A_PLANNING_REFINEMENT_WITH_SIM_OBSERVED_RESERVE** for .630642->.400950mm.
+Same target XYZ=current settled TCP+[0,0,.020]m; internal IK tolerance .5->.153404mm, actual iterations3->5.
+Same profile generator yields changed duration .977269->1.026734s because target q changed.
+No empirical Cartesian target offset. Neither absolute SIM q nor its SIM-derived reserve is evidence of REAL accuracy.
+
+### Decision
+
+Reuse existing read-only reader; add only offline basic_motion_readiness inspection of its saved JSON, calibration and profile.
+Output raw current_measured_q in ticks, named order, units, drive_mode/range/recorded offset and existing update semantics.
+Do not clamp raw measurements. Without verified physical model zero/sign, return target_q=null and
+BLOCKED_REAL_TO_MODEL_SIGN_ZERO. Camera extrinsic and a new watchdog are not prerequisites to this report.
+No new hardware dispatcher, power settings or calibration framework added.
+
+### Validation
+
+**VERIFIED BY REGRESSION:** offline readiness2 tests and existing camera_board_transform3 tests PASS.
+Missing/wrong-role snapshot and NaN/Inf/out-of-encoder-range readings rejected; raw valid readings preserved;
+unverified snapshot never yields target/authorization. No SDK/device import or hardware connection.
+Diff check recorded at handoff. Full suite/remote CI/main merge not run in this iteration.
+
+### Result
+
+Offline read-only reporting utility ready. **Fresh REAL measured q, mechanical sign/zero mapping, FK/IK target and actual motion remain UNVERIFIED / NOT RUN.**
+It is not yet a motion-ready trajectory. A validated model mapping cannot be inferred from encoder endpoint normalization.
+At attended Monday session: fresh reader snapshot -> verify LEFT joint direction/zero/order -> current mapped q -> FK -> base +Z20mm
+-> existing IK -> inspect the existing bounded profile/direction -> one explicit user approval before any actual motor command.
+Existing reader is strictly read-only; it is not a motion command and will reject nonzero --move-deg.
+No watchdog requirement is added by this new utility; old reader's unrelated motion-rejection message is not a new prerequisite.
+
+### Lesson / Next
+
+Keep encoder calibration, mechanical/model calibration and Cartesian execution validation separate.
+Extrinsic remains UNVERIFIED / BLOCKED BY DATUM METHOD; raw3.25, approximate59.78, B-D56.01 vsCAD61.16,
+A-B33.77 vsCAD34.39mm remain unchanged. No repeated A-D measurement.
+No hardware/OS30A/ACT/multi-seed/live execution this turn. PR66 remains draft, independent of PR67.
+
+### Monday commands (NOT executed on hardware this turn)
+
+From the REAL writer root, current interpreter:
+
+```bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python 2ARM_ROBOT/scripts/dual_so101_smoke --profile "$HOME/.config/dapier/dual-so101-profile.json" --move-deg 0 --operator-present --confirm VISIBLE_DUAL_SO101_READONLY --log /tmp/monday-left-readonly.json
+```
+
+This existing reader opens the profiled devices for read-only measurement in an interactive attended TTY.
+Then inspect the saved snapshot offline; use the exact LEFT calibration file referenced by that private profile:
+
+```bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python 2ARM_ROBOT/research/src/dapier_research/basic_motion_readiness.py --snapshot /tmp/monday-left-readonly.json --calibration /path/from/private-profile/left-calibration.json --settings /home/dapier-jhj/DAPIER/2ARM_ROBOT/recording/config/teleop/parallel-gripper-20260909/settings.json --output /tmp/monday-left-readiness.json
+```
+
+The calibration path is deliberately not guessed or committed. Output paths must be new. Snapshot freshness and calibration/profile binding
+must be confirmed from that attended acquisition; offline JSON alone does not authenticate a connected endpoint or prove freshness.
