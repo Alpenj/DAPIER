@@ -2223,3 +2223,107 @@ env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/d
 
 Raw replay/results/executed-script hash preserved in local-validation/controlled-audit-20260919.
 PR67 remains draft; no milestone/full CI/main merge. Only coordinator-owned audit source/fixture/record changes committed.
+
+## 2026-09-19→20 — Single PRE-CLOSE arm-lock branching experiment
+
+### Problem
+
+동일 A2 mapped PRE-CLOSE에서 팔 움직임을 제거하면 약한 CLOSE formation이 회복되는지만 검사했다.
+Writer branch `pro/arm-noslip-diagnostic-codex-20260918`, 시작 HEAD `fc3e92408c9277e28444947a8f319cd48820fa4a`, 시작 clean.
+기존 다른 worktree/REAL readiness 및 calibration은 변경하지 않았다.
+
+### Evidence — duplicate check / controlled input
+
+기존 `8027acf`의 arm-coupling 실험은 **GRASP_CONFIRM 이후** NoSlip5 terminal HOLD50 / finite-stiffness joint-equality HOLD50이다.
+현재 A2 PRE-CLOSE/NoSlip0에서 CLOSE formation 전체를 잠근 기록은 없었다. 제한된 현재 기록과 해당 diagnostic만 확인했고 Git 전체 history를 검색하지 않았다.
+따라서 새 **locked CLOSE 한 번**만 실행. 정상-arm은 `fc3e924` audit의 저장된 NoSlip0 CLOSE48을 재사용했다.
+원본 모델 SHA256 `8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9`, MuJoCo3.3.7, integration_desk.
+
+두 case의 원본 PRE-CLOSE mjSTATE_INTEGRATION(qpos/qvel/ctrl/passive jaw/warmstart/time 포함)이 exact 동일하다.
+모든 compiled arrays/options 동일; NoSlip0. 9,696 step의 command/time/stage가 **전부 exact 동일**하다.
+CLOSE48, 19.392s만 비교하며 새 CONFIRM/HOLD/LIFT는 실행하지 않았다.
+
+### Decision — explicit diagnostic intervention
+
+`KINEMATIC LOCK DIAGNOSTIC / NOT NORMAL TASK PHYSICS`:
+왼팔 pan/lift/elbow/wrist-flex/roll의 qpos를 PRE-CLOSE 값으로, qvel을0으로 **각 mj_step 전/후** projection.
+그리퍼·passive jaw·블록·다른 팔은 overwrite하지 않는다. 기존 command/controller와 runtime safety gates는 그대로다.
+한 번 qvel=0으로 두는 방식이 아니며, 9,696개 저장 sample에서 다섯 arm q/qvel과 TCP가 정확히 고정됨을 확인했다.
+**한계:** sampled-state kinematic intervention이며, within-step solve에서 arm inertia를 제거한 rigid-body constraint 실험은 아니다.
+Projection에 의한 반력/에너지 교환도 실제 fixture로 계측한 값이 아니다. 원인 완전 배제나 task success로 승격하지 않는다.
+
+### Validation / Result — DIAGNOSTIC PHYSICS, CASE B
+
+| CLOSE48 끝 / 전체 CLOSE metric | normal arm | projected arm lock |
+|---|---:|---:|
+| pad1 / pad2 summed Fn (N) | .087011 / .130919 | .098341 / .122856 |
+| bilateral native contact / positive Fn | yes | yes |
+| jaw measured q (rad) | 1.724190580628 | 1.724190581984 |
+| jaw command (rad) | 1.724187386265 | 1.724187386265 |
+| jaw opening (mm) | 40.063236 | 40.063257 |
+| block ΔXYZ (mm) | −.142422 / −.000226 / −.000068 | −.147726 / −.000246 / −.000045 |
+| block total rotation (rad) | .000049259 | .000056893 |
+| maximum block contact penetration (µm) | 3.745381 | 4.212914 |
+| maximum TCP displacement (mm) | .009548 | 0 |
+| native representative world-Z height (mm) | 25.160259 | 25.160458 |
+| terminal table normal resultant (N) | .202806 | .200719 |
+| warnings | 0 | 0 |
+
+Normal arm per-joint maximum displacement (rad):
+`[2.459203e-5,1.655899e-5,1.563738e-5,3.040296e-5,1.273545e-7]`; locked all0.
+Fn sum changes only about1.50%; bench ~.48N per finger is not restored. Bench is separate geometry/history/NoSlip5 context, not the controlled comparator.
+Existing acceptance/path/collision/penetration guards passed; no new safety threshold was introduced.
+**Answer: NO substantial recovery.** Lower CLOSE arm motion/yielding as the main-cause hypothesis for this state; do not exonerate all arm-mounted geometry/dynamics.
+
+### Evidence — CASE B only, saved first-contact trace
+
+No new physics. All times below are relative to the same PRE-CLOSE start; sampled at2ms using existing integrated-state `mj_forward` force observation.
+Pad1/pad2 are two fingers of the LEFT gripper, not left/right robot arms.
+
+| Event | normal | locked |
+|---|---:|---:|
+| first geometric pad2 / pad1 step | 9392 / 9651 | 9394 / 9652 |
+| geometric-contact lag (s) | .518 | .516 |
+| first positive Fn pad2 / pad1 step | 9398 / 9651 | 9399 / 9652 |
+| first positive Fn pad2 / pad1 time (s) | 18.796 / 19.302 | 18.798 / 19.304 |
+| positive-force lag (s) | .506 | .506 |
+| block X at second-finger force onset (mm) | −.126544 | −.134933 |
+| terminal yaw change (rad) | +9.767115e-6 | −5.808300e-6 |
+| max table tangential resultant norm (N) | .150437 | .165347 |
+
+Chronology: pad2 geometric contact → sampled unilateral force + table tangential reaction → gradual block −X displacement → pad1 contact → weak bilateral CLOSE end.
+Table +X reaction just before opposite contact is .136441/.143613N, opposing the first pad's −X push. Table normal support persists.
+Jaw tracks the same closing schedule: first force q≈1.73862/1.73852rad, qvel≈−.05378/−.05362rad/s; terminal error≈3.194e-6rad, terminal qvel≈9.23e-5rad/s.
+Native geometric contact and load-bearing force onset are explicitly distinct. Integrated-state force samples are not a reconstruction of every within-step constraint impulse.
+**INFERENCE:** contact formation with table-supported translation is the next branch. This chronology does not prove table friction causes the weak grasp; being below a friction limit would not rule out static friction either. No coefficient change performed.
+
+### Evidence — ANALYTIC error projection
+
+Saved planned `e=FK(q_target)−desired` (world mm): `[-.0562612,−.1481870,+.0008876]`, norm .1585102mm.
+Projection on target orthonormal axes (mm): closing **−.0562634**, approach **−.0008875**, remaining **−.1481861**.
+These are planned FK values, not actual measured PRE-CLOSE error or a contact-time prediction. The .159mm norm is not one finger's contact lead.
+
+### Validation / visible evidence
+
+Focused audit/lock7 + existing manipulation policy7 = **14 PASS**; full raw command/state/options/projection comparison assertions PASS; `git diff --check` PASS.
+Initial pytest invocation was blocked by unrelated ROS auto-plugin `lark` import; canonical existing unittest execution passed without dependencies/environment changes.
+No full suite/remote CI/main merge. Runtime teacher remains GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false.
+Single MuJoCo window alternates saved normal/locked CLOSE46–48 every8s, marks contacts and displays recorded force/wrench; replay is not new physics.
+
+```bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+  2ARM_ROBOT/sim/mobile_dual_so101/controlled_contact_audit.py \
+  --replay /tmp/dapier-preclose-arm-lock-20260919 \
+  --baseline /tmp/dapier-controlled-audit-20260919/ab \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb
+```
+
+Run from this writer root. Long-term raw/script/hash archive: existing local KIT's `local-validation/integration-task-20260916-aeg3vtmi/preclose-arm-lock-20260919`; previous controlled-audit archive supplies baseline/model/inputs.
+Public compact fixture `test/fixtures/preclose_arm_lock.json` preserves negative result, final native contacts and minimal first-contact events. No private calibration/device IDs added.
+
+### Lesson / Next
+
+**Next blocker: contact formation / table interaction**, not new arm/controller tuning. Stop after this CASE B trace.
+No new grasp/solver/friction search or runtime change. Projection is a bounded causal diagnostic with a stated mechanical limitation, not task success.
+BASIC +20mm existing PASS and Monday utility frozen: REAL starts from fresh measured q and verified mapping, never SIM absolute q.
+Actual motor command **NOT RUN**; no device I/O. PR67 remains draft/base main; no new merge SHA.

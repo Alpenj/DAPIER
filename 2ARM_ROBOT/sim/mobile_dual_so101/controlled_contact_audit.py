@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One copied PRE-CLOSE NoSlip 0/5 comparison; no live teacher or hardware."""
+"""Bounded PRE-CLOSE diagnostics and recorded replay; no live task or hardware."""
 import argparse
 import hashlib
 import json
@@ -17,6 +17,17 @@ from waypoint_block_teacher import WaypointBlockTeacher
 
 MODE = "DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS"
 PADS = ("left_pgripper_pad_1", "left_pgripper_pad_2")
+LOCK_MODE = "KINEMATIC LOCK DIAGNOSTIC / NOT NORMAL TASK PHYSICS"
+
+
+def locked_step(model, data, q_reference, q_addresses, v_addresses, physics_step):
+    # Project only the arm at step boundaries; jaws/block keep their physical state.
+    # This nonphysical intervention is not a rigid constraint or task execution.
+    data.qpos[q_addresses] = q_reference
+    data.qvel[v_addresses] = 0
+    physics_step(model, data)
+    data.qpos[q_addresses] = q_reference
+    data.qvel[v_addresses] = 0
 
 
 def contact_metrics(contacts, com, rotation):
@@ -92,9 +103,9 @@ def array_hashes(model):
             if not n.startswith("_") and isinstance(getattr(model,n),np.ndarray)}
 
 
-def run(source_path, continuation_path, model_path, donor_path, output):
+def run(source_path, continuation_path, model_path, donor_path, output, *, arm_lock=False):
     if output.exists():
-        raise FileExistsError("Preserve the one controlled A/B: output already exists")
+        raise FileExistsError("Preserve diagnostic evidence: output already exists")
     source=json.loads(source_path.read_text());cont=json.loads(continuation_path.read_text())
     donor=json.loads(donor_path.read_text());state=np.asarray(source["approach_terminal_state"])
     candidate=source["candidate_kinematic"]
@@ -105,11 +116,11 @@ def run(source_path, continuation_path, model_path, donor_path, output):
         source_hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest()
                        for p in (source_path,continuation_path,model_path,donor_path,Path(__file__))},
         preclose_state=state.tolist(),state_spec="mjSTATE_INTEGRATION",close_stages=close_stages,
-        protocol="same frozen 48 CLOSE stages + 50 CONFIRM steps; only noslip_iterations changes",
+        protocol=("single PRE-CLOSE locked arm, frozen CLOSE48 only; NoSlip0; baseline reused" if arm_lock else "same frozen 48 CLOSE stages + 50 CONFIRM steps; only noslip_iterations changes"),
         force_timing="integrated qpos + mj_forward after mj_step, as existing arm teacher",
         cases={})
     expected_arrays=None;expected_options=None;command_hashes=[]
-    for setting in (0,5):
+    for setting in ((0,) if arm_lock else (0,5)):
         teacher=WaypointBlockTeacher(donor["candidate"])
         teacher.env.physics_observer=None;teacher.env.reset(seed=0)
         m=mujoco.MjModel.from_binary_path(str(model_path));arrays=array_hashes(m)
@@ -129,6 +140,14 @@ def run(source_path, continuation_path, model_path, donor_path, output):
         block=m.body("red_block").id;initial_com=d.xipos[block].copy();initial_quat=d.xquat[block].copy()
         case=dict(initial_state_exact=True,initial_ctrl=reference.tolist(),options=options(m),
                   array_hashes=arrays,rows_file=f"noslip{setting}.jsonl",stages=[],failure=None)
+        arm_joints=m.actuator_trnid[:5,0]
+        assert all(m.joint(int(j)).name.startswith("left_") for j in arm_joints)
+        qa=m.jnt_qposadr[arm_joints];va=m.jnt_dofadr[arm_joints]
+        lock_reference=d.qpos[qa].copy()
+        case["arm_lock"]=dict(enabled=arm_lock,mode=LOCK_MODE if arm_lock else "NORMAL ARM",
+            joints=[m.joint(int(j)).name for j in arm_joints],q_addresses=qa.tolist(),
+            v_addresses=va.tolist(),q_reference=lock_reference.tolist(),
+            original_arm_qvel=d.qvel[va].tolist(),boundary="before and after each mj_step" if arm_lock else None)
         digest=hashlib.sha256();count=0;last_row=None;stage=0
         stream=(output/case["rows_file"]).open("w")
         def record(self):
@@ -152,6 +171,9 @@ def run(source_path, continuation_path, model_path, donor_path, output):
         schedule=np.linspace(opened,closed,max(2,math.ceil((opened-closed)/.01)+1))[1:]
         case["initial_contacts"]=contact_metrics(native_contacts(m,d),d.xipos[block],d.xmat[block])
         np.testing.assert_array_equal(integration_state(m,d),state)
+        original_step=mujoco.mj_step
+        if arm_lock:
+            mujoco.mj_step=lambda model,data: locked_step(model,data,lock_reference,qa,va,original_step)
         try:
             for stage,opening in enumerate(schedule[:close_stages],1):
                 target=reference.copy();target[5]=opening
@@ -160,9 +182,10 @@ def run(source_path, continuation_path, model_path, donor_path, output):
                     command=target.tolist(),metrics=last_row["normalized"]))
                 if stage%8==0 or stage>=46:
                     forces={p:v["summed_normal_force_N"] for p,v in last_row["normalized"]["pads"].items()}
-                    print(json.dumps(dict(mode=MODE,noslip=setting,stage=stage,step=count,forces=forces)),flush=True)
-            teacher.close_arm_reference=None;teacher.phase="GRASP_CONFIRM";teacher.env.collision_phase="GRASP_CONFIRM"
-            for _ in range(50):
+                    print(json.dumps(dict(mode=LOCK_MODE if arm_lock else MODE,noslip=setting,stage=stage,step=count,forces=forces)),flush=True)
+            if not arm_lock:
+                teacher.close_arm_reference=None;teacher.phase="GRASP_CONFIRM";teacher.env.collision_phase="GRASP_CONFIRM"
+            for _ in range(0 if arm_lock else 50):
                 teacher.env.apply_action(tuple(d.ctrl),physics_steps=1)
                 teacher.record_step();checked=teacher.inspect_runtime()
                 if not all(v>0 for v in checked["finger_force_N"].values()):
@@ -170,6 +193,7 @@ def run(source_path, continuation_path, model_path, donor_path, output):
         except (ValueError,RuntimeError) as error:
             case["failure"]=dict(phase=teacher.phase,stage=stage,time_s=float(d.time),reason=str(error))
         finally:
+            mujoco.mj_step=original_step
             stream.close()
         case.update(physics_steps=count,final_state=integration_state(m,d).tolist(),last_row=last_row,
                     command_sha256=digest.hexdigest(),final_options=options(m))
@@ -177,6 +201,11 @@ def run(source_path, continuation_path, model_path, donor_path, output):
         command_hashes.append(case["command_sha256"]);result["cases"][str(setting)]=case
         (output/"summary.json").write_text(json.dumps(result,indent=2)+"\n")
         print("CASE_DONE",setting,case["failure"],flush=True)
+    if arm_lock:
+        assert result["cases"]["0"]["options"]==expected_options
+        result.update(mode=LOCK_MODE,option_differences={},normal_arm_rerun=False)
+        (output/"summary.json").write_text(json.dumps(result,indent=2)+"\n")
+        return result
     result["identical_commands"]=command_hashes[0]==command_hashes[1]
     result["identical_compiled_arrays"]=True
     result["option_differences"]={k:[result["cases"]["0"]["options"][k],result["cases"]["5"]["options"][k]]
@@ -186,14 +215,17 @@ def run(source_path, continuation_path, model_path, donor_path, output):
     return result
 
 
-def replay(directory, model_path):
+def replay(directory, model_path, baseline=None):
     """Saved physics display in one window; no additional experiment/mj_step."""
     import time
     import mujoco.viewer
     cases={}
     for setting in (0,5):
-        with (directory/f"noslip{setting}.jsonl").open() as stream:
+        path=((baseline/"noslip0.jsonl" if setting==0 else directory/"noslip0.jsonl")
+              if baseline else directory/f"noslip{setting}.jsonl")
+        with path.open() as stream:
             rows=[json.loads(line) for line in stream]
+        if baseline: rows=[r for r in rows if r["phase"]=="CLOSE"]
         cases[setting]=[r for r in rows if r["stage"]>=46][::10]+[rows[-1]]
     m=mujoco.MjModel.from_binary_path(str(model_path));d=mujoco.MjData(m)
     with mujoco.viewer.launch_passive(m,d,show_left_ui=False,show_right_ui=False) as viewer:
@@ -214,23 +246,27 @@ def replay(directory, model_path):
                     viewer.user_scn.ngeom+=1
             height=metric["first_native_height_world_m"]
             label="missing opposing contact" if height is None else f"{height*1000:.4f} mm"
-            lines=[MODE,"RECORDED ctrl + mj_step / NOT NEW EXECUTION",f"NoSlip={setting} | {row['phase']} stage {row['stage']} | t={row['time_s']:.3f}",
+            case_label=("NORMAL ARM / NoSlip0" if setting==0 else "LOCKED ARM / NoSlip0") if baseline else f"NoSlip={setting}"
+            lines=[MODE,LOCK_MODE if baseline and setting==5 else "RECORDED ctrl + mj_step / NOT NEW EXECUTION",f"{case_label} | {row['phase']} stage {row['stage']} | t={row['time_s']:.3f}",
                    f"Native contact height: {label}",
                    "Fn: "+str([round(metric["pads"][p]["summed_normal_force_N"],6) for p in PADS]),
                    "F_net N: "+str(np.round(metric["F_net_world_N"],6)),
                    "tau_COM r x f Nm: "+str(np.round(metric["tau_COM_r_cross_f_world_Nm"],6)),
-                   "Same saved PRE-CLOSE state / same command prefix", "NoSlip5: unilateral at CONFIRM; runtime unchanged"]
+                   "Same saved PRE-CLOSE state / same command prefix",
+                   "Only LEFT arm q/qvel projected each step; NOT task success" if baseline else "NoSlip5: unilateral at CONFIRM; runtime unchanged"]
             viewer.set_texts([(mujoco.mjtFont.mjFONT_NORMAL,mujoco.mjtGridPos.mjGRID_TOPLEFT,"\n".join(lines),"")])
             viewer.sync();time.sleep(.04)
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--replay",type=Path)
+    parser.add_argument("--baseline",type=Path,help="saved normal-arm directory for lock replay")
+    parser.add_argument("--arm-lock",action="store_true",help=LOCK_MODE)
     parser.add_argument("--model",type=Path,required=True)
     for name in ("source","continuation","donor","output"):
         parser.add_argument("--"+name,type=Path)
     args=parser.parse_args()
-    if args.replay:replay(args.replay,args.model)
+    if args.replay:replay(args.replay,args.model,args.baseline)
     elif all((args.source,args.continuation,args.donor,args.output)):
-        run(args.source,args.continuation,args.model,args.donor,args.output)
+        run(args.source,args.continuation,args.model,args.donor,args.output,arm_lock=args.arm_lock)
     else:parser.error("experiment requires --source --continuation --donor --output")
