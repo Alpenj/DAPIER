@@ -3108,3 +3108,142 @@ Visible plot: ~/Downloads/DAPIER-airborne-hold-20260920/report.html
 Local validation kit: airborne-hold-20260920 raw state/source/plots/manifest.
 Artifact directory dates retain experiment start date; handoff was written after midnight.
 PR #67 draft/base main maintained; Notion updated after commit/push.
+
+## DAPIER-2026-09-21-global-impratio100-continuous-path
+
+### Problem
+
+나는 airborne HOLD에서만 NoSlip을 바꾼 진단과, 처음부터 같은 설정을 유지하는
+경로를 구분해 확인한다. 이번에는 **NoSlip=0 / impratio=100** 하나만 선택하여
+A2 PRE-CLOSE부터 matched CLOSE → CONFIRM → 기존 LIFT → HOLD를 연속 실행했다.
+새 grasp/IK 탐색, solver sweep, runtime default 변경은 하지 않았다.
+
+### Evidence — VERIFIED BY COPIED PHYSICS
+
+- Source 시작 commit f38900db5e5f5f5f0de8d72ff6276cb5b95f9a93,
+  integration_desk / MuJoCo 3.3.7 / dt=0.002 s.
+- 동일 frozen model SHA256:
+  8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9.
+- A2 approach_terminal_state를 시작할 때 한 번만 복원.
+  mjSTATE_INTEGRATION SHA256:
+  5e98962c786c9b6ea055e74136aca62337b363d1d35c04c4e3bb76d1ab96deab.
+- Model load 직후 impratio=100을 적용하고 NoSlip=0을 확인했다.
+  이후 매 mj_step 앞에서 동일 model/data와 qpos/qvel/act/time 연속성을 검사.
+  NoSlip/impratio를 매 step 확인하고 모든 model array hash/options를 종료 시
+  재확인했다. Phase boundary의 saved-state jump 또는 solver switching 없음.
+- Frozen CLOSE48 + 기존 matched target **1.716112023423022 rad**를 그대로 사용.
+  CONFIRM 50 step에서 terminal ctrl 유지. LIFT5 predecessor도 보존했다.
+  이전 refined LIFT15 q와 기존 LIFT30 q를 그대로 읽어 각 endpoint와 segment를
+  기존 plan_report/move/inspect_runtime로 재검증했다. 새 IK solve/보상값 없음.
+- minimum duration은 기존 CLOSE 0.1 s / LIFT 0.5 s, 실제 시간은 기존 septic
+  trajectory 제약으로 결정된다. Timing/gains/limits를 새로 조정하지 않았다.
+- 총 **12,485 step / 24.970 s**, SIM 18.324→43.294 s.
+  시작 이후 block/jaw/arm qpos 배치나 상태 교체 없이 ctrl + mj_step으로 진행.
+
+| Phase | Physics steps | Endpoint TCP error mm | Absolute bottom mm | Normal pad1 / pad2 N | Table contact |
+|---|---:|---:|---:|---:|---:|
+| CLOSE48 + matched | 9884 | 0.231124 | -0.004120 | 0.491365 / 0.677020 | 2 |
+| GRASP_CONFIRM | 50 | 0.230667 | -0.004599 | 0.493135 / 0.666457 | 2 |
+| LIFT5 | 260 | 0.354344 | 4.797179 | 0.537020 / 0.536499 | 0 |
+| LIFT15 | 356 | 0.364810 | 14.691783 | 0.473456 / 0.472288 | 0 |
+| LIFT30 | 435 | 0.335698 | 34.021752 | 0.417637 / 0.413236 | 0 |
+| HOLD | 1500 | 0.331177 | 33.979423 | 0.417965 / 0.413541 | 0 |
+
+첫 bilateral formation은 SIM 37.642 s. CONFIRM 종료 table normal force
+0.219284 N은 지지 중 값이며 load-bearing 성공 근거와 구분한다.
+LIFT의 실제 block/table separation과 이후 HOLD가 무지지 근거다.
+
+**Table 이탈 transient를 보존한다.**
+LIFT5 시작 38.192 s, 첫 table-free 38.286 s (+94 ms).
+38.290 / 38.298 s에 각각 table contact가 재등장했고 force는
+0.411429 / 0.344675 N이었다. 38.300 s (+108 ms)부터 지속 table-free다.
+LIFT5 중 최대 table normal force는 **2.128410 N** (38.198 s)이다.
+따라서 최초 이탈부터 항상 table-free라고 쓰지 않는다.
+새 force threshold를 만들어 통과/거부하지 않았으며 이 transient는 후보의
+후속 검토 항목으로 남긴다. LIFT15/LIFT30/HOLD에서는 table contact/force=0이다.
+
+HOLD phase 자체 1500 step / 3 s 동안:
+- 최저 absolute bottom **33.979423 mm**, 전 step 기존 30 mm gate 만족.
+- Bottom 변화 **-0.042329458 mm**, COM z 변화 -0.027311999 mm.
+- 종료 vz **-0.010452453 mm/s**, 마지막 100 ms 평균 -0.010674657 mm/s.
+- 최소 양쪽 force **0.417461 / 0.413171 N**.
+- 종료 수직 finger resultant 0.196199209 N, block weight 0.1962 N.
+- 누적 supported timer는 LIFT30의 0.308 s부터 이어져 3.308 s가 됐다.
+  HOLD phase duration은 별도로 정확히 3.000 s이며 timer를 줄여 쓰지 않았다.
+
+전체 최대 관통 **18.191382 micrometers**, HOLD 최대 8.687743 micrometers.
+Warnings=0, actuator saturation 없음. 기존 0.5 mm / 2° / 15° gate와
+general/task collision 및 1 mm penetration 기준을 유지했다.
+Attachment는 row에 별도 flag를 복제하지 않았지만 매 step 기존
+inspect_runtime의 attachment/forbidden-contact rejection을 통과했다.
+Applied pre-forward native contacts와 post-forward gate contacts를 분리 저장했다.
+
+### Decision
+
+**분류 A: CLOSE + LIFT + 추가 3 s HOLD PASS.**
+NoSlip0 / impratio100을 **이 copied 경로의 global SIM candidate**로 올린다.
+이는 production default 적용이 아니다. Runtime 기본값, 모델 파일, friction,
+mass, geometry, squeeze, gains, joint limits, acceptance 기준은 변경하지 않았다.
+
+### Validation — VERIFIED BY REGRESSION
+
+- 단일 targeted physics 실행 12,485 step; 추가 A/B/sweep/재실행 없음.
+- Frozen CLOSE/LIFT reference 정적 대조 PASS.
+- Focused regression **30 PASS**:
+  global_impratio 4, airborne_hold 5, lift_refinement 3,
+  postcontact_squeeze 11, controlled_contact 7.
+- 기존 26 tests는 한 번 실행. 새 transient 회귀가 추가된 global 파일만 재검증.
+- State/option continuity, endpoint 불변, formation/LIFT/HOLD 실패 분류,
+  첫 table-free와 영구 이탈 구분, inherited timer와 phase 시간 구분을 보존.
+- git diff --check PASS. Full suite / remote CI / merge 미실행.
+
+### Result
+
+연속 copied CLOSE→CONFIRM→LIFT5→LIFT15→LIFT30→HOLD PASS.
+새 configuration을 phase별로 바꾸거나 저장 성공 상태를 중간에 삽입하지 않았다.
+단일 MuJoCo recorded replay로 전체 경로를 표시한다.
+Replay의 qpos 기록 배치는 화면 표시 전용이며 새로운 physics 실행이 아니다.
+
+### Lesson / Next
+
+**INFERENCE:** 전체 formation/contact history가 달라질 수 있으므로,
+이 결과를 이전 HOLD-only NoSlip5 A/B와 같은 causal comparison으로 취급하지 않는다.
+이번에는 요청된 global configuration 하나가 기존 gate를 통과하는지 확인했다.
+
+**UNVERIFIED:** HOME/RESET/SETTLE/APPROACH부터 이 설정을 사용한 전체 teacher,
+다중 초기조건, 실물 fidelity와 live CENTER SUCCESS.
+HOLD의 작은 지속 하강은 사라지지 않았다. 무한시간 equilibrium을 주장하지 않는다.
+다음 후보 검토에는 LIFT 이탈 순간 table-force transient와 더 긴 slip 영향을
+함께 남긴다. 이번 턴에서는 추가 실험 없이 종료한다.
+Hardware / BASIC REAL / OS30A / ACT는 실행하거나 수정하지 않았다.
+
+Reproduce from repository root (new output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/global_impratio_audit.py \
+ --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+ --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+ --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+ --squeeze /tmp/dapier-postcontact-squeeze-20260920/audit.json \
+ --matched /tmp/dapier-matched-budget-lift-20260920/experiment.json \
+ --refined /tmp/dapier-lift15-refinement-20260920/ab.json \
+ --output /tmp/dapier-global-impratio-repro
+~~~
+
+Recorded replay (no new physics):
+
+~~~bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/global_impratio_audit.py \
+ --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+ --replay /tmp/dapier-global-impratio-20260921
+~~~
+
+Evidence: result.json, path.jsonl, summary.json, executed source and hashes under
+/tmp/dapier-global-impratio-20260921.
+Public compact fixture: test/fixtures/global_impratio.json.
+Visible: ~/Downloads/DAPIER-global-impratio-20260921/report.html.
+Local validation kit: global-impratio-20260921 raw state/trace/source/plot/manifest.
+PR #67 draft/base main, normal push. Notion uses the same record_id.
