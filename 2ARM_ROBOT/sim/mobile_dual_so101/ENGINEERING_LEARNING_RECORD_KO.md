@@ -2423,3 +2423,138 @@ Downloads `DAPIER-preclose-geometry-20260920/report.html` 전용 Firefox 창 제
 `preclose_geometry_audit.py --help`의 명시적 saved model/trace/face inputs로 재현한다. Raw measurements/private calibration/device ID는 공개하지 않았다.
 Actual teacher GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false 상태는 불변. BASIC+20mm/Monday utility 동결, actual motor command=NOT RUN.
 PR67 draft/base main 유지; 새 merge SHA 없음. SIM analytic evidence를 real/task success로 승격하지 않는다.
+
+
+## 2026-09-20 — Post-bilateral squeeze budget: Case A contributor
+
+record_id: DAPIER-2026-09-20-postcontact-squeeze
+base commit: b0840670032eb03b54a75e2535140787b9f32f2c
+scope: DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS; PR #67 draft.
+
+### Problem
+
+나는 A2 pad2/pad1 positive force onset 18.796/19.302 s와 CLOSE end 19.392 s만
+보고 squeeze가 끝났다고 판단하지 않고 source와 저장 trace를 대조했다.
+
+### Evidence
+
+**VERIFIED BY EXISTING PHYSICS / SOURCE AUDIT**
+
+CenterBlockTeacher.finish_task()와 historical continue_physics.py는 CLOSE substage의
+move()가 끝난 뒤 양 pad force가 positive이면 schedule을 중단한다. 이후
+env.apply_action(tuple(data.ctrl), physics_steps=1)를 50회 호출한다.
+전환 조건은 bilateral contact이며 force/preload 목표가 아니다.
+A0 bench도 production close-plan endpoint의 bilateral 여부로 중단하고
+terminal ctrl을 CONFIRM/support withdrawal/HOLD 동안 유지한다.
+
+| bilateral onset → CONFIRM end | A0 gripper-only | A2 mapped arm |
+|---|---:|---:|
+| NoSlip (기존 상태 그대로) | 5 | 0 |
+| onset → CLOSE end | 0.278 s | 0.090 s |
+| CONFIRM | 0.100 s | 0.100 s |
+| ctrl onset / terminal (rad) | 1.722760833 / 1.714220985 | 1.724651871 / 1.724187386 |
+| commanded additional closing | 8.539848 mrad | 0.464485 mrad |
+| measured driver closing | 8.577498 mrad | 0.469504 mrad |
+| actual opening reduction | 31.356871 µm | 2.100124 µm |
+| final opening | 39.967174 mm | 40.063189 mm |
+| pad1 / pad2 normal force | 0.480533 / 0.480533 N | 0.102269 / 0.116904 N |
+| support/table normal force | 0.196059 N | 0.199456 N |
+| peak abs actuator force after bilateral | 0.020980 Nm | 0.043379 Nm |
+
+두 case 모두 CONFIRM ctrl은 bitwise constant다. A2 힘은 CLOSE endpoint
+0.087011/0.130919 N에서 CONFIRM end 0.102269/0.116904 N으로 바뀐다.
+같은 command에서도 contact response는 계속되지만 추가 command amplitude는 없다.
+A2의 실제 measured closing/opening 감소 역시 더 작다.
+
+A0 force/opening은 pre-integration evaluation, motor q는 post-integration 기록이다.
+A2는 mj_step 뒤 mj_forward한 production state다. 2 ms sampling phase 차이를
+숨기지 않는다. 과거 A2 actuator force는 compiled fixed gain/affine bias,
+unit joint transmission 식으로 복원한 **ANALYTIC** 값이며 새 A/B는
+data.actuator_force를 직접 저장했다. 두 모델 forcerange는 ±2.94 Nm이다.
+포화 evidence는 없다. A0/A2 배치와 NoSlip 차이는 비교의 한계다.
+
+### Decision
+
+A2 actual squeeze도 적으므로 **copied A/B 한 번**만 실행했다.
+동일 A2 CLOSE48 terminal mjSTATE_INTEGRATION에서 분기했다.
+이 상태 이전 trajectory는 같으므로 PRE-CLOSE 전체를 반복하지 않았다.
+
+- Baseline: 기존 terminal ctrl에서 CONFIRM 50 step.
+- Candidate: A2 bilateral-onset ctrl에서 A0 budget 0.008539847627 rad를 뺀
+  1.716112023423022 rad까지 추가 CLOSE, 이후 같은 CONFIRM 50 step.
+- 추가 변화량 0.008075362842 rad. 기존 septic generator/최소 duration 0.1 s를
+  그대로 사용했고 motion limits가 CLOSE 188 step/0.376 s를 생성했다.
+  맞춘 것은 total commanded closing amplitude이며 elapsed duration/waveform까지
+  A0와 동일하게 만든 실험은 아니다. 두 A/B의 경과 시간도 다르므로 amplitude와
+  추가 시간의 독립적인 causal contribution은 분리하지 않았다.
+- 두 case NoSlip0, identical model/options/full initial state. arm/right gripper
+  references, geometry/friction/mass/gains/limits/thresholds는 유지했다.
+- 기존 move path/endpoint gate 및 per-step apply_action/inspect_runtime 유지.
+  초기 restore 외 qpos overwrite, attachment, hardware 없음.
+
+### Validation
+
+**VERIFIED BY PHYSICS — diagnostic copy only**
+
+Baseline CONFIRM50은 기존 trace와 매 step qpos/qvel/ctrl/native contacts가
+완전히 일치했다. Candidate CLOSE188 + CONFIRM50 완료, failure 없음.
+
+| CONFIRM end / run maximum | Baseline | Matched budget |
+|---|---:|---:|
+| pad1 / pad2 normal force | 0.102269 / 0.116904 N | 0.444831 / 0.460342 N |
+| measured driver q | 1.724189945 rad | 1.716121366 rad |
+| jaw opening | 40.063189 mm | 39.977312 mm |
+| table normal force | 0.199456 N | 0.290259 N |
+| finger resultant world Z | −0.003260 N | −0.085413 N |
+| max abs actuator force | 0.003482 Nm | 0.071898 Nm |
+| max TCP position error | 0.242577 mm | 0.242718 mm |
+| max block penetration | 0.002880 mm | 0.017249 mm |
+| warnings | 0 | 0 |
+
+기존 0.5 mm / 2° / 15° endpoint, collision, 1 mm penetration gate PASS.
+**VERIFIED BY REGRESSION:** focused squeeze 4 + 기존 controlled-contact 7 = 11 PASS;
+git diff --check PASS. No full suite / remote CI / merge.
+원본 실험을 덮어쓰는 재실행을 거부하는 guard도 검증했다.
+
+### Result
+
+**Case A — post-bilateral squeeze 부족이 약한 접촉력 형성의 contributor.**
+동일 A2 모델에서 A0-matched budget으로 양쪽 force가 크게 증가했다.
+**Case D의 사실도 유지:** CONFIRM은 이미 같은 ctrl을 유지했고 accidental release가 아니다.
+Case B 근거 없음. Case C는 normal-force 형성에는 해당하지 않지만,
+**load-bearing efficacy는 UNVERIFIED**다. table 반력도 증가했고 finger vertical
+resultant는 아래 방향이다. representative height difference도 약 25.160 mm로 유지된다.
+squeeze만으로 비대칭 grasp/LIFT가 해결됐다고 결론 내리지 않는다.
+
+실제 task는 GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false 그대로다.
+이번 후보는 copied CLOSE → GRASP_CONFIRM까지만 도달했다. Runtime teacher 수정 없음.
+
+### Lesson / Next
+
+Phase duration, retained command, incremental command, actual jaw compression은 다르다.
+다음 blocker는 강화된 비대칭 접촉이 실제 지지력을 만드는지, table loading만
+늘리는지다. 별도 범위의 검증이 필요하며 이번 턴에는 LIFT/HOLD를 추가하지 않았다.
+
+Reproduce (preserved local evidence; 반드시 새 output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/postcontact_squeeze_audit.py \
+  --a0 /tmp/dapier-prescribed-support-20260918/noslip5.json \
+  --a2 /tmp/dapier-controlled-audit-20260919/ab/noslip0.jsonl \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --continuation /tmp/dapier-success-grasp-mapping-20260918/physics-continuation.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-postcontact-squeeze-repro --run-one-ab
+~~~
+
+Artifacts: /tmp/dapier-postcontact-squeeze-20260920/{audit,experiment,summary}.json.
+Visible: ~/Downloads/DAPIER-postcontact-squeeze-20260920/report.html.
+Public compact fixture: test/fixtures/postcontact_squeeze.json.
+원시 physics/실행 당시 script/hash는 기존 local validation kit의
+postcontact-squeeze-20260920에 보존했다.
+첫 invocation은 minimal continuation에 terminal_state가 없어서 **physics 전**에
+멈췄다. 완료된 A/B는 원래 full continuation snapshot을 사용했다.
+이후 evidence overwrite guard와 future provenance/gate 저장만 추가했고 physics는 반복하지 않았다.
