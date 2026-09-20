@@ -2691,3 +2691,133 @@ Local validation kit: matched-budget-lift-20260920 (raw state, executed source, 
 render command, hashes). Public compact fixture: test/fixtures/matched_budget_lift.json.
 The executed source was preserved before adding summary/recontact bookkeeping;
 no physics was rerun after that addition. PR #67 stays draft/base main.
+
+## DAPIER-2026-09-20-lift15-endpoint-hold
+
+### Problem
+
+Matched-budget grasp가 table에서 분리되고 LIFT5를 통과했지만 LIFT15 종료 TCP
+오차 0.615623 mm가 기존 0.5 mm gate를 넘었다. 이번에는 새 IK나 grasp를 찾지
+않고 목표→planned FK→measured FK를 분리하고 같은 terminal command만 유지한다.
+시작 writer HEAD: 6455a3b950844208ab004820e718a676405d95d1, clean.
+PR #67의 같은 SIM writer만 수정하며 REAL/BASIC 코드는 동결한다.
+
+### Evidence
+
+**VERIFIED BY EXISTING PHYSICS / ANALYTIC FK**
+
+저장된 LIFT15 IK는 1 iteration에서 기존 허용치 안으로 종료했다.
+TCP site는 left_cube_grasp, parent body left_gripper다.
+Target XYZ = [0.199999996283, 0.000000138045, 0.033742416802] m.
+Planned FK = [0.199712787835, 0.000221559851, 0.033556055468] m.
+IK q_target, move target_q, 실제 terminal data.ctrl 12개 채널은 정확히 같다.
+Command FK와 planned FK도 정확히 같다. Command reseeding/변경은 발견하지 못했다.
+별도 FK preview만 apply_control_as_pose를 사용한다. 물리 MjData의 full-state는
+저장본과 bitwise 동일하게 복원하고 실제 진행 중 qpos를 덮어쓰지 않는다.
+TCP는 passive jaw body에 속하지 않는다.
+
+| TCP error (mm) | Original gate | Same ctrl + 500 ms |
+|---|---:|---:|
+| target → planned FK | 0.407733805 | 0.407733805 |
+| planned FK → measured | 0.229748673 | 0.224083936 |
+| target → measured | 0.615622815 | 0.610675131 |
+
+벡터 정의는 planned-target, measured-planned, measured-target이다.
+첫 두 **벡터**의 합이 마지막 벡터이며 norm을 더하지 않는다.
+World XYZ, mm:
+- planning residual: [-0.287208, +0.221422, -0.186361]
+- original tracking residual: [-0.094876, +0.073146, -0.196042]
+- terminal tracking residual: [-0.093242, +0.071905, -0.190655]
+- terminal total: [-0.380450, +0.293327, -0.377016]
+
+| LEFT joint | target = terminal command (rad) | gate measured (rad) | hold-end measured (rad) | gate qvel (mrad/s) | hold-end qvel (mrad/s) |
+|---|---:|---:|---:|---:|---:|
+| shoulder_pan | 0.656919934 | 0.656919998 | 0.656919937 | 0.001287 | 0.001766 |
+| shoulder_lift | 0.478144294 | 0.478816067 | 0.478797852 | -0.621655 | 0.000921 |
+| elbow_flex | -0.305189475 | -0.304807394 | -0.304818503 | -0.525788 | 0.001424 |
+| wrist_flex | 1.364645425 | 1.364638352 | 1.364647268 | 0.628468 | 0.001226 |
+| wrist_roll | -0.848061097 | -0.848060885 | -0.848061007 | -0.017262 | -0.001973 |
+
+별도 command FK의 Jacobian × measured-command로 근사한 original tracking
+기여는 shoulder_lift [-0.044176,+0.034068,-0.143699] mm,
+elbow_flex [-0.051467,+0.039691,-0.052442] mm다. 이는 국소 선형 진단이며
+새 물리 실험/인과적 controller 분리 증거는 아니다.
+기존 final 100 ms trace를 FK한 전체 오차는 0.698549 → 0.615623 mm였다.
+
+**VERIFIED BY PHYSICS — DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS**
+
+정확한 저장 LIFT15 endpoint full-state에서 250 actual ctrl + mj_step step,
+dt=0.002 s, 0.5 s 한정 관찰을 했다. 0.5 s는 기존 lift motion 최소 duration과
+같은 관찰 범위이며 새 runtime terminal wait 정책이 아니다.
+- 기존 env.apply_action + inspect_runtime의 command/measured/clearance/contact/
+  penetration gate를 그대로 사용. Phase/collision policy = LIFT_15MM.
+- 12-channel ctrl 전부 일정. 초기 target/IK/geometry/gain/friction/mass/solver/
+  NoSlip0 및 모델 배열/option hash 불변. 새 qpos teleport/weld/attachment 없음.
+- 최초 setup 시 env reset-valid 계약 누락으로 mj_step **0회**에서 거부됐다.
+  기존 env.reset 검증 후 frozen MJB/full-state를 복원하는 이전 진단과 같은
+  초기화 순서로 수정했다. 0-step 결과를 보존했고 유효 물리 실행은 한 번이다.
+- 50/100/150/500 ms TCP error: 0.611497 / 0.610773 / 0.610686 / 0.610675 mm.
+- 마지막 100 ms error range: 0.610670925~0.610675131 mm. Gate pass sample **0**.
+- Bilateral force 유지: 최소 0.389396 / 0.383446 N;
+  마지막 0.389396 / 0.393570 N. Table contact/force는 전체 0/0.
+- Block bottom 13.520121 → 13.010835 mm, 추가 하강 0.509286 mm.
+  마지막 vz=-0.987553 mm/s. 안정적인 unsupported HOLD라고 부르지 않는다.
+- 최종 approach 0.781160°, closing 0.469866°: 기존 2°/15° 안.
+- 최대 penetration 0.014807 mm < 기존 1 mm; saturation/warning 없음.
+- LIFT30 / 3 s HOLD는 실행하지 않았다. CENTER SUCCESS=false.
+
+### Decision
+
+단순 **endpoint settling/tracking timing**으로는 이 gate를 해결하지 못했다.
+요청한 no-convergence 분류는 **planning/reference residual + persistent tracking
+bias 복합**이다. 큰 고정 성분은 이미 존재한 planning residual 0.407734 mm이고,
+추종 편차 0.224084 mm가 거의 같은 방향으로 더해져 기준을 넘는다.
+IK 자체는 기존 기준 안으로 수렴했으며 command 전달 오류는 아니다.
+특히 shoulder_lift / elbow_flex qvel이 거의 0이 된 뒤에도 position bias가 남는다.
+따라서 임의 sleep을 runtime에 넣거나 0.5 mm를 완화하지 않는다.
+중력/접촉 하중과 유한 gain이 bias의 원인일 가능성은 **INFERENCE**이며,
+이번 실험만으로 각각의 기여를 확정하지 않는다.
+
+### Validation
+
+Targeted copied physics 250 steps; same initial full-state / ctrl / model assertion PASS.
+Focused tests: test_postcontact_squeeze_audit.py **11 PASS**,
+test_controlled_contact_audit.py **7 PASS** (총 18).
+새 회귀는 vector residual 합, 고정 command, 양수 힘 유지와 gate 실패의 공존,
+속도 감소 후 잔류 오차, block 하강을 success로 오인하지 않는 계약을 보존한다.
+git diff --check PASS. Full suite / remote CI / main merge 미실행.
+Runtime teacher/controller/safety 소스는 수정하지 않았다.
+
+### Result
+
+LIFT15 endpoint gate는 **FAIL 유지**. 0.5 s 추가 관찰로 원인 분류를 완료했다.
+오차 감소는 약 0.004948 mm에 그쳤다. 접촉은 유지되지만 block 하강이 계속된다.
+실제 HOME부터의 live teacher 또는 실물 동작은 하지 않았다.
+
+### Lesson / Next
+
+이 상태에서는 trajectory 종료 후 대기만 늘려도 계획 오차 여유가 확보되지 않는다.
+다음 후보 검토는 기존 acceptance 안쪽의 planner residual과 정상상태 추종 편차를
+함께 다뤄야 한다. 이번 턴에 IK tolerance/target/profile/gain을 변경하지 않았다.
+Block slip은 별도 관찰 사항이며 solver/friction tuning으로 확장하지 않았다.
+
+Reproduce (새 output directory, 저장된 endpoint만 사용):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/lift_endpoint_audit.py \
+  --experiment /tmp/dapier-matched-budget-lift-20260920/experiment.json \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-lift15-endpoint-repro
+~~~
+
+Evidence: /tmp/dapier-lift15-endpoint-20260920-run/endpoint-hold.json,
+summary.json, executed-lift_endpoint_audit.py, render-report.py.
+공개 compact fixture: test/fixtures/lift15_endpoint_hold.json.
+화면: ~/Downloads/DAPIER-lift15-endpoint-20260920/report.html.
+그래프 재생성은 위 render-report.py 실행이며 **추가 physics가 없다**.
+Raw state/source/graph는 기존 local validation kit의 lift15-endpoint-20260920에 보존.
+PR #67 draft/base main 유지. BASIC/REAL 동결, actual motor command=NOT RUN.

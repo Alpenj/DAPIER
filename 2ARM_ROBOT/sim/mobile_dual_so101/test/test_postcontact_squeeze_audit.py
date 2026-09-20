@@ -112,4 +112,44 @@ class LiftClassificationTest(unittest.TestCase):
         self.assertEqual(lift_outcome([r,self.row('HOLD',0,forces=(0,.4))],False),'D')
         self.assertEqual(lift_outcome([r,self.row(table=0,forces=(0,.4))],False),'UNCLASSIFIED_PARTIAL_LIFT')
 
+
+
+class LiftEndpointAuditTest(unittest.TestCase):
+    def test_planning_and_tracking_residuals_add_as_vectors(self):
+        from lift_endpoint_audit import error_components
+        r=error_components(np.zeros(3),[.0004,0,0],[.0001,0,0])
+        self.assertAlmostEqual(r['planned_m'],.0004)
+        self.assertAlmostEqual(r['tracking_m'],.0003)
+        self.assertAlmostEqual(r['total_m'],.0001)
+        np.testing.assert_allclose(np.array(r['planned_vector_m'])+r['tracking_vector_m'],r['total_vector_m'])
+
+    def test_saved_same_command_hold_never_passes_endpoint_gate(self):
+        r=json.loads((Path(__file__).parent/'fixtures/lift15_endpoint_hold.json').read_text())
+        self.assertEqual(r['physics_steps'],250)
+        self.assertAlmostEqual(r['duration_s'],.5)
+        self.assertEqual(r['options']['noslip_iterations'],0)
+        self.assertTrue(r['model_unchanged'] and r['command_unchanged'])
+        np.testing.assert_array_equal(r['target_q'],r['command_q'])
+        np.testing.assert_array_equal(r['initial']['ctrl'],r['final']['ctrl'])
+        np.testing.assert_array_equal(r['planned_xyz_m'],r['command_xyz_m'])
+        self.assertLess(r['initial']['errors']['planned_m'],.0005)
+        self.assertGreater(r['minimum_tcp_error_m'],.0005)
+        self.assertIsNone(r['first_gate_pass_s'])
+        self.assertFalse(r['continued_to_30mm'] or r['task_success'])
+        # A stationary joint velocity does not remove steady-state tracking error.
+        self.assertLess(max(abs(x) for x in r['final']['joint_qvel'][:5]),1e-5)
+        self.assertGreater(r['final']['errors']['tracking_m'],.0002)
+
+    def test_retained_contacts_are_not_a_success_or_stable_hold_claim(self):
+        r=json.loads((Path(__file__).parent/'fixtures/lift15_endpoint_hold.json').read_text())
+        self.assertIsNone(r['failure'])  # Physical safety checks passed, endpoint pose gate did not.
+        self.assertTrue(r['table_always_absent'])
+        self.assertGreater(min(r['minimum_finger_forces_N']),0)
+        self.assertFalse(r['any_saturation'] or any(r['max_warning_counts']))
+        self.assertLess(r['max_penetration_m'],.001)
+        self.assertLess(r['additional_block_descent_m'],0)
+        self.assertLess(r['final']['block_vz_m_s'],0)
+        self.assertLess(r['final']['bottom_lift_m'],.03)
+
+
 if __name__=='__main__': unittest.main()
