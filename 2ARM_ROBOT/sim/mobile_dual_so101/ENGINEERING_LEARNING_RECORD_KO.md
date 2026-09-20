@@ -2558,3 +2558,136 @@ postcontact-squeeze-20260920에 보존했다.
 첫 invocation은 minimal continuation에 terminal_state가 없어서 **physics 전**에
 멈췄다. 완료된 A/B는 원래 full continuation snapshot을 사용했다.
 이후 evidence overwrite guard와 future provenance/gate 저장만 추가했고 physics는 반복하지 않았다.
+
+
+## 2026-09-20 — Matched-budget grasp standard LIFT: detached, TCP gate stopped
+
+record_id: DAPIER-2026-09-20-matched-budget-lift
+base commit: 3f159f134d7235ade75826242843a4665b47cde2
+scene_id: integration_desk; MuJoCo 3.3.7; NoSlip=0; timestep=0.002 s
+model MJB SHA256: 8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9
+
+### Problem
+
+나는 matched-budget squeeze에서 얻은 약 0.45 N grasp가 실제 LIFT를 버티는지
+확인했다. 새 grasp/closing analysis, parameter sweep, REAL command는 실행하지 않았다.
+
+### Evidence
+
+**VERIFIED BY PHYSICS — copied full-model simulation**
+
+같은 A2 CLOSE48 full-state에서 target 1.716112023423022 rad로 추가 CLOSE188,
+기존 terminal-command CONFIRM50을 실제 ctrl + mj_step으로 재현했다.
+238 step의 qpos/qvel/ctrl/native contacts와 CONFIRM final mjSTATE_INTEGRATION은
+이전 matched-budget 결과와 정확히 일치했다.
+
+이후 기존 WaypointBlockTeacher.solve()/move(), lift_targets
+(LIFT_5MM +5 mm, LIFT_15MM +15 mm, LIFT_30MM +35 mm TCP target),
+기존 septic profile 및 duration minimum 0.5 s를 그대로 사용했다.
+arm state를 fix/teleport하지 않았고 gripper command는 LIFT 내내 동일했다.
+
+| 이벤트 | LIFT 시작 후 | SIM time / 결과 |
+|---|---:|---|
+| LIFT 시작 | 0 s | 38.192 s |
+| 첫 table contact=0 / force=0 | 88 ms / step44 | 38.280 s |
+| 짧은 재접촉 | 90 ms / step45 | table contacts2 / Fn 0.126790 N |
+| 연속 무접촉 시작 | 92 ms / step46 | 38.284 s, 양쪽 Fn 0.339437/0.355186 N |
+| LIFT_5MM endpoint PASS | 518 ms | 38.710 s, TCP error 0.354704 mm |
+| LIFT_15MM endpoint FAIL | 1.186 s | 39.378 s, TCP error 0.615623 mm > 0.5 mm |
+
+이후 마지막 step까지 연속 table 무접촉은 **1.094 s**다.
+first finger positive-force loss와 geometric contact loss는 모두 **관측 없음**.
+최초 분리 이후 force minimum은 pad1/pad2 0.339437/0.355186 N이었다.
+
+| 정지 상태 / 실행 최대 | 값 |
+|---|---:|
+| final pad1 / pad2 normal force | 0.401377 / 0.401173 N |
+| final table count / normal force | 0 / 0 N |
+| final block COM world z | 33.861141 mm |
+| final block bottom rise over settled baseline | 13.520121 mm |
+| maximum block bottom rise | 13.555672 mm |
+| final block vz | −0.848731 mm/s |
+| final gripper ctrl / measured q | 1.716112023 / 1.716121108 rad |
+| final jaw qvel | −9.612744e−7 rad/s |
+| final jaw opening | 39.975310 mm |
+| maximum abs gripper actuator force (including CLOSE) | 0.071898 Nm |
+| any actuator saturation / warning | none / 0 |
+| maximum block penetration (including CLOSE) | 0.017249 mm |
+
+LIFT15 approach/closing errors 0.78003°/0.46894°는 기존 2°/15° 이내이고
+해당 endpoint collision status도 safe였다. 정지 사유는 위치 gate다.
+per-step joint/state, clearance, bilateral force, penetration 및 attachment 검사도
+원래 경로를 유지했다. Block/table 접촉에 force가 0인 순간과 geometric contact가
+없는 순간을 구분하여 기록했다.
+
+### Decision
+
+최초 기존 gate 실패에서 정지했다. TCP acceptance, friction, solver/NoSlip,
+geometry, gains, mass, limits는 변경하지 않았다. Standard LIFT30과 HOLD는 실행하지 않았다.
+후속 HOLD 구현은 기존 support success뿐 아니라 실제 HOLD phase에서도 3 s 경과를
+요구하도록 준비했으나 이번에는 그 분기에 도달하지 않았다.
+
+요청한 A–D에 해당하지 않는 결과를 숨기지 않는다.
+
+- A (30 mm + 3 s): 미도달.
+- B (table 분리 전 contact loss): 아님. Force loss 없음.
+- C (table never detaches): 아님. 실제 분리 확인.
+- D (lift 후 HOLD slip): 미검증. HOLD 진입 전 TCP gate에서 중단.
+
+기록값은 **UNCLASSIFIED_PARTIAL_LIFT / TCP endpoint gate**다.
+강화된 grasp가 table을 떠나 observed interval 동안 block을 지지한 것은
+확인했지만, 30 mm / 3 s task success는 확인하지 못했다.
+마지막 음의 vz 하나로 HOLD slip의 원인을 확정하지 않는다.
+
+### Validation
+
+**VERIFIED BY REGRESSION:** squeeze/lift focused8 + existing controlled-contact7 =
+15 PASS; git diff --check PASS. 원시 831 physics steps =
+CLOSE188 + CONFIRM50 + LIFT5 259 + LIFT15 334를 보존했다.
+model compiled arrays와 options는 before/after exact 동일, NoSlip0 유지.
+
+첫 focused fixture 검산에서 1-step table recontact를 발견했다.
+진행 설명의 '첫 분리 이후 1.098 s 무재접촉'을 정정하고,
+최종 summary/plot은 92 ms부터 1.094 s **연속** 무접촉으로 계산했다.
+추가 physics 없이 저장된 trace만 다시 계산했다.
+Regression은 이 step45 재접촉, step46 연속 분리, TCP gate 실패를 모두 고정한다.
+No full suite / remote CI / main merge. 실물 명령 없음.
+
+### Result
+
+Copied matched-budget CLOSE → GRASP_CONFIRM 재현 PASS.
+Standard LIFT_5MM actual physics PASS.
+LIFT_15MM actual physics 끝까지 실행했지만 endpoint TCP gate FAIL.
+No contact-loss event. LIFT30 / HOLD 미실행.
+전체 HOME부터 live teacher를 재실행한 것이 아니므로 CENTER SUCCESS로 승격하지 않는다.
+
+### Lesson / Next
+
+Table force=0, first geometric detachment, continuous detachment interval은 다르다.
+추가 squeeze는 이번 조건에서 실제 table-free lift를 가능하게 했다.
+다음 blocker는 기존 LIFT15 endpoint의 planned vs executed TCP error를 분리하는 것.
+이번 턴에는 target offset, timing, gain 또는 acceptance 보정을 추가하지 않았다.
+
+Reproduce from preserved evidence (new output directory; one matched candidate only):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/postcontact_squeeze_audit.py \
+  --a0 /tmp/dapier-prescribed-support-20260918/noslip5.json \
+  --a2 /tmp/dapier-controlled-audit-20260919/ab/noslip0.jsonl \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --continuation /tmp/dapier-success-grasp-mapping-20260918/physics-continuation.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-matched-budget-lift-repro \
+  --lift-from /tmp/dapier-postcontact-squeeze-20260920
+~~~
+
+--lift-from reuses the cached A0/A2 budget; it does not repeat their analysis or A/B.
+Evidence: /tmp/dapier-matched-budget-lift-20260920/{experiment,lift-summary}.json.
+Visible: ~/Downloads/DAPIER-matched-budget-lift-20260920/report.html.
+Local validation kit: matched-budget-lift-20260920 (raw state, executed source, plot,
+render command, hashes). Public compact fixture: test/fixtures/matched_budget_lift.json.
+The executed source was preserved before adding summary/recontact bookkeeping;
+no physics was rerun after that addition. PR #67 stays draft/base main.

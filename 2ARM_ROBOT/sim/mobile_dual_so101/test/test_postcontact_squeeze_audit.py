@@ -4,7 +4,7 @@ import sys
 import unittest
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from postcontact_squeeze_audit import closing_budget, matched_target, experiment
+from postcontact_squeeze_audit import closing_budget, matched_target, experiment, lift_outcome
 
 
 class SqueezeAuditTest(unittest.TestCase):
@@ -58,5 +58,58 @@ class SqueezeAuditTest(unittest.TestCase):
         table=lambda row:sum(c['wrench_contact'][0] for c in row['contacts'] if 'table' in c['names'])
         self.assertGreater(table(new),table(base))
         np.testing.assert_array_equal(np.delete(base['ctrl'],5),np.delete(new['ctrl'],5))
+
+
+
+class LiftClassificationTest(unittest.TestCase):
+    def row(self, phase='LIFT_5MM', table=1, forces=(.45,.45), supported=False, hold=0):
+        return dict(phase=phase,table_contact_count=table,table_force_N=.1962 if table else 0.,
+                    finger_forces_N=list(forces),lift_supported=supported,continuous_hold_s=hold)
+
+    def test_success_needs_actual_support_free_three_seconds(self):
+        r=self.row('HOLD',0,supported=True,hold=3)
+        self.assertEqual(lift_outcome([r],True),'A')
+        for key,value in [('continuous_hold_s',2.99),('table_contact_count',1),('table_force_N',.01),('finger_forces_N',[.4,0])]:
+            self.assertNotEqual(lift_outcome([dict(r,**{key:value})],True),'A')
+
+    def test_loss_before_detachment_vs_no_detachment(self):
+        self.assertEqual(lift_outcome([self.row(forces=(0,.4))],False),'B')
+        self.assertEqual(lift_outcome([self.row()],False),'C')
+
+    def test_recorded_lift_survives_detachment_but_tcp_gate_is_not_relaxed(self):
+        r=json.loads((Path(__file__).parent/'fixtures/matched_budget_lift.json').read_text())
+        self.assertEqual(r['classification'],'UNCLASSIFIED_PARTIAL_LIFT')
+        self.assertEqual(r['failure'],'measured waypoint position tolerance failed')
+        self.assertTrue(r['matched_reproduction_exact'] and r['model_unchanged'])
+        self.assertEqual(r['noslip'],0)
+        self.assertEqual(r['phase_steps']['CLOSE'],188)
+        self.assertEqual(r['phase_steps']['GRASP_CONFIRM'],50)
+        self.assertEqual(r['first_table_detachment']['lift_step'],44)
+        self.assertAlmostEqual(r['first_table_detachment']['elapsed_s'],.088)
+        self.assertIsNone(r['first_force_loss'])
+        self.assertIsNone(r['first_geometric_contact_loss'])
+        self.assertTrue(r['table_recontact_after_detachment'])
+        self.assertEqual(r['first_table_recontact']['lift_step'],45)
+        self.assertEqual(r['continuous_support_free_start']['lift_step'],46)
+        self.assertAlmostEqual(r['continuous_support_free_start']['elapsed_s'],.092)
+        self.assertAlmostEqual(r['observed_support_free_s'],1.094)
+        self.assertGreater(min(r['minimum_forces_after_detachment_N']),0)
+        self.assertTrue(r['gripper_command_constant_during_lift'])
+        self.assertFalse(r['any_actuator_saturation'] or any(r['maximum_warning_counts']))
+        self.assertLess(r['maximum_penetration_m'],.001)
+        self.assertLess(r['maximum_bottom_lift_m'],.03)
+        self.assertEqual(r['final']['table_contact_count'],0)
+        self.assertEqual(r['final']['table_force_N'],0)
+        gates={g['phase']:g for g in r['waypoint_gates']}
+        self.assertLess(gates['LIFT_5MM']['position_error_m'],.0005)
+        self.assertGreater(gates['LIFT_15MM']['position_error_m'],.0005)
+        self.assertTrue(all(g['collision_safe'] for g in gates.values()))
+        self.assertNotIn('HOLD',r['phase_steps'])
+        self.assertFalse(r['copied_lift_success'] or r['live_task_success'] or r['hardware_execution'])
+
+    def test_hold_slip_is_not_pre_detachment_loss(self):
+        r=self.row(table=0,supported=True)
+        self.assertEqual(lift_outcome([r,self.row('HOLD',0,forces=(0,.4))],False),'D')
+        self.assertEqual(lift_outcome([r,self.row(table=0,forces=(0,.4))],False),'UNCLASSIFIED_PARTIAL_LIFT')
 
 if __name__=='__main__': unittest.main()
