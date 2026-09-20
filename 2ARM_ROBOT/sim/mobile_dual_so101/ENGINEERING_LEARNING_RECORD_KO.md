@@ -2821,3 +2821,154 @@ summary.json, executed-lift_endpoint_audit.py, render-report.py.
 그래프 재생성은 위 render-report.py 실행이며 **추가 physics가 없다**.
 Raw state/source/graph는 기존 local validation kit의 lift15-endpoint-20260920에 보존.
 PR #67 draft/base main 유지. BASIC/REAL 동결, actual motor command=NOT RUN.
+
+## DAPIER-2026-09-20-lift15-one-step-refinement
+
+### Problem
+
+같은 LIFT15 command를 추가로 유지해도 TCP 오차가 약 0.611 mm에 남았다.
+이번에는 static planning residual 0.407734 mm만 줄이는 후보를 검증했다.
+시작 HEAD edf1e99a91ae24cab8391a2de126047277a800a4, 같은 writer branch, clean.
+기존 grasp squeeze / geometry / friction / solver / NoSlip0 / controller gain /
+mass / joint limits / 0.5 mm·2°·15° acceptance는 그대로다.
+
+### Evidence
+
+**ANALYTIC / KINEMATIC DIAGNOSTIC**
+
+solve_bimanual_position_ik은 position<=0.0005 m 및 approach<=2°를
+만족하면 즉시 종료한다. 기존 LIFT15는 1번 DLS 갱신 후 이 조건을 만족했다.
+최소 residual에 도달해서 멈춘 것은 아니다. iteration 상한에 걸린 것도 아니다.
+
+같은 position3 + approach-axis2 목적함수에 기존 DLS update를 **딱 한 번**
+추가 적용했다. 기존 damping=.02, axis weight=.05 m, joint step bound=.05 rad를
+원래 함수 signature에서 읽어 재사용한다. 기존 solver/acceptance를 수정하지
+않고 isolated planning MjData에서 후보를 생성한다. 새로운 Cartesian offset,
+compensation, grasp search 또는 parameter sweep이 아니다. Global minimum
+또는 더 이상의 refinement가 불필요하다는 결론도 아니다.
+
+| Static planned FK | Original | One extra DLS update |
+|---|---:|---:|
+| X error (mm, planned-target) | -0.287208448 | -0.117239854 |
+| Y error (mm) | +0.221421806 | +0.091140054 |
+| Z error (mm) | -0.186361334 | -0.051414385 |
+| Position norm (mm) | 0.407733805 | 0.157146848 |
+| Approach error (deg) | 0.837977392 | 0.627949753 |
+| Closing error (deg) | 0.516356464 | 0.347034339 |
+| Minimum LEFT arm joint margin (rad) | 0.293417305 | 0.283888793 |
+
+LEFT arm q candidate (rad, pan/lift/elbow/wrist-flex/wrist-roll):
+[0.656920338019, 0.486150005395, -0.318900715255, 1.374173936576,
+ -0.848523089427].
+Gripper command 1.716112023423022 rad 및 나머지 7개 command 채널 불변.
+Joint / endpoint collision / full interpolated path guard PASS.
+
+**VERIFIED BY PHYSICS — DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS**
+
+동일한 **저장 LIFT15 실패 endpoint full-state**를 두 번 독립 복원하여
+원래 q와 정밀화 q를 각각 기존 move(duration=.5)로 실행했다.
+새 HOME→LIFT15 전체 재생이나 LIFT5부터의 재비교가 아니다.
+각 branch 첫 integration state는 저장본과 bitwise 동일하게 assert했다.
+Controller/profile/physics/dt=.002/compiled model arrays/options를 그대로 유지했다.
+A/B 각각 250 actual ctrl + mj_step steps. Baseline도 표준 move의 measured-start
+profile을 사용하므로 직전 턴의 constant-command hold 실험과 구분한다.
+
+| A/B LIFT15 endpoint | Original | Refined |
+|---|---:|---:|
+| Planned → measured TCP (mm) | 0.225370841 | 0.222706348 |
+| Target → measured TCP (mm) | **0.611845016 FAIL** | **0.358576777 PASS** |
+| Finger normal pad1 / pad2 (N) | 0.389389 / 0.393579 | 0.389347 / 0.394176 |
+| Table contact / force | 0 / 0 | 0 / 0 |
+| Block COM world Z (mm) | 33.353257 | 33.490739 |
+| Bottom rise from settled (mm) | 13.010067 | 13.253408 |
+| Block Vz (mm/s) | -0.943823 | -1.023709 |
+
+Refined LIFT15가 기존 measured pose/contact/clearance gate를 통과한 뒤에만
+**표준 후속 LIFT30**을 실행했다. LIFT30은 추가 정밀화하지 않았다.
+기존 teacher의 LIFT_30MM target은 grasp TCP +35 mm이며 이것은 변경하지 않았다.
+Move는 기존 motion limits에 따라 435 step / 0.870 s로 생성됐다.
+
+- LIFT30 planned error 0.200705 mm; measured endpoint **0.335685 mm PASS**.
+- HOLD 시작 SIM 40.748 s, bottom rise 31.682535 mm, Fn 0.390384 / 0.392642 N.
+- 최대 bottom rise 31.722569 mm.
+- 표준 HOLD 관찰 1600 steps / 3.2 s 실행. 양쪽 force 및 table-free 계속 유지.
+- HOLD 시작 후 **1.654 s**에 기존 lift-height 조건 최초 실패.
+- 전체 trajectory 중 최장 연속 supported-lift timer **1.894 s** (말단 LIFT 구간 포함).
+- HOLD 종료 bottom rise **28.425904 mm**, 총 하강 **3.256631 mm**.
+- 최종 COM world Z=49.234130 mm, Vz=-1.043807 mm/s.
+- 최종 Fn=0.399983 / 0.383001 N, table count/force=0/0.
+- 최종 TCP error 0.331183 mm; controller pose는 유지되지만 block은 하강했다.
+- Refined 전체 Fn minimum 0.379117 / 0.379387 N.
+- Maximum penetration **0.014853491 mm**, warning/saturation **0**.
+- 모든 원래 per-step safety check 유지. Model arrays/options 불변 assert PASS.
+- Runtime failure: continuous 3-second supported lift not reached.
+  Copied success=false / live CENTER SUCCESS=false.
+
+높이 좌표를 구분한다. 저장 settled bottom=-0.002022692 mm이다.
+기존 성공 조건은 bottom >= max(0, reference_bottom)+30 mm이다.
+따라서 최초 실패 시 settled-relative rise=30.001689906 mm지만,
+**absolute bottom=29.999667215 mm**로 기존 30 mm 기준 미달이다.
+이 2.023 µm 차이를 threshold 변경이나 데이터 반올림으로 숨기지 않았다.
+그래프는 absolute bottom을 표시하고 fixture에는 두 값을 보존한다.
+
+### Decision
+
+이번 copied 조건에서 **LIFT15 endpoint gate blocker는 해결됐다**.
+정상상태 추종 편차는 거의 같지만 static planning residual이 줄면서 기존
+0.5 mm 기준을 만족했다. Runtime default IK나 teacher source에 일괄 적용하지
+않고 diagnostic 후보로만 보존한다.
+다음 blocker는 **HOLD 중 지속적인 block slip / height 유지 실패**다.
+Bilateral force가 양수이고 TCP가 기준 안이어도 3 s supported-lift 성공이 아니다.
+이번에는 friction/solver/NoSlip/squeeze를 바꾸는 후속 실험을 하지 않는다.
+
+### Validation
+
+- Targeted physics: original 250 steps; refined LIFT15 250 + LIFT30 435 + HOLD 1600.
+  한 번의 A/B와 승인된 refined branch 후속 trajectory만 실행.
+- Focused regression **21 PASS**:
+  test_lift_refinement_audit.py 3, test_postcontact_squeeze_audit.py 11,
+  test_controlled_contact_audit.py 7.
+- 추가 DLS 한 번이 원래 solver의 한 번 갱신과 일치함을 독립 test로 확인.
+  원래 acceptance에서는 0 iteration에 종료되는 작은 residual을 사용하고,
+  test oracle에만 one-update를 강제한다. Task threshold 변경은 없다.
+- Physics state 무변경/비조작 채널 불변, A/B safety contract,
+  LIFT30 통과와 HOLD 실패의 구분을 회귀로 보존.
+- git diff --check PASS. Full suite / remote CI / main merge 미실행.
+  실제 hardware/BASIC/REAL/ACT 코드는 동결.
+
+### Result
+
+Copied LIFT15 PASS → LIFT30 PASS → HOLD FAIL.
+Actual ctrl + mj_step 근거이며 live HOME부터의 task 성공으로 확대하지 않는다.
+새 첫 실패 조건은 HOLD 높이 유지, force/contact loss가 아니다.
+기존 production HOLD loop가 3.2 s bounded observation 동안 continuous timer를
+검사하므로 최초 높이 조건 실패 시각과 최종 timeout을 별도로 기록했다.
+
+### Lesson / Next
+
+Planning acceptance를 처음 만족한 q와 실행 여유가 있는 q는 다르다.
+같은 목적함수의 추가 1-step으로 planning residual을 줄이는 것만으로
+실행 gate가 통과할 수 있음을 이번 단일 state에서 확인했다.
+다중 상태의 보장이나 새로운 runtime planner 정책을 입증한 것은 아니다.
+다음 작업은 성공한 endpoint를 보존한 채 HOLD slip 원인을 별도로 다루는 것이다.
+
+Reproduce one copied A/B (새 output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/lift_refinement_audit.py \
+  --experiment /tmp/dapier-matched-budget-lift-20260920/experiment.json \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-lift15-refinement-repro
+~~~
+
+Evidence: /tmp/dapier-lift15-refinement-20260920/ab.json, summary.json,
+executed-lift_refinement_audit.py, render-report.py, refinement-result.png.
+Source/inputs/model SHA256는 ab.json에 보존한다.
+공개 compact fixture: test/fixtures/lift15_refinement.json.
+Visible: ~/Downloads/DAPIER-lift15-refinement-20260920/report.html.
+Local validation kit: lift15-refinement-20260920에 raw state/source/plot/manifest 보존.
+PR #67 draft/base main 유지. Notion은 GitHub 결과 확인 뒤 같은 record_id로 갱신.
