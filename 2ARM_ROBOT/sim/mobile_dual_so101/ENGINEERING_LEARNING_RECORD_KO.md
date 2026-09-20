@@ -2972,3 +2972,139 @@ Source/inputs/model SHA256는 ab.json에 보존한다.
 Visible: ~/Downloads/DAPIER-lift15-refinement-20260920/report.html.
 Local validation kit: lift15-refinement-20260920에 raw state/source/plot/manifest 보존.
 PR #67 draft/base main 유지. Notion은 GitHub 결과 확인 뒤 같은 record_id로 갱신.
+
+## DAPIER-2026-09-21-airborne-hold-noslip-ab
+
+### Problem
+
+Matched squeeze와 refined endpoint의 copied LIFT15/LIFT30는 통과했지만,
+airborne HOLD에서 bilateral contact/table-free 상태를 유지하면서 block이 하강했다.
+이번 범위는 동일 HOLD 시작 state의 **NoSlip0/5 한 번 A/B**다.
+새 grasp/solver sweep, runtime 설정 변경, hardware/BASIC/REAL 작업은 하지 않는다.
+
+### Evidence
+
+**VERIFIED BY COPIED PHYSICS / DIAGNOSTIC ONLY**
+
+- Scene integration_desk, MuJoCo 3.3.7, timestep 0.002 s.
+- 시작 source SHA: 65b023176f741024b1290480f99d2c88fbfc822b.
+- Frozen MJB SHA256:
+  8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9.
+- 이전 저장물에는 HOLD 시작의 integration state가 없었다. 저장된 LIFT15
+  full-state에서 기록된 LIFT30 command/profile을 재생했다. **435 step 모두**
+  qpos/qvel/ctrl/native finger normal force/time이 이전 trace와 bitwise 일치했다.
+  새 IK를 풀거나 trajectory를 변경하지 않았다.
+- SIM 40.748000000003834 s에서 mjSTATE_INTEGRATION과 외부 hold timer를 저장.
+  State SHA256:
+  c1bdfbbf951bb659abf081487a01e150d1183a96ecca8070c08a4f2455eec2c9.
+- 각 case는 동일 qpos/qvel/act/ctrl/warmstart/시간을 복원.
+  Model array hash 동일, options 중 noslip_iterations만 0/5 차이.
+  전체 command 일정; squeeze/IK/friction/geometry/gains/mass/threshold 동일.
+- 각각 실제 ctrl + mj_step **1500 step / 3.000 s**. NoSlip0의 HOLD
+  raw qpos/qvel/ctrl/force도 이전 1500 step과 bitwise 일치.
+- 기존 timer 0.242 s를 보존했지만, 판정은 추가 1500 step 전체가
+  table-free supported lift인지 요구하므로 3초 관찰을 줄이지 않았다.
+
+| Metric | NoSlip0 baseline | NoSlip5 diagnostic |
+|---|---:|---:|
+| Initial absolute block bottom (mm) | 31.680512 | 31.680512 |
+| Final absolute bottom (mm) | 28.626064 | 31.677528 |
+| Bottom displacement in 3 s (mm) | -3.054448 | -0.002985 |
+| COM z displacement (mm) | -3.068506 | -0.002474 |
+| Terminal vz (mm/s) | -0.984277 | -0.001187040 |
+| Last 100 ms mean vz (mm/s) | -1.024478 | -0.001186916 |
+| Final normal force pad1 / pad2 (N) | 0.388323 / 0.393434 | 0.413428 / 0.409060 |
+| Final applied vertical finger resultant (N) | 0.196788877 | 0.196199999949 |
+| Final post-forward gate vertical resultant (N) | 0.195572485 | 0.196199999949 |
+| Maximum full elliptic utilization | 0.668463 | 0.696035 |
+| Maximum penetration (micrometers) | 14.664375 | 17.255719 |
+| Max block rotation from checkpoint (deg) | 0.043000 | 0.004708 |
+| Maximum TCP error (mm) | 0.335351 | 0.336670 |
+| Table contact / force throughout | 0 / 0 | 0 / 0 |
+| Warning / actuator saturation | 0 / none | 0 / none |
+| Copied 3 s HOLD | FAIL | PASS |
+
+Bilateral force는 모든 step에서 positive다.Baseline의 최초 높이 기준 실패는 HOLD+1.654 s,
+maximum continuous timer=1.894 s. NoSlip5는 모든 step bottom>=30 mm,
+종료 timer=3.242 s. Live CENTER SUCCESS는 여전히 false다.
+
+Force timing을 혼동하지 않는다. Native solver cache를 mj_step 직후,
+기존 mj_forward 전에 읽은 **applied** force와, 기존 mj_forward 뒤의 **gate**
+force를 별도로 저장했다. Applied finger Fz + gravity와 m*dvz/dt의 최대
+차이는 각각 1.119e-16 / 1.110e-16 N이다. 두 case 모두 table force=0이고
+기존 protected-contact 검사를 통과했다. Fz≈mg는 하강 속도가 0이라는 뜻이
+아니며, baseline은 거의 일정한 slip velocity와 양립한다.
+
+Elliptic cone=1 / condim=4이므로 utilization에는 contact.friction에 따른
+두 sliding 축과 torsional 축을 포함한다. 단순 mu*sum(N) 지표가 아니다.
+Native contact들을 합산하며 대표 contact point를 연속 pressure patch로 해석하지 않는다.
+
+독립 read-only force audit:
+NoSlip5 최대 normal 합 0.822488 N은 baseline 0.805179 N보다 약 2.15% 크다.
+Applied force 합의 최대 step derivative는 13.272 → 8.911 N/s로 증가하지
+않았으며, 관통 증가는 2.591344 micrometers다. 기존 1 mm 관통 제한 이내이고
+새 warning/contact loss/force spike evidence는 없다. 새 spike threshold는 만들지 않았다.
+
+### Decision
+
+**분류 A. 이 저장 airborne grasp에서 soft-friction regularization은
+slip의 주요 contributor임을 controlled physics로 확인했다.**
+동일 initial state/command/model에서 NoSlip5만 바꿔 기존 30 mm + 3 s
+supported HOLD가 통과했다. NoSlip5에도 약 3 micrometers의 bottom 하강과
+약 -0.001187 mm/s 잔류 속도가 있어 exact zero-slip이나 무한시간 안정으로
+확대하지 않는다.
+
+**INFERENCE:** regularized contact의 저속 slip이 주 원인이라는 해석은
+동일-state intervention과 일치한다. 모든 grasp/실물 마찰 모델의 일반적
+원인 또는 fidelity가 검증됐다는 뜻은 아니다.
+
+### Validation
+
+- Targeted physics: checkpoint replay 435 + NoSlip0 HOLD 1500 + NoSlip5 HOLD
+  1500 step. A/B 1회, parameter sweep 없음.
+- **VERIFIED BY REGRESSION: focused 26 PASS**
+  airborne_hold_audit 5, lift_refinement_audit 3,
+  postcontact_squeeze_audit 11, controlled_contact_audit 7.
+- Full cone metric의 torsion/rolling 및 invalid/unloaded cases,
+  identical state/command와 single-option change, contact-only false success,
+  force timing와 기존 TCP/penetration/warning contract를 확인.
+- unittest test/path 직접 호출은 표준 test package와 충돌했다.
+  기존 discover -s test -p test_NAME.py 호출로 정상 검사했다.
+- git diff --check PASS. Full suite / remote CI / main merge 미실행.
+
+### Result
+
+NoSlip0 copied HOLD FAIL, NoSlip5 copied HOLD PASS.
+Production/runtime default는 변경하지 않았다.
+**UNVERIFIED:** HOME부터 NoSlip5를 적용한 전체 task 형성·LIFT·HOLD,
+live task CENTER SUCCESS, 실물 fidelity. Actual motor command=NOT RUN.
+
+### Lesson / Next
+
+그립 힘이 충분하고 table에서 떨어져 있어도 soft contact의 작은 지속 slip이
+높이 gate를 소진할 수 있다. Net force≈weight와 static no-slip은 구분해야 한다.
+다음 blocker는 별도 승인 범위에서 NoSlip runtime 후보의 전체 task 형성 및
+연속 실행을 검증하는 것이다. 이번에는 HOLD A/B에서 종료한다.
+
+Reproduce (repository root, new output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/airborne_hold_audit.py \
+  --experiment /tmp/dapier-lift15-refinement-20260920/ab.json \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-airborne-hold-repro
+~~~
+
+Evidence: /tmp/dapier-airborne-hold-20260920/hold-start.json, ab.json,
+noslip0.jsonl, noslip5.jsonl, summary.json, executed-airborne_hold_audit.py,
+render-report.py and input/source hashes.
+Public compact fixture: test/fixtures/airborne_hold.json.
+Visible plot: ~/Downloads/DAPIER-airborne-hold-20260920/report.html
+(reopen with xdg-open; plots require no new physics).
+Local validation kit: airborne-hold-20260920 raw state/source/plots/manifest.
+Artifact directory dates retain experiment start date; handoff was written after midnight.
+PR #67 draft/base main maintained; Notion updated after commit/push.
