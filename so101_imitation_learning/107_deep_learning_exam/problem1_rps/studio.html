@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>가위바위보 실습실 · 문제 1</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:#17283d;background:#edf2f8;line-height:1.55;color-scheme:light}*{box-sizing:border-box}body{margin:0}main{max-width:1480px;margin:auto;padding:28px}header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}h1{font-size:clamp(25px,3vw,38px);margin:0}h2{font-size:22px;margin:0 0 12px}p{margin:8px 0 16px}.eyebrow{color:#305ab1;font-weight:750;letter-spacing:.08em;font-size:12px}.muted,small{color:#52647b}nav{display:flex;gap:12px;flex-wrap:wrap}a{color:#164ba5}nav a{background:white;padding:8px 14px;border-radius:12px;text-decoration:none}.layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:22px;align-items:start}.card{background:#fff;border:1px solid #d6dfec;border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 4px 18px #1d3c6810}.camera-card{position:sticky;top:20px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}button,select,input{font:inherit;border:1px solid #aebdd1;border-radius:10px;padding:10px 13px;max-width:100%}button{cursor:pointer;background:#fff;color:#17283d;font-weight:650;min-height:44px}button.primary{background:#2456bb;border-color:#2456bb;color:white}button.danger{color:#a32435}button:disabled{opacity:.45;cursor:not-allowed}button:hover:enabled{filter:brightness(.95)}:focus-visible{outline:3px solid #e3a119;outline-offset:3px}select{background:white;min-width:0}label{font-size:14px;font-weight:650}.preview{position:relative;background:#111e30;border-radius:14px;overflow:hidden;aspect-ratio:4/3;margin:16px 0;display:grid;place-items:center}.preview video{width:100%;height:100%;object-fit:contain;transform:scaleX(-1)}.roi{position:absolute;border:3px solid #80e7cf;border-radius:10px;pointer-events:none;display:none;box-shadow:0 0 0 1000px #07122240}.preview-hint{position:absolute;color:#d8e5f7;text-align:center;padding:25px;pointer-events:none}.status{padding:12px 15px;background:#eaf1ff;border-radius:12px;min-height:48px;overflow-wrap:anywhere}.status.error{background:#fff0ef;color:#942737}.labels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.labels button{text-align:left;padding:14px;background:#f7f9fe}.labels strong{display:block;font-size:20px}.labels small{display:block;margin-top:4px}.number{font-size:26px;font-weight:750;color:#2456bb}.progress{height:8px;background:#e9eef7;border-radius:10px;overflow:hidden;margin:10px 0}.progress span{display:block;height:100%;background:#2456bb;width:0}.game-result{background:#f3f7fc;border-radius:16px;padding:18px;text-align:center;margin:14px 0}.duel{display:grid;grid-template-columns:1fr auto 1fr;gap:15px;align-items:center}.gesture{font-size:30px;min-height:50px;font-weight:750}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;margin:12px 0}.metrics div{padding:9px;background:#f2f5fa;border-radius:8px}.metrics strong{display:block;font-size:17px}.probabilities{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px}.probabilities div{background:#edf3fb;padding:6px;border-radius:7px;text-align:center}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:190px;overflow:auto;font-size:12px;background:#14243a;color:#dbe8fc;border-radius:10px;padding:12px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:right;border-bottom:1px solid #e2e8f0;padding:9px 6px;white-space:nowrap}th:first-child,td:first-child{text-align:left}.table-wrap{overflow:auto}.run{margin-top:20px}footer{font-size:13px;color:#52647b;padding:10px 0}@media(max-width:900px){main{padding:16px}.layout{grid-template-columns:minmax(0,1fr)}.camera-card{position:static}header{display:block}nav{margin-top:16px}.card{padding:18px}.metrics{grid-template-columns:1fr 1fr 1fr}}
+</style>
+<main>
+<header><div><div class="eyebrow">DEEP LEARNING · PROBLEM 01</div><h1>가위바위보 실습실</h1><p class="muted">직접 촬영하고, 네 모델을 비교하고, 웹캠으로 확인합니다.</p></div><nav aria-label="실습 단계"><a href="#capture">01 촬영</a><a href="#train">02 학습</a><a href="#game">03 게임</a><a href="#results">04 결과</a><a href="/hand">문제 2 · 가상 손 →</a></nav></header>
+<div class="layout"><aside class="card camera-card" aria-label="웹캠 미리보기">
+<h2>웹캠</h2><div class="row"><button id="cameraStart" class="primary">카메라 시작</button><button id="cameraStop" disabled>카메라 끄기</button><label for="cameraSelect">장치</label><select id="cameraSelect" disabled><option value="">기본 카메라</option></select></div>
+<div class="preview" id="preview"><video id="video" autoplay muted playsinline aria-label="거울 모드 웹캠 영상"></video><div id="roi" class="roi"></div><div id="previewHint" class="preview-hint">카메라 시작을 누르면 영상이 표시됩니다.<br>이미지는 이 컴퓨터에만 저장됩니다.</div></div>
+<p class="muted">초록 사각형 안에 손을 놓으세요. 촬영과 게임은 동일한 거울 모드·중앙 영역을 사용합니다. <strong>없음</strong>은 손을 완전히 빼고 촬영합니다.</p>
+<div id="notice" class="status" role="status" aria-live="polite">서버 연결 확인 중…</div>
+<div class="metrics"><div>모델 추론<strong id="modelMs">—</strong></div><div>왕복 응답<strong id="roundMs">—</strong></div><div>화면 갱신<strong id="updateFps">—</strong></div></div>
+<div id="probabilities" class="probabilities" aria-label="클래스별 모델 확률"></div>
+</aside><div>
+<section id="capture" class="card"><div class="eyebrow">01 · DATASET</div><h2>조건을 바꾸며 10세션 촬영</h2><p>한 세션은 가위·바위·보·없음 각 30장입니다. 같은 세션의 이미지는 같은 분할에 들어갑니다. 10세션이면 총 1,200장입니다.</p>
+<div class="row"><label for="sessionSelect">촬영 세션</label><select id="sessionSelect"><option value="">세션 없음</option></select><button id="newSession">새 세션</button></div>
+<p><span id="sessionProgress" class="number">0 / 10</span> <small>완료한 세션</small></p><div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+<div id="captureButtons" class="labels"></div><button id="captureStop" class="danger" disabled>촬영 중지</button>
+<p id="captureHint" class="muted">라벨 버튼을 누르면 3초 준비 후 0.25초 간격으로 촬영합니다. 같은 손 모양을 유지하며 위치와 각도를 조금씩 바꾸세요. 중지 후 남은 장수부터 이어갈 수 있습니다.</p>
+<p><strong>세션이 바뀌면</strong> 조명·거리·배경을 바꾸고, 그 조건에서 네 라벨을 모두 촬영하세요.</p></section>
+<section id="train" class="card"><div class="eyebrow">02 · TRAINING</div><h2>네 모델 같은 분할로 학습</h2><p>MLP · 3층 이상 CNN · 동결 ResNet18 · 미세조정 ResNet18. 완료 세션을 7:2:1로 나누어 학습·검증·테스트합니다.</p><div class="row"><label for="epochs">모델당 epoch</label><input id="epochs" type="number" min="10" max="100" value="10" step="1" style="width:95px"><button id="trainStart" class="primary" disabled>네 모델 학습 시작</button></div><p id="trainHint" class="muted">10세션 수집 후 시작할 수 있습니다.</p><pre id="trainingLog" aria-label="학습 로그">아직 학습 기록이 없습니다.</pre></section>
+<section id="game" class="card"><div class="eyebrow">03 · LIVE GAME</div><h2>인식한 손에 맞춰 컴퓨터가 응답</h2><label for="modelSelect">체크포인트 · 기본 선택은 검증 정확도 기준</label><select id="modelSelect" style="width:100%;margin:8px 0"><option value="">학습 완료 모델 없음</option></select><div class="row"><button id="gameStart" class="primary" disabled>게임 시작</button><button id="gameStop" disabled>게임 중지</button><button id="nextRound" disabled>다음 라운드</button></div>
+<div class="game-result"><div class="duel"><div><small>내 손</small><div id="player" class="gesture">—</div></div><span>→</span><div><small>컴퓨터</small><div id="computer" class="gesture">대기</div></div></div><p id="gameMessage" role="status" aria-live="polite">카메라와 학습 완료 모델을 준비하세요.</p></div><p class="muted">신뢰도 70%·확률 차이 15% 이상인 같은 손이 3프레임 이상, 0.7초 유지되면 확정합니다. 없음이면 기다립니다. 컴퓨터는 이기는 손을 내며, 승패는 모델 정확도가 아닙니다.</p></section>
+<section id="results" class="card"><div class="eyebrow">04 · EVIDENCE</div><h2>실제 실행 결과</h2><p class="muted">모델 정확도와 지연 시간은 완료한 학습·평가 결과만 표시합니다. 곡선과 상세 결과는 각 실행 보고서에서 확인하세요.</p><div id="runs">아직 완료한 실행이 없습니다.</div></section>
+</div></div><footer>로컬 실습용 · 촬영 이미지를 외부로 보내지 않습니다. 탭을 숨기면 촬영과 게임이 중지됩니다.</footer>
+</main><canvas id="cropCanvas" width="224" height="224" hidden></canvas>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const CLASSES = ["scissors", "rock", "paper", "none"];
+const NAMES = {scissors:"✌ 가위",rock:"✊ 바위",paper:"✋ 보",none:"없음"};
+const MODELS = {mlp:"MLP",cnn:"CNN",resnet_frozen:"ResNet18 동결",resnet_finetune:"ResNet18 미세조정"};
+const COUNTER = {scissors:"rock",rock:"paper",paper:"scissors"};
+const state = {data:null,online:false,stream:null,opening:false,mode:"idle",busy:false,controller:null,token:0,selectedSession:"",selectedModel:"",manualModel:false,frozen:false,candidate:null,frames:0,since:0,lastUpdate:0,polling:false};
+const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
+const percent = x => Number.isFinite(x) ? (x*100).toFixed(1)+"%" : "—";
+function notice(text,error=false){$("notice").textContent=text;$("notice").classList.toggle("error",error);}
+function clearPrediction(message="게임을 시작하면 손을 인식합니다."){
+ state.frozen=false;state.candidate=null;state.frames=0;state.since=0;state.lastUpdate=0;
+ $("player").textContent="—";$("computer").textContent="대기";$("gameMessage").textContent=message;
+ ["modelMs","roundMs","updateFps"].forEach(id=>$(id).textContent="—");$("probabilities").replaceChildren();
+}
+function stopWork(message="중지했습니다."){
+ state.token++;state.controller?.abort();state.mode="idle";clearPrediction(message);notice(message);renderControls();
+}
+function stopCamera(message="카메라를 껐습니다."){
+ stopWork(message);const stream=state.stream;state.stream=null;
+ stream?.getTracks().forEach(track=>track.stop());$("video").srcObject=null;$("roi").style.display="none";$("previewHint").hidden=false;renderControls();
+}
+async function api(path,options={}){
+ const response=await fetch(path,{...options,signal:options.signal || AbortSignal.timeout(15000)});
+ const data=await response.json();if(!response.ok)throw new Error(data.error || `요청 실패 (${response.status})`);return data;
+}
+const jsonPost = body => ({method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+function currentSession(){return state.data?.sessions.find(s=>s.id===state.selectedSession);}
+function renderControls(){
+ const training=!!state.data?.training.running;
+ const locked=state.mode!=="idle" || state.busy || state.opening || training;
+ $("cameraStart").disabled=locked || !state.online;
+ $("cameraStop").disabled=!state.stream && !state.opening;
+ $("cameraSelect").disabled=locked || !state.stream;
+ $("sessionSelect").disabled=locked;
+ const sessions=state.data?.sessions || [];
+ $("newSession").disabled=locked || !state.online || sessions.some(s=>!s.complete) || sessions.length>=10;
+ const session=currentSession();
+ for(const label of CLASSES){const button=$("capture-"+label);if(!button)continue;const count=session?.counts[label] || 0;button.disabled=locked || !state.online || !state.stream || !session || count>=30;button.querySelector("small").textContent=`${count} / 30장 · ${count ? "이어 촬영" : "3초 후 촬영"}`;}
+ $("captureStop").disabled=state.mode!=="capture";
+ $("trainStart").disabled=locked || !state.online || !state.data?.ready_to_train;
+ $("epochs").disabled=locked;$("modelSelect").disabled=locked;
+ $("gameStart").disabled=locked || !state.online || !state.stream || !state.selectedModel;
+ $("gameStop").disabled=state.mode!=="game";$("nextRound").disabled=state.mode!=="game" || !state.frozen;
+}
+function renderStatus(){
+ const data=state.data,sessions=data.sessions || [];
+ if(!sessions.some(s=>s.id===state.selectedSession))state.selectedSession=sessions.at(-1)?.id || "";
+ $("sessionSelect").replaceChildren();
+ for(const [index,session] of sessions.entries()){const option=new Option(`세션 ${index+1}${session.complete ? " · 완료" : " · 촬영 중"}`,session.id);$("sessionSelect").add(option);}
+ if(!sessions.length)$("sessionSelect").add(new Option("세션 없음",""));
+ $("sessionSelect").value=state.selectedSession;
+ $("sessionProgress").textContent=`${data.complete_sessions} / 10`;
+ $("progressBar").style.width=Math.min(100,data.complete_sessions*10)+"%";
+ $("trainHint").textContent=data.training.running ? `학습 중 · ${data.training.run_id}` : data.training.error ? `학습 오류: ${data.training.error}` : data.ready_to_train ? "촬영 준비 완료. 모델 4개를 순서대로 학습합니다." : "완료한 촬영 세션 10개가 필요합니다.";
+ $("trainingLog").textContent=data.training.log_tail || "아직 학습 기록이 없습니다.";
+ const models=(data.models || []).slice().sort((a,b)=>b.val_accuracy-a.val_accuracy);
+ const key=m=>JSON.stringify([m.run,m.model]);
+ if(!state.manualModel || !models.some(m=>key(m)===state.selectedModel))state.selectedModel=models[0] ? key(models[0]) : "";
+ $("modelSelect").replaceChildren();
+ models.forEach(m=>$("modelSelect").add(new Option(`${MODELS[m.model] || m.model} · 검증 ${percent(m.val_accuracy)} · ${m.run}`,key(m))));
+ if(!models.length)$("modelSelect").add(new Option("학습 완료 모델 없음",""));
+ $("modelSelect").value=state.selectedModel;
+ renderRuns(data.runs || []);renderControls();
+}
+function renderRuns(runs){
+ const container=$("runs");container.replaceChildren();
+ if(!runs.length){container.textContent="아직 완료한 실행이 없습니다.";return;}
+ for(const run of runs.slice().reverse()){
+  const section=document.createElement("div");section.className="run";
+  const title=document.createElement("strong");title.textContent=`${run.id} · ${run.complete ? "완료" : "진행 중 / 미완료"}`;section.append(title);
+  if(run.report_url){const url=new URL(run.report_url,location.href);if(url.origin===location.origin && ["http:","https:"].includes(url.protocol)){const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener";link.textContent="곡선·상세 보고서 열기";const p=document.createElement("p");p.append(link);section.append(p);}}
+  if(run.metrics?.length){const wrap=document.createElement("div");wrap.className="table-wrap";const table=document.createElement("table");
+   const head=table.createTHead().insertRow();["모델","검증 정확도","테스트 정확도","테스트 loss","추론 ms","추론 FPS"].forEach(text=>{const th=document.createElement("th");th.scope="col";th.textContent=text;head.append(th);});
+   const body=table.createTBody();for(const m of run.metrics){const row=body.insertRow();[MODELS[m.model] || m.model,percent(m.val_accuracy),percent(m.test_accuracy),Number.isFinite(m.test_loss)?m.test_loss.toFixed(4):"—",Number.isFinite(m.latency_ms)?m.latency_ms.toFixed(2):"—",Number.isFinite(m.fps)?m.fps.toFixed(1):"—"].forEach(text=>{row.insertCell().textContent=text;});}wrap.append(table);section.append(wrap);
+  }container.append(section);
+ }
+}
+async function pollStatus(){
+ if(state.polling)return;state.polling=true;
+ try{const data=await api("/api/status");const first=!state.online;state.data=data;state.online=true;
+  if(data.training.running && state.mode!=="idle")stopWork("학습이 진행되어 촬영·게임을 중지했습니다.");
+  renderStatus();if(first)notice("연결되었습니다. 카메라를 켜고 새 세션을 시작하세요.");
+ }catch(error){state.online=false;stopWork("서버 연결 실패: "+error.message);notice("서버 연결 실패: "+error.message,true);}finally{state.polling=false;renderControls();}
+}
+async function startCamera(){
+ if(state.opening)return;state.opening=true;const token=++state.token;renderControls();
+ try{
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error("localhost에서 카메라를 지원하는 브라우저를 사용하세요.");
+  const chosen=$("cameraSelect").value;
+  const previous=state.stream;state.stream=null;previous?.getTracks().forEach(track=>track.stop());
+  const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{width:{ideal:1280},height:{ideal:720},...(chosen ? {deviceId:{exact:chosen}} : {facingMode:"user"})}});
+  if(token!==state.token || document.hidden){stream.getTracks().forEach(track=>track.stop());return;}
+  state.stream=stream;$("video").srcObject=stream;await $("video").play();
+  const track=stream.getVideoTracks()[0];track.addEventListener("ended",()=>{if(state.stream===stream)stopCamera("카메라 연결이 끊겼습니다.");});
+  const devices=await navigator.mediaDevices.enumerateDevices();if(token!==state.token)return;
+  $("cameraSelect").replaceChildren();devices.filter(d=>d.kind==="videoinput").forEach((d,i)=>$("cameraSelect").add(new Option(d.label || `카메라 ${i+1}`,d.deviceId)));
+  $("cameraSelect").value=track.getSettings().deviceId || "";$("previewHint").hidden=true;updateROI();notice("카메라 준비 완료. 중앙 사각형 안에서 촬영하세요.");
+ }catch(error){if(token===state.token){stopCamera();notice("카메라 오류: "+error.message,true);}}finally{state.opening=false;renderControls();}
+}
+function updateROI(){
+ const video=$("video"),w=video.videoWidth,h=video.videoHeight;if(!w || !h)return;
+ $("preview").style.aspectRatio=`${w} / ${h}`;const size=Math.min(w,h)*.7;
+ Object.assign($("roi").style,{display:state.stream?"block":"none",width:`${size/w*100}%`,height:`${size/h*100}%`,left:`${(w-size)/w*50}%`,top:`${(h-size)/h*50}%`});
+}
+async function frameBlob(){
+ const video=$("video"),w=video.videoWidth,h=video.videoHeight;
+ if(!state.stream || !w || !h || video.readyState<2 || state.stream.getVideoTracks().some(t=>t.readyState!=="live" || t.muted))throw new Error("사용 가능한 카메라 프레임이 없습니다.");
+ const side=Math.min(w,h)*.7,canvas=$("cropCanvas"),ctx=canvas.getContext("2d");
+ ctx.setTransform(-1,0,0,1,224,0);ctx.drawImage(video,(w-side)/2,(h-side)/2,side,side,0,0,224,224);ctx.setTransform(1,0,0,1,0,0);
+ return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("이미지 변환 실패")),"image/jpeg",.92));
+}
+async function capture(label){
+ if($("capture-"+label).disabled)return;
+ const session=currentSession();state.mode="capture";state.busy=true;const token=++state.token;const controller=new AbortController();state.controller=controller;renderControls();
+ try{
+  for(let n=3;n>0;n--){if(token!==state.token)return;notice(`${NAMES[label]} · ${n}초 후 촬영합니다. 손을 준비하세요.`);await sleep(1000);}
+  while(token===state.token && (session.counts[label] || 0)<30){
+   const started=performance.now(),blob=await frameBlob();if(token!==state.token)return;
+   const result=await api(`/api/capture?session=${encodeURIComponent(session.id)}&label=${encodeURIComponent(label)}`,{method:"POST",headers:{"Content-Type":"image/jpeg"},body:blob,signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])});
+   session.counts[label]=result.count;if(token!==state.token)return;
+   notice(`${NAMES[label]} · ${result.count} / 30장 저장`);renderControls();await sleep(Math.max(0,250-(performance.now()-started)));
+  }
+  if(token===state.token)notice(`${NAMES[label]} 30장 완료. 같은 조건에서 다음 라벨을 촬영하세요.`);
+ }catch(error){if(token===state.token){clearPrediction();notice("촬영 오류: "+error.message,true);}}
+ finally{if(token===state.token){state.mode="idle";state.controller=null;}state.busy=false;renderControls();await pollStatus();}
+}
+function showPrediction(result,roundMs){
+ const now=performance.now();$("modelMs").textContent=Number(result.latency_ms).toFixed(1)+" ms";$("roundMs").textContent=roundMs.toFixed(1)+" ms";
+ $("updateFps").textContent=state.lastUpdate?(1000/(now-state.lastUpdate)).toFixed(1)+" FPS":"—";state.lastUpdate=now;
+ $("probabilities").replaceChildren();CLASSES.forEach((name,i)=>{const div=document.createElement("div");div.textContent=`${NAMES[name]} ${percent(result.probabilities[i])}`;$("probabilities").append(div);});
+ const probabilities=result.probabilities.slice().sort((a,b)=>b-a),label=result.label;
+ if(!CLASSES.includes(label) || result.confidence<.7 || probabilities[0]-probabilities[1]<.15){state.candidate=null;state.frames=0;state.since=0;$("player").textContent="판단 중";$("computer").textContent="대기";$("gameMessage").textContent="손을 중앙에 두고 잠시 유지하세요.";return;}
+ if(state.candidate!==label){state.candidate=label;state.frames=1;state.since=now;}else state.frames++;
+ if(state.frames<3 || now-state.since<700){$("player").textContent="판단 중";$("computer").textContent="대기";$("gameMessage").textContent="같은 손이 안정적으로 유지되는지 확인 중입니다.";return;}
+ $("player").textContent=NAMES[label];
+ if(label==="none"){$("computer").textContent="대기";$("gameMessage").textContent="손이 없습니다. 가위·바위·보 중 하나를 보여주세요.";return;}
+ state.frozen=true;$("computer").textContent=NAMES[COUNTER[label]];$("gameMessage").textContent="컴퓨터가 이기는 손을 냈습니다. 다음 라운드를 눌러 다시 시작하세요.";renderControls();
+}
+async function startGame(){
+ if($("gameStart").disabled)return;clearPrediction("손을 보여주세요.");state.mode="game";state.busy=true;
+ const token=++state.token,controller=new AbortController();state.controller=controller;const [run,model]=JSON.parse(state.selectedModel);renderControls();
+ try{while(token===state.token){
+  if(state.frozen){await sleep(120);continue;}
+  const blob=await frameBlob();if(token!==state.token)return;const started=performance.now();
+  const result=await api(`/api/predict?run=${encodeURIComponent(run)}&model=${encodeURIComponent(model)}`,{method:"POST",headers:{"Content-Type":"image/jpeg"},body:blob,signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])});
+  if(token!==state.token)return;
+  if(!Array.isArray(result.probabilities) || result.probabilities.length!==4 || !result.probabilities.every(Number.isFinite) || !Number.isFinite(result.confidence) || !Number.isFinite(result.latency_ms))throw new Error("모델 응답 형식이 올바르지 않습니다.");
+  showPrediction(result,performance.now()-started);await sleep(120);
+ }}catch(error){if(token===state.token){stopWork("추론 중지: "+error.message);notice("추론 오류: "+error.message,true);}}
+ finally{if(token===state.token){state.mode="idle";state.controller=null;}state.busy=false;renderControls();}
+}
+for(const label of CLASSES){const button=document.createElement("button");button.id="capture-"+label;const title=document.createElement("strong");title.textContent=NAMES[label];const count=document.createElement("small");count.textContent="0 / 30장";button.append(title,count);button.addEventListener("click",()=>capture(label));$("captureButtons").append(button);}
+$("cameraStart").addEventListener("click",startCamera);$("cameraSelect").addEventListener("change",startCamera);$("cameraStop").addEventListener("click",()=>stopCamera());
+$("video").addEventListener("loadedmetadata",updateROI);$("video").addEventListener("resize",updateROI);$("video").addEventListener("error",()=>stopCamera("카메라 영상 오류로 중지했습니다."));
+$("sessionSelect").addEventListener("change",()=>{state.selectedSession=$("sessionSelect").value;renderControls();});
+$("newSession").addEventListener("click",async()=>{
+ if($("newSession").disabled)return;state.busy=true;renderControls();
+ try{const data=await api("/api/session",jsonPost({}));state.selectedSession=data.session.id;await pollStatus();notice("새 세션입니다. 조명·거리·배경을 바꾸고 네 라벨을 모두 촬영하세요.");}catch(error){notice(error.message,true);}finally{state.busy=false;renderControls();}
+});
+$("captureStop").addEventListener("click",()=>stopWork("촬영을 중지했습니다. 저장된 장수부터 이어갈 수 있습니다."));
+$("trainStart").addEventListener("click",async()=>{
+ if($("trainStart").disabled)return;const epochs=Number($("epochs").value);
+ if(!Number.isInteger(epochs)||epochs<10||epochs>100){notice("epoch는 10~100 사이 정수로 입력하세요.",true);return;}
+ state.busy=true;renderControls();try{const result=await api("/api/train",jsonPost({epochs}));notice(`학습 시작 · ${result.run_id}`);await pollStatus();}catch(error){notice("학습 시작 실패: "+error.message,true);}finally{state.busy=false;renderControls();}
+});
+$("modelSelect").addEventListener("change",()=>{state.manualModel=true;state.selectedModel=$("modelSelect").value;clearPrediction();renderControls();});
+$("gameStart").addEventListener("click",startGame);$("gameStop").addEventListener("click",()=>stopWork("게임을 중지했습니다."));$("nextRound").addEventListener("click",()=>{clearPrediction("다음 손을 보여주세요.");renderControls();});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopWork("탭을 숨겨 촬영·게임을 중지했습니다.");});
+window.addEventListener("pagehide",()=>stopCamera());
+renderControls();pollStatus();setInterval(pollStatus,2000);
+</script>
+</html>

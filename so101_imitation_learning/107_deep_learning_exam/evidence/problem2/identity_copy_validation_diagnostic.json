@@ -1,0 +1,54 @@
+{
+  "created": "2026-09-09T02:48:33.464584+00:00",
+  "scope": "v2 validation 교사 정답에서 현재 관절을 그대로 복사하는 무학습 기준선의 오프라인 손실 진단. 최종 test 지표·움직임 성공률이 아니다.",
+  "teacher_version": "mixed-open-start-v2",
+  "source_run": "cd9a368691de4b759ca03cfcb2876b31",
+  "split": "val",
+  "generation_seed": 43,
+  "episodes": 240,
+  "window_times": [
+    0,
+    12,
+    24,
+    40,
+    56
+  ],
+  "windows": 1200,
+  "chunk_steps": 8,
+  "joints": 10,
+  "scalar_squared_errors": 96000,
+  "prediction": "prediction[k,j] = states[t,j] for every k=0..7; no image, label or future action used as predictor input",
+  "target": "teacher actions[t:t+8]",
+  "aggregation": "각 창의 8×10 스칼라 제곱오차를 float32 평균, 클래스 안에서 창 평균, 동일한 창 수를 가진 네 클래스 평균",
+  "unit": "rad²; no angle normalization",
+  "identity_chunk_mse_rad2": 0.0055878639104776084,
+  "selected_v2_model_prior_val_mse_rad2": 0.009252723051855961,
+  "per_class": {
+    "scissors": {
+      "episodes": 60,
+      "action_windows": 300,
+      "identity_chunk_mse_rad2": 0.010533618740737438,
+      "first_command_mean_abs_delta_rad": 0.02989823743700981
+    },
+    "rock": {
+      "episodes": 60,
+      "action_windows": 300,
+      "identity_chunk_mse_rad2": 0.003532292088493705,
+      "first_command_mean_abs_delta_rad": 0.013914432376623154
+    },
+    "paper": {
+      "episodes": 60,
+      "action_windows": 300,
+      "identity_chunk_mse_rad2": 0.00828554481267929,
+      "first_command_mean_abs_delta_rad": 0.02402392588555813
+    },
+    "none": {
+      "episodes": 60,
+      "action_windows": 300,
+      "identity_chunk_mse_rad2": 0.0,
+      "first_command_mean_abs_delta_rad": 0.0
+    }
+  },
+  "generator_source_sha256": "406875110000e81a1bb72a34b7197618b1d4e2afb0cbf295193a43e78d9ca5eb",
+  "interpretation": "현재 자세 복사만으로 선택 모델보다 낮은 validation MSE를 얻었다. 기존의 완만한 시간 의존 교사가 행동 정지 shortcut에 유리함을 보여주는 기준선이며 실제 목표 도달을 뜻하지 않는다."
+}

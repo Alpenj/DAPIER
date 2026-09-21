@@ -1,0 +1,20 @@
+[
+  {
+    "model": "rnn",
+    "mse": 0.0014448780659586191,
+    "memory_long_mse": 0.005645783571526408,
+    "memory_short_mse": 0.02720137300590674
+  },
+  {
+    "model": "lstm",
+    "mse": 0.001938012062261502,
+    "memory_long_mse": 0.0014320700506990154,
+    "memory_short_mse": 0.011133289119849602
+  },
+  {
+    "model": "transformer",
+    "mse": 0.001515806025515,
+    "memory_long_mse": 0.0009497230057604611,
+    "memory_short_mse": 0.056245585530996324
+  }
+]

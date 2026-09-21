@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>가상 로봇 손 · 시퀀스 모델과 ACT 실습</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:#17283d;background:#edf2f8;line-height:1.6;color-scheme:light}*{box-sizing:border-box}body{margin:0}main{max-width:1540px;margin:auto;padding:28px}header{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:24px}h1{font-size:clamp(27px,3vw,39px);margin:0}h2{font-size:23px;margin:0 0 12px}h3{margin:20px 0 8px}p{margin:8px 0 16px}.eyebrow{color:#276a6c;font-size:12px;font-weight:800;letter-spacing:.08em}.muted,small{color:#52647b}a{color:#165e91}.button,button,select,input{font:inherit;border:1px solid #aebdd1;border-radius:10px;padding:10px 13px;max-width:100%}.button,button{display:inline-block;background:white;color:#17283d;font-weight:650;min-height:44px;cursor:pointer;text-decoration:none}.primary{background:#14716e;border-color:#14716e;color:white}.danger{color:#a32435}button:disabled{opacity:.45;cursor:not-allowed}button:hover:enabled{filter:brightness(.95)}:focus-visible{outline:3px solid #e3a119;outline-offset:3px}select{background:#fff;min-width:0}input[type=checkbox]{width:18px;height:18px;accent-color:#14716e}label{font-size:14px;font-weight:650}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.card{background:#fff;border:1px solid #d6dfec;border-radius:20px;padding:23px;margin-bottom:20px;box-shadow:0 4px 18px #1d3c6810}.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}.preview{position:relative;background:#112334;border-radius:14px;overflow:hidden;aspect-ratio:4/3;display:grid;place-items:center;margin-top:16px}.preview video{width:100%;height:100%;object-fit:contain;transform:scaleX(-1)}.roi{display:none;position:absolute;pointer-events:none;border:3px solid #7ce6c8;box-shadow:0 0 0 1000px #081d3040;border-radius:10px}.hint{position:absolute;text-align:center;color:#e0ecf9;padding:20px;pointer-events:none}.simulation{background:linear-gradient(160deg,#eef8f6,#e6eef7);border-radius:14px;overflow:hidden;position:relative}.simulation canvas{display:block;width:100%;height:auto}.badge{position:absolute;left:14px;top:12px;background:white;padding:5px 10px;border-radius:7px;font-size:12px;font-weight:750;color:#276a6c}.status{background:#e8f4f2;padding:12px 16px;border-radius:12px;min-height:50px;overflow-wrap:anywhere}.status.error{background:#fff0ef;color:#942737}.observation{display:flex;align-items:center;gap:15px;margin:16px 0;padding:14px;background:#f2f6fc;border-radius:12px}.observation strong{font-size:26px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.metrics div{background:#f2f5fa;padding:10px;border-radius:10px;font-size:12px}.metrics strong{display:block;font-size:18px}.probabilities{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px}.probabilities div{padding:7px;background:#f2f6fa;border-radius:7px;text-align:center}.bottom{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:22px;align-items:start}pre{background:#14283a;color:#dbedf7;padding:14px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:210px;overflow:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #e0e8ee;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}caption{text-align:left;margin:12px 0 5px;font-size:13px;color:#52647b}details{margin-top:14px}summary{cursor:pointer;font-weight:650;padding:5px 0}.run{margin:18px 0}footer{color:#52647b;font-size:13px;padding:8px 0}.note{background:#f7fafc;border-left:3px solid #7eb5b0;padding:10px 13px;margin:14px 0;font-size:13px}@media(max-width:900px){main{padding:16px}header{display:block}.stage,.bottom{grid-template-columns:minmax(0,1fr)}.card{padding:18px}header .button{margin-top:12px}}
+</style>
+<main>
+<header><div><div class="eyebrow">DEEP LEARNING · PROBLEM 02</div><h1>웹캠을 보는 가상 로봇 손</h1><p class="muted">시퀀스 모델을 비교하고, ACT/CVAE가 예측한 다음 관절 명령을 확인합니다.</p></div><a class="button" href="/">← 문제 1 촬영·분류 실습</a></header>
+<div class="status" id="notice" role="status" aria-live="polite">서버 연결 확인 중…</div><p class="muted">가상 운동학 시뮬레이션입니다. 실제 로봇이나 모터에 연결하지 않습니다.</p>
+<div class="stage"><section class="card"><div class="eyebrow">OBSERVATION</div><h2>상대 손 · 웹캠 입력</h2><div class="row"><button id="cameraStart" class="primary">카메라 시작</button><button id="cameraStop" disabled>카메라 끄기</button><label for="cameraSelect">장치</label><select id="cameraSelect" disabled><option value="">기본 카메라</option></select></div>
+<div class="preview" id="preview"><video id="video" autoplay muted playsinline aria-label="상대 손을 보여주는 거울 모드 웹캠"></video><div id="roi" class="roi"></div><div class="hint" id="cameraHint">카메라 시작을 누르세요.<br>초록 사각형 안의 손을 모델이 관찰합니다.</div></div>
+<p class="muted">문제 1과 같은 거울 모드·중앙 70% 영역을 224×224로 입력합니다. 이미지와 관절 상태는 이 컴퓨터의 로컬 서버로만 보냅니다.</p>
+<div class="observation"><div><small>ViT가 분류한 상대 손</small><br><strong id="observed">—</strong></div><div><small>신뢰도</small><br><strong id="confidence">—</strong></div></div><div id="probabilities" class="probabilities" aria-label="상대 손 클래스별 확률"></div>
+<div class="metrics"><div>모델 추론<strong id="latency">—</strong></div><div>왕복 응답<strong id="roundtrip">—</strong></div><div>CVAE 잠재변수<strong id="zMode">—</strong></div></div>
+</section><section class="card"><div class="eyebrow">PREDICTED ACTION</div><h2>ACT가 움직이는 가상 손</h2><div class="simulation"><span class="badge">VIRTUAL ONLY · 5 FINGERS / 10 JOINTS</span><canvas id="handCanvas" width="840" height="650" role="img" aria-label="10개 관절의 가상 로봇 손. 실제 각도는 아래 표에 표시됩니다."></canvas></div>
+<p id="motionStatus" role="status" aria-live="polite">정지 · 열린 자세</p>
+<label for="modelSelect">ACT/CVAE 체크포인트 · 첫 선택은 최신 교사 버전 안에서 검증 MSE가 가장 낮은 모델</label><select id="modelSelect" style="width:100%;margin:8px 0"><option value="">학습 완료 모델 없음</option></select><div class="row"><button id="start" class="primary" disabled>가상 손 시작</button><button id="stop" disabled>동작 중지</button><button id="reset">열린 자세로 초기화</button></div>
+<p><label class="row" style="justify-content:flex-start"><input id="sampleZ" type="checkbox">잠재변수 z 샘플링 <small>기본 해제: z = 0으로 추론</small></label></p>
+<div class="note">한 번에 8개 시점의 관절 명령을 예측하고 앞 4개만 10Hz로 실행한 뒤 다시 관찰합니다. 각 시점은 <code>q ← q + 0.35 × (예측 명령 − q)</code>로 움직입니다. 신뢰도 70% 미만이거나 <strong>없음</strong>이면 현재 자세를 유지합니다.</div>
+<details><summary>현재 10개 관절 각도 보기</summary><table><caption>가상 관절 각도 · 도(°), 각 손가락의 기저 / 말단 관절</caption><thead><tr><th scope="col">손가락</th><th scope="col">기저 관절</th><th scope="col">말단 관절</th></tr></thead><tbody id="jointRows"></tbody></table></details>
+<details><summary>최근 예측한 8시점 명령 보기</summary><p class="muted">아래 숫자는 모델 출력이며, 위 가상 관절은 0.35 응답률을 적용한 실제 시뮬레이션 상태입니다.</p><div class="table-wrap"><table><caption>예측 명령 · 각 손가락 기저 / 말단 각도(°)</caption><thead><tr><th scope="col">시점</th><th scope="col">엄지</th><th scope="col">검지</th><th scope="col">중지</th><th scope="col">약지</th><th scope="col">소지</th></tr></thead><tbody id="actionRows"></tbody></table></div></details>
+</section></div>
+<div class="bottom"><section class="card"><div class="eyebrow">TRAINING</div><h2>데이터 연결 · 모델 학습</h2><p id="sourceStatus">문제 1 촬영 세션을 확인 중입니다.</p><a class="button" href="/" id="captureLink">문제 1에서 촬영하기</a><p>문제 1의 직접 촬영한 손 이미지를 사용해 RNN·LSTM·Transformer와 ACT/CVAE를 순서대로 학습합니다.</p><div class="row"><label for="epochs">epoch</label><input id="epochs" type="number" min="10" max="100" value="10" step="1" style="width:90px"><button id="train" class="primary" disabled>문제 2 모델 학습</button></div><p id="trainState" class="muted">아직 학습을 시작하지 않았습니다.</p><pre id="log" aria-label="문제 2 학습 로그">학습 로그가 여기에 표시됩니다.</pre>
+<div class="note">학습 목표는 상대 가위 → 바위, 바위 → 보, 보 → 가위, 없음 → 현재 자세 유지입니다. 화면은 <strong>학습 모델이 예측한 명령</strong>을 그대로 실행합니다. 목표 규칙으로 명령을 대체하지 않으며 모델이 틀릴 수 있습니다.</div></section>
+<section class="card"><div class="eyebrow">EVIDENCE</div><h2>실제 학습·평가 결과</h2><p class="muted">시퀀스 예측 MSE와 장·단기 기억 평가, ACT action chunk 오차를 확인합니다. 가상 손의 외형이나 게임 승패를 모델 정확도로 표시하지 않습니다.</p><div id="runs">아직 평가 결과가 없습니다.</div></section></div>
+<footer>탭을 숨기면 가상 동작이 멈춥니다. 페이지를 떠나면 카메라도 해제됩니다. 웹캠 입력과 가상 관절의 반응은 실물 로봇 검증 결과가 아닙니다.</footer>
+</main><canvas id="cropCanvas" width="224" height="224" hidden></canvas>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const LABELS=["scissors","rock","paper","none"],NAMES={scissors:"✌ 가위",rock:"✊ 바위",paper:"✋ 보",none:"없음"};
+const FINGERS=["엄지","검지","중지","약지","소지"];
+const state={data:null,online:false,stream:null,opening:false,running:false,busy:false,token:0,controller:null,polling:false,run:"",joints:Array(10).fill(0)};
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const percent=x=>Number.isFinite(x)?(100*x).toFixed(1)+"%":"—";
+const metric=x=>Number.isFinite(x)?x.toFixed(5):"—";
+function notice(message,error=false){$("notice").textContent=message;$("notice").classList.toggle("error",error);}
+function clearObservation(){["observed","confidence","latency","roundtrip","zMode"].forEach(id=>$(id).textContent="—");$("probabilities").replaceChildren();$("actionRows").replaceChildren();}
+function stopMotion(message="가상 동작을 중지했습니다. 현재 자세를 유지합니다."){
+ state.token++;state.controller?.abort();state.running=false;clearObservation();$("motionStatus").textContent=message;notice(message);renderControls();
+}
+function resetHand(){stopMotion("열린 자세로 초기화했습니다.");state.joints=Array(10).fill(0);drawHand();}
+function stopCamera(message="카메라를 끄고 가상 동작을 중지했습니다."){
+ stopMotion(message);const stream=state.stream;state.stream=null;stream?.getTracks().forEach(track=>track.stop());$("video").srcObject=null;$("roi").style.display="none";$("cameraHint").hidden=false;renderControls();
+}
+async function api(path,options={}){const response=await fetch(path,{...options,signal:options.signal || AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok)throw new Error(data.error || `요청 실패 (${response.status})`);return data;}
+const jsonPost=body=>({method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+function renderControls(){
+ const locked=state.running || state.busy || state.opening || !!state.data?.training.running;
+ $("cameraStart").disabled=locked || !state.online;$("cameraStop").disabled=!state.stream && !state.opening;$("cameraSelect").disabled=locked || !state.stream;
+ $("start").disabled=locked || !state.online || !state.stream || !state.run;$("stop").disabled=!state.running;
+ $("modelSelect").disabled=locked;$("sampleZ").disabled=locked;$("epochs").disabled=locked;$("train").disabled=locked || !state.online || !state.data?.ready_to_train;
+ // Reset remains available to cancel an in-flight chunk before zeroing the joints.
+ $("reset").disabled=state.opening;
+}
+function renderStatus(){
+ const data=state.data;$("sourceStatus").textContent=`문제 1 완료 세션: ${data.source_sessions}개 · ${data.ready_to_train?"학습 준비 완료":"완료 세션 10개 이상이 필요합니다."}`;
+ $("captureLink").hidden=data.ready_to_train;
+ $("trainState").textContent=data.training.running?"모델 학습 중입니다. 문제 1과 문제 2 학습은 동시에 실행하지 않습니다.":data.training.error?"학습 오류: "+data.training.error:"촬영 데이터가 준비되면 학습 버튼을 누르세요.";
+ $("log").textContent=data.training.log_tail || "아직 학습 로그가 없습니다.";
+ const score=m=>{const value=data.runs?.find(r=>r.id===m.run)?.act_metrics?.val_mse;return Number.isFinite(value)?value:Infinity;};
+ const latestVersion=data.models?.[0]?.teacher_version || "random-start-v1";
+ const models=(data.models || []).slice().sort((a,b)=>score(a)-score(b));if(!models.some(m=>m.run===state.run))state.run=models.find(m=>(m.teacher_version || "random-start-v1")===latestVersion)?.run || "";
+ $("modelSelect").replaceChildren();models.forEach(m=>$("modelSelect").add(new Option(m.run,m.run)));if(!models.length)$("modelSelect").add(new Option("학습 완료 모델 없음",""));$("modelSelect").value=state.run;
+ renderRuns(data.runs || []);renderControls();
+}
+function renderRuns(runs){
+ $("runs").replaceChildren();if(!runs.length){$("runs").textContent="아직 평가 결과가 없습니다.";return;}
+ for(const run of runs.slice().reverse()){
+  const section=document.createElement("div");section.className="run";const title=document.createElement("strong");title.textContent=`${run.id} · ${run.complete?"완료":"진행 중 / 미완료"}`;section.append(title);
+  if(run.report_url){try{const url=new URL(run.report_url,location.href);if(url.origin===location.origin && ["http:","https:"].includes(url.protocol)){const p=document.createElement("p"),a=document.createElement("a");a.href=url.href;a.target="_blank";a.rel="noopener";a.textContent="학습 곡선·상세 보고서 열기";p.append(a);section.append(p);}}catch{}}
+  if(run.sequence_metrics?.length){const wrapper=document.createElement("div");wrapper.className="table-wrap";const table=document.createElement("table");const head=table.createTHead().insertRow();["시퀀스 모델","예측 MSE","장기 기억 MSE","단기 기억 MSE"].forEach(text=>{const th=document.createElement("th");th.scope="col";th.textContent=text;head.append(th);});const body=table.createTBody();for(const m of run.sequence_metrics){const row=body.insertRow();[m.model,metric(m.mse),metric(m.memory_long_mse),metric(m.memory_short_mse)].forEach(text=>row.insertCell().textContent=text);}wrapper.append(table);section.append(wrapper);}
+  if(run.act_metrics){const m=run.act_metrics,p=document.createElement("p");p.textContent=`ACT chunk MSE ${metric(m.chunk_mse)} · prior 샘플 MSE ${metric(m.prior_sample_mse)} · ViT 분류 정확도 ${percent(m.vision_accuracy)}`;section.append(p);}
+  $("runs").append(section);
+ }
+}
+async function pollStatus(){
+ if(state.polling)return;state.polling=true;
+ try{const data=await api("/api/hand/status");const first=!state.online;state.data=data;state.online=true;if(data.training.running && state.running)stopMotion("학습이 시작되어 가상 동작을 중지했습니다.");renderStatus();if(first)notice("연결되었습니다. 모델과 카메라를 준비한 후 가상 손을 시작하세요.");}
+ catch(error){state.online=false;stopMotion("서버 연결이 끊겨 가상 동작을 중지했습니다.");notice("서버 연결 실패: "+error.message,true);}finally{state.polling=false;renderControls();}
+}
+async function startCamera(){
+ if(state.opening)return;state.opening=true;const token=++state.token;renderControls();
+ try{
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error("카메라 지원 브라우저에서 localhost 주소를 사용하세요.");
+  const chosen=$("cameraSelect").value,previous=state.stream;state.stream=null;previous?.getTracks().forEach(track=>track.stop());
+  const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{width:{ideal:1280},height:{ideal:720},...(chosen?{deviceId:{exact:chosen}}:{facingMode:"user"})}});
+  if(token!==state.token || document.hidden){stream.getTracks().forEach(track=>track.stop());return;}
+  state.stream=stream;$("video").srcObject=stream;await $("video").play();const track=stream.getVideoTracks()[0];
+  const ended=()=>{if(state.stream===stream)stopCamera("카메라 입력이 중단되어 가상 동작을 멈췄습니다.");};track.addEventListener("ended",ended);track.addEventListener("mute",ended);
+  const devices=await navigator.mediaDevices.enumerateDevices();if(token!==state.token)return;$("cameraSelect").replaceChildren();devices.filter(d=>d.kind==="videoinput").forEach((d,i)=>$("cameraSelect").add(new Option(d.label || `카메라 ${i+1}`,d.deviceId)));$("cameraSelect").value=track.getSettings().deviceId || "";$("cameraHint").hidden=true;updateROI();notice("카메라 준비 완료. 가상 손 시작을 눌러 추론하세요.");
+ }catch(error){if(token===state.token){stopCamera();notice("카메라 오류: "+error.message,true);}}finally{state.opening=false;renderControls();}
+}
+function updateROI(){const video=$("video"),w=video.videoWidth,h=video.videoHeight;if(!w || !h)return;$("preview").style.aspectRatio=`${w} / ${h}`;const side=Math.min(w,h)*.7;Object.assign($("roi").style,{display:state.stream?"block":"none",width:`${side/w*100}%`,height:`${side/h*100}%`,left:`${(w-side)/w*50}%`,top:`${(h-side)/h*50}%`});}
+function frameImage(){
+ const video=$("video"),w=video.videoWidth,h=video.videoHeight;
+ if(!state.stream || !w || !h || video.readyState<2 || state.stream.getVideoTracks().some(t=>t.readyState!=="live" || t.muted))throw new Error("사용 가능한 카메라 프레임이 없습니다.");
+ const side=Math.min(w,h)*.7,canvas=$("cropCanvas"),ctx=canvas.getContext("2d");ctx.setTransform(-1,0,0,1,224,0);ctx.drawImage(video,(w-side)/2,(h-side)/2,side,side,0,0,224,224);ctx.setTransform(1,0,0,1,0,0);return canvas.toDataURL("image/jpeg",.92);
+}
+function validatePrediction(result){
+ if(!LABELS.includes(result.label)||!Number.isFinite(result.confidence)||result.confidence<0||result.confidence>1||!Number.isFinite(result.latency_ms)||!Array.isArray(result.probabilities)||result.probabilities.length!==4||!result.probabilities.every(x=>Number.isFinite(x)&&x>=0&&x<=1)||!["zero","sample"].includes(result.z_mode))throw new Error("모델의 분류 응답이 올바르지 않습니다.");
+ if(!Array.isArray(result.actions)||result.actions.length!==8||!result.actions.every(a=>Array.isArray(a)&&a.length===10&&a.every(q=>Number.isFinite(q)&&q>=0&&q<=1.4)))throw new Error("예측 명령은 0~1.4 rad 범위의 8×10 관절 배열이어야 합니다.");
+}
+function showPrediction(result,roundtrip){
+ $("observed").textContent=NAMES[result.label];$("confidence").textContent=percent(result.confidence);$("latency").textContent=result.latency_ms.toFixed(1)+" ms";$("roundtrip").textContent=roundtrip.toFixed(1)+" ms";$("zMode").textContent=result.z_mode==="sample"?"샘플링":"z = 0";
+ $("probabilities").replaceChildren();LABELS.forEach((label,i)=>{const div=document.createElement("div");div.textContent=`${NAMES[label]} ${percent(result.probabilities[i])}`;$("probabilities").append(div);});
+ $("actionRows").replaceChildren();result.actions.forEach((action,i)=>{const row=document.createElement("tr");const step=document.createElement("th");step.scope="row";step.textContent=`${i+1}${i<4?" · 사용 후보":" · 미사용"}`;row.append(step);for(let f=0;f<5;f++){const td=document.createElement("td");td.textContent=`${degrees(action[f*2])} / ${degrees(action[f*2+1])}`;row.append(td);}$("actionRows").append(row);});
+}
+function applyAction(action){state.joints=state.joints.map((q,i)=>q+.35*(action[i]-q));drawHand();}
+async function startMotion(){
+ if($("start").disabled)return;clearObservation();state.joints=Array(10).fill(0);drawHand();state.running=true;state.busy=true;const token=++state.token,controller=new AbortController(),run=state.run,sample=$("sampleZ").checked;state.controller=controller;renderControls();notice("ACT 예측 명령으로 가상 손을 움직입니다.");
+ try{while(token===state.token){
+  $("motionStatus").textContent="현재 이미지와 관절 상태로 다음 8시점을 예측 중…";
+  const request={image:frameImage(),joints:state.joints.slice(),sample},started=performance.now();
+  const result=await api(`/api/hand/predict?run=${encodeURIComponent(run)}`,{...jsonPost(request),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])});
+  if(token!==state.token)return;validatePrediction(result);showPrediction(result,performance.now()-started);
+  if(result.confidence<.7 || result.label==="none"){$("motionStatus").textContent=`WAIT · ${result.label==="none"?"손 없음":"신뢰도 70% 미만"} · 현재 관절 유지`;await sleep(400);continue;}
+  for(let i=0;i<4;i++){await sleep(100);if(token!==state.token)return;applyAction(result.actions[i]);$("motionStatus").textContent=`8개 예측 중 ${i+1} / 4개 명령 실행 · 다음 관찰 대기`;}
+ }}catch(error){if(token===state.token){stopMotion("오류로 가상 동작을 중지했습니다. 현재 자세를 유지합니다.");notice("추론 오류: "+error.message,true);}}
+ finally{if(token===state.token){state.running=false;state.controller=null;}state.busy=false;renderControls();}
+}
+const degrees=q=>(q*180/Math.PI).toFixed(1);
+const HAND_FINGERS=[{x:325,y:409,l1:87,l2:70,angle:-.91,bendX:.8,bendY:.12},{x:348,y:330,l1:112,l2:88,angle:-.24,bendX:.1,bendY:.45},{x:417,y:313,l1:139,l2:96,angle:.12,bendX:.1,bendY:.45},{x:486,y:321,l1:127,l2:91,angle:.04,bendX:.1,bendY:.45},{x:548,y:348,l1:94,l2:72,angle:.18,bendX:.1,bendY:.45}];
+function fingerPoints(finger,q1,q2){
+ // 두 링크의 길이는 고정한다. cos는 손바닥 방향, sin은 굽힘 깊이로 투영한다.
+ // 엄지는 다른 굽힘면을 가지며, 검지/중지의 벌어짐은 고정 기하값이다.
+ const points=[[finger.x,finger.y]];
+ [q1,q1+q2].forEach((angle,j)=>{const length=j?finger.l2:finger.l1,along=length*Math.cos(angle),depth=length*Math.sin(angle),last=points.at(-1);points.push([last[0]+Math.sin(finger.angle)*along+finger.bendX*depth,last[1]-Math.cos(finger.angle)*along+finger.bendY*depth]);});
+ return points;
+}
+function drawHand(){
+ const canvas=$("handCanvas"),ctx=canvas.getContext("2d");ctx.clearRect(0,0,840,650);
+ ctx.strokeStyle="#dce9ed";ctx.lineWidth=1;for(let x=40;x<840;x+=40){ctx.beginPath();ctx.moveTo(x,50);ctx.lineTo(x,625);ctx.stroke();}for(let y=65;y<650;y+=40){ctx.beginPath();ctx.moveTo(20,y);ctx.lineTo(820,y);ctx.stroke();}
+ ctx.fillStyle="#bad5d8";ctx.beginPath();ctx.ellipse(423,548,190,34,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#356d78";ctx.strokeStyle="#204958";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(323,523);ctx.lineTo(310,330);ctx.quadraticCurveTo(425,286,567,337);ctx.lineTo(553,515);ctx.quadraticCurveTo(430,570,323,523);ctx.fill();ctx.stroke();
+ ctx.fillStyle="#214f5f";ctx.fillRect(367,524,145,62);ctx.fillStyle="#99cfca";ctx.fillRect(386,542,107,11);
+ // 뒤쪽 손가락부터 그리고 엄지를 마지막에 겹쳐 손바닥 앞의 접힘을 표현한다.
+ [4,3,2,1,0].forEach(i=>{
+  const finger=HAND_FINGERS[i],q1=state.joints[i*2],q2=state.joints[i*2+1],points=fingerPoints(finger,q1,q2);
+  for(let j=0;j<2;j++){
+   const shadow=3+7*Math.sin(j?q1+q2:q1);ctx.lineCap="round";ctx.strokeStyle="#102e3d30";ctx.lineWidth=43;ctx.beginPath();ctx.moveTo(points[j][0]+4,points[j][1]+shadow);ctx.lineTo(points[j+1][0]+4,points[j+1][1]+shadow);ctx.stroke();
+   ctx.strokeStyle="#285568";ctx.lineWidth=39;ctx.beginPath();ctx.moveTo(...points[j]);ctx.lineTo(...points[j+1]);ctx.stroke();ctx.strokeStyle=j?"#a7dbd5":"#77b7b6";ctx.lineWidth=29;ctx.stroke();
+  }
+  points.slice(0,2).forEach(point=>{ctx.fillStyle="#214f60";ctx.beginPath();ctx.arc(...point,12,0,Math.PI*2);ctx.fill();ctx.fillStyle="#daeef0";ctx.beginPath();ctx.arc(...point,5,0,Math.PI*2);ctx.fill();});
+  ctx.fillStyle="#284657";ctx.font="600 17px system-ui";ctx.textAlign="center";ctx.fillText(FINGERS[i],finger.x+(i===0?-86:0),i===0?452:Math.min(280,points[2][1]-25));
+ });
+ ctx.textAlign="center";ctx.font="14px system-ui";ctx.fillStyle="#406777";ctx.fillText("모델 출력 → 가상 관절 응답 · 실물 장치 연결 없음",420,623);
+ $("jointRows").replaceChildren();FINGERS.forEach((name,i)=>{const row=document.createElement("tr"),head=document.createElement("th");head.scope="row";head.textContent=name;row.append(head);[state.joints[i*2],state.joints[i*2+1]].forEach(q=>{const td=document.createElement("td");td.textContent=degrees(q)+"°";row.append(td);});$("jointRows").append(row);});
+}
+$("cameraStart").addEventListener("click",startCamera);$("cameraSelect").addEventListener("change",startCamera);$("cameraStop").addEventListener("click",()=>stopCamera());
+$("video").addEventListener("loadedmetadata",updateROI);$("video").addEventListener("resize",updateROI);$("video").addEventListener("error",()=>stopCamera("카메라 영상 오류로 중지했습니다."));
+$("start").addEventListener("click",startMotion);$("stop").addEventListener("click",()=>stopMotion());$("reset").addEventListener("click",resetHand);
+$("modelSelect").addEventListener("change",()=>{state.run=$("modelSelect").value;clearObservation();renderControls();});
+$("train").addEventListener("click",async()=>{
+ if($("train").disabled)return;const epochs=Number($("epochs").value);if(!Number.isInteger(epochs)||epochs<10||epochs>100){notice("epoch는 10~100 사이 정수로 입력하세요.",true);return;}
+ state.busy=true;renderControls();try{await api("/api/hand/train",jsonPost({epochs}));notice("문제 2 모델 학습을 시작했습니다.");await pollStatus();}catch(error){notice("학습 시작 실패: "+error.message,true);}finally{state.busy=false;renderControls();}
+});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopMotion("탭을 숨겨 가상 동작을 중지했습니다. 현재 자세를 유지합니다.");});
+window.addEventListener("pagehide",()=>stopCamera());
+drawHand();renderControls();pollStatus();setInterval(pollStatus,2000);
+</script>
+</html>

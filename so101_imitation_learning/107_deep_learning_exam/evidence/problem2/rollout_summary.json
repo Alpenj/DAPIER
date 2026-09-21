@@ -1,0 +1,87 @@
+{
+  "created": "2026-09-09T02:49:26.237272+00:00",
+  "smoke": false,
+  "scope": "고정 held-out 웹캠 이미지에 대한 가상 운동학 폐루프 평가. 실물·새 웹캠 장면·게임 승률 평가 아님.",
+  "device": "cuda",
+  "source_fingerprint": "169fd07754a258f26a2010ddaa6af97590c31efcd9065beca33e2de5841a468a",
+  "checkpoint_sha256": "4515c4c2f37cc1abbaada469d72ee445a51770dd2ccfc01a91c16c2fdbd1e5ed",
+  "settings": {
+    "chunks": 16,
+    "predicted_steps_per_chunk": 8,
+    "executed_steps_per_chunk": 4,
+    "ticks": 64,
+    "kinematic_seconds": 6.4,
+    "hz": 10,
+    "lag": 0.35,
+    "confidence_threshold": 0.7,
+    "z": "zero",
+    "initial_joints_rad": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "criterion_rmse_rad": 0.2,
+    "criterion_note": "0.2 rad RMSE는 이 평가에서 정한 기준이며 시험·실물 성공 기준이 아니다.",
+    "response_fraction_note": "신뢰도 게이트를 통과해 명령을 실행한 관찰 청크 비율. 정답 여부와 별개.",
+    "representative_selection": "source manifest 순서에서 클래스별 첫 번째 테스트 이미지"
+  },
+  "overall": {
+    "images": 120,
+    "raw_vit_accuracy": 0.6416666666666667,
+    "response_fraction": 0.65,
+    "mean_initial_joint_rmse_rad": 0.4568644883111119,
+    "mean_final_joint_rmse_rad": 0.29740290267315383,
+    "initial_within_criterion_fraction": 0.5,
+    "within_criterion_fraction": 0.6333333333333333
+  },
+  "per_class": {
+    "scissors": {
+      "images": 30,
+      "raw_vit_accuracy": 0.5666666666666667,
+      "response_fraction": 0.9,
+      "mean_initial_joint_rmse_rad": 1.0012491941452026,
+      "mean_final_joint_rmse_rad": 0.37010011843716106,
+      "initial_within_criterion_fraction": 0.0,
+      "within_criterion_fraction": 0.4666666666666667
+    },
+    "rock": {
+      "images": 30,
+      "raw_vit_accuracy": 0.23333333333333334,
+      "response_fraction": 0.8,
+      "mean_initial_joint_rmse_rad": 0.05000000074505806,
+      "mean_final_joint_rmse_rad": 0.6358747236120205,
+      "initial_within_criterion_fraction": 1.0,
+      "within_criterion_fraction": 0.3333333333333333
+    },
+    "paper": {
+      "images": 30,
+      "raw_vit_accuracy": 0.8,
+      "response_fraction": 0.9,
+      "mean_initial_joint_rmse_rad": 0.776208758354187,
+      "mean_final_joint_rmse_rad": 0.18363676864343384,
+      "initial_within_criterion_fraction": 0.0,
+      "within_criterion_fraction": 0.7333333333333333
+    },
+    "none": {
+      "images": 30,
+      "raw_vit_accuracy": 0.9666666666666667,
+      "response_fraction": 0.0,
+      "mean_initial_joint_rmse_rad": 0.0,
+      "mean_final_joint_rmse_rad": 0.0,
+      "initial_within_criterion_fraction": 1.0,
+      "within_criterion_fraction": 1.0
+    }
+  },
+  "none_hold": {
+    "images": 30,
+    "no_response_fraction": 1.0,
+    "pose_hold_fraction": 1.0
+  }
+}

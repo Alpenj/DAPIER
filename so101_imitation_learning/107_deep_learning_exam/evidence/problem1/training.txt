@@ -1,0 +1,49 @@
+mlp: 12,616,580 parameters (12,616,580 trainable)
+mlp 01/10 train loss=2.7872 acc=0.471 | val loss=1.8233 acc=0.496
+mlp 02/10 train loss=1.2804 acc=0.598 | val loss=2.6004 acc=0.317
+mlp 03/10 train loss=1.0837 acc=0.606 | val loss=1.2746 acc=0.592
+mlp 04/10 train loss=0.7355 acc=0.693 | val loss=1.4710 acc=0.558
+mlp 05/10 train loss=0.7240 acc=0.701 | val loss=1.0561 acc=0.613
+mlp 06/10 train loss=0.6637 acc=0.698 | val loss=1.3943 acc=0.537
+mlp 07/10 train loss=0.6010 acc=0.749 | val loss=1.0614 acc=0.575
+mlp 08/10 train loss=0.6134 acc=0.749 | val loss=1.0465 acc=0.475
+mlp 09/10 train loss=0.6162 acc=0.752 | val loss=1.2547 acc=0.537
+mlp 10/10 train loss=0.6764 acc=0.743 | val loss=1.4202 acc=0.579
+mlp test accuracy=0.6000, inference=0.206 ms
+cnn: 155,524 parameters (155,524 trainable)
+cnn 01/10 train loss=1.0438 acc=0.524 | val loss=0.9948 acc=0.504
+cnn 02/10 train loss=0.6808 acc=0.701 | val loss=0.6029 acc=0.846
+cnn 03/10 train loss=0.5611 acc=0.767 | val loss=0.5605 acc=0.829
+cnn 04/10 train loss=0.4497 acc=0.830 | val loss=0.5161 acc=0.879
+cnn 05/10 train loss=0.3326 acc=0.888 | val loss=0.3605 acc=0.887
+cnn 06/10 train loss=0.2879 acc=0.908 | val loss=0.4770 acc=0.842
+cnn 07/10 train loss=0.2220 acc=0.935 | val loss=0.3350 acc=0.871
+cnn 08/10 train loss=0.1928 acc=0.936 | val loss=0.3420 acc=0.887
+cnn 09/10 train loss=0.1730 acc=0.943 | val loss=0.4845 acc=0.838
+cnn 10/10 train loss=0.1678 acc=0.958 | val loss=0.4143 acc=0.838
+cnn test accuracy=0.7417, inference=0.227 ms
+resnet_frozen: 11,178,564 parameters (2,052 trainable)
+resnet_frozen 01/10 train loss=1.1452 acc=0.506 | val loss=0.8334 acc=0.742
+resnet_frozen 02/10 train loss=0.4733 acc=0.929 | val loss=0.5606 acc=0.787
+resnet_frozen 03/10 train loss=0.2852 acc=0.960 | val loss=0.4675 acc=0.800
+resnet_frozen 04/10 train loss=0.2062 acc=0.969 | val loss=0.4320 acc=0.808
+resnet_frozen 05/10 train loss=0.1549 acc=0.975 | val loss=0.4138 acc=0.800
+resnet_frozen 06/10 train loss=0.1400 acc=0.979 | val loss=0.4346 acc=0.804
+resnet_frozen 07/10 train loss=0.1075 acc=0.986 | val loss=0.4412 acc=0.808
+resnet_frozen 08/10 train loss=0.0934 acc=0.989 | val loss=0.4657 acc=0.792
+resnet_frozen 09/10 train loss=0.0909 acc=0.985 | val loss=0.4817 acc=0.783
+resnet_frozen 10/10 train loss=0.0822 acc=0.990 | val loss=0.5254 acc=0.787
+resnet_frozen test accuracy=0.6083, inference=1.474 ms
+resnet_finetune: 11,178,564 parameters (11,178,564 trainable)
+resnet_finetune 01/10 train loss=0.3129 acc=0.889 | val loss=0.1787 acc=0.946
+resnet_finetune 02/10 train loss=0.0422 acc=0.990 | val loss=0.1665 acc=0.929
+resnet_finetune 03/10 train loss=0.0291 acc=0.990 | val loss=0.2181 acc=0.908
+resnet_finetune 04/10 train loss=0.0227 acc=0.990 | val loss=0.2010 acc=0.921
+resnet_finetune 05/10 train loss=0.0160 acc=0.995 | val loss=0.1045 acc=0.967
+resnet_finetune 06/10 train loss=0.0029 acc=1.000 | val loss=0.0948 acc=0.958
+resnet_finetune 07/10 train loss=0.0015 acc=1.000 | val loss=0.1155 acc=0.946
+resnet_finetune 08/10 train loss=0.0016 acc=1.000 | val loss=0.1372 acc=0.950
+resnet_finetune 09/10 train loss=0.0088 acc=0.996 | val loss=0.1475 acc=0.946
+resnet_finetune 10/10 train loss=0.0563 acc=0.986 | val loss=0.2434 acc=0.896
+resnet_finetune test accuracy=0.7917, inference=1.504 ms
+완료: ./problem1_rps/runs/3cb779884c1c4bfcbabb0fd00ab94afd/report.html

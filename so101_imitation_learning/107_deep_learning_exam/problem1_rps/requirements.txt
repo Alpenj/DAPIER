@@ -1,0 +1,6 @@
+# 검증에 사용한 기존 환경. CUDA 환경의 PyTorch 설치 방법은 README 참고.
+torch==2.11.0
+torchvision==0.26.0
+numpy>=1.26,<3
+Pillow==12.3.0
+matplotlib==3.10.9

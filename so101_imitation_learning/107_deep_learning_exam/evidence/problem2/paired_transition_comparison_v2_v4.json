@@ -1,0 +1,54 @@
+{
+  "created": "2026-09-09T02:50:38.303963+00:00",
+  "scope": "v2와 v4 모두 같은 테스트 사진·초기 자세에서 정분류하고 명령을 실행한 공통 사례의 paired 진단. 전체 인식 성능/새 환경/실물 성공률이 아니다.",
+  "v2_run": "cd9a368691de4b759ca03cfcb2876b31",
+  "v4_run": "61dbebe471924c68ad73568ab479761c",
+  "conditioning": "correct == true and response_fraction > 0 in both runs, exact same (image,initial_pose) pairs",
+  "input_paths_published": false,
+  "same_rollout_settings": true,
+  "devices": {
+    "v2": "cpu",
+    "v4": "cuda"
+  },
+  "overall": {
+    "transitions": 87,
+    "unique_images": 29,
+    "v2_final_rmse_rad": 0.12170224426977935,
+    "v4_final_rmse_rad": 0.008272019867924437,
+    "mean_paired_change_rad": -0.11343022440185492,
+    "fraction_lower_rmse": 1.0
+  },
+  "per_class": {
+    "scissors": {
+      "transitions": 12,
+      "unique_images": 4,
+      "v2_final_rmse_rad": 0.3593978689362605,
+      "v4_final_rmse_rad": 0.014432452929516634,
+      "mean_paired_change_rad": -0.3449654160067439,
+      "fraction_lower_rmse": 1.0
+    },
+    "rock": {
+      "transitions": 12,
+      "unique_images": 4,
+      "v2_final_rmse_rad": 0.34385788223395747,
+      "v4_final_rmse_rad": 0.00729997157274435,
+      "mean_paired_change_rad": -0.3365579106612131,
+      "fraction_lower_rmse": 1.0
+    },
+    "paper": {
+      "transitions": 63,
+      "unique_images": 21,
+      "v2_final_rmse_rad": 0.03411152757822521,
+      "v4_final_rmse_rad": 0.007283756102893561,
+      "mean_paired_change_rad": -0.02682777147533165,
+      "fraction_lower_rmse": 1.0
+    },
+    "none": {
+      "transitions": 0,
+      "unique_images": 0,
+      "v2_final_rmse_rad": null,
+      "v4_final_rmse_rad": null,
+      "mean_paired_change_rad": null
+    }
+  }
+}
