@@ -3247,3 +3247,99 @@ Public compact fixture: test/fixtures/global_impratio.json.
 Visible: ~/Downloads/DAPIER-global-impratio-20260921/report.html.
 Local validation kit: global-impratio-20260921 raw state/trace/source/plot/manifest.
 PR #67 draft/base main, normal push. Notion uses the same record_id.
+
+
+## 2026-09-21 — Normal HOME runtime candidate: staging provenance gate
+
+Record ID: DAPIER-2026-09-21-runtime-contact-candidate-home
+
+### Problem
+
+Copied A2 CLOSE→HOLD success did not establish a normal HOME-to-HOLD teacher.
+I tested the opt-in NoSlip=0/impratio=100 candidate once from normal scene
+construction/reset, with matched squeeze/refined LIFT references and unchanged gates.
+
+### Evidence — VERIFIED BY PHYSICS
+
+- Parent commit 8270d9142e890313b8c4bcc1f241ed818674b2e7, branch
+  pro/arm-noslip-diagnostic-codex-20260918; owned changes dirty at execution.
+- integration_desk / MuJoCo3.3.7 / timestep0.002s.
+- HOME static guard PASS; normal RESET PASS; SETTLE **100 steps / 0.200s PASS**.
+- First existing gate: STAGING_DIAGNOSTIC — saved staging geometry changed: model_sha256.
+- No arm motion or TCP waypoint gate reached. CLOSE/CONFIRM/LIFT/HOLD not run.
+  CENTER SUCCESS=false; HOLD=0s.
+- NoSlip=0/impratio=100 throughout; qpos/qvel/act/time continuity, unchanged
+  model-array/option checks PASS. Copied preflight steps=0; no state jumps.
+- Final finger normal=0/0N; table contact count minimum=4; no detachment.
+  Final block bottom=-0.002023mm; max penetration across contacts=19.620µm.
+  Warnings=0; actuator saturation=false. These metrics describe SETTLE only.
+
+### Evidence — ANALYTIC / DIAGNOSTIC ONLY
+
+A2 command geometry is nearly vertical, TCP z=18.742417mm with 20mm PREGRASP
+standoff, unlike the old HOME teacher's 7.249° tilted grasp and 60mm standoff.
+The opt-in wrapper explicitly carries A2 geometry/task-open and frozen
+49 CLOSE /3 LIFT commands; it never restores A2 physical state.
+The existing fixed staging retreat10.110786mm and all original gates are reused.
+HOME-to-A2 connection is still unverified.
+
+Saved staging raw model SHA:
+ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
+
+Current pre-candidate builder raw model SHA:
+8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9
+
+Current pre-candidate portable SHA:
+b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4
+
+Only asset-hash difference: so101_new_calib.xml.
+Saved=78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703;
+current=d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580.
+integration_desk_source.json already records both revisions and applies the
+existing desk limits. The old staging record has no portable fingerprint.
+Raw MJB includes paths: this is an identity/provenance blocker, not proof of
+changed physical geometry. No hash was substituted or assertion removed.
+
+### Decision
+
+Stop at the first gate. No tuning, search, fallback, geometry/threshold change,
+or promotion of old copied success to current live success. Runtime candidate
+is opt-in; default contact configuration and REAL/BASIC are unchanged.
+
+### Validation — VERIFIED BY REGRESSION
+
+Focused **30 PASS**: candidate5, global4, refinement3, controlled7, squeeze11.
+Contracts cover option-only adoption, normal initial state, frozen command
+geometry, clone/live recorder separation, identity mismatch rejection before
+waypoint evaluation/physics, existing acceptance and table-recontact semantics.
+One targeted runtime attempt; no repeat after failure. git diff --check PASS.
+No CENTER SUCCESS milestone: no full suite, canonical render/vision, remote CI
+or merge. The recorded-result plot/replay is not canonical validation.
+
+### Result
+
+Final actual physics phase=SETTLE. Failure phase=STAGING_DIAGNOSTIC.
+This is a pre-trajectory provenance failure, not a new grasp/LIFT failure.
+PR67 remains draft/base main. Hardware/camera/ACT not run.
+
+### Lesson / Next
+
+Establish compiled equivalence for the saved staging model without relabeling
+its raw hashes, then evaluate the unchanged HOME-to-A2 connection.
+Post-SETTLE runtime behavior remains **UNVERIFIED**.
+
+Reproduction (SIM directory; fresh output path):
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --config config/runtime_contact_candidate.json --staging /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/dynamic-single-viewer.json --donor /tmp/dapier-controlled-audit-20260919/input-donor.json --output /tmp/dapier-runtime-contact-candidate-repro
+~~~
+
+Recorded replay (display only):
+~~~bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --model /tmp/dapier-runtime-contact-candidate-20260921/runtime-model.mjb --replay /tmp/dapier-runtime-contact-candidate-20260921
+~~~
+
+Raw state/trace/executed source: /tmp/dapier-runtime-contact-candidate-20260921.
+Public fixture: test/fixtures/runtime_candidate_gate.json.
+Visible: ~/Downloads/DAPIER-runtime-contact-candidate-20260921/report.html.
+Local validation kit: runtime-contact-candidate-20260921 (manifest included).
+Notion uses first-person project-owner research-note voice.

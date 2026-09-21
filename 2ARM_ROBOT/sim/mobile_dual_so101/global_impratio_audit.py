@@ -178,7 +178,7 @@ def replay(directory,model_path):
             with v.lock():
                 d.qpos[:]=r['raw_qpos'];d.qvel[:]=r['raw_qvel'];d.ctrl[:]=r['ctrl'];d.time=r['time_s']
                 mujoco.mj_forward(m,d)
-            lines=[MODE,'RECORDED ctrl + mj_step / DISPLAY ONLY','NoSlip=0 / impratio=100 throughout',
+            lines=[result.get("mode",MODE),'RECORDED ctrl + mj_step / DISPLAY ONLY','NoSlip=0 / impratio=100 throughout',
                 f"{r['phase']} stage {r['stage']} | SIM {r['time_s']:.3f} s",
                 f"Finger normal N: {np.round(r['gate']['forces_N'],4)}",
                 f"Table contacts {r['gate']['table_count']} / N {r['gate']['table_force_N']:.5f}",
