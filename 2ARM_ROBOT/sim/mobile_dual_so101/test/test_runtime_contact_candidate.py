@@ -7,7 +7,8 @@ from unittest.mock import patch
 import numpy as np
 import mujoco
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from runtime_contact_candidate import RuntimeCandidateTeacher
+from runtime_contact_candidate import RuntimeCandidateTeacher, connection_evidence
+from run_live_connection_candidate import LiveConnectionTeacher
 from waypoint_block_teacher import WaypointBlockTeacher
 from controlled_contact_audit import array_hashes, options
 
@@ -76,6 +77,40 @@ class RuntimeCandidateTest(unittest.TestCase):
         self.assertEqual(f['final_forces_N'],[0,0])
         self.assertEqual(f['warnings'],0)
         self.assertFalse(f['saturation_any'])
+
+
+class ConnectionEvidenceTest(unittest.TestCase):
+    def test_identical_endpoints_do_not_hide_interior_or_missing_samples(self):
+        copied=[dict(phase='ALIGN_HIGH',time_s=i,raw_qpos=[float(i)],
+                     raw_qvel=[0.],target_q=[1.],measured_clearance_m=.031+i*.001) for i in range(3)]
+        live=[dict(r,ctrl=r['target_q'],general_clearance_m=r['measured_clearance_m'],
+                   general_policy_safe=True) for r in copied]
+        report={'staging_search':{'selected':{'dynamic_preflight':
+            dict(scope=['ALIGN_HIGH'],telemetry=copied,passed=True)}},
+            'preflight_live_comparison':dict(scope=['ALIGN_HIGH'],bitwise_equal=True)}
+        good=connection_evidence(report,live)
+        self.assertTrue(good['samplewise_equal']);self.assertTrue(good['verified'])
+        self.assertEqual(good['live_minimum_general_clearance_m'],.031)
+        changed=copy.deepcopy(live);changed[1]['raw_qpos'][0]+=.01
+        bad=connection_evidence(report,changed)
+        self.assertFalse(bad['samplewise_equal']);self.assertFalse(bad['verified'])
+        self.assertEqual(bad['first_mismatch_index'],1)
+        self.assertFalse(connection_evidence(report,live[:-1])['samplewise_equal'])
+        self.assertFalse(connection_evidence(report,[])['samplewise_equal'])
+        self.assertIsNone(connection_evidence({},live))
+        report['preflight_live_comparison']['bitwise_equal']=False
+        self.assertFalse(connection_evidence(report,live)['verified'])
+        report['preflight_live_comparison']=dict(scope=['SAFE_STAGE'],bitwise_equal=True)
+        self.assertFalse(connection_evidence(report,live)['verified'])
+
+    def test_candidate_override_preserves_identity_before_ik(self):
+        config=json.loads((ROOT/'config/runtime_contact_candidate.json').read_text())
+        t=LiveConnectionTeacher({},dict(provenance={}),config,connection_only=True)
+        t.staging_reference['provenance']=dict(t.report['provenance'],model_sha256='wrong')
+        with patch.object(t,'evaluate_waypoint') as ik,patch.object(mujoco,'mj_step') as step:
+            with self.assertRaisesRegex(ValueError,'saved staging geometry changed: model_sha256'):
+                t.staging_plan(None,None,require_dynamic=True)
+            ik.assert_not_called();step.assert_not_called()
 
 
 if __name__=='__main__':unittest.main()

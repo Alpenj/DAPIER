@@ -23,6 +23,7 @@ from collision_guard import (
     check_bimanual_path,
     certified_separation_lower_bound,
     minimum_protected_clearance,
+    evaluate_pair_clearance_evidence, evaluate_clearance_set, ClearanceStatus,
     protected_geom_pairs,
 )
 from mobile_dual_so101 import (
@@ -48,6 +49,62 @@ UNSAFE_BIMANUAL_TARGET = (
     1.0153142196339973,
 )
 RESTORED_BASE_CAMERA_CLEARANCE_M = 0.10
+
+
+class ClearanceEvidenceTest(unittest.TestCase):
+    def setUp(self):
+        self.model=mujoco.MjModel.from_xml_string('<mujoco><worldbody>'
+            '<geom name="a" type="sphere" size=".01"/>'
+            '<geom name="b" type="sphere" size=".01" pos=".1 0 0"/>'
+            '<geom name="c" type="sphere" size=".01" pos=".2 0 0"/>'
+            '</worldbody></mujoco>')
+        self.data=mujoco.MjData(self.model);mujoco.mj_forward(self.model,self.data)
+
+    def test_native_contract_failure_cannot_hide_in_legacy_minimum(self):
+        for native in (float('nan'),float('inf'),float('-inf'),.051):
+            with self.subTest(native=native),patch.object(mujoco,'mj_geomDistance',side_effect=[native,.05]):
+                gap,a,b=minimum_protected_clearance(self.model,self.data,[(0,1),(0,2)],distance_cap_m=.05)
+                self.assertLess(gap,0);self.assertEqual((a,b),(0,1))
+            with patch.object(mujoco,'mj_geomDistance',return_value=native):
+                evidence=evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+                    required_clearance_m=.03,query_cap_m=.05)
+                self.assertFalse(evidence.safe)
+                self.assertEqual(evidence.status,ClearanceStatus.ENGINE_CONTRACT_FAILURE)
+
+    def test_finite_inputs_empty_pairs_and_cutoff_semantics(self):
+        for required,cap in ((float('nan'),.05),(.03,float('inf')),(.03,.02),(.03,.03)):
+            with self.subTest(required=required,cap=cap),self.assertRaises(ValueError):
+                evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+                    required_clearance_m=required,query_cap_m=cap)
+        with self.assertRaises(ValueError):
+            evaluate_clearance_set(self.model,self.data,[],required_clearance_m=.03,query_cap_m=.05)
+        clipped=evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+            required_clearance_m=.03,query_cap_m=.05)
+        self.assertTrue(clipped.safe);self.assertIsNone(clipped.exact_distance_m)
+        self.assertEqual(clipped.provable_clearance_m,.05)
+        # A native value just below the cap is still exact, never rounded up to pass.
+        self.data.geom_xpos[1]=[.049,0,0]
+        with patch.object(mujoco,'mj_geomDistance',return_value=.03-1e-15):
+            evidence=evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+                required_clearance_m=.03,query_cap_m=.03+1e-15)
+            self.assertFalse(evidence.safe);self.assertEqual(evidence.status,ClearanceStatus.EXACT_FAIL)
+
+    def test_false_zero_needs_certificate_and_penetration_cannot_be_overridden(self):
+        with patch.object(mujoco,'mj_geomDistance',return_value=0.):
+            evidence=evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+                required_clearance_m=.03,query_cap_m=.05)
+            self.assertTrue(evidence.safe);self.assertIsNone(evidence.exact_distance_m)
+            self.assertEqual(evidence.status,ClearanceStatus.CERTIFIED_SAFE)
+        with patch.object(mujoco,'mj_geomDistance',return_value=-.001):
+            evidence=evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+                required_clearance_m=.03,query_cap_m=.05)
+            self.assertFalse(evidence.safe)
+        self.data.geom_xpos[1]=[.02,0,0]
+        with patch.object(mujoco,'mj_geomDistance',return_value=0.):
+            evidence=evaluate_pair_clearance_evidence(self.model,self.data,(0,1),
+                required_clearance_m=.03,query_cap_m=.05)
+            self.assertFalse(evidence.safe);self.assertIsNone(evidence.exact_distance_m)
+            self.assertEqual(evidence.status,ClearanceStatus.UNVERIFIABLE_FAIL)
 
 
 class CollisionGuardTest(unittest.TestCase):

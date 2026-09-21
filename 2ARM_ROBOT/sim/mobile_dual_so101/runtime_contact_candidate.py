@@ -3,6 +3,9 @@
 import argparse
 import hashlib
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import patch
 import mujoco
@@ -14,6 +17,7 @@ from lift_refinement_audit import plan_report
 from pgripper import jaw_gap_m
 from waypoint_block_teacher import WaypointBlockTeacher
 from dynamic_preflight import full_state_preflight
+from collision_guard import task_clearance_status
 
 MODE='SIM PHYSICS / LIVE TASK STATE / RUNTIME CANDIDATE'
 
@@ -66,8 +70,8 @@ class RuntimeCandidateTeacher(WaypointBlockTeacher):
         return super().staging_plan(pregrasp,grasp,require_dynamic=require_dynamic)
 
     def finish_task(self,grasp):
+        self.report['connection_pass']=True
         if self.connection_only:
-            self.report['connection_pass']=True
             self.transition('A2_CONNECTION_READY')
             return  # Explicit bounded run stops before CLOSE; never task success.
         grasp=np.asarray(self.config['target_TCP'])[:3,3];self.waypoint_xyz=grasp
@@ -100,11 +104,55 @@ class RuntimeCandidateTeacher(WaypointBlockTeacher):
         self.report['success']=True;self.report['live_task_success']=True;self.transition('SUCCESS')
 
 
-def run(a):
+def connection_evidence(report, rows):
+    """Compare equal scopes; endpoint equality alone is not trajectory equality."""
+    preflight=report.get('staging_search',{}).get('selected',{}).get('dynamic_preflight')
+    if not preflight:
+        return None
+    scope=preflight['scope']
+    live=[r for r in rows if r['phase'] in scope]
+    copied=preflight['telemetry']
+    fields=(('time_s','time_s'),('raw_qpos','raw_qpos'),('raw_qvel','raw_qvel'),('ctrl','target_q'))
+    mismatches=[i for i,(a,b) in enumerate(zip(live,copied))
+        if a['phase']!=b['phase'] or any(not np.array_equal(a[x],b[y]) for x,y in fields)]
+    minimum=lambda values: min(values,default=None)
+    equal=bool(live and len(live)==len(copied) and not mismatches)
+    endpoint=report.get('preflight_live_comparison',{})
+    verified=bool(preflight.get('passed') and equal and all(r['general_policy_safe'] for r in live)
+        and endpoint.get('scope')==scope and endpoint.get('bitwise_equal'))
+    return dict(verified=verified,scope=scope,comparison_fields=[x for x,y in fields],
+        live_samples=len(live),copied_samples=len(copied),
+        samplewise_equal=equal,
+        first_mismatch_index=mismatches[0] if mismatches else None,
+        live_minimum_general_clearance_m=minimum(r['general_clearance_m'] for r in live),
+        copied_minimum_general_clearance_m=minimum(r['measured_clearance_m'] for r in copied),
+        live_all_policy_safe=bool(live and all(r['general_policy_safe'] for r in live)))
+
+
+def run(a, *, teacher_class=RuntimeCandidateTeacher):
     a.output.mkdir(parents=True,exist_ok=False)
     config=json.loads(a.config.read_text());staging=json.loads(a.staging.read_text())
     donor=json.loads(a.donor.read_text())
-    t=RuntimeCandidateTeacher(donor['candidate'],staging,config,connection_only=a.connection_only)
+    # Snapshot exact disk sources and inputs before execution; never reuse output directories.
+    root=Path(__file__).resolve().parent
+    sources=sorted(set(root.glob('*.py')) | set(root.glob('*.json')) | set((root/'config').glob('*.json')))
+    source_hashes={}
+    for path in sources:
+        raw=path.read_bytes();relative=path.relative_to(root)
+        destination=a.output/'source'/relative;destination.parent.mkdir(parents=True,exist_ok=True)
+        destination.write_bytes(raw);source_hashes[str(relative)]=hashlib.sha256(raw).hexdigest()
+    for name,path in (('config',a.config),('staging',a.staging),('donor',a.donor)):
+        (a.output/(name+'-input.json')).write_bytes(path.read_bytes())
+    provenance=dict(python=sys.version,executable=sys.executable,mujoco=mujoco.__version__,
+        numpy=np.__version__,entrypoint=str(Path(sys.argv[0]).resolve()),argv=sys.argv,
+        teacher_class=teacher_class.__name__,source_sha256=source_hashes,
+        collision_guard_file=sys.modules['collision_guard'].__file__,
+        mj_geomDistance_doc=mujoco.mj_geomDistance.__doc__,
+        asset_path=os.environ.get('DAPIER_SO101_MJCF'))
+    for name,args in (('head',['rev-parse','HEAD']),('status',['status','--short']),('diff',['diff','HEAD'])):
+        provenance[name]=subprocess.check_output(['git',*args],cwd=root,text=True)
+    (a.output/'run-provenance.json').write_text(json.dumps(provenance,indent=2)+'\n')
+    t=teacher_class(donor['candidate'],staging,config,connection_only=a.connection_only)
     m,d=t.m,t.d;fixed=options(m);arrays=array_hashes(m)
     mujoco.mj_saveModel(m,str(a.output/'runtime-model.mjb'),None)
     t.stage=0;rows=[];counts=dict(live=0,preflight=0);last=None
@@ -125,9 +173,14 @@ def run(a):
         if self.d is not d:return  # Existing preflight observer is separate from live evidence.
         if rows and rows[-1]['time_s']==float(d.time):return
         f=force_sample(self);metrics=self.env.metrics();limits=m.actuator_forcerange
+        clearance=task_clearance_status(m,d,self.env.collision_phase)
         joint=int(m.body_jntadr[self.block_body]);dof=int(m.jnt_dofadr[joint])
         row=dict(step=counts['live'],phase=self.phase,stage=self.stage,time_s=float(d.time),elapsed_s=float(d.time),
             raw_qpos=d.qpos.tolist(),raw_qvel=d.qvel.tolist(),ctrl=d.ctrl.tolist(),gate=f,
+            general_clearance_m=clearance['general_clearance_m'],
+            general_provable_clearance_m=clearance['general_provable_clearance_m'],
+            general_evidence_status=clearance['general_evidence_status'],
+            general_policy_safe=clearance['safe'],closest_general_pair=clearance['closest_general_pair'],
             tcp_xyz=d.site_xpos[self.site].tolist(),
             tcp_error_m=0. if self.waypoint_xyz is None else float(np.linalg.norm(d.site_xpos[self.site]-self.waypoint_xyz)),
             target_xyz=None if self.waypoint_xyz is None else self.waypoint_xyz.tolist(),
@@ -152,6 +205,12 @@ def run(a):
     with (a.output/'path.jsonl').open('w') as stream,patch.object(mujoco,'mj_step',step):
         report=t.run()
     assert arrays==array_hashes(m) and fixed==options(m)
+    if any(hashlib.sha256((root/name).read_bytes()).hexdigest()!=digest for name,digest in source_hashes.items()):
+        raise RuntimeError('source changed during execution; run is not certified')
+    report['connection_evidence']=connection_evidence(report,rows)
+    report['connection_verified']=bool(report['connection_evidence'] and report['connection_evidence']['verified'])
+    report['verification_passed']=bool(report['connection_verified'] and not report.get('failure')
+        and (report['success'] or (a.connection_only and report.get('connection_pass'))))
     report.update(mode=MODE,hardware_execution=False,runtime_default_changed=False,
         initial_source='normal scene HOME and env.reset, no saved-state input',
         live_physics_steps=counts['live'],copied_preflight_steps=counts['preflight'],
@@ -161,10 +220,14 @@ def run(a):
                                 for p in (a.config,a.staging,a.donor,Path(__file__))})
     (a.output/'teacher.json').write_text(json.dumps(report,indent=2)+'\n')
     (a.output/'result.json').write_text(json.dumps(dict(mode=MODE,failure=report.get('failure'),
-        classification=('CENTER SUCCESS' if report['success'] else
+        classification=('FIRST GATE FAILURE' if report.get('failure') else 'CONNECTION VERIFICATION FAILED' if report.get('connection_pass') and not report['connection_verified'] else
+            'CENTER SUCCESS' if report['success'] else
             'A2 CONNECTION PASS / TASK NOT RUN' if report.get('connection_pass') else 'FIRST GATE FAILURE'),
-        live_task_success=report['success'],physics_steps=counts['live']),indent=2)+'\n')
+        live_task_success=report['success'],connection_pass=report.get('connection_pass',False),
+        connection_evidence=report['connection_evidence'],connection_verified=report['connection_verified'],
+        verification_passed=report['verification_passed'],physics_steps=counts['live']),indent=2)+'\n')
     print('LIVE FINISHED',report['final_phase'],report.get('failure'),'CENTER SUCCESS',report['success'],flush=True)
+    return report
 
 
 if __name__=='__main__':
@@ -176,5 +239,6 @@ if __name__=='__main__':
     if a.replay:
         if not a.model:p.error('replay requires --model')
         replay(a.replay,a.model)
-    elif all(getattr(a,k) for k in ('config','staging','donor','output')):run(a)
+    elif all(getattr(a,k) for k in ('config','staging','donor','output')):
+        raise SystemExit(0 if run(a)['verification_passed'] else 1)
     else:p.error('runtime requires config/staging/donor/output')

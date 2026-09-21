@@ -3487,3 +3487,82 @@ Public fixture: test/fixtures/staging_identity_connection.json.
 Visible table/plot: ~/Downloads/DAPIER-staging-identity-20260921/report.html.
 Existing validation kit: staging-identity-20260921, raw models/trace/source/manifest.
 PR67 draft/base main; normal push; Notion first-person research note.
+
+
+## 2026-09-21 — Gemini 원본 대조와 normal HOME→HOLD 연속 검증
+
+Record ID: DAPIER-2026-09-21-connection-evidence-audit
+
+### Problem / Evidence
+
+나는 보고된 코드 조각과 실제 디스크 구현을 먼저 대조했다. 기준은 `17d72bf`와
+당시 미커밋 guard 및 두 runner다. 원본과 Git diff, 환경, SHA256을 ZIP으로 보존했다.
+원래 teacher.json의 guard `d88c9ea…bf72f`, runner `848a895…7d755`는 실제 디스크와
+일치했다. 실제 guard에는 6원소 fromto, non-finite 입력 검사, false-zero certificate,
+빈 집합 거부가 이미 있었다. 제출된 다른 코드 조각을 근거로 이를 재구현하지 않았다.
+
+원본 copied preflight는 SAFE_STAGE/ALIGN_HIGH만 실행했다. 30.7695967 mm는 그 경로의
+최소이고, 40.6719176 mm는 SAFE_STAGE 종점이었다. ALIGN 종료 상태 일치를 전체 궤적
+일치로 해석할 수 없었다. 원본 412-test 로그는 확인하지 못했다.
+
+### Decision
+
+- 공통 legacy 최소값 계산에서 native NaN/±Inf 또는 query cap 초과값이 다른 pair나
+  certificate 뒤에 숨지 못하도록 실패값을 유지했다. 구조화 판정은 engine failure로 남긴다.
+- cutoff는 cap과 정확히 같은 sentinel만 인정한다. cap 직전 값을 올림해 승인하지 않는다.
+- 후보 override의 모델/asset identity 및 ALIGN 관절 margin gate를 보존한다.
+- live/copy가 하나의 후보 planner를 재사용하고 5개 접근 구간 전부 copied preflight한다.
+- 매 step의 거리 증거 유형과 하한, 소스 snapshot, 실제 import/버전, 명령을 저장한다.
+- 경로 표본/정책/종점 비교를 검증 verdict에 연결하고 실패 CLI는 nonzero로 종료한다.
+- 기존 성공 결과를 덮어쓰지 않고 writer worktree와 exclusive output을 사용한다.
+
+새 작업 폴더의 raw model hash 차이는 기존 staging_model_audit로 검증했다.
+물리 배열·옵션·scalar 차이는 없고 mesh_pathadr만 달랐다(classification A).
+검사를 우회하지 않고 로컬 새 staging reference를 만들었다. 원래 reference는 보존한다.
+
+### Validation / Result — SIM
+
+변경 관련 guard 17개와 runtime 7개가 통과했다. 기존 copied failure/success/live-state
+불변성 3개도 통과했다. 최종 `scripts/verify-mujoco-headless`는 연구 코드 33개와
+SIM 417개 테스트를 모두 통과하고 canonical render/vision artifact 생성을 완료했다.
+검증 exit code=0, source_unchanged=true다. 성공 run의 소스 73개가 검증 시작 파일과
+SHA256까지 동일했다. canonical render는 기본 tower 장면 회귀이고, 아래 후보 성공은
+별도 `full-run-02`의 physics와 `verified-run.png`로 확인했다.
+
+normal HOME에서 상태 복원 없이 18,203 physics step / 36.406 s를 연속 실행하여
+CLOSE→GRASP_CONFIRM→LIFT5/15/30→HOLD→SUCCESS까지 도달했다.
+NoSlip=0, impratio=100, model arrays/options를 유지했다.
+
+- 접근 5단계 5,582 sample의 time/qpos/qvel/ctrl이 copied/live에서 모두 동일했다.
+- APPROACH_FINE 종료 mjSTATE_INTEGRATION도 bitwise 동일했다. 매 시점의 전체
+  integration-state 동일성이라고 확대하지 않는다.
+- live 전체 일반 clearance 최소는 ALIGN_HIGH, 5.150 s에서 30.769596726 mm였다.
+- 원래 Gemini 연결 run 5,682 sample(SETTLE 포함)의 phase/time/qpos/qvel/ctrl도
+  수정 후 live 앞부분과 모두 동일했다. 기존 성공 경로를 보존했다.
+- HOLD 1,500 sample / 3.000 s 전부 lift_supported=true, table contact=0.
+- HOLD 끝 block bottom=33.864400 mm, TCP error=0.331179 mm.
+- warning=0, saturation sample=0, artificial attachment 사용 없음.
+
+### Lesson / Next
+
+나는 먼저 실행본과 원자료의 연결을 확인해야 불필요한 수정을 피할 수 있음을 확인했다.
+검증 범위, endpoint와 path minimum, exact와 certificate를 구분해야 한다.
+이번 주 첫 실기 목표는 사용자가 정한 블록 집기→들기→3초 유지다.
+이번 결과는 고정 장면의 SIM 1회다. 실측 센서 목표, 좌표계/보정, 장치 command 변환과
+감독하의 제한된 실기 시험은 별도 검증 대상이며 이번 작업에서 장치를 열지 않았다.
+
+로컬 원본·수정 실행본·원시 로그·해시·재현 명령과 그림은
+`~/Downloads/DAPIER-audit-20260921/`에 보존했다. `full-run-01`은 identity gate 실패,
+`model-identity`는 등가성 근거, `full-run-02`는 실제 연속 성공이다.
+`verified-run-summary.json`과 `verified-run.png`는 원시 path.jsonl에서 만든 파생 근거다.
+
+내 실물 구성은 양팔 PGripper, OS30A RGB-D 초기 위치 추정, 양 손목 RGB 추적이다.
+2026-09-21 결정에 따라 장치 연결·보정 촬영·팔 구동은 내일 오전으로 분리했다.
+오늘은 실물 장치를 열지 않았으며, 실제 센서 입력에서 집기→들기→3초 유지를
+확인하는 단계는 미완료다. 실기 실행 직전 명령·장치·범위 승인을 별도로 받는다.
+
+모터 보정 사전 점검은 장치 없이 완료했다. 2026-09-15 공통 보정 4개와 기존 kit의
+12개 saved-file 참조 SHA256이 모두 일치했고, recorder/shared 경로는 같은 원본이다.
+역할별 joint order/motor ID/range 검사, 기존 `start-teleop.sh --check`,
+`test_local_calibration.py` 1개가 통과했다. 보정값·시작 기준·모터 설정은 바꾸지 않았다.
+이 결과는 파일 정합성 확인이며 새 실물 readback을 뜻하지 않는다.
