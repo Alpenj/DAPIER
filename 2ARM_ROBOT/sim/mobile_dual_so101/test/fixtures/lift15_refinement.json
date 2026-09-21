@@ -1,0 +1,882 @@
+{
+  "mode": "DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS",
+  "live_task_success": false,
+  "hardware_execution": false,
+  "initial_source": "same saved failed LIFT15 endpoint, not a new HOME-to-LIFT rollout",
+  "original_ik": {
+    "action_rad": [
+      0.6569199336328165,
+      0.4781442944091744,
+      -0.3051894751270867,
+      1.3646454247684223,
+      -0.8480610973285759,
+      1.716112023423022,
+      1.0490956456824395e-09,
+      0.0017030530554207712,
+      0.001437346054517011,
+      0.0003997092142699944,
+      -1.2257071175058136e-06,
+      2.2025746379457667
+    ],
+    "converged": true,
+    "iterations": 1,
+    "residual_m_by_side": {
+      "left": 0.00040773380526789714
+    },
+    "tool_axis_error_rad_by_side": {
+      "left": 0.014625464552152667
+    },
+    "planning_qpos_writes": 2,
+    "runtime_qpos_writes": 0,
+    "hardware_execution": false
+  },
+  "sources": {
+    "/tmp/dapier-arm-noslip-20260918/original-model.mjb": "8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9",
+    "/tmp/dapier-matched-budget-lift-20260920/experiment.json": "139f33309c65428a7f9febb6477a031d73096dd061041f17f15fc4dec4f757ca",
+    "/tmp/dapier-controlled-audit-20260919/input-source.json": "927d738558b449b15b689d30654f06673fa2eb956ed2019b5d6318ff105de84a",
+    "/tmp/dapier-controlled-audit-20260919/input-donor.json": "390c35c6afd98af256ec618762d8ad7fa2f676e2299ddbe8fbc58edf2c2eba31",
+    "/home/dapier-jhj/DAPIER/.local-workspaces/pro/grasp-families-codex-20260918/2ARM_ROBOT/sim/mobile_dual_so101/lift_refinement_audit.py": "d7ab74ad38f5e2ba3f7ce684513e829c7d24f33d353b67771032e3745c5c6ef7"
+  },
+  "reference_bottom_m": -2.022691563290102e-06,
+  "required_world_bottom_m": 0.03,
+  "same_initial_full_state": true,
+  "cases": {
+    "original": {
+      "plan": {
+        "q": [
+          0.6569199336328165,
+          0.4781442944091744,
+          -0.3051894751270867,
+          1.3646454247684223,
+          -0.8480610973285759,
+          1.716112023423022,
+          1.0490956456824395e-09,
+          0.0017030530554207712,
+          0.001437346054517011,
+          0.0003997092142699944,
+          -1.2257071175058136e-06,
+          2.2025746379457667
+        ],
+        "xyz": [
+          0.19971278783498572,
+          0.00022155985088691287,
+          0.03355605546807372
+        ],
+        "position_vector_m": [
+          -0.000287208448184334,
+          0.0002214218063605685,
+          -0.00018636133428855117
+        ],
+        "position_error_m": 0.00040773380526789714,
+        "approach_error_rad": 0.014625464552160258,
+        "closing_error_rad": 0.009012120415234212,
+        "joint_margins_rad": [
+          1.2629422435609468,
+          1.2671849575851621,
+          1.3848105248729132,
+          0.29341730456511117,
+          1.8957861996706735,
+          0.4866879765769778,
+          1.9198621761446677,
+          1.743626198938916,
+          1.688562653945483,
+          1.6576630201192635,
+          2.7438460712921318,
+          0.00022536205423318023
+        ],
+        "guard": {
+          "safe": true,
+          "reason": "interpolated simulator path satisfies protected clearance",
+          "minimum_clearance_m": 0.03,
+          "required_clearance_m": 0.03,
+          "path_fraction": 0.0,
+          "checked_samples": 2,
+          "first_body": "left_shoulder",
+          "second_body": "world",
+          "first_geom_id": 9,
+          "second_geom_id": 0,
+          "published": false,
+          "control_authorized": false,
+          "hardware_dispatch_authorized": false,
+          "executed_action": false,
+          "hardware_execution": false
+        },
+        "task_policy": {
+          "safe": true,
+          "general_clearance_m": 0.06619829615889289,
+          "closest_general_pair": [
+            27,
+            74
+          ]
+        }
+      },
+      "options": {
+        "ccd_iterations": 35,
+        "ccd_tolerance": 1e-06,
+        "cone": 1,
+        "density": 0.0,
+        "disableactuator": 0,
+        "disableflags": 0,
+        "enableflags": 0,
+        "gravity": [
+          0.0,
+          0.0,
+          -9.81
+        ],
+        "impratio": 1.0,
+        "integrator": 3,
+        "iterations": 100,
+        "jacobian": 2,
+        "ls_iterations": 50,
+        "ls_tolerance": 0.01,
+        "magnetic": [
+          0.0,
+          -0.5,
+          0.0
+        ],
+        "noslip_iterations": 0,
+        "noslip_tolerance": 1e-06,
+        "o_friction": [
+          1.0,
+          1.0,
+          0.005,
+          0.0001,
+          0.0001
+        ],
+        "o_margin": 0.0,
+        "o_solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "o_solref": [
+          0.02,
+          1.0
+        ],
+        "sdf_initpoints": 40,
+        "sdf_iterations": 10,
+        "solver": 2,
+        "timestep": 0.002,
+        "tolerance": 1e-10,
+        "viscosity": 0.0,
+        "wind": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "model_unchanged": true,
+      "failure": "measured waypoint position tolerance failed",
+      "copied_success": false,
+      "refinement_settings": null,
+      "physics_steps": 250,
+      "phase_steps": {
+        "LIFT_15MM": 250
+      },
+      "initial": {
+        "time_s": 39.37800000000216,
+        "elapsed_s": 0.0,
+        "phase": "LIFT_15MM",
+        "errors": {
+          "planned_vector_m": [
+            -0.000287208448184334,
+            0.0002214218063605685,
+            -0.00018636133428855117
+          ],
+          "tracking_vector_m": [
+            -9.487584645140323e-05,
+            7.314634369554431e-05,
+            -0.00019604244111381952
+          ],
+          "total_vector_m": [
+            -0.00038208429463573723,
+            0.0002945681500561128,
+            -0.0003824037754023707
+          ],
+          "planned_m": 0.00040773380526789714,
+          "tracking_m": 0.0002297486725832433,
+          "total_m": 0.0006156228152665853
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.03374241680236227
+        ],
+        "tcp_xyz": [
+          0.19961791198853432,
+          0.0002947061945824572,
+          0.0333600130269599
+        ],
+        "finger_forces_N": [
+          0.40137727999907696,
+          0.4011725620025933
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.033861140599025986,
+        "block_vz_m_s": -0.0008487310794539214,
+        "bottom_lift_m": 0.013520120663426519,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997531006231418,
+        "penetration_m": 1.4549651780640003e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.013518097971863229
+      },
+      "lift15_endpoint": {
+        "time_s": 39.87800000000277,
+        "elapsed_s": 0.5000000000006111,
+        "phase": "LIFT_15MM",
+        "errors": {
+          "planned_vector_m": [
+            -0.000287208448184334,
+            0.0002214218063605685,
+            -0.00018636133428855117
+          ],
+          "tracking_vector_m": [
+            -9.37016932814061e-05,
+            7.226119082294328e-05,
+            -0.00019180805204076223
+          ],
+          "total_vector_m": [
+            -0.0003809101414657401,
+            0.0002936829971835118,
+            -0.0003781693863293134
+          ],
+          "planned_m": 0.00040773380526789714,
+          "tracking_m": 0.00022537084072839653,
+          "total_m": 0.0006118450158846031
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.03374241680236227
+        ],
+        "tcp_xyz": [
+          0.19961908614170432,
+          0.00029382104170985615,
+          0.03336424741603296
+        ],
+        "finger_forces_N": [
+          0.38938915913445615,
+          0.393579158889524
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.033353256719981406,
+        "block_vz_m_s": -0.0009438232446285299,
+        "bottom_lift_m": 0.013010066553744232,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997547057009326,
+        "penetration_m": 1.4755096668413241e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.013008043862180942
+      },
+      "final": {
+        "time_s": 39.87800000000277,
+        "elapsed_s": 0.5000000000006111,
+        "phase": "LIFT_15MM",
+        "errors": {
+          "planned_vector_m": [
+            -0.000287208448184334,
+            0.0002214218063605685,
+            -0.00018636133428855117
+          ],
+          "tracking_vector_m": [
+            -9.37016932814061e-05,
+            7.226119082294328e-05,
+            -0.00019180805204076223
+          ],
+          "total_vector_m": [
+            -0.0003809101414657401,
+            0.0002936829971835118,
+            -0.0003781693863293134
+          ],
+          "planned_m": 0.00040773380526789714,
+          "tracking_m": 0.00022537084072839653,
+          "total_m": 0.0006118450158846031
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.03374241680236227
+        ],
+        "tcp_xyz": [
+          0.19961908614170432,
+          0.00029382104170985615,
+          0.03336424741603296
+        ],
+        "finger_forces_N": [
+          0.38938915913445615,
+          0.393579158889524
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.033353256719981406,
+        "block_vz_m_s": -0.0009438232446285299,
+        "bottom_lift_m": 0.013010066553744232,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997547057009326,
+        "penetration_m": 1.4755096668413241e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.013008043862180942
+      },
+      "lift15_gate": {
+        "phase": "LIFT_15MM",
+        "time_s": 39.87800000000277,
+        "position_error_m": 0.0006118450158846031,
+        "approach_error_rad": 0.013628232491734284,
+        "closing_error_rad": 0.00819612626085486,
+        "collision_safe": true
+      },
+      "lift15_gate_pass": false,
+      "waypoint_gates": [
+        {
+          "phase": "LIFT_15MM",
+          "time_s": 39.87800000000277,
+          "position_error_m": 0.0006118450158846031,
+          "approach_error_rad": 0.013628232491734284,
+          "closing_error_rad": 0.00819612626085486,
+          "collision_safe": true
+        }
+      ],
+      "minimum_finger_forces_N": [
+        0.3791173564154971,
+        0.37952277845609517
+      ],
+      "table_always_absent": true,
+      "gripper_command_constant": true,
+      "any_saturation": false,
+      "max_warning_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "max_penetration_m": 1.482966135092334e-05,
+      "maximum_bottom_lift_m": 0.013520120663426519,
+      "maximum_continuous_supported_lift_s": 0.0
+    },
+    "refined": {
+      "plan": {
+        "q": [
+          0.656920338018807,
+          0.486150005394708,
+          -0.3189007152547846,
+          1.374173936575636,
+          -0.8485230894271821,
+          1.716112023423022,
+          1.0490956456824395e-09,
+          0.0017030530554207712,
+          0.001437346054517011,
+          0.0003997092142699944,
+          -1.2257071175058136e-06,
+          2.2025746379457667
+        ],
+        "xyz": [
+          0.19988275642927197,
+          9.127809863458637e-05,
+          0.03369100241692015
+        ],
+        "position_vector_m": [
+          -0.00011723985389808234,
+          9.114005410824201e-05,
+          -5.141438544212229e-05
+        ],
+        "position_error_m": 0.00015714684799666867,
+        "approach_error_rad": 0.010959790727844481,
+        "closing_error_rad": 0.0060568918244019694,
+        "joint_margins_rad": [
+          1.2629418391749563,
+          1.2591792465996288,
+          1.3710992847452155,
+          0.28388879275789747,
+          1.895324207572067,
+          0.4866879765769778,
+          1.9198621761446677,
+          1.743626198938916,
+          1.688562653945483,
+          1.6576630201192635,
+          2.7438460712921318,
+          0.00022536205423318023
+        ],
+        "guard": {
+          "safe": true,
+          "reason": "interpolated simulator path satisfies protected clearance",
+          "minimum_clearance_m": 0.03,
+          "required_clearance_m": 0.03,
+          "path_fraction": 0.0,
+          "checked_samples": 2,
+          "first_body": "left_shoulder",
+          "second_body": "world",
+          "first_geom_id": 9,
+          "second_geom_id": 0,
+          "published": false,
+          "control_authorized": false,
+          "hardware_dispatch_authorized": false,
+          "executed_action": false,
+          "hardware_execution": false
+        },
+        "task_policy": {
+          "safe": true,
+          "general_clearance_m": 0.0662861369289654,
+          "closest_general_pair": [
+            27,
+            74
+          ]
+        }
+      },
+      "options": {
+        "ccd_iterations": 35,
+        "ccd_tolerance": 1e-06,
+        "cone": 1,
+        "density": 0.0,
+        "disableactuator": 0,
+        "disableflags": 0,
+        "enableflags": 0,
+        "gravity": [
+          0.0,
+          0.0,
+          -9.81
+        ],
+        "impratio": 1.0,
+        "integrator": 3,
+        "iterations": 100,
+        "jacobian": 2,
+        "ls_iterations": 50,
+        "ls_tolerance": 0.01,
+        "magnetic": [
+          0.0,
+          -0.5,
+          0.0
+        ],
+        "noslip_iterations": 0,
+        "noslip_tolerance": 1e-06,
+        "o_friction": [
+          1.0,
+          1.0,
+          0.005,
+          0.0001,
+          0.0001
+        ],
+        "o_margin": 0.0,
+        "o_solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "o_solref": [
+          0.02,
+          1.0
+        ],
+        "sdf_initpoints": 40,
+        "sdf_iterations": 10,
+        "solver": 2,
+        "timestep": 0.002,
+        "tolerance": 1e-10,
+        "viscosity": 0.0,
+        "wind": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "model_unchanged": true,
+      "failure": "continuous 3-second supported lift not reached",
+      "copied_success": false,
+      "refinement_settings": {
+        "damping": 0.02,
+        "tool_axis_weight_m": 0.05,
+        "max_joint_step_rad": 0.05
+      },
+      "physics_steps": 2285,
+      "phase_steps": {
+        "LIFT_15MM": 250,
+        "LIFT_30MM": 435,
+        "HOLD": 1600
+      },
+      "initial": {
+        "time_s": 39.37800000000216,
+        "elapsed_s": 0.0,
+        "phase": "LIFT_15MM",
+        "errors": {
+          "planned_vector_m": [
+            -0.00011723985389808234,
+            9.114005410824201e-05,
+            -5.141438544212229e-05
+          ],
+          "tracking_vector_m": [
+            -0.0002648444407376549,
+            0.00020342809594787081,
+            -0.0003309893899602484
+          ],
+          "total_vector_m": [
+            -0.00038208429463573723,
+            0.0002945681500561128,
+            -0.0003824037754023707
+          ],
+          "planned_m": 0.00015714684799666867,
+          "tracking_m": 0.00047019096575420794,
+          "total_m": 0.0006156228152665853
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.03374241680236227
+        ],
+        "tcp_xyz": [
+          0.19961791198853432,
+          0.0002947061945824572,
+          0.0333600130269599
+        ],
+        "finger_forces_N": [
+          0.40137727999907696,
+          0.4011725620025933
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.033861140599025986,
+        "block_vz_m_s": -0.0008487310794539214,
+        "bottom_lift_m": 0.013520120663426519,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997531006231418,
+        "penetration_m": 1.4549651780640003e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.013518097971863229
+      },
+      "lift15_endpoint": {
+        "time_s": 39.87800000000277,
+        "elapsed_s": 0.5000000000006111,
+        "phase": "LIFT_15MM",
+        "errors": {
+          "planned_vector_m": [
+            -0.00011723985389808234,
+            9.114005410824201e-05,
+            -5.141438544212229e-05
+          ],
+          "tracking_vector_m": [
+            -9.281687771739433e-05,
+            7.15835398706437e-05,
+            -0.00018936457243290405
+          ],
+          "total_vector_m": [
+            -0.00021005673161547667,
+            0.0001627235939788857,
+            -0.00024077895787502634
+          ],
+          "planned_m": 0.00015714684799666867,
+          "tracking_m": 0.0002227063476022054,
+          "total_m": 0.00035857677711999893
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.03374241680236227
+        ],
+        "tcp_xyz": [
+          0.19978993955155458,
+          0.00016286163850523006,
+          0.033501637844487245
+        ],
+        "finger_forces_N": [
+          0.38934710065244277,
+          0.39417615358442487
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.03349073866065518,
+        "block_vz_m_s": -0.001023709105597764,
+        "bottom_lift_m": 0.013253407585768262,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997546839429354,
+        "penetration_m": 1.4788131301581415e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.013251384894204972
+      },
+      "final": {
+        "time_s": 43.948000000007745,
+        "elapsed_s": 4.570000000005585,
+        "phase": "HOLD",
+        "errors": {
+          "planned_vector_m": [
+            0.00011830935149884092,
+            -8.87130493120982e-05,
+            -0.0001357039078625638
+          ],
+          "tracking_vector_m": [
+            -7.858561527090968e-05,
+            6.0606215629418776e-05,
+            -0.00019188444116872982
+          ],
+          "total_vector_m": [
+            3.972373622793124e-05,
+            -2.8106833682679428e-05,
+            -0.00032758834903129364
+          ],
+          "planned_m": 0.00020070540196890136,
+          "tracking_m": 0.00021602881998257264,
+          "total_m": 0.000331182873561754
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.053742416802362275
+        ],
+        "tcp_xyz": [
+          0.200039720019398,
+          -2.7968789156335074e-05,
+          0.05341482845333098
+        ],
+        "finger_forces_N": [
+          0.399982555000451,
+          0.3830009123776629
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.04923412972327373,
+        "block_vz_m_s": -0.0010438068742027857,
+        "bottom_lift_m": 0.028425903939445916,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997545168373416,
+        "penetration_m": 1.4487775668856574e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.028423881247882626
+      },
+      "lift15_gate": {
+        "phase": "LIFT_15MM",
+        "time_s": 39.87800000000277,
+        "position_error_m": 0.00035857677711999893,
+        "approach_error_rad": 0.010005810476372138,
+        "closing_error_rad": 0.005263390805259325,
+        "collision_safe": true
+      },
+      "lift15_gate_pass": true,
+      "waypoint_gates": [
+        {
+          "phase": "LIFT_15MM",
+          "time_s": 39.87800000000277,
+          "position_error_m": 0.00035857677711999893,
+          "approach_error_rad": 0.010005810476372138,
+          "closing_error_rad": 0.005263390805259325,
+          "collision_safe": true
+        },
+        {
+          "phase": "LIFT_30MM",
+          "time_s": 40.748000000003834,
+          "position_error_m": 0.0003356850266321037,
+          "approach_error_rad": 0.03091373039962115,
+          "closing_error_rad": 0.022262862757520725,
+          "collision_safe": true
+        }
+      ],
+      "minimum_finger_forces_N": [
+        0.37911735835689875,
+        0.3793869465610963
+      ],
+      "table_always_absent": true,
+      "gripper_command_constant": true,
+      "any_saturation": false,
+      "max_warning_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "max_penetration_m": 1.4853490514852347e-05,
+      "maximum_bottom_lift_m": 0.031722569106473406,
+      "maximum_continuous_supported_lift_s": 1.8940000000000015,
+      "hold_start": {
+        "time_s": 40.748000000003834,
+        "elapsed_s": 1.3700000000016743,
+        "phase": "LIFT_30MM",
+        "errors": {
+          "planned_vector_m": [
+            0.00011830935149884092,
+            -8.87130493120982e-05,
+            -0.0001357039078625638
+          ],
+          "tracking_vector_m": [
+            -7.981643634086266e-05,
+            6.154364458307556e-05,
+            -0.0001966581778727189
+          ],
+          "total_vector_m": [
+            3.849291515797826e-05,
+            -2.7169404729022645e-05,
+            -0.0003323620857352827
+          ],
+          "planned_m": 0.00020070540196890136,
+          "tracking_m": 0.00022098127210906548,
+          "total_m": 0.0003356850266321037
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.053742416802362275
+        ],
+        "tcp_xyz": [
+          0.20003848919832803,
+          -2.703136020267829e-05,
+          0.05341005471662699
+        ],
+        "finger_forces_N": [
+          0.39038400787600525,
+          0.3926422856502478
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.052507678909594166,
+        "block_vz_m_s": -0.0008028645269118631,
+        "bottom_lift_m": 0.031682534821953864,
+        "continuous_hold_s": 0.2420000000000002,
+        "lift_supported": true,
+        "jaw_opening_m": 0.039975472480884004,
+        "penetration_m": 1.4665038240907634e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.031680512130390574
+      },
+      "hold_observed_s": 3.200000000003911,
+      "first_hold_support_criterion_failure": {
+        "time_s": 42.402000000005856,
+        "elapsed_s": 3.0240000000036957,
+        "phase": "HOLD",
+        "errors": {
+          "planned_vector_m": [
+            0.00011830935149884092,
+            -8.87130493120982e-05,
+            -0.0001357039078625638
+          ],
+          "tracking_vector_m": [
+            -7.858804831034627e-05,
+            6.060476465163771e-05,
+            -0.0001918845459058377
+          ],
+          "total_vector_m": [
+            3.972130318849465e-05,
+            -2.8108284660460496e-05,
+            -0.0003275884537684015
+          ],
+          "planned_m": 0.00020070540196890136,
+          "tracking_m": 0.0002160293910401991,
+          "total_m": 0.0003311828084848577
+        },
+        "target_xyz_m": [
+          0.19999999628317006,
+          1.3804452634435554e-07,
+          0.053742416802362275
+        ],
+        "tcp_xyz": [
+          0.20003971758635855,
+          -2.7970240134116142e-05,
+          0.053414828348593874
+        ],
+        "finger_forces_N": [
+          0.4022048724881879,
+          0.4005550338961885
+        ],
+        "table_count": 0,
+        "table_force_N": 0,
+        "block_z_m": 0.05081830542800043,
+        "block_vz_m_s": -0.0010436841725066004,
+        "bottom_lift_m": 0.030001689906367042,
+        "continuous_hold_s": 0.0,
+        "lift_supported": false,
+        "jaw_opening_m": 0.03997532154170262,
+        "penetration_m": 1.4536637586218337e-05,
+        "warnings": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "block_bottom_world_m": 0.029999667214803752
+      },
+      "hold_elapsed_at_failure_s": 1.6540000000020214,
+      "hold_total_descent_m": -0.0032566308825079486
+    }
+  }
+}

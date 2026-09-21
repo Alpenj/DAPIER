@@ -1,0 +1,838 @@
+{
+  "mode": "DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS",
+  "live_task_success": false,
+  "hardware_execution": false,
+  "runtime_adopted": false,
+  "mujoco_version": "3.3.7",
+  "initial_state_sha256": "5e98962c786c9b6ea055e74136aca62337b363d1d35c04c4e3bb76d1ab96deab",
+  "source_hashes": {
+    "/tmp/dapier-controlled-audit-20260919/input-source.json": "927d738558b449b15b689d30654f06673fa2eb956ed2019b5d6318ff105de84a",
+    "/tmp/dapier-controlled-audit-20260919/input-donor.json": "390c35c6afd98af256ec618762d8ad7fa2f676e2299ddbe8fbc58edf2c2eba31",
+    "/tmp/dapier-postcontact-squeeze-20260920/audit.json": "c4ccb17b3f57eb480dd33a8be2a610665022d8228631e610802216a9cf4a87a1",
+    "/tmp/dapier-matched-budget-lift-20260920/experiment.json": "139f33309c65428a7f9febb6477a031d73096dd061041f17f15fc4dec4f757ca",
+    "/tmp/dapier-lift15-refinement-20260920/ab.json": "aaadc8e073b68e545c3444f82caf2aab6e11275c168737d7b961dfcc6c86c6cd",
+    "/tmp/dapier-arm-noslip-20260918/original-model.mjb": "8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9",
+    "/home/dapier-jhj/DAPIER/.local-workspaces/pro/grasp-families-codex-20260918/2ARM_ROBOT/sim/mobile_dual_so101/global_impratio_audit.py": "e0964ee0ff25f08cc1a4441a959324018bf8268b828c59c584c8c0b1639670ae"
+  },
+  "original_options": {
+    "ccd_iterations": 35,
+    "ccd_tolerance": 1e-06,
+    "cone": 1,
+    "density": 0.0,
+    "disableactuator": 0,
+    "disableflags": 0,
+    "enableflags": 0,
+    "gravity": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "impratio": 1.0,
+    "integrator": 3,
+    "iterations": 100,
+    "jacobian": 2,
+    "ls_iterations": 50,
+    "ls_tolerance": 0.01,
+    "magnetic": [
+      0.0,
+      -0.5,
+      0.0
+    ],
+    "noslip_iterations": 0,
+    "noslip_tolerance": 1e-06,
+    "o_friction": [
+      1.0,
+      1.0,
+      0.005,
+      0.0001,
+      0.0001
+    ],
+    "o_margin": 0.0,
+    "o_solimp": [
+      0.9,
+      0.95,
+      0.001,
+      0.5,
+      2.0
+    ],
+    "o_solref": [
+      0.02,
+      1.0
+    ],
+    "sdf_initpoints": 40,
+    "sdf_iterations": 10,
+    "solver": 2,
+    "timestep": 0.002,
+    "tolerance": 1e-10,
+    "viscosity": 0.0,
+    "wind": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "fixed_options": {
+    "ccd_iterations": 35,
+    "ccd_tolerance": 1e-06,
+    "cone": 1,
+    "density": 0.0,
+    "disableactuator": 0,
+    "disableflags": 0,
+    "enableflags": 0,
+    "gravity": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "impratio": 100.0,
+    "integrator": 3,
+    "iterations": 100,
+    "jacobian": 2,
+    "ls_iterations": 50,
+    "ls_tolerance": 0.01,
+    "magnetic": [
+      0.0,
+      -0.5,
+      0.0
+    ],
+    "noslip_iterations": 0,
+    "noslip_tolerance": 1e-06,
+    "o_friction": [
+      1.0,
+      1.0,
+      0.005,
+      0.0001,
+      0.0001
+    ],
+    "o_margin": 0.0,
+    "o_solimp": [
+      0.9,
+      0.95,
+      0.001,
+      0.5,
+      2.0
+    ],
+    "o_solref": [
+      0.02,
+      1.0
+    ],
+    "sdf_initpoints": 40,
+    "sdf_iterations": 10,
+    "solver": 2,
+    "timestep": 0.002,
+    "tolerance": 1e-10,
+    "viscosity": 0.0,
+    "wind": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "classification": "A",
+  "close_confirm_pass": true,
+  "lift_pass": true,
+  "copied_hold_pass": true,
+  "physics_steps": 12485,
+  "continuous_state_verified": true,
+  "options_constant_every_step": true,
+  "model_arrays_unchanged": true,
+  "final_phase": "HOLD",
+  "failure": null,
+  "close_commands_rad": [
+    2.192608236869089,
+    2.1826418357924116,
+    2.1726754347157335,
+    2.162709033639056,
+    2.1527426325623784,
+    2.1427762314857004,
+    2.132809830409023,
+    2.1228434293323453,
+    2.1128770282556677,
+    2.10291062717899,
+    2.092944226102312,
+    2.0829778250256346,
+    2.073011423948957,
+    2.063045022872279,
+    2.0530786217956014,
+    2.043112220718924,
+    2.0331458196422463,
+    2.0231794185655687,
+    2.0132130174888907,
+    2.003246616412213,
+    1.9932802153355356,
+    1.9833138142588578,
+    1.97334741318218,
+    1.9633810121055024,
+    1.9534146110288249,
+    1.943448209952147,
+    1.9334818088754693,
+    1.9235154077987917,
+    1.9135490067221141,
+    1.9035826056454364,
+    1.8936162045687586,
+    1.883649803492081,
+    1.8736834024154034,
+    1.8637170013387256,
+    1.8537506002620479,
+    1.8437841991853703,
+    1.8338177981086927,
+    1.823851397032015,
+    1.8138849959553371,
+    1.8039185948786596,
+    1.793952193801982,
+    1.7839857927253042,
+    1.7740193916486264,
+    1.7640529905719489,
+    1.7540865894952713,
+    1.7441201884185935,
+    1.7341537873419157,
+    1.7241873862652382,
+    1.716112023423022
+  ],
+  "lift_commands": [
+    {
+      "phase": "LIFT_5MM",
+      "xyz": [
+        0.19999999628317006,
+        1.3804452634435554e-07,
+        0.02374241680236227
+      ],
+      "q": [
+        0.6569203271508107,
+        0.5114942618894932,
+        -0.28397956504647137,
+        1.319293067688928,
+        -0.8474661142690022,
+        1.716112023423022,
+        1.049087939023653e-09,
+        0.0011351457851567902,
+        0.0009582204491022114,
+        0.00026646737841481245,
+        -8.171291358334545e-07,
+        2.2025746379457667
+      ]
+    },
+    {
+      "phase": "LIFT_15MM",
+      "xyz": [
+        0.19999999628317006,
+        1.3804452634435554e-07,
+        0.03374241680236227
+      ],
+      "q": [
+        0.656920338018807,
+        0.486150005394708,
+        -0.3189007152547846,
+        1.374173936575636,
+        -0.8485230894271821,
+        1.716112023423022,
+        1.0490956456824395e-09,
+        0.0017030530554207712,
+        0.001437346054517011,
+        0.0003997092142699944,
+        -1.2257071175058136e-06,
+        2.2025746379457667
+      ]
+    },
+    {
+      "phase": "LIFT_30MM",
+      "xyz": [
+        0.19999999628317006,
+        1.3804452634435554e-07,
+        0.053742416802362275
+      ],
+      "q": [
+        0.6569232221266472,
+        0.4399951176955442,
+        -0.39415410704146675,
+        1.4741673951004524,
+        -0.8498738109621398,
+        1.716112023423022,
+        -1.4754632685126592e-09,
+        0.0022752667221490907,
+        0.0019179434749450365,
+        0.0005330735149329577,
+        -1.6345915439486844e-06,
+        2.2025746379457667
+      ]
+    }
+  ],
+  "phase_summaries": [
+    {
+      "phase": "CLOSE",
+      "steps": 9884,
+      "time_s": 38.09200000000059,
+      "finger_forces_N": [
+        0.4913650854736349,
+        0.6770202710433223
+      ],
+      "table_count": 2,
+      "table_force_N": 0.19775173745840235,
+      "bottom_m": -4.1197978728930995e-06,
+      "vz_m_s": 3.894852631473295e-06,
+      "tcp_error_m": 0.0002311237134338323
+    },
+    {
+      "phase": "GRASP_CONFIRM",
+      "steps": 50,
+      "time_s": 38.19200000000071,
+      "finger_forces_N": [
+        0.49313543656088765,
+        0.6664565914390846
+      ],
+      "table_count": 2,
+      "table_force_N": 0.21928375914521636,
+      "bottom_m": -4.598818295176166e-06,
+      "vz_m_s": 5.959934624683835e-06,
+      "tcp_error_m": 0.00023066652166522984
+    },
+    {
+      "phase": "LIFT_5MM",
+      "steps": 260,
+      "time_s": 38.712000000001346,
+      "finger_forces_N": [
+        0.537019871982266,
+        0.5364987764913061
+      ],
+      "table_count": 0,
+      "table_force_N": 0,
+      "bottom_m": 0.0047971792542396,
+      "vz_m_s": 0.0001886199681899631,
+      "tcp_error_m": 0.00035434433840755093
+    },
+    {
+      "phase": "LIFT_15MM",
+      "steps": 356,
+      "time_s": 39.424000000002216,
+      "finger_forces_N": [
+        0.4734564601722872,
+        0.4722882776853882
+      ],
+      "table_count": 0,
+      "table_force_N": 0,
+      "bottom_m": 0.014691782810527836,
+      "vz_m_s": 0.0001802844892380432,
+      "tcp_error_m": 0.00036481003268005893
+    },
+    {
+      "phase": "LIFT_30MM",
+      "steps": 435,
+      "time_s": 40.29400000000328,
+      "finger_forces_N": [
+        0.41763734162171173,
+        0.4132363595599526
+      ],
+      "table_count": 0,
+      "table_force_N": 0,
+      "bottom_m": 0.034021752249922044,
+      "vz_m_s": 0.0001715809526371505,
+      "tcp_error_m": 0.00033569762361845633
+    },
+    {
+      "phase": "HOLD",
+      "steps": 1500,
+      "time_s": 43.294000000006946,
+      "finger_forces_N": [
+        0.4179654873587372,
+        0.4135406095086272
+      ],
+      "table_count": 0,
+      "table_force_N": 0,
+      "bottom_m": 0.033979422791864965,
+      "vz_m_s": -1.0452452997245878e-05,
+      "tcp_error_m": 0.0003311766019609879
+    }
+  ],
+  "waypoint_gates": [
+    {
+      "phase": "CLOSE",
+      "time_s": 18.7280000000005,
+      "position_error_m": 0.00024518007407968716,
+      "approach_error_rad": 0.0037283213453580214,
+      "closing_error_rad": 0.0027895147121009367,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 19.132000000000275,
+      "position_error_m": 0.00024518007479418306,
+      "approach_error_rad": 0.0037283213461322537,
+      "closing_error_rad": 0.00278951471520533,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 19.53600000000005,
+      "position_error_m": 0.00024518007480008296,
+      "approach_error_rad": 0.0037283213463109224,
+      "closing_error_rad": 0.0027895147154441296,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 19.939999999999827,
+      "position_error_m": 0.0002451800748056695,
+      "approach_error_rad": 0.0037283213461322537,
+      "closing_error_rad": 0.00278951471528493,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 20.343999999999603,
+      "position_error_m": 0.0002451800748109241,
+      "approach_error_rad": 0.0037283213461620315,
+      "closing_error_rad": 0.00278951471532473,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 20.74799999999938,
+      "position_error_m": 0.00024518007481605657,
+      "approach_error_rad": 0.003728321346072697,
+      "closing_error_rad": 0.00278951471528493,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 21.151999999999155,
+      "position_error_m": 0.0002451800748207944,
+      "approach_error_rad": 0.0037283213461024754,
+      "closing_error_rad": 0.00278951471532473,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 21.55599999999893,
+      "position_error_m": 0.00024518007482531674,
+      "approach_error_rad": 0.0037283213461024754,
+      "closing_error_rad": 0.00278951471540433,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 21.959999999998708,
+      "position_error_m": 0.0002451800748295292,
+      "approach_error_rad": 0.0037283213461918097,
+      "closing_error_rad": 0.0027895147155237296,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 22.363999999998484,
+      "position_error_m": 0.00024518007483349813,
+      "approach_error_rad": 0.0037283213461918097,
+      "closing_error_rad": 0.0027895147156033295,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 22.76799999999826,
+      "position_error_m": 0.00024518007483708586,
+      "approach_error_rad": 0.0037283213461918097,
+      "closing_error_rad": 0.0027895147156033295,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 23.171999999998036,
+      "position_error_m": 0.0002451800748405885,
+      "approach_error_rad": 0.0037283213461918097,
+      "closing_error_rad": 0.002789514715682929,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 23.575999999997812,
+      "position_error_m": 0.00024518007484355763,
+      "approach_error_rad": 0.003728321346370479,
+      "closing_error_rad": 0.0027895147159217285,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 23.979999999997588,
+      "position_error_m": 0.00024518007484653084,
+      "approach_error_rad": 0.0037283213461322537,
+      "closing_error_rad": 0.0027895147156033295,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 24.383999999997364,
+      "position_error_m": 0.00024518007484897804,
+      "approach_error_rad": 0.003728321346221588,
+      "closing_error_rad": 0.0027895147158023288,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 24.78799999999714,
+      "position_error_m": 0.00024518007485125324,
+      "approach_error_rad": 0.003728321346221588,
+      "closing_error_rad": 0.0027895147158023288,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 25.191999999996916,
+      "position_error_m": 0.00024518007485320014,
+      "approach_error_rad": 0.0037283213463407006,
+      "closing_error_rad": 0.0027895147159615287,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 25.595999999996693,
+      "position_error_m": 0.0002451800748549691,
+      "approach_error_rad": 0.003728321346400257,
+      "closing_error_rad": 0.002789514716120728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 25.99999999999647,
+      "position_error_m": 0.0002451800748563462,
+      "approach_error_rad": 0.0037283213462513663,
+      "closing_error_rad": 0.0027895147159217285,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 26.403999999996245,
+      "position_error_m": 0.0002451800748573703,
+      "approach_error_rad": 0.003728321346430035,
+      "closing_error_rad": 0.0027895147161605283,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 26.80799999999602,
+      "position_error_m": 0.0002451800748582887,
+      "approach_error_rad": 0.003728321346221588,
+      "closing_error_rad": 0.0027895147159615287,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 27.211999999995797,
+      "position_error_m": 0.0002451800748588659,
+      "approach_error_rad": 0.003728321346400257,
+      "closing_error_rad": 0.002789514716200328,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 27.615999999995573,
+      "position_error_m": 0.00024518007485906925,
+      "approach_error_rad": 0.0037283213463407006,
+      "closing_error_rad": 0.002789514716120728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 28.01999999999535,
+      "position_error_m": 0.000245180074859112,
+      "approach_error_rad": 0.0037283213462513663,
+      "closing_error_rad": 0.0027895147160013284,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 28.423999999995125,
+      "position_error_m": 0.00024518007485875007,
+      "approach_error_rad": 0.003728321346430035,
+      "closing_error_rad": 0.002789514716240128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 28.8279999999949,
+      "position_error_m": 0.0002451800748582134,
+      "approach_error_rad": 0.003728321346430035,
+      "closing_error_rad": 0.002789514716319728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 29.231999999994677,
+      "position_error_m": 0.00024518007485730065,
+      "approach_error_rad": 0.0037283213465193698,
+      "closing_error_rad": 0.0027895147164391275,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 29.635999999994453,
+      "position_error_m": 0.0002451800748560835,
+      "approach_error_rad": 0.003728321346430035,
+      "closing_error_rad": 0.002789514716319728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 30.03999999999423,
+      "position_error_m": 0.0002451800748546423,
+      "approach_error_rad": 0.0037283213465193698,
+      "closing_error_rad": 0.0027895147164391275,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 30.443999999994006,
+      "position_error_m": 0.0002451800748529156,
+      "approach_error_rad": 0.0037283213462811445,
+      "closing_error_rad": 0.002789514716120728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 30.84799999999378,
+      "position_error_m": 0.000245180074850945,
+      "approach_error_rad": 0.0037283213465193698,
+      "closing_error_rad": 0.0027895147164391275,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 31.251999999993558,
+      "position_error_m": 0.00024518007484861283,
+      "approach_error_rad": 0.0037283213464598132,
+      "closing_error_rad": 0.0027895147163595276,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 31.655999999993334,
+      "position_error_m": 0.00024518007484609,
+      "approach_error_rad": 0.003728321346370479,
+      "closing_error_rad": 0.002789514716240128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 32.05999999999322,
+      "position_error_m": 0.0002451800748431985,
+      "approach_error_rad": 0.0037283213464598132,
+      "closing_error_rad": 0.0027895147163595276,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 32.46399999999371,
+      "position_error_m": 0.00024518007483997217,
+      "approach_error_rad": 0.003728321346370479,
+      "closing_error_rad": 0.002789514716240128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 32.867999999994204,
+      "position_error_m": 0.00024518007483638547,
+      "approach_error_rad": 0.0037283213464598132,
+      "closing_error_rad": 0.0027895147163595276,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 33.2719999999947,
+      "position_error_m": 0.0002451800748326364,
+      "approach_error_rad": 0.003728321346370479,
+      "closing_error_rad": 0.002789514716240128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 33.67599999999519,
+      "position_error_m": 0.0002451800748286697,
+      "approach_error_rad": 0.0037283213464598132,
+      "closing_error_rad": 0.0027895147163595276,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 34.079999999995685,
+      "position_error_m": 0.00024518007482431797,
+      "approach_error_rad": 0.003728321346370479,
+      "closing_error_rad": 0.002789514716240128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 34.48399999999618,
+      "position_error_m": 0.00024518007481966376,
+      "approach_error_rad": 0.0037283213465193698,
+      "closing_error_rad": 0.0027895147164391275,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 34.88799999999667,
+      "position_error_m": 0.00024518007481477347,
+      "approach_error_rad": 0.003728321346370479,
+      "closing_error_rad": 0.002789514716240128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 35.29199999999717,
+      "position_error_m": 0.00024518007480968433,
+      "approach_error_rad": 0.0037283213462811445,
+      "closing_error_rad": 0.002789514716120728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 35.69599999999766,
+      "position_error_m": 0.0002451800748041032,
+      "approach_error_rad": 0.0037283213462811445,
+      "closing_error_rad": 0.002789514716120728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 36.099999999998154,
+      "position_error_m": 0.00024518007479829793,
+      "approach_error_rad": 0.003728321346430035,
+      "closing_error_rad": 0.002789514716319728,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 36.50399999999865,
+      "position_error_m": 0.0002451800747922684,
+      "approach_error_rad": 0.0037283213463407006,
+      "closing_error_rad": 0.002789514716200328,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 36.90799999999914,
+      "position_error_m": 0.00024518007478597966,
+      "approach_error_rad": 0.0037283213462811445,
+      "closing_error_rad": 0.002789514716041128,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 37.311999999999635,
+      "position_error_m": 0.00023619486510867102,
+      "approach_error_rad": 0.0037197545025485636,
+      "closing_error_rad": 0.0027518783082463747,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 37.71600000000013,
+      "position_error_m": 0.0002308126682312243,
+      "approach_error_rad": 0.003716204406527363,
+      "closing_error_rad": 0.002735664109633539,
+      "collision_safe": true
+    },
+    {
+      "phase": "CLOSE",
+      "time_s": 38.09200000000059,
+      "position_error_m": 0.0002311237134338323,
+      "approach_error_rad": 0.0037156496277703983,
+      "closing_error_rad": 0.002732854386065147,
+      "collision_safe": true
+    },
+    {
+      "phase": "LIFT_5MM",
+      "time_s": 38.712000000001346,
+      "position_error_m": 0.00035434433840755093,
+      "approach_error_rad": 0.005353289273916423,
+      "closing_error_rad": 0.000870239639809838,
+      "collision_safe": true
+    },
+    {
+      "phase": "LIFT_15MM",
+      "time_s": 39.424000000002216,
+      "position_error_m": 0.00036481003268005893,
+      "approach_error_rad": 0.009977876202832638,
+      "closing_error_rad": 0.005240103957854042,
+      "collision_safe": true
+    },
+    {
+      "phase": "LIFT_30MM",
+      "time_s": 40.29400000000328,
+      "position_error_m": 0.00033569762361845633,
+      "approach_error_rad": 0.030913757360636573,
+      "closing_error_rad": 0.022262884182437916,
+      "collision_safe": true
+    }
+  ],
+  "times_contiguous": true,
+  "duration_s": 24.97,
+  "frozen_lift_endpoints": true,
+  "first_bilateral_time_s": 37.64200000000004,
+  "first_table_detachment_time_s": 38.286000000000826,
+  "first_table_detachment_after_lift_s": 0.09400000000011488,
+  "table_absent_since_first_detachment": false,
+  "max_bottom_m": 0.034024683823284885,
+  "max_penetration_m": 1.819138232452641e-05,
+  "max_warning_counts": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "any_saturation": false,
+  "hold_steps": 1500,
+  "hold_all_supported": true,
+  "hold_table_always_absent": true,
+  "hold_min_bottom_m": 0.033979422791864965,
+  "hold_final_counter_s": 3.3079999999998573,
+  "hold_bottom_delta_m": -4.232945805707905e-05,
+  "hold_com_z_delta_m": -2.7311999152242195e-05,
+  "hold_final_vz_m_s": -1.0452452997245878e-05,
+  "hold_last_100ms_mean_vz_m_s": -1.0674657351897524e-05,
+  "hold_min_forces_N": [
+    0.41746076080724864,
+    0.41317143281096125
+  ],
+  "hold_max_penetration_m": 8.687743010641947e-06,
+  "final": {
+    "time_s": 43.294000000006946,
+    "phase": "HOLD",
+    "tcp_error_m": 0.0003311766019609879,
+    "bottom_m": 0.033979422791864965,
+    "block_z_m": 0.054816152789193044,
+    "block_vz_m_s": -1.0452452997245878e-05,
+    "continuous_hold_s": 3.3079999999998573,
+    "jaw_q_rad": 1.7161215998566852,
+    "jaw_qvel_rad_s": 1.4242785943596303e-08,
+    "jaw_opening_m": 0.03998276572038235
+  },
+  "final_forces_N": [
+    0.4179654873587372,
+    0.4135406095086272
+  ],
+  "final_vertical_finger_resultant_N": 0.19619920946481104,
+  "path_sha256": "7a1a8c26a4c4b7fcdd94b917efac6c734e320d9a3802e1fa9c0063515261a6b2",
+  "global_sim_candidate": true,
+  "permanent_table_free_time_s": 38.30000000000084,
+  "permanent_table_free_after_lift_s": 0.10800000000013199,
+  "lift_table_force_peak_N": 2.1284096765052958,
+  "lift_table_recontacts": [
+    {
+      "time_s": 38.29000000000083,
+      "table_count": 1,
+      "table_force_N": 0.41142857511791703
+    },
+    {
+      "time_s": 38.29800000000084,
+      "table_count": 1,
+      "table_force_N": 0.3446750397441671
+    }
+  ],
+  "hold_initial_counter_s": 0.3080000000000002,
+  "maximum_pad_forces_N": [
+    0.5906671421946967,
+    0.880446512327065
+  ],
+  "no_attachment_evidence": "unchanged inspect_runtime attachment gate passed every step; not a separate stored attachment flag"
+}

@@ -1904,3 +1904,1586 @@ MODEL5af4835e39c7df7afaa4ca4669a27c2149214913bba22c88dfd53ffa78eb7e9c.
 다음 SIM 단계는 copied arm-mounted grasp에서 contact-model 후보 검증이다.
 긴 시간/다중 초기조건/실기 fidelity/pad sample interior는 아직 검증하지 않았다.
 REAL perception/extrinsic/비접촉 PREGRASP는 별도 트랙이며 이 결과로 대체하지 않는다.
+
+
+## DAPIER-2026-09-18-arm-noslip-copy
+
+### Problem
+
+Gripper-only NoSlip5 무지지 HOLD가 기존 arm-mounted 비대칭 grasp의 LIFT도
+해결하는지 확인했다. 실제 arm task는 GRASP_CONFIRM PASS / LIFT FAIL이다.
+
+### Evidence — VERIFIED BY PHYSICS / DIAGNOSTIC ONLY
+
+보존 GRASP_CONFIRM의 mjSTATE_INTEGRATION 244값과 warmstart/terminal ctrl를
+bitwise 복사했다. Portable model SHA 일치, compiled numeric fields/옵션은
+noslip_iterations 0→5 외 동일하며 donor state/model은 불변이다.
+기존 controller와 continuous-command septic LIFT의 50개 command도 baseline과 같다.
+0.534920337s 궤적 중 50step/0.100s만 관찰했다.
+
+첫 bilateral support loss는 NoSlip0 step36에서 NoSlip5 step33/66ms로 앞당겨졌다.
+Step32에서만 table contact/force0 및 bottom gap +0.392161µm가 확인됐다.
+다음 step33에는 table contact2/force0.168861N과 한쪽 finger loss가 발생했다.
+이 한 sample의 분리는 지속 load-bearing LIFT가 아니다.
+Step34–50은 실패 이후 bounded diagnostic extension이며 task PASS에 포함하지 않는다.
+최종 finger Fn0/0.254030N, table Fn0.314623N, bottom lift−0.019765mm이다.
+최대 normal-force 변화율127.015N/s, jaw1 cone utilization은 step32에서1.0이었다.
+최소 protected clearance48.707677mm, 최대 penetration26.09µm, warnings0.
+
+Force는 기존 helper의 ctrl→mj_step→integrated-pose mj_forward→contact gate
+순서로 얻은 값이며 직전 integration impulse와 구분한다.
+NoSlip0로 형성된 state에 NoSlip5를 적용한 첫 solve transient도 포함한다.
+종료 TCP error5.039mm는 진행 중인 +5mm 최종 목표까지 거리이며
+완료 endpoint acceptance 실패로 바꾸어 해석하지 않는다.
+
+### Decision — INFERENCE
+
+NoSlip이 gripper-only slow slip을 줄인 사실을 arm grasp 안정성으로 일반화할 수 없다.
+현재 비대칭 contact placement/torque 수요를 유지한 상태에서는 지속 지지가 없었다.
+NoSlip5 runtime 채택, full-path preflight와 live 재실행은 진행하지 않는다.
+Geometry/friction/mass/controller/timing/joint limits/acceptance/safety는 유지했다.
+
+### Validation
+
+저장-only 독립 verifier PASS: fullstate/ctrl/options/donor/50commands/상태연속성.
+새 LIFT negative fixture와 기존 gripper/contact/solver focused8 PASS(0.050s).
+가짜 force/support/command/success 및30mm미달 기록을 거부한다.
+이번 arm milestone은 미달이므로 fullsuite/새remoteCI는 실행하지 않는다.
+지난 gripper-only milestone의 Research33/MuJoCo363/canonical 및remote checks는
+별개로 PASS하여 PR65를 main c44d2c9dafc3cccaa088a33436750c4ff3c4bb56에 병합했다.
+
+### Result
+
+최종 copied phase LIFT_5MM FAIL(step33). 실제 live 상태는 변경하지 않았다.
+Actual last PASS GRASP_CONFIRM, CENTER SUCCESS=false, HOLD0s.
+Raw SHA187f3264af3dbec8db48dce64f5f5b9e30487ddb118121b9937b544bcb1b18df.
+재현: 보존 KIT local-validation의 arm-noslip-20260918/run.py와 exact input;
+저장 검증은 같은 폴더 verify.py. 공개 fixture는 기존 lift_transition.json에 추가했다.
+
+### Lesson / Next — UNVERIFIED
+
+한 sample의 table force0와 큰 finger force는 지속적인 무지지 grasp의 충분조건이 아니다.
+다음 SIM blocker는 arm이 만들 수 있는 contact geometry와 load-bearing 안정성이다.
+새 pose search나 physics 설정 변경은 이번 결과 없이 자동 확대하지 않았다.
+REAL calibration 결과는 이 SIM 결과와 독립적으로 기록한다.
+
+## DAPIER-2026-09-18-arm-coupling-comparison
+
+### Problem
+단독 gripper NoSlip5의 무지지 성공을 팔 장착 grasp로 일반화할 수 있는지,
+팔의 움직임과 처음부터 다른 접촉 배치를 분리했다. 실제 task는 GRASP_CONFIRM
+PASS / LIFT FAIL이고 새 live 실행은 하지 않았다.
+
+### Evidence — VERIFIED BY PHYSICS / DIAGNOSTIC ONLY
+동일한 보존 GRASP_CONFIRM full-state에서 terminal command HOLD50과 왼팔5관절
+SOFT_LOCK HOLD50, 총100step/0.2s를 복제 실행했다. 원래qpos/qvel/warmstart/ctrl를
+보존했고 per-step qpos reset은 없다. 29option/38physical arrays/기존4equalities가
+같으며 신규5 eq_active만 추가했다. SOFT_LOCK은 유한 강성이고 강체 고정이 아니다.
+최대 관절 변위2.76939e-7rad, 속도2.48973e-5rad/s이다.
+
+HOLD 최종 Fn .080839/.075044N, table .197998N; SOFT_LOCK은
+.081746/.074822N, table .196242N이다. 둘 다 양쪽 접촉을 유지하지만 table이
+중량 .1962N을 계속 받친다. 성공한 정상 OPEN→CLOSE→prescribed TEST SUPPORT
+철수→무지지3s bench는 Fn .481446/.481445N, 패드 수직합력 .1962N,
+COM torque 약3.31e-15Nm, support0이다. 이전 preformed identical-state bench와 구분했다.
+
+공통 block-COM frame 접촉 높이 차이: arm31.054978mm vs bench .017130mm.
+Arm 접촉 법선은 완전 대향에서9.251도 어긋난다. Gripper terminal command도
+arm2.043112221rad / bench1.714220985rad로 다르며 jaw opening47.385/39.967mm를
+같은 압축량으로 비교할 수 없다. Bench는 NoSlip5로 형성했고 arm은 NoSlip0으로
+형성한 상태에 NoSlip5를 적용했다. Friction/condim은 같지만 통제된 arm-only A/B는 아니다.
+
+기존 NoSlip LIFT50은 원본hash/시작state/command 동일성을 확인해 재사용했다.
+Step32 한 관측단계 table force0에서 pad Fz .172801N<weight .1962N,
+step33 첫 bilateral support loss, step37 양쪽 기하접촉 상실이다.
+Step50 남은 pad Fz -.060550N/table .314623N. 0.534920s 궤적의 .1s 진단이며
+endpoint 도달 실패나 새로운 actual execution으로 표시하지 않는다.
+
+### Decision — INFERENCE
+가장 강한 차이는 형성 이력/대각 접촉/낮은 preload와 lift 중 wrench 붕괴다.
+팔 compliance 단독 원인으로 확정하지 않는다. SOFT_LOCK은 HOLD에만 적용했으며
+locked-LIFT는 미검증이다. NoSlip runtime 채택이나 friction/mass/geometry/controller/
+timing/limits/acceptance/safety 변경을 하지 않았다.
+
+### Validation — VERIFIED BY REGRESSION
+저장-only verifier PASS: common full-state/모든 option/38arrays/원래 equality,
+100행 모든 pad force와 COM moment를 contact frame에서 독립 재합산했다.
+추가 mj_step 없음. 기존 lift_transition fixture에 대표1/25/50step과 비교값/원본hash를
+추가해 명령 불변, table support 잔류, wrench 합산, 다른 접촉배치 의미를 회귀로 보존했다.
+Focused9 PASS; fullsuite/remoteCI는 milestone 미달로 실행하지 않았다.
+MuJoCo 한 창은 RECORDED STATE PLAYBACK / NOT NEW PHYSICS라고 표시하고
+1:HOLD/2:SOFT_LOCK/3:LIFT를 비교한다. 표시용 data만 qpos를 복원한다.
+
+### Result
+Actual last PASS=GRASP_CONFIRM, LIFT FAIL, CENTER SUCCESS=false/HOLD0s 유지.
+Copied HOLD retention은 unsupported HOLD 성공이 아니다. Raw SHA
+189a8bee856647497ccab55443022cfb16a7a4a7a9b259900585decbdc70a1de.
+재현은 기존 KIT local-validation/arm-coupling-20260918의 run.py;
+저장 검증 verify.py, 표시 view_saved.py. 원본 모델/상태/manifest도 함께 보존한다.
+Focused 명령은 test 디렉터리에서 python -m unittest
+ test_lift_transition.LiftTransitionTest.test_arm_hold_retention_is_not_unsupported_grasp
+ test_lift_transition.LiftTransitionTest.test_arm_noslip_copy_does_not_establish_load_bearing
+ test_gripper_force_requirements -v 이다.
+
+### Lesson / Next — UNVERIFIED
+같은 solver라도 접촉 형성과 자세가 다르면 arm coupling 실험이 아니다.
+Bench는 pre-integration force, arm은 integrated-pose mj_forward force여서 과도응답의
+직접 인과 비교에도 한계가 있다. 다음은 검증된 접촉 배치/형성 이력을 맞춘 통제 비교다.
+현재 기준을 완화하거나 추가 CLOSE/NoSlip sweep으로 성공을 만들지 않는다.
+REAL extrinsic과 이 결과를 섞지 않고 PR67 draft를 유지한다.
+
+## 2026-09-18 — 성공 상대 grasp를 팔에 매핑하고 기본 Z 동작 분리
+
+record_id: DAPIER-2026-09-18-relative-grasp-basic-motion
+
+### Problem
+
+성공한 gripper-only 접촉과 arm-mounted 접촉이 다른 이유를 먼저 확인했다. 어려운 A–D 실측은 중단하고, camera extrinsic과 독립적인 LEFT +20 mm/정지/복귀 SIM 리허설을 준비했다. 실제 motor command는 보내지 않았다.
+
+### Evidence
+
+**ANALYTIC / DIAGNOSTIC:** 정상 형성 후 무지지 HOLD 성공 bench의 `T_block_housing`과 `T_block_TCP`를 원래 pre-step qpos에서 추출했다. `T_A_B`는 B 좌표를 A로 변환한다(m/rad). TCP translation은 block 기준 약 `(0, 0.000138, -1.257583) mm`, TCP approach는 거의 block −Z, closing은 +X다. Bench contact height 차이는 .017130 mm, Fn .481446/.481445 N, support0이다. 하우징/site local transform은 팔과 exact 동일했다.
+
+기존 위치의 16개 제한된 seed/yaw 후보와 analytic wrist-axis 보정 6개를 평가했다. 선택 nominal 후보는 position .158510 mm, approach .210398°, closing .116392°이며 joint limits와 open 접근/CLOSE interpolation을 통과했다. 더 엄격한 별도 정밀 IK 자체는 .05° 목표에 수렴하지 않았으며, 기존 .5mm/2°/15° 수용과 구분했다. 전역 최소/불가능을 주장하지 않는다. Native bench-jaw state는 한쪽 접촉이므로 IK PASS를 양측 grasp로 간주하지 않았다.
+
+**VERIFIED BY PHYSICS / COPIED DIAGNOSTIC:** copied pregrasp 초기 배치 후 runtime teleport 없이 기존 ctrl/step 경로로 APPROACH→CLOSE→CONFIRM을 실행했다. HOME→staging은 이번 candidate에서 검증하지 않았다. Contact 형성 뒤 실제 높이차는 **25.158028 mm**, rigidly carried bench contact 예측은 **.178175 mm**였다. CONFIRM Fn .102269/.116904 N, table .199456 N, pad vertical resultant −.003260 N. 거의 맞는 TCP pose가 동일 native contact manifold/하중을 재현하지 못했다.
+
+기존 LIFT 첫 명령의 measured reseeding은 최대 .000616214 rad의 점프를 만들었다. 같은 CONFIRM full-state/같은 target에서 직전 verified ctrl로 정확히 연속 시작하면 첫 스텝 양측 접촉이 유지되지만 **step40 / 80ms**에 한쪽 normal force가0이 되어 기존 gate로 정지했다. Table 이탈은 step38–39 두 표본(.862/.696µm gap)에 불과했고 step40 재접촉했다. TCP 상승 .027776mm, 5mm endpoint 미도달, 무지지 HOLD 없음.
+
+**한계:** bench 형성 NoSlip5 vs arm 형성/runtime0은 혼재 조건이다. 이번에는 값을 바꾸지 않았다. 작은 pose 오차와 contact feature 선택/형성 이력이 원인 후보이며 단일 solver bug나 arm compliance로 확정하지 않는다. Native representative contact 높이차와 전체 usable surface overlap은 같은 지표가 아니다. 원본 duplicated-preflight의 custom 상세 필드4종은 잘못된 donor capture라 제외; main/continuation 실제 state와 기존 core clone/final state만 사용했다. 3226 main+6947 continued+40 continuous actual copied steps, 별도 중복 preflight2828step을 구분해 보존했다.
+
+### Decision
+
+Teacher grasp/runtime, NoSlip, friction, mass, geometry, controller, timing, limits, safety policy를 바꾸지 않았다. 성공 relative transform의 FK 수용은 가능하지만 실제 접촉 재현은 미완료다. Grasp 후보를 live task에 채택하지 않는다.
+
+기본 동작은 `basic_vertical_motion.py`에서 기존 integration scene/reset/settle, corrected axis IK, septic generator, `env.apply_action` 및 SAFE_STAGE 일반 30mm guard를 재사용한다. Measured q는 path/telemetry 시작값, 미조작 gripper/반대팔은 explicit ctrl를 유지한다. 새 hardware dispatch 경로는 없다.
+
+### Validation
+
+**VERIFIED BY PHYSICS:** 첫 +20mm 실행은 endpoint .630642mm로 거부했다. 계획 오차 .415475mm와 command FK→measured .346596mm를 분리했다. Acceptance .5mm는 유지하고 planner 내부 position tolerance만 `.5−.346596=.153404mm`로 설정했다. 단일 관측 기반 reserve이며 robustness bound가 아니다. Controller/속도/geometry는 그대로다.
+
+재실행은 SETTLE100step/.2s → 상승514step/1.028s → 비접촉 HOLD250step/.5s → 복귀514step/1.028s, 총1378step. 실제 상승19.600463mm, endpoint .400950mm/.251168°, HOLD .400876mm, 복귀 .000792mm/.000105°. General min72.400006mm, max command tracking .001003409rad. Joint/command/near-support/runtime clearance 검사 PASS. 양 gripper/오른팔 command 불변, hardware0, runtime qpos 직접 쓰기0(소스 계약). Full dynamics robustness나 실물 profile 검증으로 확대하지 않는다.
+
+**VERIFIED BY REGRESSION:** 기본 계획·저장 physics2 PASS, 접촉/LIFT/force focused10 PASS, 기존 REAL transform3 PASS. 원본 transform/FK22후보 및 복사-state chronology/hash/force 검증을 보존했다. Negative collision policy7 PASS/3.249s, near-support 음성2 PASS와 compact fixture 재검사1 PASS/3.128s, 양 worktree diffcheck PASS. 전체1378step max tracking이 기존 final .02rad보다 작음도 저장 trace에서 확인했다. Fullsuite/remoteCI 미실행.
+
+### Result
+
+실제 arm task는 여전히 GRASP_CONFIRM PASS/LIFT FAIL, CENTER SUCCESS=false/HOLD0s. Copied candidate의 continuous LIFT40step 실패를 분리했다. 기본 비접촉 SIM 상승/hold/return은 PASS이며 SIM 모델 시작 자세에서의 결과다.
+
+SIM LEFT arm 순서 pan/lift/elbow/wrist-flex/roll:
+- start/return q(rad): `[0, 0, 0, 0, 0]`
+- target q(rad): `[0.00001045348, 0.01949969385, -0.16493163968, 0.14095875590, -0.00563163025]`
+- delta(deg): `[0.0005989405, 1.11725016, -9.44988686, 8.07634180, -0.32266865]`
+- SIM gripper command2.2028rad 불변. 이를 실물 gripper0..100에 복사하지 않는다.
+- continuous septic nominal1.026733576s, timestep sampling1.028s/leg, hold.5s.
+
+재실행(SIM 폴더, 기존 venv):
+```bash
+python basic_vertical_motion.py --viewer --report /tmp/dapier-basic-vertical.json
+```
+해당 Python은 기존 MuJoCo venv를 뜻한다. 현재 검증 asset은 기존 pinned SO101 source이다. 정확한 raw/report/script는 기존 local-validation KIT에 보존한다. Viewer는 실제 동일 model/data를 관찰했고, 별도 접촉 비교 창은 RECORDED PHYSICS / NOT NEW EXECUTION으로 표시했다.
+
+### Lesson / Next
+
+거의 같은 rigid pose와 source contact를 운반한 점은 native solver contact의 동일성을 보장하지 않는다. 다음은 접촉면/형성 이력을 통제한 원인 분리이며 이번 결과로 성공이라고 쓰지 않는다.
+
+REAL extrinsic은 UNVERIFIED / BLOCKED BY DATUM METHOD. 새 측정 없이 원값 보존. BASIC에는 카메라가 필요 없지만 현재 실물 q 및 SIM↔REAL joint zero/sign/pose 대응은 아직 없다. 월요일 fresh readback→해당 실제 pose 기준 SIM 매핑/경로 검증→LEFT q/profile 제시→사용자 승인 순서다. 과거 start-pose나 위 SIM 절대 q를 현재 실물 q로 사용하지 않는다.
+
+## 2026-09-19 — Four-state provenance / one controlled CLOSE A/B / Monday BASIC audit
+
+### Problem
+
+.017 / 4.924 / 25.158 / 31.058mm는 서로 다른 실행/phase의 수치다. 개선 후보의 runtime 채택 여부,
+metric frame/force timing, NoSlip의 formation 기여를 분리했다. 새 grasp/solver sweep, LIFT, 실기 명령은 없다.
+SIM writer 시작 HEAD=8b973dada6d567e36d90be62bde987f4291b1183, branch=pro/arm-noslip-diagnostic-codex-20260918.
+시작 dirty 없음. 기존 다른 worktree/fixtures 및 REAL_SCENE_GEOMETRY_AUDIT.md 보존.
+
+### Evidence — provenance
+
+검색 범위는 현재 PR67/학습 기록/PR65 계열 diagnostic/명시된 merge만 사용했다.
+**PR63 merge=1c646eac01f14011d01899c2a2f65175be6d2449; PR64 merge=7ff415a707e3ea2c4e5e34452a61dab9a9dafdfb.**
+7ff415a를 PR65라고 부르지 않는다. 아래 미확정 필드는 `PROVENANCE PARTIALLY UNRESOLVED`로 남기며 전체 history 검색하지 않는다.
+
+| 항목 | A0 bench | A1 historical +X | A2 mapped reference | A3 baseline arm |
+|---|---|---|---|---|
+| source/record | prescribed-support-20260918/noslip5.json; 8b973da의 reference record, 원 실행 commit 일부 미확정 | physics baseline 7ff415a(PR64); record/negative fixture commit c44d2c9dafc3cccaa088a33436750c4ff3c4bb56 | physics source 8027acf; record/source handoff 8b973da | donor provenance acf47cfed3bae34eba1146b7e39434bdd658ed67 |
+| fixture/script | prescribed-bench.mjb / normal-formation saved rows | grasp-families-20260918/C/vertical-proposal.json, representative-replay.json, write_vertical_report.py; grasp_wrench.json vertical_X_plus_hold50 | success-grasp-mapping-20260918/{physics.py,continue_physics.py,physics.json,physics-continuation.json} | lift transition donor states B_confirm / grasp_quality; grasp_wrench.json B_confirm |
+| model | arm-free PGripper bench + TEST SUPPORT; separate model | integration_desk, MJB 8f486c9a… | identical original integration_desk MJB 8f486c9a… | integration_desk donor; original compiled identity/provenance preserved |
+| block initial | supported bench at nominal (0,0,.100)m | settled center (.200,0,.020)m; donor prefix initial saved in approach preflight | copied nominal (.200,0,.020)m reset before APPROACH | original settled center; exact initial/pre-CLOSE snapshot unresolved in bound |
+| block just before CLOSE | (0,0,.099996977)m | (.200,0,.019997977)m | (.200,0,.019997977)m | UNRESOLVED; no estimate substituted |
+| TCP just before CLOSE (m) | (~0,~0,.098739377) | (.199657177,.000267480,.018519520) | (.199849291,-.000074889,.018570197) | UNRESOLVED |
+| approach / closing | block -Z / +X | nominal -Z / +X; actual below | nominal bench -Z / +X; actual below | tilted ~7.2493deg, azimuth337.5; legacy candidate |
+| pre-CLOSE jaw opening | 51.028095mm | 51.028095mm | 51.028095mm | raw source remains, pre-CLOSE value unresolved |
+| CLOSE profile | normal OPEN, CLOSE49 then CONFIRM and support withdrawal | existing septic .01rad schedule, .1s minimum per stage, bilateral CLOSE22, CONFIRM50 + HOLD50 | same generator, bilateral CLOSE48, CONFIRM50 | existing arm teacher CLOSE16 + CONFIRM50 |
+| terminal gripper command | ~1.714221rad | 1.983313814rad | 1.724187386rad | ~2.043112221rad |
+| NoSlip | 5 throughout formation/HOLD | 0 | 0 historical | 0 original formation; later NoSlip5 copied LIFT is different experiment |
+| support at compared state | support contact/force0, unsupported3s | table support remains | table support remains | table support remains |
+| status | gripper-only actual ctrl+step, diagnostic | copied actual ctrl+step; NOT adopted | copied actual ctrl+step; NOT adopted | original actual teacher GRASP_CONFIRM PASS/LIFT FAIL |
+| old metric | block-frame point height | world-Z point height | block-frame point height | world-Z point height |
+
+A1 raw SHA256=666430b2b6a2a819a45c5ff7eabc82e5c9118037ce1c4cc8a6b5aa8663647e6a.
+A1 was never adopted into teacher/runtime. A1 and A2 share the nominal +X closing / downward family,
+but do not have identical transforms, jaw command, initial branch or phase. **No demonstrated 31mm regression.**
+All exact raw hashes/complete contacts/pre-CLOSE q/FK/model hash available in `test/fixtures/contact_audit.json` and local archive.
+
+A1 measured pre-CLOSE approach=(.01407745,-.01133731,-.99983663), closing=(.98511799,-.17115067,.01581092).
+A2 measured pre-CLOSE approach=(-.002775646,-.002485349,-.999993059), closing=(.999996148,-.000007116,-.002775637).
+Near-reference nominal IK .159mm/.210deg/.116deg is evidence against this particular pose being simply unreachable;
+it does not prove arbitrary 6DoF reachability. No new IK search performed.
+
+### Evidence — metric normalization
+
+**NATIVE CONTACT POINT METRIC:** first native contact per pad height, retained in both world-Z and block-COM frame.
+**GEOMETRIC CONTACT/SURFACE METRIC:** separate saved pad polygon margins; no native point interpreted as pressure patch.
+**NET WRENCH METRIC:** all native pad/block contacts, summed Fn, Fn-weighted centroid, F=sum(f), tau=sum(r cross f).
+Contact-frame intrinsic torque is separately retained; full constraint torque=tau+intrinsic.
+MuJoCo contact frame axes are rows; world wrench uses its transpose and the geom1/geom2 sign.
+[MuJoCo3.3.7 contact API](https://mujoco.readthedocs.io/en/3.3.7/programming/simulation.html#contacts).
+
+| State | phase / SIM time(s) | world height(mm) | block height(mm) | summed Fn pad1/pad2(N) | pad Fz(N) | table Fn(N) |
+|---|---|---:|---:|---:|---:|---:|
+| A0 | UNSUPPORTED_HOLD / 23.412000 | 0.017180 | 0.017130 | 0.481446 / 0.481445 | +0.196200000 | 0.000000000 |
+| A1 | HOLD / 20.010000 | 4.923809 | 4.923540 | 0.019770 / 0.023094 | -0.000388594 | 0.196588585 |
+| A2 | GRASP_CONFIRM / 37.816000 | 25.160512 | 25.158028 | 0.102269 / 0.116904 | -0.003259948 | 0.199455962 |
+| A3 | GRASP_CONFIRM / 17.472000 | 31.057826 | 31.054976 | 0.070893 / 0.072187 | +0.000459441 | 0.195740710 |
+
+All four comparison snapshots contain one native contact per pad. This is an observed count, not an assumption of the metric function.
+A0 uses saved pre-integration contact solve and matching COM/rotation. A1/A2 use existing integrated-state mj_forward observation.
+A3 force vector uses original saved wrench plus existing fixture frame: contact point and Fn matched exactly before combining.
+No forces were regenerated at an arbitrary later qpos. PRE-CLOSE FK is **ANALYTIC / DIAGNOSTIC ONLY**.
+A0 pad Fz equals block weight .1962N and full COM torque is ~3.3e-15Nm.
+A1 and A2 have downward pad resultant while table supports the weight; A3 pad Fz is only .00045944N.
+Smaller height mismatch alone is not a load-bearing criterion; wrench evidence does not rank A1 as successful.
+
+### Decision — exactly one controlled experiment
+
+Freeze historical A2 PRE-CLOSE mjSTATE_INTEGRATION including time/qpos/qvel/ctrl/passive jaws/warmstart.
+Load original MJB separately for each case; assert all model arrays equal. Only option difference noslip_iterations=0/5.
+Replay identical fixed48 CLOSE commands (.01rad schedule with existing motion limits), at most50 CONFIRM steps.
+Existing .5mm/2deg/15deg acceptance and collision/joint/penetration gates remain. No adaptive search or new force threshold.
+
+### Validation / Result — VERIFIED BY PHYSICS, DIAGNOSTIC COPY
+
+Both cases have exact initial full-state and identical command/time/stage for all **9697 common steps**.
+NoSlip0: 9746 steps, CONFIRM50 PASS; first force step9398, first bilateral9651.
+NoSlip5: 9697 steps; first force9397, no bilateral at any step; first CONFIRM rejected.
+At same terminal CLOSE48: Fn0=.087011/.130919N; Fn5=0/.334592N.
+NoSlip0 CONFIRM end reproduces A2 block-frame height25.158028mm and Fn .102269/.116904N.
+NoSlip5 first CONFIRM: only pad2 contact, Fn .338381N, F=(-.338379,.003556,-.022968)N.
+Height mismatch is **undefined with missing opposing contact**, never reported as zero/improvement.
+Maximum block contact penetration: 3.745381um (0), 17.559815um (5); both below existing1mm.
+Warnings0. No LIFT, runtime adoption, new sweep or live teacher execution.
+Full command hashes differ only because fail-closed stops case5 early; compare common prefix, not unequal-length hashes.
+Conclusion: **NoSlip changes CLOSE formation in this specific state; cannot exclude it as a contributor.**
+It does not establish that NoSlip alone explains every historical geometry mismatch or reproduces the successful bench.
+
+### Evidence — BASIC 0.631 -> 0.401mm
+
+Classification **A: planning refinement using SIM-observed reserve**, not Cartesian empirical compensation.
+Same settled start, start/target XYZ, controller/profile, solver and .020m upward delta verified from both saved reports.
+Old IK default position tolerance .0005m -> internal (.0005 - .0003465963856126189)=.00015340361438738112m.
+Maximum iterations remains300; actual convergence3 ->5; planned position error .415475 -> .085025mm.
+Measured endpoint .630641990 -> .400950417mm. Target q changes; same motion-limit generator automatically changes
+nominal duration .977269138 ->1.026733576s. Therefore these two executions are not identical-time trajectories.
+No target XYZ offset, no controller gain/timing override. Acceptance .5mm/2deg unchanged.
+First version was uncommitted within the earlier turn; do not invent a separate baseline commit. New source committed8b973da.
+The reserve is learned from this SIM run, not evidence of REAL robustness; SIM absolute q is not copied to REAL.
+
+### Focused validation
+
+Common contact metric synthetic tests (frame sign, multi-contact sum, r cross f vs intrinsic torque, NaN) and saved four-state/A-B regressions PASS.
+Existing manipulation policy7 tests PASS: wrong-phase, unrelated30mm, touching/depth/changedgeometry rejection.
+REAL offline readiness2 and existing transform3 PASS in separate PR66 writer.
+Initial collision-test invocation from repository root failed import resolution; rerun from the existing SIM module working directory passed.
+No code/environment workaround, full suite or remote CI performed. git diff --check recorded at handoff.
+
+### Lesson / Next
+
+Answering the five audit questions is complete. Current blocker is contact formation/relative motion sensitivity;
+no new grasp or solver search is authorized by this result. Teacher stays GRASP_CONFIRM PASS/LIFT FAIL/CENTER SUCCESS=false.
+Monday REAL remains no-motion: exact current encoder values/order/profile can be reported offline from an attended read-only snapshot,
+but physical sign/mechanical-zero mapping is UNVERIFIED, so model FK/IK target is refused. Camera extrinsic is independently blocked.
+No new watchdog/power/torque settings added. Existing manual teleop profile is not silently treated as a Cartesian hardware executor.
+
+### Reproduction / visible results
+
+From this SIM directory, existing interpreter:
+
+```bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python controlled_contact_audit.py --replay /tmp/dapier-controlled-audit-20260919/ab --model /tmp/dapier-arm-noslip-20260918/original-model.mjb
+```
+
+One viewer alternates saved CLOSE0/5, contacts red/yellow, forces/net torque; label `DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS`.
+It is recorded ctrl+step playback, not a new physics run or live state. X11 window creation confirmed.
+Existing BASIC actual SIM command (not rerun during this audit):
+
+```bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python basic_vertical_motion.py --viewer --report /tmp/basic-monday-review.json
+```
+
+Raw replay/results/executed-script hash preserved in local-validation/controlled-audit-20260919.
+PR67 remains draft; no milestone/full CI/main merge. Only coordinator-owned audit source/fixture/record changes committed.
+
+## 2026-09-19→20 — Single PRE-CLOSE arm-lock branching experiment
+
+### Problem
+
+동일 A2 mapped PRE-CLOSE에서 팔 움직임을 제거하면 약한 CLOSE formation이 회복되는지만 검사했다.
+Writer branch `pro/arm-noslip-diagnostic-codex-20260918`, 시작 HEAD `fc3e92408c9277e28444947a8f319cd48820fa4a`, 시작 clean.
+기존 다른 worktree/REAL readiness 및 calibration은 변경하지 않았다.
+
+### Evidence — duplicate check / controlled input
+
+기존 `8027acf`의 arm-coupling 실험은 **GRASP_CONFIRM 이후** NoSlip5 terminal HOLD50 / finite-stiffness joint-equality HOLD50이다.
+현재 A2 PRE-CLOSE/NoSlip0에서 CLOSE formation 전체를 잠근 기록은 없었다. 제한된 현재 기록과 해당 diagnostic만 확인했고 Git 전체 history를 검색하지 않았다.
+따라서 새 **locked CLOSE 한 번**만 실행. 정상-arm은 `fc3e924` audit의 저장된 NoSlip0 CLOSE48을 재사용했다.
+원본 모델 SHA256 `8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9`, MuJoCo3.3.7, integration_desk.
+
+두 case의 원본 PRE-CLOSE mjSTATE_INTEGRATION(qpos/qvel/ctrl/passive jaw/warmstart/time 포함)이 exact 동일하다.
+모든 compiled arrays/options 동일; NoSlip0. 9,696 step의 command/time/stage가 **전부 exact 동일**하다.
+CLOSE48, 19.392s만 비교하며 새 CONFIRM/HOLD/LIFT는 실행하지 않았다.
+
+### Decision — explicit diagnostic intervention
+
+`KINEMATIC LOCK DIAGNOSTIC / NOT NORMAL TASK PHYSICS`:
+왼팔 pan/lift/elbow/wrist-flex/roll의 qpos를 PRE-CLOSE 값으로, qvel을0으로 **각 mj_step 전/후** projection.
+그리퍼·passive jaw·블록·다른 팔은 overwrite하지 않는다. 기존 command/controller와 runtime safety gates는 그대로다.
+한 번 qvel=0으로 두는 방식이 아니며, 9,696개 저장 sample에서 다섯 arm q/qvel과 TCP가 정확히 고정됨을 확인했다.
+**한계:** sampled-state kinematic intervention이며, within-step solve에서 arm inertia를 제거한 rigid-body constraint 실험은 아니다.
+Projection에 의한 반력/에너지 교환도 실제 fixture로 계측한 값이 아니다. 원인 완전 배제나 task success로 승격하지 않는다.
+
+### Validation / Result — DIAGNOSTIC PHYSICS, CASE B
+
+| CLOSE48 끝 / 전체 CLOSE metric | normal arm | projected arm lock |
+|---|---:|---:|
+| pad1 / pad2 summed Fn (N) | .087011 / .130919 | .098341 / .122856 |
+| bilateral native contact / positive Fn | yes | yes |
+| jaw measured q (rad) | 1.724190580628 | 1.724190581984 |
+| jaw command (rad) | 1.724187386265 | 1.724187386265 |
+| jaw opening (mm) | 40.063236 | 40.063257 |
+| block ΔXYZ (mm) | −.142422 / −.000226 / −.000068 | −.147726 / −.000246 / −.000045 |
+| block total rotation (rad) | .000049259 | .000056893 |
+| maximum block contact penetration (µm) | 3.745381 | 4.212914 |
+| maximum TCP displacement (mm) | .009548 | 0 |
+| native representative world-Z height (mm) | 25.160259 | 25.160458 |
+| terminal table normal resultant (N) | .202806 | .200719 |
+| warnings | 0 | 0 |
+
+Normal arm per-joint maximum displacement (rad):
+`[2.459203e-5,1.655899e-5,1.563738e-5,3.040296e-5,1.273545e-7]`; locked all0.
+Fn sum changes only about1.50%; bench ~.48N per finger is not restored. Bench is separate geometry/history/NoSlip5 context, not the controlled comparator.
+Existing acceptance/path/collision/penetration guards passed; no new safety threshold was introduced.
+**Answer: NO substantial recovery.** Lower CLOSE arm motion/yielding as the main-cause hypothesis for this state; do not exonerate all arm-mounted geometry/dynamics.
+
+### Evidence — CASE B only, saved first-contact trace
+
+No new physics. All times below are relative to the same PRE-CLOSE start; sampled at2ms using existing integrated-state `mj_forward` force observation.
+Pad1/pad2 are two fingers of the LEFT gripper, not left/right robot arms.
+
+| Event | normal | locked |
+|---|---:|---:|
+| first geometric pad2 / pad1 step | 9392 / 9651 | 9394 / 9652 |
+| geometric-contact lag (s) | .518 | .516 |
+| first positive Fn pad2 / pad1 step | 9398 / 9651 | 9399 / 9652 |
+| first positive Fn pad2 / pad1 time (s) | 18.796 / 19.302 | 18.798 / 19.304 |
+| positive-force lag (s) | .506 | .506 |
+| block X at second-finger force onset (mm) | −.126544 | −.134933 |
+| terminal yaw change (rad) | +9.767115e-6 | −5.808300e-6 |
+| max table tangential resultant norm (N) | .150437 | .165347 |
+
+Chronology: pad2 geometric contact → sampled unilateral force + table tangential reaction → gradual block −X displacement → pad1 contact → weak bilateral CLOSE end.
+Table +X reaction just before opposite contact is .136441/.143613N, opposing the first pad's −X push. Table normal support persists.
+Jaw tracks the same closing schedule: first force q≈1.73862/1.73852rad, qvel≈−.05378/−.05362rad/s; terminal error≈3.194e-6rad, terminal qvel≈9.23e-5rad/s.
+Native geometric contact and load-bearing force onset are explicitly distinct. Integrated-state force samples are not a reconstruction of every within-step constraint impulse.
+**INFERENCE:** contact formation with table-supported translation is the next branch. This chronology does not prove table friction causes the weak grasp; being below a friction limit would not rule out static friction either. No coefficient change performed.
+
+### Evidence — ANALYTIC error projection
+
+Saved planned `e=FK(q_target)−desired` (world mm): `[-.0562612,−.1481870,+.0008876]`, norm .1585102mm.
+Projection on target orthonormal axes (mm): closing **−.0562634**, approach **−.0008875**, remaining **−.1481861**.
+These are planned FK values, not actual measured PRE-CLOSE error or a contact-time prediction. The .159mm norm is not one finger's contact lead.
+
+### Validation / visible evidence
+
+Focused audit/lock7 + existing manipulation policy7 = **14 PASS**; full raw command/state/options/projection comparison assertions PASS; `git diff --check` PASS.
+Initial pytest invocation was blocked by unrelated ROS auto-plugin `lark` import; canonical existing unittest execution passed without dependencies/environment changes.
+No full suite/remote CI/main merge. Runtime teacher remains GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false.
+Single MuJoCo window alternates saved normal/locked CLOSE46–48 every8s, marks contacts and displays recorded force/wrench; replay is not new physics.
+
+```bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+  2ARM_ROBOT/sim/mobile_dual_so101/controlled_contact_audit.py \
+  --replay /tmp/dapier-preclose-arm-lock-20260919 \
+  --baseline /tmp/dapier-controlled-audit-20260919/ab \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb
+```
+
+Run from this writer root. Long-term raw/script/hash archive: existing local KIT's `local-validation/integration-task-20260916-aeg3vtmi/preclose-arm-lock-20260919`; previous controlled-audit archive supplies baseline/model/inputs.
+Public compact fixture `test/fixtures/preclose_arm_lock.json` preserves negative result, final native contacts and minimal first-contact events. No private calibration/device IDs added.
+
+### Lesson / Next
+
+**Next blocker: contact formation / table interaction**, not new arm/controller tuning. Stop after this CASE B trace.
+No new grasp/solver/friction search or runtime change. Projection is a bounded causal diagnostic with a stated mechanical limitation, not task success.
+BASIC +20mm existing PASS and Monday utility frozen: REAL starts from fresh measured q and verified mapping, never SIM absolute q.
+Actual motor command **NOT RUN**; no device I/O. PR67 remains draft/base main; no new merge SHA.
+
+## 2026-09-20 — PRE-CLOSE pad geometry audit (PARTIAL)
+
+### Problem
+
+동일 A2 CLOSE의 pad2→pad1 정상력 발생 간격 .506s를 PRE-CLOSE geometry와 실제 jaw kinematics가 설명하는지 확인했다.
+시작 HEAD `ff1b085a62dbe97cafd08acee8deb04215b0ee7d`, branch `pro/arm-noslip-diagnostic-codex-20260918`, clean.
+Coordinator만 source를 수정하고, read-only agent는 compiled coupling/log availability를 확인했다. 새 mj_step, IK/search, hardware 접근0.
+
+### Evidence — source / compiled geometry
+
+A0: prescribed-support bench NoSlip5 성공 실행의 **첫 CLOSE(step251) 직전** `raw_qpos_pre_step`, t=.500s.
+RESET 전에 놓인 pose나 unsupported HOLD pose를 PRE-CLOSE로 오인하지 않았다.
+A2: 기존 audit의 `summary.json:preclose_state` mjSTATE_INTEGRATION, t=18.324s. CLOSE 9,696행에 motor와 두 passive jaw의 measured qpos/qvel이 모두 있다.
+A0/A2는 다른 model/context의 비교이며 새로운 controlled solver 비교가 아니다.
+
+Pad geoms는 MESH, block은 BOX(half-size20mm). 기존 supporting-face polygon을 현재 `mjModel.mesh_vert` 정점에 대응시킨 뒤 사용했다.
+Pad1/2 polygon은8/4 vertices. Supporting-plane grouping residual35.98/14.59nm는 기존100nm grouping precision 안이다.
+Raw STL, geom center를 접촉면으로 쓰지 않았다. World vertex=`geom_xmat @ compiled_mesh_vertex + geom_xpos`; body/mesh offset 중복 적용 없음.
+[MuJoCo3.3.7 mesh compiler frame 문서](https://mujoco.readthedocs.io/en/3.3.7/XMLreference.html#asset-mesh)를 대조했다.
+Face vertices/centroid/normal/tangents 및 양쪽 block face center/outward normal은 compact fixture에 보존했다.
+여기서 usable face는 현재 **compiled convex distal collision proxy**의 면이며, 실제 고무 압력 patch/model fidelity 검증이 아니다.
+
+### Decision — sign / overlap / prediction
+
+Block local ±X face의 **outward** normal로 양쪽 모두 gap>0=분리,0=접촉,음수=plane 침범이다.
+Pad inward normal과 반대 block outward normal의 각도를 보고한다.
+기존 bench rectangle half-plane clip4개를 재사용해 block face Y/Z bounds와 pad projection의 교집합을 계산했다.
+겹침이 없으면 effective gap=None. 겹친 polygon의 최소 gap을 쓰며 mean이나 bounds 안의 단일 vertex로 접촉을 판정하지 않는다.
+Mean은 전체 face boundary vertex의 산술평균이고 pressure-weighted centroid가 아니다.
+
+| PRE-CLOSE metric | A0 successful bench | A2 mapped arm |
+|---|---:|---:|
+| pad1 effective min / mean / max gap (mm) | 5.514048 / 5.514055 / 5.514068 | 5.629940 / 5.675393 / 5.699332 |
+| pad2 effective min / mean / max gap (mm) | 5.514047 / 5.514058 / 5.514066 | 5.328634 / 5.363327 / 5.398026 |
+| pad1−pad2 effective min difference (mm) | .000000531 | .301306312 |
+| pad1 / pad2 wedge (mm) | .00002030 / .00001890 | .06939243 / .06939227 |
+| pad1 / pad2 normal misalignment (deg) | .00005471 / .00001686 | .15908597 / .15903841 |
+| projected overlap | both yes | both yes |
+| overlap Y×Z extent, pad1 (mm) | 34.980217×25.000004 | 34.980109×25.066555 |
+| overlap Y×Z extent, pad2 (mm) | 34.980232×25.000004 | 34.980124×25.066555 |
+| jaw opening (mm) | 51.028095 | 51.028095 |
+
+Jaw opening이 같아도 각 pad/block 상대면 gap과 wedge는 같지 않다.
+
+### Validation — ANALYTIC / KINEMATIC DIAGNOSTIC
+
+`mj_kinematics()`만 사용했다. 두 measured passive slide q(t)를 독립적으로 대입하고 arm/block은 PRE-CLOSE에 고정했다.
+Motor command만으로 ideal equality를 강제하거나 constant velocity/endpoint interpolation을 만들지 않았다.
+Zero crossing은 overlap 안의 g가 positive→nonpositive인 첫 sample bracket이다. 기존±100nm 면 grouping precision의 onset band도 별도 보존했다.
+
+| Onset, PRE-CLOSE 이후(s) | pad1 | pad2 | pad1−pad2 |
+|---|---:|---:|---:|
+| fixed PRE-CLOSE + recorded jaws prediction | CLOSE 끝19.392s까지 없음 | 18.794 (bracket18.792–18.794) | **> .598s, right-censored** |
+| recorded full poses의 geometry 재계산 | 19.302 | 18.784 | .518 |
+| 기존 native geometric contact | 19.302 | 18.784 | .518 |
+| 기존 positive normal force | 19.302 | 18.796 | .506 |
+
+고정 geometry의 pad2 onset precision band는18.794–18.796s이고 pad1은±100nm에서도 crossing 없음.
+종료 시 predicted pad1 gap은 여전히+.143333mm. 미래 onset을 extrapolate하거나 임의 숫자로 채우지 않았다.
+실제 전체 pose 재계산의 두 onset이 native contact와 sample 단위로 일치하여 compiled frame/overlap 해석을 교차검증했다.
+Stored measured jaw trajectories는 접촉 후의 constraint response도 포함하므로 독립적인 contact-free causal prediction이 아니다.
+
+### Evidence — block motion / compiled coupling
+
+같은 recorded jaw+arm pose에서 **실제 block pose vs PRE-CLOSE block pose**만 비교했다.
+두 번째 접촉(step9651)에서 pad1 actual gap−.000772mm vs frozen-block+.125670mm:
+블록 움직임의 기여는 **−.126441mm**로 반대 finger의 gap을 줄인다.
+Pad2는−.003226mm vs−.129631mm, 기여 **+.126405mm**. 따라서 이 trace에서 블록 움직임은 두 번째 접촉을 가능하게/앞당기는 방향이다.
+이는 world−X 부호 해석이 아니라 직접 계산한 상대 gap 비교다. Table friction 원인 확정은 하지 않았다.
+
+Compiled actuator5→`left_gripper` hinge(qpos/dof5), joint transmission/gear1; 두 passive slide qpos/dof6,7.
+`left_pgripper_jaw_1/2_coupling`은 active `mjEQ_JOINT`, driver qpos0=2.2028rad, displacement coefficient −.0115/+ .0115m/rad.
+Equality solref [.004,1], solimp [.99,.99,.001,.5,2]. ntendon=0, passive jaws에 독립 actuator 없음.
+실제 equality 존재는 확인했지만 이번 결과만으로 'mimic softness'를 실패 원인으로 기록하지 않는다.
+
+### Result — PARTIAL / INFERENCE
+
+Initial effective gap 비대칭과 jaw kinematics는 **pad2 first-contact 순서와 큰 비대칭 경향**을 설명한다.
+하지만 fixed-block prediction은 pad1 onset 자체가 없으므로 .506s라는 finite force lag를 단독 재현하지 못한다.
+실제 block response를 포함하면 geometric lag .518s가 맞으며 force lag와12ms 차이는 force/geometry 관측 정의를 구분한다.
+**PARTIAL**: symmetric static prediction인 NO도, delay 전체를 독립적으로 설명한 YES도 아니다.
+다음 확인점은 A2 mapping/실제 PRE-CLOSE가 만든 .301306mm effective-gap 비대칭 및 접촉 중 block/jaw response이다.
+이번 턴은 여기서 종료. 새 physics/friction/table replacement/solver sweep으로 확장하지 않는다.
+
+### Validation / Lesson / Handoff
+
+Geometry focused4 + 기존 contact/audit7 = **11 PASS**. No-overlap rejection, vertex가 모두 밖인 enclosing overlap,
+overlap 밖 wedge minimum 배제, mirrored signed gap, touching/penetration, recorded native onset 일치, positive-force 구분을 검증했다.
+소스 AST에서 mj_step/mj_forward call 없음 확인. `git diff --check` PASS. Full suite/remote CI/main merge 없음.
+A0/A2 face diagram, min/mean/max/wedge/overlap table, predicted/observed timing plot을 생성했다.
+Downloads `DAPIER-preclose-geometry-20260920/report.html` 전용 Firefox 창 제목을 확인했다.
+원본/plot script/face definitions/reproduction source/hash는 기존 KIT의 `local-validation/integration-task-20260916-aeg3vtmi/preclose-geometry-20260920`에 보존.
+`preclose_geometry_audit.py --help`의 명시적 saved model/trace/face inputs로 재현한다. Raw measurements/private calibration/device ID는 공개하지 않았다.
+Actual teacher GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false 상태는 불변. BASIC+20mm/Monday utility 동결, actual motor command=NOT RUN.
+PR67 draft/base main 유지; 새 merge SHA 없음. SIM analytic evidence를 real/task success로 승격하지 않는다.
+
+
+## 2026-09-20 — Post-bilateral squeeze budget: Case A contributor
+
+record_id: DAPIER-2026-09-20-postcontact-squeeze
+base commit: b0840670032eb03b54a75e2535140787b9f32f2c
+scope: DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS; PR #67 draft.
+
+### Problem
+
+나는 A2 pad2/pad1 positive force onset 18.796/19.302 s와 CLOSE end 19.392 s만
+보고 squeeze가 끝났다고 판단하지 않고 source와 저장 trace를 대조했다.
+
+### Evidence
+
+**VERIFIED BY EXISTING PHYSICS / SOURCE AUDIT**
+
+CenterBlockTeacher.finish_task()와 historical continue_physics.py는 CLOSE substage의
+move()가 끝난 뒤 양 pad force가 positive이면 schedule을 중단한다. 이후
+env.apply_action(tuple(data.ctrl), physics_steps=1)를 50회 호출한다.
+전환 조건은 bilateral contact이며 force/preload 목표가 아니다.
+A0 bench도 production close-plan endpoint의 bilateral 여부로 중단하고
+terminal ctrl을 CONFIRM/support withdrawal/HOLD 동안 유지한다.
+
+| bilateral onset → CONFIRM end | A0 gripper-only | A2 mapped arm |
+|---|---:|---:|
+| NoSlip (기존 상태 그대로) | 5 | 0 |
+| onset → CLOSE end | 0.278 s | 0.090 s |
+| CONFIRM | 0.100 s | 0.100 s |
+| ctrl onset / terminal (rad) | 1.722760833 / 1.714220985 | 1.724651871 / 1.724187386 |
+| commanded additional closing | 8.539848 mrad | 0.464485 mrad |
+| measured driver closing | 8.577498 mrad | 0.469504 mrad |
+| actual opening reduction | 31.356871 µm | 2.100124 µm |
+| final opening | 39.967174 mm | 40.063189 mm |
+| pad1 / pad2 normal force | 0.480533 / 0.480533 N | 0.102269 / 0.116904 N |
+| support/table normal force | 0.196059 N | 0.199456 N |
+| peak abs actuator force after bilateral | 0.020980 Nm | 0.043379 Nm |
+
+두 case 모두 CONFIRM ctrl은 bitwise constant다. A2 힘은 CLOSE endpoint
+0.087011/0.130919 N에서 CONFIRM end 0.102269/0.116904 N으로 바뀐다.
+같은 command에서도 contact response는 계속되지만 추가 command amplitude는 없다.
+A2의 실제 measured closing/opening 감소 역시 더 작다.
+
+A0 force/opening은 pre-integration evaluation, motor q는 post-integration 기록이다.
+A2는 mj_step 뒤 mj_forward한 production state다. 2 ms sampling phase 차이를
+숨기지 않는다. 과거 A2 actuator force는 compiled fixed gain/affine bias,
+unit joint transmission 식으로 복원한 **ANALYTIC** 값이며 새 A/B는
+data.actuator_force를 직접 저장했다. 두 모델 forcerange는 ±2.94 Nm이다.
+포화 evidence는 없다. A0/A2 배치와 NoSlip 차이는 비교의 한계다.
+
+### Decision
+
+A2 actual squeeze도 적으므로 **copied A/B 한 번**만 실행했다.
+동일 A2 CLOSE48 terminal mjSTATE_INTEGRATION에서 분기했다.
+이 상태 이전 trajectory는 같으므로 PRE-CLOSE 전체를 반복하지 않았다.
+
+- Baseline: 기존 terminal ctrl에서 CONFIRM 50 step.
+- Candidate: A2 bilateral-onset ctrl에서 A0 budget 0.008539847627 rad를 뺀
+  1.716112023423022 rad까지 추가 CLOSE, 이후 같은 CONFIRM 50 step.
+- 추가 변화량 0.008075362842 rad. 기존 septic generator/최소 duration 0.1 s를
+  그대로 사용했고 motion limits가 CLOSE 188 step/0.376 s를 생성했다.
+  맞춘 것은 total commanded closing amplitude이며 elapsed duration/waveform까지
+  A0와 동일하게 만든 실험은 아니다. 두 A/B의 경과 시간도 다르므로 amplitude와
+  추가 시간의 독립적인 causal contribution은 분리하지 않았다.
+- 두 case NoSlip0, identical model/options/full initial state. arm/right gripper
+  references, geometry/friction/mass/gains/limits/thresholds는 유지했다.
+- 기존 move path/endpoint gate 및 per-step apply_action/inspect_runtime 유지.
+  초기 restore 외 qpos overwrite, attachment, hardware 없음.
+
+### Validation
+
+**VERIFIED BY PHYSICS — diagnostic copy only**
+
+Baseline CONFIRM50은 기존 trace와 매 step qpos/qvel/ctrl/native contacts가
+완전히 일치했다. Candidate CLOSE188 + CONFIRM50 완료, failure 없음.
+
+| CONFIRM end / run maximum | Baseline | Matched budget |
+|---|---:|---:|
+| pad1 / pad2 normal force | 0.102269 / 0.116904 N | 0.444831 / 0.460342 N |
+| measured driver q | 1.724189945 rad | 1.716121366 rad |
+| jaw opening | 40.063189 mm | 39.977312 mm |
+| table normal force | 0.199456 N | 0.290259 N |
+| finger resultant world Z | −0.003260 N | −0.085413 N |
+| max abs actuator force | 0.003482 Nm | 0.071898 Nm |
+| max TCP position error | 0.242577 mm | 0.242718 mm |
+| max block penetration | 0.002880 mm | 0.017249 mm |
+| warnings | 0 | 0 |
+
+기존 0.5 mm / 2° / 15° endpoint, collision, 1 mm penetration gate PASS.
+**VERIFIED BY REGRESSION:** focused squeeze 4 + 기존 controlled-contact 7 = 11 PASS;
+git diff --check PASS. No full suite / remote CI / merge.
+원본 실험을 덮어쓰는 재실행을 거부하는 guard도 검증했다.
+
+### Result
+
+**Case A — post-bilateral squeeze 부족이 약한 접촉력 형성의 contributor.**
+동일 A2 모델에서 A0-matched budget으로 양쪽 force가 크게 증가했다.
+**Case D의 사실도 유지:** CONFIRM은 이미 같은 ctrl을 유지했고 accidental release가 아니다.
+Case B 근거 없음. Case C는 normal-force 형성에는 해당하지 않지만,
+**load-bearing efficacy는 UNVERIFIED**다. table 반력도 증가했고 finger vertical
+resultant는 아래 방향이다. representative height difference도 약 25.160 mm로 유지된다.
+squeeze만으로 비대칭 grasp/LIFT가 해결됐다고 결론 내리지 않는다.
+
+실제 task는 GRASP_CONFIRM PASS / LIFT FAIL / CENTER SUCCESS=false 그대로다.
+이번 후보는 copied CLOSE → GRASP_CONFIRM까지만 도달했다. Runtime teacher 수정 없음.
+
+### Lesson / Next
+
+Phase duration, retained command, incremental command, actual jaw compression은 다르다.
+다음 blocker는 강화된 비대칭 접촉이 실제 지지력을 만드는지, table loading만
+늘리는지다. 별도 범위의 검증이 필요하며 이번 턴에는 LIFT/HOLD를 추가하지 않았다.
+
+Reproduce (preserved local evidence; 반드시 새 output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/postcontact_squeeze_audit.py \
+  --a0 /tmp/dapier-prescribed-support-20260918/noslip5.json \
+  --a2 /tmp/dapier-controlled-audit-20260919/ab/noslip0.jsonl \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --continuation /tmp/dapier-success-grasp-mapping-20260918/physics-continuation.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-postcontact-squeeze-repro --run-one-ab
+~~~
+
+Artifacts: /tmp/dapier-postcontact-squeeze-20260920/{audit,experiment,summary}.json.
+Visible: ~/Downloads/DAPIER-postcontact-squeeze-20260920/report.html.
+Public compact fixture: test/fixtures/postcontact_squeeze.json.
+원시 physics/실행 당시 script/hash는 기존 local validation kit의
+postcontact-squeeze-20260920에 보존했다.
+첫 invocation은 minimal continuation에 terminal_state가 없어서 **physics 전**에
+멈췄다. 완료된 A/B는 원래 full continuation snapshot을 사용했다.
+이후 evidence overwrite guard와 future provenance/gate 저장만 추가했고 physics는 반복하지 않았다.
+
+
+## 2026-09-20 — Matched-budget grasp standard LIFT: detached, TCP gate stopped
+
+record_id: DAPIER-2026-09-20-matched-budget-lift
+base commit: 3f159f134d7235ade75826242843a4665b47cde2
+scene_id: integration_desk; MuJoCo 3.3.7; NoSlip=0; timestep=0.002 s
+model MJB SHA256: 8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9
+
+### Problem
+
+나는 matched-budget squeeze에서 얻은 약 0.45 N grasp가 실제 LIFT를 버티는지
+확인했다. 새 grasp/closing analysis, parameter sweep, REAL command는 실행하지 않았다.
+
+### Evidence
+
+**VERIFIED BY PHYSICS — copied full-model simulation**
+
+같은 A2 CLOSE48 full-state에서 target 1.716112023423022 rad로 추가 CLOSE188,
+기존 terminal-command CONFIRM50을 실제 ctrl + mj_step으로 재현했다.
+238 step의 qpos/qvel/ctrl/native contacts와 CONFIRM final mjSTATE_INTEGRATION은
+이전 matched-budget 결과와 정확히 일치했다.
+
+이후 기존 WaypointBlockTeacher.solve()/move(), lift_targets
+(LIFT_5MM +5 mm, LIFT_15MM +15 mm, LIFT_30MM +35 mm TCP target),
+기존 septic profile 및 duration minimum 0.5 s를 그대로 사용했다.
+arm state를 fix/teleport하지 않았고 gripper command는 LIFT 내내 동일했다.
+
+| 이벤트 | LIFT 시작 후 | SIM time / 결과 |
+|---|---:|---|
+| LIFT 시작 | 0 s | 38.192 s |
+| 첫 table contact=0 / force=0 | 88 ms / step44 | 38.280 s |
+| 짧은 재접촉 | 90 ms / step45 | table contacts2 / Fn 0.126790 N |
+| 연속 무접촉 시작 | 92 ms / step46 | 38.284 s, 양쪽 Fn 0.339437/0.355186 N |
+| LIFT_5MM endpoint PASS | 518 ms | 38.710 s, TCP error 0.354704 mm |
+| LIFT_15MM endpoint FAIL | 1.186 s | 39.378 s, TCP error 0.615623 mm > 0.5 mm |
+
+이후 마지막 step까지 연속 table 무접촉은 **1.094 s**다.
+first finger positive-force loss와 geometric contact loss는 모두 **관측 없음**.
+최초 분리 이후 force minimum은 pad1/pad2 0.339437/0.355186 N이었다.
+
+| 정지 상태 / 실행 최대 | 값 |
+|---|---:|
+| final pad1 / pad2 normal force | 0.401377 / 0.401173 N |
+| final table count / normal force | 0 / 0 N |
+| final block COM world z | 33.861141 mm |
+| final block bottom rise over settled baseline | 13.520121 mm |
+| maximum block bottom rise | 13.555672 mm |
+| final block vz | −0.848731 mm/s |
+| final gripper ctrl / measured q | 1.716112023 / 1.716121108 rad |
+| final jaw qvel | −9.612744e−7 rad/s |
+| final jaw opening | 39.975310 mm |
+| maximum abs gripper actuator force (including CLOSE) | 0.071898 Nm |
+| any actuator saturation / warning | none / 0 |
+| maximum block penetration (including CLOSE) | 0.017249 mm |
+
+LIFT15 approach/closing errors 0.78003°/0.46894°는 기존 2°/15° 이내이고
+해당 endpoint collision status도 safe였다. 정지 사유는 위치 gate다.
+per-step joint/state, clearance, bilateral force, penetration 및 attachment 검사도
+원래 경로를 유지했다. Block/table 접촉에 force가 0인 순간과 geometric contact가
+없는 순간을 구분하여 기록했다.
+
+### Decision
+
+최초 기존 gate 실패에서 정지했다. TCP acceptance, friction, solver/NoSlip,
+geometry, gains, mass, limits는 변경하지 않았다. Standard LIFT30과 HOLD는 실행하지 않았다.
+후속 HOLD 구현은 기존 support success뿐 아니라 실제 HOLD phase에서도 3 s 경과를
+요구하도록 준비했으나 이번에는 그 분기에 도달하지 않았다.
+
+요청한 A–D에 해당하지 않는 결과를 숨기지 않는다.
+
+- A (30 mm + 3 s): 미도달.
+- B (table 분리 전 contact loss): 아님. Force loss 없음.
+- C (table never detaches): 아님. 실제 분리 확인.
+- D (lift 후 HOLD slip): 미검증. HOLD 진입 전 TCP gate에서 중단.
+
+기록값은 **UNCLASSIFIED_PARTIAL_LIFT / TCP endpoint gate**다.
+강화된 grasp가 table을 떠나 observed interval 동안 block을 지지한 것은
+확인했지만, 30 mm / 3 s task success는 확인하지 못했다.
+마지막 음의 vz 하나로 HOLD slip의 원인을 확정하지 않는다.
+
+### Validation
+
+**VERIFIED BY REGRESSION:** squeeze/lift focused8 + existing controlled-contact7 =
+15 PASS; git diff --check PASS. 원시 831 physics steps =
+CLOSE188 + CONFIRM50 + LIFT5 259 + LIFT15 334를 보존했다.
+model compiled arrays와 options는 before/after exact 동일, NoSlip0 유지.
+
+첫 focused fixture 검산에서 1-step table recontact를 발견했다.
+진행 설명의 '첫 분리 이후 1.098 s 무재접촉'을 정정하고,
+최종 summary/plot은 92 ms부터 1.094 s **연속** 무접촉으로 계산했다.
+추가 physics 없이 저장된 trace만 다시 계산했다.
+Regression은 이 step45 재접촉, step46 연속 분리, TCP gate 실패를 모두 고정한다.
+No full suite / remote CI / main merge. 실물 명령 없음.
+
+### Result
+
+Copied matched-budget CLOSE → GRASP_CONFIRM 재현 PASS.
+Standard LIFT_5MM actual physics PASS.
+LIFT_15MM actual physics 끝까지 실행했지만 endpoint TCP gate FAIL.
+No contact-loss event. LIFT30 / HOLD 미실행.
+전체 HOME부터 live teacher를 재실행한 것이 아니므로 CENTER SUCCESS로 승격하지 않는다.
+
+### Lesson / Next
+
+Table force=0, first geometric detachment, continuous detachment interval은 다르다.
+추가 squeeze는 이번 조건에서 실제 table-free lift를 가능하게 했다.
+다음 blocker는 기존 LIFT15 endpoint의 planned vs executed TCP error를 분리하는 것.
+이번 턴에는 target offset, timing, gain 또는 acceptance 보정을 추가하지 않았다.
+
+Reproduce from preserved evidence (new output directory; one matched candidate only):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/postcontact_squeeze_audit.py \
+  --a0 /tmp/dapier-prescribed-support-20260918/noslip5.json \
+  --a2 /tmp/dapier-controlled-audit-20260919/ab/noslip0.jsonl \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --continuation /tmp/dapier-success-grasp-mapping-20260918/physics-continuation.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-matched-budget-lift-repro \
+  --lift-from /tmp/dapier-postcontact-squeeze-20260920
+~~~
+
+--lift-from reuses the cached A0/A2 budget; it does not repeat their analysis or A/B.
+Evidence: /tmp/dapier-matched-budget-lift-20260920/{experiment,lift-summary}.json.
+Visible: ~/Downloads/DAPIER-matched-budget-lift-20260920/report.html.
+Local validation kit: matched-budget-lift-20260920 (raw state, executed source, plot,
+render command, hashes). Public compact fixture: test/fixtures/matched_budget_lift.json.
+The executed source was preserved before adding summary/recontact bookkeeping;
+no physics was rerun after that addition. PR #67 stays draft/base main.
+
+## DAPIER-2026-09-20-lift15-endpoint-hold
+
+### Problem
+
+Matched-budget grasp가 table에서 분리되고 LIFT5를 통과했지만 LIFT15 종료 TCP
+오차 0.615623 mm가 기존 0.5 mm gate를 넘었다. 이번에는 새 IK나 grasp를 찾지
+않고 목표→planned FK→measured FK를 분리하고 같은 terminal command만 유지한다.
+시작 writer HEAD: 6455a3b950844208ab004820e718a676405d95d1, clean.
+PR #67의 같은 SIM writer만 수정하며 REAL/BASIC 코드는 동결한다.
+
+### Evidence
+
+**VERIFIED BY EXISTING PHYSICS / ANALYTIC FK**
+
+저장된 LIFT15 IK는 1 iteration에서 기존 허용치 안으로 종료했다.
+TCP site는 left_cube_grasp, parent body left_gripper다.
+Target XYZ = [0.199999996283, 0.000000138045, 0.033742416802] m.
+Planned FK = [0.199712787835, 0.000221559851, 0.033556055468] m.
+IK q_target, move target_q, 실제 terminal data.ctrl 12개 채널은 정확히 같다.
+Command FK와 planned FK도 정확히 같다. Command reseeding/변경은 발견하지 못했다.
+별도 FK preview만 apply_control_as_pose를 사용한다. 물리 MjData의 full-state는
+저장본과 bitwise 동일하게 복원하고 실제 진행 중 qpos를 덮어쓰지 않는다.
+TCP는 passive jaw body에 속하지 않는다.
+
+| TCP error (mm) | Original gate | Same ctrl + 500 ms |
+|---|---:|---:|
+| target → planned FK | 0.407733805 | 0.407733805 |
+| planned FK → measured | 0.229748673 | 0.224083936 |
+| target → measured | 0.615622815 | 0.610675131 |
+
+벡터 정의는 planned-target, measured-planned, measured-target이다.
+첫 두 **벡터**의 합이 마지막 벡터이며 norm을 더하지 않는다.
+World XYZ, mm:
+- planning residual: [-0.287208, +0.221422, -0.186361]
+- original tracking residual: [-0.094876, +0.073146, -0.196042]
+- terminal tracking residual: [-0.093242, +0.071905, -0.190655]
+- terminal total: [-0.380450, +0.293327, -0.377016]
+
+| LEFT joint | target = terminal command (rad) | gate measured (rad) | hold-end measured (rad) | gate qvel (mrad/s) | hold-end qvel (mrad/s) |
+|---|---:|---:|---:|---:|---:|
+| shoulder_pan | 0.656919934 | 0.656919998 | 0.656919937 | 0.001287 | 0.001766 |
+| shoulder_lift | 0.478144294 | 0.478816067 | 0.478797852 | -0.621655 | 0.000921 |
+| elbow_flex | -0.305189475 | -0.304807394 | -0.304818503 | -0.525788 | 0.001424 |
+| wrist_flex | 1.364645425 | 1.364638352 | 1.364647268 | 0.628468 | 0.001226 |
+| wrist_roll | -0.848061097 | -0.848060885 | -0.848061007 | -0.017262 | -0.001973 |
+
+별도 command FK의 Jacobian × measured-command로 근사한 original tracking
+기여는 shoulder_lift [-0.044176,+0.034068,-0.143699] mm,
+elbow_flex [-0.051467,+0.039691,-0.052442] mm다. 이는 국소 선형 진단이며
+새 물리 실험/인과적 controller 분리 증거는 아니다.
+기존 final 100 ms trace를 FK한 전체 오차는 0.698549 → 0.615623 mm였다.
+
+**VERIFIED BY PHYSICS — DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS**
+
+정확한 저장 LIFT15 endpoint full-state에서 250 actual ctrl + mj_step step,
+dt=0.002 s, 0.5 s 한정 관찰을 했다. 0.5 s는 기존 lift motion 최소 duration과
+같은 관찰 범위이며 새 runtime terminal wait 정책이 아니다.
+- 기존 env.apply_action + inspect_runtime의 command/measured/clearance/contact/
+  penetration gate를 그대로 사용. Phase/collision policy = LIFT_15MM.
+- 12-channel ctrl 전부 일정. 초기 target/IK/geometry/gain/friction/mass/solver/
+  NoSlip0 및 모델 배열/option hash 불변. 새 qpos teleport/weld/attachment 없음.
+- 최초 setup 시 env reset-valid 계약 누락으로 mj_step **0회**에서 거부됐다.
+  기존 env.reset 검증 후 frozen MJB/full-state를 복원하는 이전 진단과 같은
+  초기화 순서로 수정했다. 0-step 결과를 보존했고 유효 물리 실행은 한 번이다.
+- 50/100/150/500 ms TCP error: 0.611497 / 0.610773 / 0.610686 / 0.610675 mm.
+- 마지막 100 ms error range: 0.610670925~0.610675131 mm. Gate pass sample **0**.
+- Bilateral force 유지: 최소 0.389396 / 0.383446 N;
+  마지막 0.389396 / 0.393570 N. Table contact/force는 전체 0/0.
+- Block bottom 13.520121 → 13.010835 mm, 추가 하강 0.509286 mm.
+  마지막 vz=-0.987553 mm/s. 안정적인 unsupported HOLD라고 부르지 않는다.
+- 최종 approach 0.781160°, closing 0.469866°: 기존 2°/15° 안.
+- 최대 penetration 0.014807 mm < 기존 1 mm; saturation/warning 없음.
+- LIFT30 / 3 s HOLD는 실행하지 않았다. CENTER SUCCESS=false.
+
+### Decision
+
+단순 **endpoint settling/tracking timing**으로는 이 gate를 해결하지 못했다.
+요청한 no-convergence 분류는 **planning/reference residual + persistent tracking
+bias 복합**이다. 큰 고정 성분은 이미 존재한 planning residual 0.407734 mm이고,
+추종 편차 0.224084 mm가 거의 같은 방향으로 더해져 기준을 넘는다.
+IK 자체는 기존 기준 안으로 수렴했으며 command 전달 오류는 아니다.
+특히 shoulder_lift / elbow_flex qvel이 거의 0이 된 뒤에도 position bias가 남는다.
+따라서 임의 sleep을 runtime에 넣거나 0.5 mm를 완화하지 않는다.
+중력/접촉 하중과 유한 gain이 bias의 원인일 가능성은 **INFERENCE**이며,
+이번 실험만으로 각각의 기여를 확정하지 않는다.
+
+### Validation
+
+Targeted copied physics 250 steps; same initial full-state / ctrl / model assertion PASS.
+Focused tests: test_postcontact_squeeze_audit.py **11 PASS**,
+test_controlled_contact_audit.py **7 PASS** (총 18).
+새 회귀는 vector residual 합, 고정 command, 양수 힘 유지와 gate 실패의 공존,
+속도 감소 후 잔류 오차, block 하강을 success로 오인하지 않는 계약을 보존한다.
+git diff --check PASS. Full suite / remote CI / main merge 미실행.
+Runtime teacher/controller/safety 소스는 수정하지 않았다.
+
+### Result
+
+LIFT15 endpoint gate는 **FAIL 유지**. 0.5 s 추가 관찰로 원인 분류를 완료했다.
+오차 감소는 약 0.004948 mm에 그쳤다. 접촉은 유지되지만 block 하강이 계속된다.
+실제 HOME부터의 live teacher 또는 실물 동작은 하지 않았다.
+
+### Lesson / Next
+
+이 상태에서는 trajectory 종료 후 대기만 늘려도 계획 오차 여유가 확보되지 않는다.
+다음 후보 검토는 기존 acceptance 안쪽의 planner residual과 정상상태 추종 편차를
+함께 다뤄야 한다. 이번 턴에 IK tolerance/target/profile/gain을 변경하지 않았다.
+Block slip은 별도 관찰 사항이며 solver/friction tuning으로 확장하지 않았다.
+
+Reproduce (새 output directory, 저장된 endpoint만 사용):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/lift_endpoint_audit.py \
+  --experiment /tmp/dapier-matched-budget-lift-20260920/experiment.json \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-lift15-endpoint-repro
+~~~
+
+Evidence: /tmp/dapier-lift15-endpoint-20260920-run/endpoint-hold.json,
+summary.json, executed-lift_endpoint_audit.py, render-report.py.
+공개 compact fixture: test/fixtures/lift15_endpoint_hold.json.
+화면: ~/Downloads/DAPIER-lift15-endpoint-20260920/report.html.
+그래프 재생성은 위 render-report.py 실행이며 **추가 physics가 없다**.
+Raw state/source/graph는 기존 local validation kit의 lift15-endpoint-20260920에 보존.
+PR #67 draft/base main 유지. BASIC/REAL 동결, actual motor command=NOT RUN.
+
+## DAPIER-2026-09-20-lift15-one-step-refinement
+
+### Problem
+
+같은 LIFT15 command를 추가로 유지해도 TCP 오차가 약 0.611 mm에 남았다.
+이번에는 static planning residual 0.407734 mm만 줄이는 후보를 검증했다.
+시작 HEAD edf1e99a91ae24cab8391a2de126047277a800a4, 같은 writer branch, clean.
+기존 grasp squeeze / geometry / friction / solver / NoSlip0 / controller gain /
+mass / joint limits / 0.5 mm·2°·15° acceptance는 그대로다.
+
+### Evidence
+
+**ANALYTIC / KINEMATIC DIAGNOSTIC**
+
+solve_bimanual_position_ik은 position<=0.0005 m 및 approach<=2°를
+만족하면 즉시 종료한다. 기존 LIFT15는 1번 DLS 갱신 후 이 조건을 만족했다.
+최소 residual에 도달해서 멈춘 것은 아니다. iteration 상한에 걸린 것도 아니다.
+
+같은 position3 + approach-axis2 목적함수에 기존 DLS update를 **딱 한 번**
+추가 적용했다. 기존 damping=.02, axis weight=.05 m, joint step bound=.05 rad를
+원래 함수 signature에서 읽어 재사용한다. 기존 solver/acceptance를 수정하지
+않고 isolated planning MjData에서 후보를 생성한다. 새로운 Cartesian offset,
+compensation, grasp search 또는 parameter sweep이 아니다. Global minimum
+또는 더 이상의 refinement가 불필요하다는 결론도 아니다.
+
+| Static planned FK | Original | One extra DLS update |
+|---|---:|---:|
+| X error (mm, planned-target) | -0.287208448 | -0.117239854 |
+| Y error (mm) | +0.221421806 | +0.091140054 |
+| Z error (mm) | -0.186361334 | -0.051414385 |
+| Position norm (mm) | 0.407733805 | 0.157146848 |
+| Approach error (deg) | 0.837977392 | 0.627949753 |
+| Closing error (deg) | 0.516356464 | 0.347034339 |
+| Minimum LEFT arm joint margin (rad) | 0.293417305 | 0.283888793 |
+
+LEFT arm q candidate (rad, pan/lift/elbow/wrist-flex/wrist-roll):
+[0.656920338019, 0.486150005395, -0.318900715255, 1.374173936576,
+ -0.848523089427].
+Gripper command 1.716112023423022 rad 및 나머지 7개 command 채널 불변.
+Joint / endpoint collision / full interpolated path guard PASS.
+
+**VERIFIED BY PHYSICS — DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS**
+
+동일한 **저장 LIFT15 실패 endpoint full-state**를 두 번 독립 복원하여
+원래 q와 정밀화 q를 각각 기존 move(duration=.5)로 실행했다.
+새 HOME→LIFT15 전체 재생이나 LIFT5부터의 재비교가 아니다.
+각 branch 첫 integration state는 저장본과 bitwise 동일하게 assert했다.
+Controller/profile/physics/dt=.002/compiled model arrays/options를 그대로 유지했다.
+A/B 각각 250 actual ctrl + mj_step steps. Baseline도 표준 move의 measured-start
+profile을 사용하므로 직전 턴의 constant-command hold 실험과 구분한다.
+
+| A/B LIFT15 endpoint | Original | Refined |
+|---|---:|---:|
+| Planned → measured TCP (mm) | 0.225370841 | 0.222706348 |
+| Target → measured TCP (mm) | **0.611845016 FAIL** | **0.358576777 PASS** |
+| Finger normal pad1 / pad2 (N) | 0.389389 / 0.393579 | 0.389347 / 0.394176 |
+| Table contact / force | 0 / 0 | 0 / 0 |
+| Block COM world Z (mm) | 33.353257 | 33.490739 |
+| Bottom rise from settled (mm) | 13.010067 | 13.253408 |
+| Block Vz (mm/s) | -0.943823 | -1.023709 |
+
+Refined LIFT15가 기존 measured pose/contact/clearance gate를 통과한 뒤에만
+**표준 후속 LIFT30**을 실행했다. LIFT30은 추가 정밀화하지 않았다.
+기존 teacher의 LIFT_30MM target은 grasp TCP +35 mm이며 이것은 변경하지 않았다.
+Move는 기존 motion limits에 따라 435 step / 0.870 s로 생성됐다.
+
+- LIFT30 planned error 0.200705 mm; measured endpoint **0.335685 mm PASS**.
+- HOLD 시작 SIM 40.748 s, bottom rise 31.682535 mm, Fn 0.390384 / 0.392642 N.
+- 최대 bottom rise 31.722569 mm.
+- 표준 HOLD 관찰 1600 steps / 3.2 s 실행. 양쪽 force 및 table-free 계속 유지.
+- HOLD 시작 후 **1.654 s**에 기존 lift-height 조건 최초 실패.
+- 전체 trajectory 중 최장 연속 supported-lift timer **1.894 s** (말단 LIFT 구간 포함).
+- HOLD 종료 bottom rise **28.425904 mm**, 총 하강 **3.256631 mm**.
+- 최종 COM world Z=49.234130 mm, Vz=-1.043807 mm/s.
+- 최종 Fn=0.399983 / 0.383001 N, table count/force=0/0.
+- 최종 TCP error 0.331183 mm; controller pose는 유지되지만 block은 하강했다.
+- Refined 전체 Fn minimum 0.379117 / 0.379387 N.
+- Maximum penetration **0.014853491 mm**, warning/saturation **0**.
+- 모든 원래 per-step safety check 유지. Model arrays/options 불변 assert PASS.
+- Runtime failure: continuous 3-second supported lift not reached.
+  Copied success=false / live CENTER SUCCESS=false.
+
+높이 좌표를 구분한다. 저장 settled bottom=-0.002022692 mm이다.
+기존 성공 조건은 bottom >= max(0, reference_bottom)+30 mm이다.
+따라서 최초 실패 시 settled-relative rise=30.001689906 mm지만,
+**absolute bottom=29.999667215 mm**로 기존 30 mm 기준 미달이다.
+이 2.023 µm 차이를 threshold 변경이나 데이터 반올림으로 숨기지 않았다.
+그래프는 absolute bottom을 표시하고 fixture에는 두 값을 보존한다.
+
+### Decision
+
+이번 copied 조건에서 **LIFT15 endpoint gate blocker는 해결됐다**.
+정상상태 추종 편차는 거의 같지만 static planning residual이 줄면서 기존
+0.5 mm 기준을 만족했다. Runtime default IK나 teacher source에 일괄 적용하지
+않고 diagnostic 후보로만 보존한다.
+다음 blocker는 **HOLD 중 지속적인 block slip / height 유지 실패**다.
+Bilateral force가 양수이고 TCP가 기준 안이어도 3 s supported-lift 성공이 아니다.
+이번에는 friction/solver/NoSlip/squeeze를 바꾸는 후속 실험을 하지 않는다.
+
+### Validation
+
+- Targeted physics: original 250 steps; refined LIFT15 250 + LIFT30 435 + HOLD 1600.
+  한 번의 A/B와 승인된 refined branch 후속 trajectory만 실행.
+- Focused regression **21 PASS**:
+  test_lift_refinement_audit.py 3, test_postcontact_squeeze_audit.py 11,
+  test_controlled_contact_audit.py 7.
+- 추가 DLS 한 번이 원래 solver의 한 번 갱신과 일치함을 독립 test로 확인.
+  원래 acceptance에서는 0 iteration에 종료되는 작은 residual을 사용하고,
+  test oracle에만 one-update를 강제한다. Task threshold 변경은 없다.
+- Physics state 무변경/비조작 채널 불변, A/B safety contract,
+  LIFT30 통과와 HOLD 실패의 구분을 회귀로 보존.
+- git diff --check PASS. Full suite / remote CI / main merge 미실행.
+  실제 hardware/BASIC/REAL/ACT 코드는 동결.
+
+### Result
+
+Copied LIFT15 PASS → LIFT30 PASS → HOLD FAIL.
+Actual ctrl + mj_step 근거이며 live HOME부터의 task 성공으로 확대하지 않는다.
+새 첫 실패 조건은 HOLD 높이 유지, force/contact loss가 아니다.
+기존 production HOLD loop가 3.2 s bounded observation 동안 continuous timer를
+검사하므로 최초 높이 조건 실패 시각과 최종 timeout을 별도로 기록했다.
+
+### Lesson / Next
+
+Planning acceptance를 처음 만족한 q와 실행 여유가 있는 q는 다르다.
+같은 목적함수의 추가 1-step으로 planning residual을 줄이는 것만으로
+실행 gate가 통과할 수 있음을 이번 단일 state에서 확인했다.
+다중 상태의 보장이나 새로운 runtime planner 정책을 입증한 것은 아니다.
+다음 작업은 성공한 endpoint를 보존한 채 HOLD slip 원인을 별도로 다루는 것이다.
+
+Reproduce one copied A/B (새 output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/lift_refinement_audit.py \
+  --experiment /tmp/dapier-matched-budget-lift-20260920/experiment.json \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-lift15-refinement-repro
+~~~
+
+Evidence: /tmp/dapier-lift15-refinement-20260920/ab.json, summary.json,
+executed-lift_refinement_audit.py, render-report.py, refinement-result.png.
+Source/inputs/model SHA256는 ab.json에 보존한다.
+공개 compact fixture: test/fixtures/lift15_refinement.json.
+Visible: ~/Downloads/DAPIER-lift15-refinement-20260920/report.html.
+Local validation kit: lift15-refinement-20260920에 raw state/source/plot/manifest 보존.
+PR #67 draft/base main 유지. Notion은 GitHub 결과 확인 뒤 같은 record_id로 갱신.
+
+## DAPIER-2026-09-21-airborne-hold-noslip-ab
+
+### Problem
+
+Matched squeeze와 refined endpoint의 copied LIFT15/LIFT30는 통과했지만,
+airborne HOLD에서 bilateral contact/table-free 상태를 유지하면서 block이 하강했다.
+이번 범위는 동일 HOLD 시작 state의 **NoSlip0/5 한 번 A/B**다.
+새 grasp/solver sweep, runtime 설정 변경, hardware/BASIC/REAL 작업은 하지 않는다.
+
+### Evidence
+
+**VERIFIED BY COPIED PHYSICS / DIAGNOSTIC ONLY**
+
+- Scene integration_desk, MuJoCo 3.3.7, timestep 0.002 s.
+- 시작 source SHA: 65b023176f741024b1290480f99d2c88fbfc822b.
+- Frozen MJB SHA256:
+  8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9.
+- 이전 저장물에는 HOLD 시작의 integration state가 없었다. 저장된 LIFT15
+  full-state에서 기록된 LIFT30 command/profile을 재생했다. **435 step 모두**
+  qpos/qvel/ctrl/native finger normal force/time이 이전 trace와 bitwise 일치했다.
+  새 IK를 풀거나 trajectory를 변경하지 않았다.
+- SIM 40.748000000003834 s에서 mjSTATE_INTEGRATION과 외부 hold timer를 저장.
+  State SHA256:
+  c1bdfbbf951bb659abf081487a01e150d1183a96ecca8070c08a4f2455eec2c9.
+- 각 case는 동일 qpos/qvel/act/ctrl/warmstart/시간을 복원.
+  Model array hash 동일, options 중 noslip_iterations만 0/5 차이.
+  전체 command 일정; squeeze/IK/friction/geometry/gains/mass/threshold 동일.
+- 각각 실제 ctrl + mj_step **1500 step / 3.000 s**. NoSlip0의 HOLD
+  raw qpos/qvel/ctrl/force도 이전 1500 step과 bitwise 일치.
+- 기존 timer 0.242 s를 보존했지만, 판정은 추가 1500 step 전체가
+  table-free supported lift인지 요구하므로 3초 관찰을 줄이지 않았다.
+
+| Metric | NoSlip0 baseline | NoSlip5 diagnostic |
+|---|---:|---:|
+| Initial absolute block bottom (mm) | 31.680512 | 31.680512 |
+| Final absolute bottom (mm) | 28.626064 | 31.677528 |
+| Bottom displacement in 3 s (mm) | -3.054448 | -0.002985 |
+| COM z displacement (mm) | -3.068506 | -0.002474 |
+| Terminal vz (mm/s) | -0.984277 | -0.001187040 |
+| Last 100 ms mean vz (mm/s) | -1.024478 | -0.001186916 |
+| Final normal force pad1 / pad2 (N) | 0.388323 / 0.393434 | 0.413428 / 0.409060 |
+| Final applied vertical finger resultant (N) | 0.196788877 | 0.196199999949 |
+| Final post-forward gate vertical resultant (N) | 0.195572485 | 0.196199999949 |
+| Maximum full elliptic utilization | 0.668463 | 0.696035 |
+| Maximum penetration (micrometers) | 14.664375 | 17.255719 |
+| Max block rotation from checkpoint (deg) | 0.043000 | 0.004708 |
+| Maximum TCP error (mm) | 0.335351 | 0.336670 |
+| Table contact / force throughout | 0 / 0 | 0 / 0 |
+| Warning / actuator saturation | 0 / none | 0 / none |
+| Copied 3 s HOLD | FAIL | PASS |
+
+Bilateral force는 모든 step에서 positive다.Baseline의 최초 높이 기준 실패는 HOLD+1.654 s,
+maximum continuous timer=1.894 s. NoSlip5는 모든 step bottom>=30 mm,
+종료 timer=3.242 s. Live CENTER SUCCESS는 여전히 false다.
+
+Force timing을 혼동하지 않는다. Native solver cache를 mj_step 직후,
+기존 mj_forward 전에 읽은 **applied** force와, 기존 mj_forward 뒤의 **gate**
+force를 별도로 저장했다. Applied finger Fz + gravity와 m*dvz/dt의 최대
+차이는 각각 1.119e-16 / 1.110e-16 N이다. 두 case 모두 table force=0이고
+기존 protected-contact 검사를 통과했다. Fz≈mg는 하강 속도가 0이라는 뜻이
+아니며, baseline은 거의 일정한 slip velocity와 양립한다.
+
+Elliptic cone=1 / condim=4이므로 utilization에는 contact.friction에 따른
+두 sliding 축과 torsional 축을 포함한다. 단순 mu*sum(N) 지표가 아니다.
+Native contact들을 합산하며 대표 contact point를 연속 pressure patch로 해석하지 않는다.
+
+독립 read-only force audit:
+NoSlip5 최대 normal 합 0.822488 N은 baseline 0.805179 N보다 약 2.15% 크다.
+Applied force 합의 최대 step derivative는 13.272 → 8.911 N/s로 증가하지
+않았으며, 관통 증가는 2.591344 micrometers다. 기존 1 mm 관통 제한 이내이고
+새 warning/contact loss/force spike evidence는 없다. 새 spike threshold는 만들지 않았다.
+
+### Decision
+
+**분류 A. 이 저장 airborne grasp에서 soft-friction regularization은
+slip의 주요 contributor임을 controlled physics로 확인했다.**
+동일 initial state/command/model에서 NoSlip5만 바꿔 기존 30 mm + 3 s
+supported HOLD가 통과했다. NoSlip5에도 약 3 micrometers의 bottom 하강과
+약 -0.001187 mm/s 잔류 속도가 있어 exact zero-slip이나 무한시간 안정으로
+확대하지 않는다.
+
+**INFERENCE:** regularized contact의 저속 slip이 주 원인이라는 해석은
+동일-state intervention과 일치한다. 모든 grasp/실물 마찰 모델의 일반적
+원인 또는 fidelity가 검증됐다는 뜻은 아니다.
+
+### Validation
+
+- Targeted physics: checkpoint replay 435 + NoSlip0 HOLD 1500 + NoSlip5 HOLD
+  1500 step. A/B 1회, parameter sweep 없음.
+- **VERIFIED BY REGRESSION: focused 26 PASS**
+  airborne_hold_audit 5, lift_refinement_audit 3,
+  postcontact_squeeze_audit 11, controlled_contact_audit 7.
+- Full cone metric의 torsion/rolling 및 invalid/unloaded cases,
+  identical state/command와 single-option change, contact-only false success,
+  force timing와 기존 TCP/penetration/warning contract를 확인.
+- unittest test/path 직접 호출은 표준 test package와 충돌했다.
+  기존 discover -s test -p test_NAME.py 호출로 정상 검사했다.
+- git diff --check PASS. Full suite / remote CI / main merge 미실행.
+
+### Result
+
+NoSlip0 copied HOLD FAIL, NoSlip5 copied HOLD PASS.
+Production/runtime default는 변경하지 않았다.
+**UNVERIFIED:** HOME부터 NoSlip5를 적용한 전체 task 형성·LIFT·HOLD,
+live task CENTER SUCCESS, 실물 fidelity. Actual motor command=NOT RUN.
+
+### Lesson / Next
+
+그립 힘이 충분하고 table에서 떨어져 있어도 soft contact의 작은 지속 slip이
+높이 gate를 소진할 수 있다. Net force≈weight와 static no-slip은 구분해야 한다.
+다음 blocker는 별도 승인 범위에서 NoSlip runtime 후보의 전체 task 형성 및
+연속 실행을 검증하는 것이다. 이번에는 HOLD A/B에서 종료한다.
+
+Reproduce (repository root, new output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/airborne_hold_audit.py \
+  --experiment /tmp/dapier-lift15-refinement-20260920/ab.json \
+  --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+  --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+  --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+  --output /tmp/dapier-airborne-hold-repro
+~~~
+
+Evidence: /tmp/dapier-airborne-hold-20260920/hold-start.json, ab.json,
+noslip0.jsonl, noslip5.jsonl, summary.json, executed-airborne_hold_audit.py,
+render-report.py and input/source hashes.
+Public compact fixture: test/fixtures/airborne_hold.json.
+Visible plot: ~/Downloads/DAPIER-airborne-hold-20260920/report.html
+(reopen with xdg-open; plots require no new physics).
+Local validation kit: airborne-hold-20260920 raw state/source/plots/manifest.
+Artifact directory dates retain experiment start date; handoff was written after midnight.
+PR #67 draft/base main maintained; Notion updated after commit/push.
+
+## DAPIER-2026-09-21-global-impratio100-continuous-path
+
+### Problem
+
+나는 airborne HOLD에서만 NoSlip을 바꾼 진단과, 처음부터 같은 설정을 유지하는
+경로를 구분해 확인한다. 이번에는 **NoSlip=0 / impratio=100** 하나만 선택하여
+A2 PRE-CLOSE부터 matched CLOSE → CONFIRM → 기존 LIFT → HOLD를 연속 실행했다.
+새 grasp/IK 탐색, solver sweep, runtime default 변경은 하지 않았다.
+
+### Evidence — VERIFIED BY COPIED PHYSICS
+
+- Source 시작 commit f38900db5e5f5f5f0de8d72ff6276cb5b95f9a93,
+  integration_desk / MuJoCo 3.3.7 / dt=0.002 s.
+- 동일 frozen model SHA256:
+  8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9.
+- A2 approach_terminal_state를 시작할 때 한 번만 복원.
+  mjSTATE_INTEGRATION SHA256:
+  5e98962c786c9b6ea055e74136aca62337b363d1d35c04c4e3bb76d1ab96deab.
+- Model load 직후 impratio=100을 적용하고 NoSlip=0을 확인했다.
+  이후 매 mj_step 앞에서 동일 model/data와 qpos/qvel/act/time 연속성을 검사.
+  NoSlip/impratio를 매 step 확인하고 모든 model array hash/options를 종료 시
+  재확인했다. Phase boundary의 saved-state jump 또는 solver switching 없음.
+- Frozen CLOSE48 + 기존 matched target **1.716112023423022 rad**를 그대로 사용.
+  CONFIRM 50 step에서 terminal ctrl 유지. LIFT5 predecessor도 보존했다.
+  이전 refined LIFT15 q와 기존 LIFT30 q를 그대로 읽어 각 endpoint와 segment를
+  기존 plan_report/move/inspect_runtime로 재검증했다. 새 IK solve/보상값 없음.
+- minimum duration은 기존 CLOSE 0.1 s / LIFT 0.5 s, 실제 시간은 기존 septic
+  trajectory 제약으로 결정된다. Timing/gains/limits를 새로 조정하지 않았다.
+- 총 **12,485 step / 24.970 s**, SIM 18.324→43.294 s.
+  시작 이후 block/jaw/arm qpos 배치나 상태 교체 없이 ctrl + mj_step으로 진행.
+
+| Phase | Physics steps | Endpoint TCP error mm | Absolute bottom mm | Normal pad1 / pad2 N | Table contact |
+|---|---:|---:|---:|---:|---:|
+| CLOSE48 + matched | 9884 | 0.231124 | -0.004120 | 0.491365 / 0.677020 | 2 |
+| GRASP_CONFIRM | 50 | 0.230667 | -0.004599 | 0.493135 / 0.666457 | 2 |
+| LIFT5 | 260 | 0.354344 | 4.797179 | 0.537020 / 0.536499 | 0 |
+| LIFT15 | 356 | 0.364810 | 14.691783 | 0.473456 / 0.472288 | 0 |
+| LIFT30 | 435 | 0.335698 | 34.021752 | 0.417637 / 0.413236 | 0 |
+| HOLD | 1500 | 0.331177 | 33.979423 | 0.417965 / 0.413541 | 0 |
+
+첫 bilateral formation은 SIM 37.642 s. CONFIRM 종료 table normal force
+0.219284 N은 지지 중 값이며 load-bearing 성공 근거와 구분한다.
+LIFT의 실제 block/table separation과 이후 HOLD가 무지지 근거다.
+
+**Table 이탈 transient를 보존한다.**
+LIFT5 시작 38.192 s, 첫 table-free 38.286 s (+94 ms).
+38.290 / 38.298 s에 각각 table contact가 재등장했고 force는
+0.411429 / 0.344675 N이었다. 38.300 s (+108 ms)부터 지속 table-free다.
+LIFT5 중 최대 table normal force는 **2.128410 N** (38.198 s)이다.
+따라서 최초 이탈부터 항상 table-free라고 쓰지 않는다.
+새 force threshold를 만들어 통과/거부하지 않았으며 이 transient는 후보의
+후속 검토 항목으로 남긴다. LIFT15/LIFT30/HOLD에서는 table contact/force=0이다.
+
+HOLD phase 자체 1500 step / 3 s 동안:
+- 최저 absolute bottom **33.979423 mm**, 전 step 기존 30 mm gate 만족.
+- Bottom 변화 **-0.042329458 mm**, COM z 변화 -0.027311999 mm.
+- 종료 vz **-0.010452453 mm/s**, 마지막 100 ms 평균 -0.010674657 mm/s.
+- 최소 양쪽 force **0.417461 / 0.413171 N**.
+- 종료 수직 finger resultant 0.196199209 N, block weight 0.1962 N.
+- 누적 supported timer는 LIFT30의 0.308 s부터 이어져 3.308 s가 됐다.
+  HOLD phase duration은 별도로 정확히 3.000 s이며 timer를 줄여 쓰지 않았다.
+
+전체 최대 관통 **18.191382 micrometers**, HOLD 최대 8.687743 micrometers.
+Warnings=0, actuator saturation 없음. 기존 0.5 mm / 2° / 15° gate와
+general/task collision 및 1 mm penetration 기준을 유지했다.
+Attachment는 row에 별도 flag를 복제하지 않았지만 매 step 기존
+inspect_runtime의 attachment/forbidden-contact rejection을 통과했다.
+Applied pre-forward native contacts와 post-forward gate contacts를 분리 저장했다.
+
+### Decision
+
+**분류 A: CLOSE + LIFT + 추가 3 s HOLD PASS.**
+NoSlip0 / impratio100을 **이 copied 경로의 global SIM candidate**로 올린다.
+이는 production default 적용이 아니다. Runtime 기본값, 모델 파일, friction,
+mass, geometry, squeeze, gains, joint limits, acceptance 기준은 변경하지 않았다.
+
+### Validation — VERIFIED BY REGRESSION
+
+- 단일 targeted physics 실행 12,485 step; 추가 A/B/sweep/재실행 없음.
+- Frozen CLOSE/LIFT reference 정적 대조 PASS.
+- Focused regression **30 PASS**:
+  global_impratio 4, airborne_hold 5, lift_refinement 3,
+  postcontact_squeeze 11, controlled_contact 7.
+- 기존 26 tests는 한 번 실행. 새 transient 회귀가 추가된 global 파일만 재검증.
+- State/option continuity, endpoint 불변, formation/LIFT/HOLD 실패 분류,
+  첫 table-free와 영구 이탈 구분, inherited timer와 phase 시간 구분을 보존.
+- git diff --check PASS. Full suite / remote CI / merge 미실행.
+
+### Result
+
+연속 copied CLOSE→CONFIRM→LIFT5→LIFT15→LIFT30→HOLD PASS.
+새 configuration을 phase별로 바꾸거나 저장 성공 상태를 중간에 삽입하지 않았다.
+단일 MuJoCo recorded replay로 전체 경로를 표시한다.
+Replay의 qpos 기록 배치는 화면 표시 전용이며 새로운 physics 실행이 아니다.
+
+### Lesson / Next
+
+**INFERENCE:** 전체 formation/contact history가 달라질 수 있으므로,
+이 결과를 이전 HOLD-only NoSlip5 A/B와 같은 causal comparison으로 취급하지 않는다.
+이번에는 요청된 global configuration 하나가 기존 gate를 통과하는지 확인했다.
+
+**UNVERIFIED:** HOME/RESET/SETTLE/APPROACH부터 이 설정을 사용한 전체 teacher,
+다중 초기조건, 실물 fidelity와 live CENTER SUCCESS.
+HOLD의 작은 지속 하강은 사라지지 않았다. 무한시간 equilibrium을 주장하지 않는다.
+다음 후보 검토에는 LIFT 이탈 순간 table-force transient와 더 긴 slip 영향을
+함께 남긴다. 이번 턴에서는 추가 실험 없이 종료한다.
+Hardware / BASIC REAL / OS30A / ACT는 실행하거나 수정하지 않았다.
+
+Reproduce from repository root (new output directory):
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml \
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/global_impratio_audit.py \
+ --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+ --source /tmp/dapier-controlled-audit-20260919/input-source.json \
+ --donor /tmp/dapier-controlled-audit-20260919/input-donor.json \
+ --squeeze /tmp/dapier-postcontact-squeeze-20260920/audit.json \
+ --matched /tmp/dapier-matched-budget-lift-20260920/experiment.json \
+ --refined /tmp/dapier-lift15-refinement-20260920/ab.json \
+ --output /tmp/dapier-global-impratio-repro
+~~~
+
+Recorded replay (no new physics):
+
+~~~bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python \
+2ARM_ROBOT/sim/mobile_dual_so101/global_impratio_audit.py \
+ --model /tmp/dapier-arm-noslip-20260918/original-model.mjb \
+ --replay /tmp/dapier-global-impratio-20260921
+~~~
+
+Evidence: result.json, path.jsonl, summary.json, executed source and hashes under
+/tmp/dapier-global-impratio-20260921.
+Public compact fixture: test/fixtures/global_impratio.json.
+Visible: ~/Downloads/DAPIER-global-impratio-20260921/report.html.
+Local validation kit: global-impratio-20260921 raw state/trace/source/plot/manifest.
+PR #67 draft/base main, normal push. Notion uses the same record_id.
+
+
+## 2026-09-21 — Normal HOME runtime candidate: staging provenance gate
+
+Record ID: DAPIER-2026-09-21-runtime-contact-candidate-home
+
+### Problem
+
+Copied A2 CLOSE→HOLD success did not establish a normal HOME-to-HOLD teacher.
+I tested the opt-in NoSlip=0/impratio=100 candidate once from normal scene
+construction/reset, with matched squeeze/refined LIFT references and unchanged gates.
+
+### Evidence — VERIFIED BY PHYSICS
+
+- Parent commit 8270d9142e890313b8c4bcc1f241ed818674b2e7, branch
+  pro/arm-noslip-diagnostic-codex-20260918; owned changes dirty at execution.
+- integration_desk / MuJoCo3.3.7 / timestep0.002s.
+- HOME static guard PASS; normal RESET PASS; SETTLE **100 steps / 0.200s PASS**.
+- First existing gate: STAGING_DIAGNOSTIC — saved staging geometry changed: model_sha256.
+- No arm motion or TCP waypoint gate reached. CLOSE/CONFIRM/LIFT/HOLD not run.
+  CENTER SUCCESS=false; HOLD=0s.
+- NoSlip=0/impratio=100 throughout; qpos/qvel/act/time continuity, unchanged
+  model-array/option checks PASS. Copied preflight steps=0; no state jumps.
+- Final finger normal=0/0N; table contact count minimum=4; no detachment.
+  Final block bottom=-0.002023mm; max penetration across contacts=19.620µm.
+  Warnings=0; actuator saturation=false. These metrics describe SETTLE only.
+
+### Evidence — ANALYTIC / DIAGNOSTIC ONLY
+
+A2 command geometry is nearly vertical, TCP z=18.742417mm with 20mm PREGRASP
+standoff, unlike the old HOME teacher's 7.249° tilted grasp and 60mm standoff.
+The opt-in wrapper explicitly carries A2 geometry/task-open and frozen
+49 CLOSE /3 LIFT commands; it never restores A2 physical state.
+The existing fixed staging retreat10.110786mm and all original gates are reused.
+HOME-to-A2 connection is still unverified.
+
+Saved staging raw model SHA:
+ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
+
+Current pre-candidate builder raw model SHA:
+8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9
+
+Current pre-candidate portable SHA:
+b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4
+
+Only asset-hash difference: so101_new_calib.xml.
+Saved=78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703;
+current=d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580.
+integration_desk_source.json already records both revisions and applies the
+existing desk limits. The old staging record has no portable fingerprint.
+Raw MJB includes paths: this is an identity/provenance blocker, not proof of
+changed physical geometry. No hash was substituted or assertion removed.
+
+### Decision
+
+Stop at the first gate. No tuning, search, fallback, geometry/threshold change,
+or promotion of old copied success to current live success. Runtime candidate
+is opt-in; default contact configuration and REAL/BASIC are unchanged.
+
+### Validation — VERIFIED BY REGRESSION
+
+Focused **30 PASS**: candidate5, global4, refinement3, controlled7, squeeze11.
+Contracts cover option-only adoption, normal initial state, frozen command
+geometry, clone/live recorder separation, identity mismatch rejection before
+waypoint evaluation/physics, existing acceptance and table-recontact semantics.
+One targeted runtime attempt; no repeat after failure. git diff --check PASS.
+No CENTER SUCCESS milestone: no full suite, canonical render/vision, remote CI
+or merge. The recorded-result plot/replay is not canonical validation.
+
+### Result
+
+Final actual physics phase=SETTLE. Failure phase=STAGING_DIAGNOSTIC.
+This is a pre-trajectory provenance failure, not a new grasp/LIFT failure.
+PR67 remains draft/base main. Hardware/camera/ACT not run.
+
+### Lesson / Next
+
+Establish compiled equivalence for the saved staging model without relabeling
+its raw hashes, then evaluate the unchanged HOME-to-A2 connection.
+Post-SETTLE runtime behavior remains **UNVERIFIED**.
+
+Reproduction (SIM directory; fresh output path):
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --config config/runtime_contact_candidate.json --staging /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/dynamic-single-viewer.json --donor /tmp/dapier-controlled-audit-20260919/input-donor.json --output /tmp/dapier-runtime-contact-candidate-repro
+~~~
+
+Recorded replay (display only):
+~~~bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --model /tmp/dapier-runtime-contact-candidate-20260921/runtime-model.mjb --replay /tmp/dapier-runtime-contact-candidate-20260921
+~~~
+
+Raw state/trace/executed source: /tmp/dapier-runtime-contact-candidate-20260921.
+Public fixture: test/fixtures/runtime_candidate_gate.json.
+Visible: ~/Downloads/DAPIER-runtime-contact-candidate-20260921/report.html.
+Local validation kit: runtime-contact-candidate-20260921 (manifest included).
+Notion uses first-person project-owner research-note voice.
+
+
+## 2026-09-21 — Staging identity 동등성 검증 및 HOME→A2 연결
+
+Record ID: DAPIER-2026-09-21-staging-model-identity
+
+### Problem
+
+나는 HOME/RESET/SETTLE 이후의 saved staging model_sha256 불일치를
+identity gate를 우회하지 않고 해결한다. Grasp, squeeze, IK, solver,
+friction, joint limits, 기존 30mm/0.5mm/2°/15° 기준은 그대로 둔다.
+
+### Evidence — ANALYTIC / DIAGNOSTIC ONLY
+
+Source XML diff는 정확히 두 곳이다.
+
+| 항목 | 과거 local XML | pinned XML | 현재 desk compiled |
+|---|---|---|---|
+| shoulder_lift joint 하한(rad) | -1.9198621771937616 | -1.7453292519943224 | -1.9198621771937616 |
+| shoulder_lift ctrl 하한(rad) | -1.91986 | -1.74533 | -1.91986 |
+
+상한과 다른 XML 내용은 동일하다. 기존 preserve_desk_source_profile()이
+양쪽 arm에 기존 desk 하한을 적용하므로 이번에 limit을 변경한 것이 아니다.
+이 동등성은 integration_desk에만 해당한다. Mobile/direct builder로 일반화하지 않는다.
+
+Local XML SHA:
+78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703
+Pinned XML SHA:
+d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580
+
+보존 worktree와 local XML로 재compile하여 저장 staging의 raw MJB SHA를
+정확히 재현했다:
+ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
+
+현재 canonical builder raw MJB SHA:
+8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9
+
+비교 대상은 bodies23 / geoms76 / joints17 / actuators12 / equalities4 /
+meshes45 / tendons0, nq23/nv22이다. Position/orientation, mass/inertia,
+contact/friction, limits, transmissions, equality 및 파생 DOF 데이터가 일치했다.
+
+| compiled array group | 확인한 fields | 결과 |
+|---|---:|---|
+| body | 29 | exact equal |
+| geom | 25 | exact equal |
+| joint | 17 | exact equal |
+| actuator | 25 | exact equal |
+| equality | 8 | exact equal |
+| mesh (path 제외) | 32 | exact equal |
+| dof | 13 | exact equal |
+
+모든 physics 옵션과 45개 mesh의 vertex/face SHA도 동일하다.
+이 identity 비교는 saved staging과 current canonical base(둘 다 NoSlip0/impratio1)
+사이다. Rerun은 앞서 승인된 runtime candidate NoSlip0/impratio100을 그대로 쓴다.
+전체 portable compiled fingerprint는 위 그룹 이외의 names/scalars/
+visual/stat metadata까지 비교한다. Physics arrays/options/scalars 차이 없음.
+Path storage의 mesh_pathadr 등은 relocation metadata로 별도 취급한다.
+
+**직렬화 함정:** MuJoCo3.3.7의 fresh model signature는
+16570902232489541775지만 native MJB load 후에는0이다.
+설치된 mjmodel.h는 이를 mjSpec과 공유하는 compilation signature로 명시한다.
+Loaded saved와 fresh current를 직접 portable-hash 비교한 첫 probe는 이
+metadata 때문에 달랐다. Physics 차이로 오판하지 않고 양쪽을 동일한 native
+MJB roundtrip 형태로 비교했다. Runtime identity/hash 함수를 완화하지 않았다.
+
+두 normalized fingerprint:
+bc1deea119d717a5b5368ceee00959d8d76e72044310333d9de78a8652372a96
+
+Fresh compiled portable fingerprint:
+b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4
+
+### Decision
+
+**A — compiled physics/geometry equivalent.**
+staging_model_audit.py는 원본 binary hash가 저장 report와 일치하고,
+원본 physics arrays/options/scalars 및 normalized fingerprint가 모두
+일치할 때만 새 staging provenance를 생성한다. 실제 차이는 B로 거부한다.
+
+config/runtime_staging_reference.json에 현재 exact model/asset identity를
+기록하고 original_provenance/source report hash를 보존했다.
+이 reference는 기존 retreat10.1107859316mm만 가져온다. 과거 full state,
+cached IK, dynamics 성공은 새 실행의 근거로 가져오지 않는다.
+waypoint_block_teacher.py의 기존 exact identity gate는 수정하지 않았다.
+
+실행에는 --connection-only 범위를 추가했다. A2 접근까지 통과하더라도
+CLOSE 전에 A2_CONNECTION_READY로 끝나며 CENTER SUCCESS로 처리하지 않는다.
+이번에는 새 파라미터나 retreat 검색 없이 기존 고정값으로 한 번 실행했다.
+
+### Validation — VERIFIED BY PHYSICS / VERIFIED BY REGRESSION
+
+- Normal HOME PASS → RESET PASS → SETTLE100step/0.200s PASS.
+- 갱신한 staging identity gate PASS.
+- SAFE_STAGE planning IK16iterations, position error0.126448mm PASS.
+- HOME→SAFE_STAGE 경로 **81.4815%** sample:
+  left_pgripper_pad_1(geom36) ↔ red_block_geom(geom74),
+  clearance21.140360mm < unchanged required30mm → FAIL.
+- Endpoint guard distance=-3.609746mm는 KINEMATIC 예측값이다.
+  실제 task에서 관통이 발생했다는 뜻이 아니다.
+- 실제 팔 이동, dynamic preflight, CLOSE/LIFT/HOLD는 실행하지 않았다.
+- Physics NoSlip0/impratio100 및 state continuity 유지. Grasp/squeeze/refined
+  LIFT config 파일은 변경하지 않았다.
+- Focused21 PASS: audit5, integration source4, runtime5, manipulation7.
+  판정을 강화한 audit 파일만5개 재확인했다.
+- Negative tests: body pose/mass/inertia, friction/solref, joint range,
+  actuator gain/gear, equality data, mesh vertex, timestep 변경은 모두 B.
+  잘못된 원본 binary hash 거부, 원본 report 보존, connection-only CLOSE 금지.
+- git diff --check PASS. Full suite/remote CI/main merge 미실행.
+
+### Result
+
+Staging model identity blocker는 해결했다. 새 첫 blocker는
+**SAFE_STAGE full-path clearance**이다. 실제 최종 physics는 SETTLE,
+CENTER SUCCESS=false/HOLD0s다. 기존 failure report와 모든 local evidence를
+보존했다. SIM replay와 비교 그래프를 열었고 HW/REAL/OS30A/ACT는 실행하지 않았다.
+
+### Lesson / Next
+
+나는 source XML 차이, 최종 compiled physics 차이, path/serialization metadata를
+구분해야 한다는 점을 확인했다. Hash를 단순 치환하는 대신 동일 모델임을 검증하고
+provenance revision을 남겼다. 다음에는 새 grasp나 contact tuning이 아니라,
+현재 A2 목표에 대한 SAFE_STAGE 연결의 gripper envelope/path를 다뤄야 한다.
+이번 턴에서는 그 계획을 수정하지 않는다.
+
+### Reproduction / artifacts
+
+정확한 저장 모델은 기존 source/worktree에서 재구성했고 원본 staging raw SHA와
+일치함을 확인했다. Audit와 connection 재현은 SIM directory에서:
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python staging_model_audit.py --saved-model /tmp/dapier-staging-identity-20260921/saved-reconstructed.mjb --staging /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/dynamic-single-viewer.json --output /tmp/dapier-staging-identity-repro
+
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --config config/runtime_contact_candidate.json --staging config/runtime_staging_reference.json --donor /tmp/dapier-controlled-audit-20260919/input-donor.json --connection-only --output /tmp/dapier-staging-connection-repro
+~~~
+
+Recorded MuJoCo display:
+~~~bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --model /tmp/dapier-staging-identity-20260921/connection/runtime-model.mjb --replay /tmp/dapier-staging-identity-20260921/connection
+~~~
+
+Local full audit: /tmp/dapier-staging-identity-20260921/final-audit.
+Public fixture: test/fixtures/staging_identity_connection.json.
+Visible table/plot: ~/Downloads/DAPIER-staging-identity-20260921/report.html.
+Existing validation kit: staging-identity-20260921, raw models/trace/source/manifest.
+PR67 draft/base main; normal push; Notion first-person research note.
