@@ -6,6 +6,7 @@ wrist RGB다. 장치명·역할·stable alias는 [`../config/hardware_roles.json
 우선한다. 제목에 JDcobot이 있거나 2026-08의 Astra Pro 단일 카메라를 전제로 한 문서는 초기
 연구·회귀 자료이며 현재 실물 명령 근거가 아니다.
 
+- [`PGRIPPER_WORKLOG_20260909.md`](PGRIPPER_WORKLOG_20260909.md): 9월 9일 텔레옵·MuJoCo·RoboTwin·비전 집기·ACT/PPO 결과와 코드 흐름
 - [`requirements-ledger.md`](requirements-ledger.md): 현재 확정·미확정 요구사항 원장
 - [`PHASE0_HANDOFF.md`](PHASE0_HANDOFF.md): Ubuntu ROS 2 PC 개발 인수인계
 - [`이동형_양팔_로봇_신발_정리_프로젝트_요구사항_원장.docx`](이동형_양팔_로봇_신발_정리_프로젝트_요구사항_원장.docx): 팀 공유용 Word 요구사항 원장
