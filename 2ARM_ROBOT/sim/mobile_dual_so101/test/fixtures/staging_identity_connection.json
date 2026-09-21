@@ -1,0 +1,201 @@
+{
+  "classification": "A",
+  "saved_portable_sha256": "bc1deea119d717a5b5368ceee00959d8d76e72044310333d9de78a8652372a96",
+  "current_portable_sha256": "bc1deea119d717a5b5368ceee00959d8d76e72044310333d9de78a8652372a96",
+  "comparison_form": "both native MJB round-tripped; compilation signature is not serialized",
+  "original_portable_sha256": [
+    "bc1deea119d717a5b5368ceee00959d8d76e72044310333d9de78a8652372a96",
+    "b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4"
+  ],
+  "original_compilation_signatures": [
+    0,
+    16570902232489541775
+  ],
+  "serialized_compilation_signatures": [
+    0,
+    0
+  ],
+  "physics_array_differences": [],
+  "storage_array_differences": [
+    "mesh_pathadr"
+  ],
+  "option_differences": {},
+  "mesh_hashes_equal": true,
+  "counts": {
+    "nbody": [
+      23,
+      23
+    ],
+    "ngeom": [
+      76,
+      76
+    ],
+    "njnt": [
+      17,
+      17
+    ],
+    "nu": [
+      12,
+      12
+    ],
+    "neq": [
+      4,
+      4
+    ],
+    "nmesh": [
+      45,
+      45
+    ],
+    "ntendon": [
+      0,
+      0
+    ],
+    "nq": [
+      23,
+      23
+    ],
+    "nv": [
+      22,
+      22
+    ]
+  },
+  "compared_scope": "All portable compiled fields incl scalars, names, physics/options/meshes; path storage excluded",
+  "saved_raw_sha256": "ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368",
+  "current_raw_sha256": "8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9",
+  "connection": {
+    "failure": {
+      "phase": "STAGING_DIAGNOSTIC",
+      "reason": "fixed retreat with task open target failed validation"
+    },
+    "live_physics_steps": 100,
+    "copied_preflight_steps": 0,
+    "hold_duration_s": 0.0,
+    "center_success": false,
+    "first_rejected_segment": {
+      "phase": "SAFE_STAGE",
+      "xyz": [
+        0.20000003396846186,
+        1.3804463201834303e-07,
+        0.048853202733910875
+      ],
+      "position_error_m": 0.00012644801702067836,
+      "guard": {
+        "safe": false,
+        "reason": "protected clearance violated; target rejected",
+        "minimum_clearance_m": 0.021140360293627376,
+        "required_clearance_m": 0.03,
+        "path_fraction": 0.8148148148148148,
+        "checked_samples": 23,
+        "first_body": "left_pgripper_jaw_1",
+        "second_body": "red_block",
+        "first_geom_id": 36,
+        "second_geom_id": 74,
+        "published": false,
+        "control_authorized": false,
+        "hardware_dispatch_authorized": false,
+        "executed_action": false,
+        "hardware_execution": false
+      },
+      "task_policy": {
+        "general_clearance_m": -0.0036097460849815726,
+        "closest_general_pair": [
+          36,
+          74
+        ],
+        "pairs": [],
+        "safe": false
+      },
+      "geometric_clearances_m": {
+        "pad_block": -0.0036097460849815726,
+        "pad_table": 0.03180433313739968,
+        "housing_block": 0.026769597366614595
+      }
+    },
+    "waypoint_gates": [],
+    "home": {
+      "guard": {
+        "safe": true,
+        "reason": "interpolated simulator path satisfies protected clearance",
+        "minimum_clearance_m": 0.03,
+        "required_clearance_m": 0.03,
+        "path_fraction": 0.0,
+        "checked_samples": 2,
+        "first_body": "left_shoulder",
+        "second_body": "world",
+        "first_geom_id": 9,
+        "second_geom_id": 0,
+        "published": false,
+        "control_authorized": false,
+        "hardware_dispatch_authorized": false,
+        "executed_action": false,
+        "hardware_execution": false
+      }
+    },
+    "settle": {
+      "phase": "PREGRASP",
+      "physics_steps": 100,
+      "time_s": 0.20000000000000015,
+      "block_bottom_height_m": -2.022691563290102e-06,
+      "stable_steps": 92,
+      "velocity_threshold": 0.0001,
+      "arm_floor_clearance_m": 0.0724000062753883,
+      "arm_block_clearance_m": 0.167228501814418,
+      "hardware_execution": false
+    }
+  },
+  "field_groups": {
+    "body": {
+      "compared": 29,
+      "equal": true
+    },
+    "geom": {
+      "compared": 25,
+      "equal": true
+    },
+    "jnt": {
+      "compared": 17,
+      "equal": true
+    },
+    "actuator": {
+      "compared": 25,
+      "equal": true
+    },
+    "eq": {
+      "compared": 8,
+      "equal": true
+    },
+    "mesh": {
+      "compared": 32,
+      "equal": true
+    },
+    "dof": {
+      "compared": 13,
+      "equal": true
+    }
+  },
+  "scalar_differences": {},
+  "xml_changes": [
+    {
+      "element": "joint shoulder_lift range",
+      "saved": [
+        -1.9198621771937616,
+        1.7453292519943366
+      ],
+      "pinned": [
+        -1.7453292519943224,
+        1.7453292519943366
+      ]
+    },
+    {
+      "element": "actuator shoulder_lift ctrlrange",
+      "saved": [
+        -1.91986,
+        1.74533
+      ],
+      "pinned": [
+        -1.74533,
+        1.74533
+      ]
+    }
+  ]
+}

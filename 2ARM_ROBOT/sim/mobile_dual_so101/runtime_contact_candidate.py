@@ -19,11 +19,12 @@ MODE='SIM PHYSICS / LIVE TASK STATE / RUNTIME CANDIDATE'
 
 
 class RuntimeCandidateTeacher(WaypointBlockTeacher):
-    def __init__(self, candidate, staging, config):
+    def __init__(self, candidate, staging, config, *, connection_only=False):
         candidate=dict(axis=np.asarray(config['target_TCP'])[:3,0].tolist(),
             label=config['label'],best=dict(pregrasp=dict(q=config['pregrasp_q'])))
         super().__init__(candidate,staging_reference=staging)
         self.config=config
+        self.connection_only=connection_only
         assert config['noslip_iterations']==0 and config['impratio']==100
         self.m.opt.noslip_iterations=0;self.m.opt.impratio=100
         # A2's successful copied formation used a different target from the tilted
@@ -65,6 +66,10 @@ class RuntimeCandidateTeacher(WaypointBlockTeacher):
         return super().staging_plan(pregrasp,grasp,require_dynamic=require_dynamic)
 
     def finish_task(self,grasp):
+        if self.connection_only:
+            self.report['connection_pass']=True
+            self.transition('A2_CONNECTION_READY')
+            return  # Explicit bounded run stops before CLOSE; never task success.
         grasp=np.asarray(self.config['target_TCP'])[:3,3];self.waypoint_xyz=grasp
         self.close_arm_reference=self.d.ctrl.copy()
         self.close_start_tcp=self.d.site_xpos[self.site].copy();self.close_contact_origin=None
@@ -99,7 +104,7 @@ def run(a):
     a.output.mkdir(parents=True,exist_ok=False)
     config=json.loads(a.config.read_text());staging=json.loads(a.staging.read_text())
     donor=json.loads(a.donor.read_text())
-    t=RuntimeCandidateTeacher(donor['candidate'],staging,config)
+    t=RuntimeCandidateTeacher(donor['candidate'],staging,config,connection_only=a.connection_only)
     m,d=t.m,t.d;fixed=options(m);arrays=array_hashes(m)
     mujoco.mj_saveModel(m,str(a.output/'runtime-model.mjb'),None)
     t.stage=0;rows=[];counts=dict(live=0,preflight=0);last=None
@@ -139,6 +144,9 @@ def run(a):
     t.live_data=d;t.live_recorder=record
     t.env.physics_observer=t.record_step
     t.observer=lambda phase:print(MODE,'PHASE',phase,'time',float(d.time),flush=True)
+    t.planning_observer=lambda r:print('KINEMATIC CONNECTION / NOT PHYSICS',r['phase'],
+        'eligible',r['eligible'],'position mm',r['position_error_m']*1000,
+        'approach deg',np.rad2deg(r['approach_error_rad']),flush=True)
     # Normal env.reset is the only initialization. Planning and preflight have
     # private MjData and cannot replace the live state across phase boundaries.
     with (a.output/'path.jsonl').open('w') as stream,patch.object(mujoco,'mj_step',step):
@@ -153,7 +161,8 @@ def run(a):
                                 for p in (a.config,a.staging,a.donor,Path(__file__))})
     (a.output/'teacher.json').write_text(json.dumps(report,indent=2)+'\n')
     (a.output/'result.json').write_text(json.dumps(dict(mode=MODE,failure=report.get('failure'),
-        classification='CENTER SUCCESS' if report['success'] else 'FIRST GATE FAILURE',
+        classification=('CENTER SUCCESS' if report['success'] else
+            'A2 CONNECTION PASS / TASK NOT RUN' if report.get('connection_pass') else 'FIRST GATE FAILURE'),
         live_task_success=report['success'],physics_steps=counts['live']),indent=2)+'\n')
     print('LIVE FINISHED',report['final_phase'],report.get('failure'),'CENTER SUCCESS',report['success'],flush=True)
 
@@ -161,6 +170,7 @@ def run(a):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--replay',type=Path);p.add_argument('--model',type=Path)
+    p.add_argument('--connection-only',action='store_true',help='stop after A2 approach, before CLOSE')
     for k in ('config','staging','donor','output'):p.add_argument('--'+k,type=Path)
     a=p.parse_args()
     if a.replay:

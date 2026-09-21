@@ -3343,3 +3343,147 @@ Public fixture: test/fixtures/runtime_candidate_gate.json.
 Visible: ~/Downloads/DAPIER-runtime-contact-candidate-20260921/report.html.
 Local validation kit: runtime-contact-candidate-20260921 (manifest included).
 Notion uses first-person project-owner research-note voice.
+
+
+## 2026-09-21 — Staging identity 동등성 검증 및 HOME→A2 연결
+
+Record ID: DAPIER-2026-09-21-staging-model-identity
+
+### Problem
+
+나는 HOME/RESET/SETTLE 이후의 saved staging model_sha256 불일치를
+identity gate를 우회하지 않고 해결한다. Grasp, squeeze, IK, solver,
+friction, joint limits, 기존 30mm/0.5mm/2°/15° 기준은 그대로 둔다.
+
+### Evidence — ANALYTIC / DIAGNOSTIC ONLY
+
+Source XML diff는 정확히 두 곳이다.
+
+| 항목 | 과거 local XML | pinned XML | 현재 desk compiled |
+|---|---|---|---|
+| shoulder_lift joint 하한(rad) | -1.9198621771937616 | -1.7453292519943224 | -1.9198621771937616 |
+| shoulder_lift ctrl 하한(rad) | -1.91986 | -1.74533 | -1.91986 |
+
+상한과 다른 XML 내용은 동일하다. 기존 preserve_desk_source_profile()이
+양쪽 arm에 기존 desk 하한을 적용하므로 이번에 limit을 변경한 것이 아니다.
+이 동등성은 integration_desk에만 해당한다. Mobile/direct builder로 일반화하지 않는다.
+
+Local XML SHA:
+78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703
+Pinned XML SHA:
+d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580
+
+보존 worktree와 local XML로 재compile하여 저장 staging의 raw MJB SHA를
+정확히 재현했다:
+ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
+
+현재 canonical builder raw MJB SHA:
+8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9
+
+비교 대상은 bodies23 / geoms76 / joints17 / actuators12 / equalities4 /
+meshes45 / tendons0, nq23/nv22이다. Position/orientation, mass/inertia,
+contact/friction, limits, transmissions, equality 및 파생 DOF 데이터가 일치했다.
+
+| compiled array group | 확인한 fields | 결과 |
+|---|---:|---|
+| body | 29 | exact equal |
+| geom | 25 | exact equal |
+| joint | 17 | exact equal |
+| actuator | 25 | exact equal |
+| equality | 8 | exact equal |
+| mesh (path 제외) | 32 | exact equal |
+| dof | 13 | exact equal |
+
+모든 physics 옵션과 45개 mesh의 vertex/face SHA도 동일하다.
+이 identity 비교는 saved staging과 current canonical base(둘 다 NoSlip0/impratio1)
+사이다. Rerun은 앞서 승인된 runtime candidate NoSlip0/impratio100을 그대로 쓴다.
+전체 portable compiled fingerprint는 위 그룹 이외의 names/scalars/
+visual/stat metadata까지 비교한다. Physics arrays/options/scalars 차이 없음.
+Path storage의 mesh_pathadr 등은 relocation metadata로 별도 취급한다.
+
+**직렬화 함정:** MuJoCo3.3.7의 fresh model signature는
+16570902232489541775지만 native MJB load 후에는0이다.
+설치된 mjmodel.h는 이를 mjSpec과 공유하는 compilation signature로 명시한다.
+Loaded saved와 fresh current를 직접 portable-hash 비교한 첫 probe는 이
+metadata 때문에 달랐다. Physics 차이로 오판하지 않고 양쪽을 동일한 native
+MJB roundtrip 형태로 비교했다. Runtime identity/hash 함수를 완화하지 않았다.
+
+두 normalized fingerprint:
+bc1deea119d717a5b5368ceee00959d8d76e72044310333d9de78a8652372a96
+
+Fresh compiled portable fingerprint:
+b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4
+
+### Decision
+
+**A — compiled physics/geometry equivalent.**
+staging_model_audit.py는 원본 binary hash가 저장 report와 일치하고,
+원본 physics arrays/options/scalars 및 normalized fingerprint가 모두
+일치할 때만 새 staging provenance를 생성한다. 실제 차이는 B로 거부한다.
+
+config/runtime_staging_reference.json에 현재 exact model/asset identity를
+기록하고 original_provenance/source report hash를 보존했다.
+이 reference는 기존 retreat10.1107859316mm만 가져온다. 과거 full state,
+cached IK, dynamics 성공은 새 실행의 근거로 가져오지 않는다.
+waypoint_block_teacher.py의 기존 exact identity gate는 수정하지 않았다.
+
+실행에는 --connection-only 범위를 추가했다. A2 접근까지 통과하더라도
+CLOSE 전에 A2_CONNECTION_READY로 끝나며 CENTER SUCCESS로 처리하지 않는다.
+이번에는 새 파라미터나 retreat 검색 없이 기존 고정값으로 한 번 실행했다.
+
+### Validation — VERIFIED BY PHYSICS / VERIFIED BY REGRESSION
+
+- Normal HOME PASS → RESET PASS → SETTLE100step/0.200s PASS.
+- 갱신한 staging identity gate PASS.
+- SAFE_STAGE planning IK16iterations, position error0.126448mm PASS.
+- HOME→SAFE_STAGE 경로 **81.4815%** sample:
+  left_pgripper_pad_1(geom36) ↔ red_block_geom(geom74),
+  clearance21.140360mm < unchanged required30mm → FAIL.
+- Endpoint guard distance=-3.609746mm는 KINEMATIC 예측값이다.
+  실제 task에서 관통이 발생했다는 뜻이 아니다.
+- 실제 팔 이동, dynamic preflight, CLOSE/LIFT/HOLD는 실행하지 않았다.
+- Physics NoSlip0/impratio100 및 state continuity 유지. Grasp/squeeze/refined
+  LIFT config 파일은 변경하지 않았다.
+- Focused21 PASS: audit5, integration source4, runtime5, manipulation7.
+  판정을 강화한 audit 파일만5개 재확인했다.
+- Negative tests: body pose/mass/inertia, friction/solref, joint range,
+  actuator gain/gear, equality data, mesh vertex, timestep 변경은 모두 B.
+  잘못된 원본 binary hash 거부, 원본 report 보존, connection-only CLOSE 금지.
+- git diff --check PASS. Full suite/remote CI/main merge 미실행.
+
+### Result
+
+Staging model identity blocker는 해결했다. 새 첫 blocker는
+**SAFE_STAGE full-path clearance**이다. 실제 최종 physics는 SETTLE,
+CENTER SUCCESS=false/HOLD0s다. 기존 failure report와 모든 local evidence를
+보존했다. SIM replay와 비교 그래프를 열었고 HW/REAL/OS30A/ACT는 실행하지 않았다.
+
+### Lesson / Next
+
+나는 source XML 차이, 최종 compiled physics 차이, path/serialization metadata를
+구분해야 한다는 점을 확인했다. Hash를 단순 치환하는 대신 동일 모델임을 검증하고
+provenance revision을 남겼다. 다음에는 새 grasp나 contact tuning이 아니라,
+현재 A2 목표에 대한 SAFE_STAGE 연결의 gripper envelope/path를 다뤄야 한다.
+이번 턴에서는 그 계획을 수정하지 않는다.
+
+### Reproduction / artifacts
+
+정확한 저장 모델은 기존 source/worktree에서 재구성했고 원본 staging raw SHA와
+일치함을 확인했다. Audit와 connection 재현은 SIM directory에서:
+
+~~~bash
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python staging_model_audit.py --saved-model /tmp/dapier-staging-identity-20260921/saved-reconstructed.mjb --staging /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/dynamic-single-viewer.json --output /tmp/dapier-staging-identity-repro
+
+env DAPIER_SO101_MJCF=/tmp/dapier-pr62-pinned-assets/so101_new_calib.xml /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --config config/runtime_contact_candidate.json --staging config/runtime_staging_reference.json --donor /tmp/dapier-controlled-audit-20260919/input-donor.json --connection-only --output /tmp/dapier-staging-connection-repro
+~~~
+
+Recorded MuJoCo display:
+~~~bash
+/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python runtime_contact_candidate.py --model /tmp/dapier-staging-identity-20260921/connection/runtime-model.mjb --replay /tmp/dapier-staging-identity-20260921/connection
+~~~
+
+Local full audit: /tmp/dapier-staging-identity-20260921/final-audit.
+Public fixture: test/fixtures/staging_identity_connection.json.
+Visible table/plot: ~/Downloads/DAPIER-staging-identity-20260921/report.html.
+Existing validation kit: staging-identity-20260921, raw models/trace/source/manifest.
+PR67 draft/base main; normal push; Notion first-person research note.
