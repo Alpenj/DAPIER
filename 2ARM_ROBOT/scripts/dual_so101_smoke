@@ -9,6 +9,7 @@ import json
 import math
 import os
 import stat
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -208,6 +209,7 @@ def load_trusted_profile(path: Path) -> dict[str, dict[str, object]]:
             "controller_serial": arm["controller_serial"],
             "calibration_path": calibration_path,
             "calibration": validate_calibration(calibration_bytes, side),
+            "calibration_sha256": digest,
         }
     validate_arm_ports(loaded["left"]["port"], loaded["right"]["port"])
     validate_expected_identities(
@@ -316,7 +318,8 @@ def main() -> int:
         raise SystemExit(f"bus setup failed: {type(error).__name__}") from None
 
     record: dict[str, object] = {
-        "schema_version": "dapier.dual-so101-smoke.v0.4",
+        "schema_version": "dapier.dual-so101-smoke.v0.5",
+        "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "started_at": datetime.now().astimezone().isoformat(),
         "motion_requested_deg": 0.0,
         "motion_enabled": False,
@@ -340,13 +343,21 @@ def main() -> int:
                 {side: ports[side]}, {side: identities[side]}, serial_reader=controller_serial
             )
             record["controller_identity_revalidated"][side] = True
-        starts = {
-            side: bus.sync_read("Present_Position", normalize=False, num_retry=2)
-            for side, bus in buses.items()
-        }
-        snapshots = {side: health(bus) for side, bus in buses.items()}
-        for side in buses:
-            record["arms"][side] = {"position_raw_tick": starts[side], "health": snapshots[side]}
+        for side, bus in buses.items():
+            # Timestamp the read interval, not the later health/log completion.
+            captured_at = datetime.now().astimezone().isoformat()
+            started_ns = time.monotonic_ns()
+            positions = bus.sync_read("Present_Position", normalize=False, num_retry=2)
+            record["arms"][side] = {
+                "role": "follower", "device_id": f"dapier_dual_follower_{side}",
+                "calibration_sha256": profile[side]["calibration_sha256"],
+                "position_started_at": captured_at,
+                "position_finished_at": datetime.now().astimezone().isoformat(),
+                "position_read_duration_ns": time.monotonic_ns() - started_ns,
+                "position_raw_tick": positions,
+            }
+        for side, bus in buses.items():
+            record["arms"][side]["health"] = health(bus)
     except BaseException as error:
         record["error"] = type(error).__name__
         failure = error
@@ -368,7 +379,8 @@ def main() -> int:
         raise RuntimeError("read-only hardware smoke failed; inspect the private log") from None
     if disconnect_errors:
         raise RuntimeError("failed to disconnect cleanly; inspect the private log")
-    print(json.dumps(record, ensure_ascii=False, indent=2))
+    # Calibration provenance stays in the private log, not terminal transcripts.
+    print("read_only_snapshot_complete=true motion_enabled=false")
     print("private_log_written=true")
     return 0
 

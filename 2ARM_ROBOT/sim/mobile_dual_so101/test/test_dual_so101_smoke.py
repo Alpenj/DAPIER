@@ -227,8 +227,15 @@ class DualSO101SmokeTest(unittest.TestCase):
             self.assertFalse(record["hardware_execution"])
             self.assertEqual(record["controller_identity_revalidated"], {"left": True, "right": True})
             self.assertFalse(record["connected_endpoint_identity_bound"])
-            for secret in ("synthetic-controller", "/synthetic/", "calibration_sha256"):
+            for secret in ("synthetic-controller", "/synthetic/"):
                 self.assertNotIn(secret, text)
+            self.assertEqual(record["source_sha256"], hashlib.sha256(SCRIPT.read_bytes()).hexdigest())
+            for side in ("left", "right"):
+                arm = record["arms"][side]
+                self.assertEqual(arm["calibration_sha256"], hashlib.sha256((root / f"{side}.json").read_bytes()).hexdigest())
+                self.assertEqual(arm["device_id"], f"dapier_dual_follower_{side}")
+                self.assertLessEqual(arm["position_started_at"], arm["position_finished_at"])
+                self.assertGreaterEqual(arm["position_read_duration_ns"], 0)
 
             with self.assertRaisesRegex(ValueError, "already exists"):
                 SMOKE["_open_new_log"](log)
