@@ -167,6 +167,9 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     if not np.array_equal(start[6:], goal[6:]):
         raise ValueError("left-only executor cannot dispatch right-arm changes")
     sources = [candidate["block_source"], candidate["model"], candidate["mapping"]["profile"]]
+    if candidate.get("candidate_mode") == "wrist_feedback":
+        wrist = candidate["wrist_source"]
+        sources.extend((wrist, wrist["frame_source"]))
     timestamps = []
     for side in ("left", "right"):
         from datetime import datetime

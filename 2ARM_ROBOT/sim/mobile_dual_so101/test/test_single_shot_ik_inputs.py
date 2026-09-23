@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -15,10 +16,103 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state,
-    target_in_model_base, check_native_feedback_endpoint, fingerprint, bind_observed_block)
+    target_in_model_base, check_native_feedback_endpoint, fingerprint, bind_observed_block,
+    load_wrist_correction, evaluate)
 
 
 class SingleShotInputsTest(unittest.TestCase):
+    def test_saved_wrist_features_bind_to_measured_start_and_preserve_gripper(self):
+        from integration_scenes import task_env
+        env = task_env("desk")
+        seed = np.zeros(12)
+        seed[5] = .7
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frame = root / "MOCK-frame.bin"
+            frame.write_bytes(b"MOCK image evidence, no device")
+            path = root / "wrist.json"
+            source = {"sha256":"a" * 64}
+            observation = {"schema_version":"dapier.wrist-observation.v1", "side":"left",
+                "clock":"host_monotonic_ns", "timestamp_ns":100,
+                "measured_state_sha256":source["sha256"], "measured_q_model_rad":seed[:6].tolist(),
+                "frame_source":fingerprint(frame), "feature_center_uv":[.15,-.15],
+                "target_uv":[0.,0.], "confidence":.95}
+            path.write_text(json.dumps(observation))
+            q, intent, evidence = load_wrist_correction(path, env.model, seed, source, now_ns=101)
+            self.assertAlmostEqual(q[3], np.deg2rad(.3))
+            self.assertAlmostEqual(q[4], np.deg2rad(-.3))
+            self.assertEqual(q[5], .7)
+            np.testing.assert_array_equal(q[6:], seed[6:])
+            self.assertEqual(intent.source, "wrist_servo_adapter")
+            self.assertEqual(evidence["sha256"], fingerprint(path)["sha256"])
+            for change in ({"measured_state_sha256":"b" * 64},
+                           {"measured_q_model_rad":[0.] * 6},
+                           {"timestamp_ns":102}, {"timestamp_ns":-2_000_000_000},
+                           {"feature_center_uv":None}, {"feature_center_uv":[float("nan"),0.]},
+                           {"side":"right"}, {"clock":"unix_ns"}):
+                path.write_text(json.dumps({**observation, **change}))
+                with self.subTest(change=change), self.assertRaises(ValueError):
+                    load_wrist_correction(path, env.model, seed, source, now_ns=101)
+            path.write_text(json.dumps(observation))
+            frame.write_bytes(b"changed")
+            with self.assertRaisesRegex(ValueError, "source frame changed"):
+                load_wrist_correction(path, env.model, seed, source, now_ns=101)
+
+    def test_wrist_route_requires_real_measured_start_before_any_solver(self):
+        with mock.patch("evaluate_single_shot_ik.solve_bimanual_position_ik") as solver:
+            with self.assertRaisesRegex(ValueError, "measured path start"):
+                evaluate(SimpleNamespace(wrist_observation_json=Path("unused.json"), sim_home_seed=True))
+            solver.assert_not_called()
+
+    def test_wrist_evaluation_reaches_fk_path_gate_without_running_ik(self):
+        from integration_scenes import task_env
+        from mobile_dual_so101 import apply_control_as_pose
+        env = task_env("desk")
+        seed = np.zeros(12)
+        seed[5] = .7
+        goal = seed.copy()
+        goal[3:5] = np.deg2rad([.3, -.3])
+        apply_control_as_pose(env.model, env.data, goal)
+        base = env.data.body("left_base")
+        target = base.xmat.reshape(3, 3).T @ (env.data.site("left_cube_grasp").xpos - base.xpos)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frame = root / "MOCK-frame.bin"
+            frame.write_bytes(b"MOCK")
+            wrist = root / "wrist.json"
+            source = {"sha256":"a" * 64, "timestamp":datetime.now(timezone.utc).isoformat()}
+            wrist.write_text(json.dumps({"schema_version":"dapier.wrist-observation.v1",
+                "side":"left", "clock":"host_monotonic_ns", "timestamp_ns":100,
+                "measured_state_sha256":source["sha256"], "measured_q_model_rad":seed[:6].tolist(),
+                "frame_source":fingerprint(frame), "feature_center_uv":[.15,-.15],
+                "target_uv":[0.,0.], "confidence":.95}))
+            block = root / "MOCK-block.json"
+            block.write_text(json.dumps({"arm_mapping":{"candidate_frame":"left_motor1_datum"},
+                "target_arm_xyz_candidate_m":target.tolist(), "rgb_timestamp_ns":time.time_ns(),
+                "scene_object":{"frame":"left_motor1_datum", "position_semantics":"object_center",
+                    "center_xyz_m":[.12,-.05,0.], "size_m":[.04]*3, "quaternion_wxyz":[1.,0.,0.,0.]}}))
+            args = SimpleNamespace(sim_home_seed=False, wrist_observation_json=wrist,
+                measured_state_json=root / "left", right_measured_state_json=root / "right",
+                left_calibration=root / "left-cal", right_calibration=root / "right-cal",
+                block_json=block, model=Path(os.environ["DAPIER_SO101_MJCF"]),
+                motor_datum_in_base_m=[0.,0.,0.], pregrasp_offset_z=0.)
+            with (mock.patch("evaluate_single_shot_ik.load_measured_state", return_value=(np.zeros(6),source)),
+                  mock.patch("evaluate_single_shot_ik.candidate_seed", return_value=seed),
+                  mock.patch("evaluate_single_shot_ik.task_env", return_value=env),
+                  mock.patch("evaluate_single_shot_ik.time.monotonic_ns", return_value=101),
+                  mock.patch("evaluate_single_shot_ik.solve_bimanual_position_ik") as solver,
+                  mock.patch("evaluate_single_shot_ik.check_bimanual_path",
+                      return_value=SimpleNamespace(safe=True, reason="MOCK path", minimum_clearance_m=.05)) as path):
+                result = evaluate(args)
+            solver.assert_not_called()
+            np.testing.assert_array_equal(path.call_args.args[1], seed)
+            np.testing.assert_allclose(path.call_args.args[2], goal)
+            self.assertEqual(result["candidate_mode"], "wrist_feedback")
+            self.assertEqual(result["goal_intent"]["source"], "wrist_servo_adapter")
+            self.assertLess(result["position_error_m"], 1e-12)
+            self.assertGreater(result["tool_axis_error_rad_by_side"]["left"], np.deg2rad(2))
+            self.assertFalse(result["offline_candidate_accepted"])
+
     def test_observed_center_replaces_nominal_collision_block_not_approach_target(self):
         from integration_scenes import task_env
         from mobile_dual_so101 import apply_control_as_pose

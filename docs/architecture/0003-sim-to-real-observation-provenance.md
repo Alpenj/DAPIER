@@ -65,3 +65,31 @@ provenance.
 2. Require the dataset gate in ACT/LeRobot conversion.
 3. Connect the accepted policy observation to the C++ mock safety bridge.
 4. Add ROS 2 camera/joint provenance and clock-domain validation.
+
+## 2026-09-23: 손목 관측에서 제한 실행 후보로 연결
+
+record_id: DAPIER-2026-09-23-wrist-observation-ingress
+
+손목 보정 함수가 검사 도구에서만 호출되는 것을 확인하고,
+`evaluate_single_shot_ik.py --wrist-observation-json FILE`을 기존 후보 생성기에 연결했다.
+이 모드는 새 IK를 풀지 않고 실측 시작 상태에 영상 오차 보정을 적용한 뒤,
+같은 FK·접근축·경로 검사로 후보를 평가한다. 반대팔과 그리퍼는 유지한다.
+
+입력은 `dapier.wrist-observation.v1` JSON이다. `side="left"`,
+`clock="host_monotonic_ns"`, `timestamp_ns`, `measured_state_sha256`,
+`measured_q_model_rad`(왼팔 6축), `frame_source`(`path`, `sha256`),
+`feature_center_uv`, `target_uv`, `confidence`를 명시한다.
+UV는 [-1, 1] 정규화 좌표이며, 영상 취득과 관절 상태의 실제 시간 대응은 생산자가
+확인해야 한다. 해시 일치만으로 노출 시점 동기화나 카메라 장착 방향을 검증했다고
+판정하지 않는다. 현재 연결은 특징 관측 파일을 소비하며 카메라를 직접 열지 않는다.
+
+후보에는 `goal_intent`와 손목 관측 원본이 함께 남는다.
+`bounded_pregrasp_plan()`은 그 원본과 영상 해시를 다시 확인하고,
+기존 `execute_bounded_pregrasp.py` 및 C++ `WRIST_ALIGN` 경로를 사용한다.
+실측과 다른 시작값, 오래된/유실된 특징, 바뀐 영상은 거부한다.
+위치 오차 0.5 mm, 수직축 2도, 기존 30 mm 경로 기준을 유지한다.
+
+장치 없는 입력·어댑터 검사에서 이 연결을 확인했다. 위치만 맞고 축이 틀린
+합성 목표가 거부되고, 손목 분기에서 IK가 호출되지 않는 것도 검사했다.
+기존 native MOCK 전송·지연 피드백 검증은 재사용했다. 실제 손목 영상 취득,
+장착 방향별 보정 효과, 실물 연속 피드백 루프와 집기 성공은 아직 검증하지 못했다.

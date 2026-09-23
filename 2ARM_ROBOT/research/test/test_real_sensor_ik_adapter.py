@@ -1,4 +1,6 @@
 import math
+import hashlib
+import tempfile
 from pathlib import Path
 import sys
 import unittest
@@ -19,6 +21,23 @@ from dapier_research.vision_target import VisionTargetError, VisionTargetEstimat
 
 
 class RealSensorIkAdapterTest(unittest.TestCase):
+    def test_changed_wrist_frame_is_rejected_before_plan_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = Path(directory) / "source"
+            source_path.write_bytes(b"MOCK source")
+            source = {"path":str(source_path), "sha256":hashlib.sha256(source_path.read_bytes()).hexdigest()}
+            frame = Path(directory) / "frame"
+            frame.write_bytes(b"changed image")
+            measured = {**source, "timestamp":"1970-01-01T00:16:40+00:00", "calibration":source}
+            candidate = {"offline_candidate_accepted":True, "candidate_mode":"wrist_feedback",
+                "scene_object":{"bound_to_path_reference":True},
+                "seed_posture":{"seed_q_rad":[0.]*12, "left":measured, "right":measured},
+                "solved_action_rad":[0.]*12, "block_source":source, "model":source,
+                "mapping":{"profile":source},
+                "wrist_source":{**source, "frame_source":{"path":str(frame), "sha256":"0"*64}}}
+            with self.assertRaisesRegex(ValueError, "source changed"):
+                bounded_pregrasp_plan(candidate, Path("unused"), now_s=1000.)
+
     def test_nominal_scene_candidate_cannot_reach_executor(self):
         with self.assertRaisesRegex(ValueError, "observed object"):
             bounded_pregrasp_plan({"offline_candidate_accepted": True}, Path("unused"), now_s=1000.)

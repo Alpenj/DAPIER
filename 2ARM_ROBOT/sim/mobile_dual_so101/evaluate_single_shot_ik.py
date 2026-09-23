@@ -14,6 +14,7 @@ import json
 import math
 import os
 from pathlib import Path
+import sys
 import time
 
 import mujoco
@@ -212,8 +213,56 @@ def check_native_feedback_endpoint(candidate, native_result):
         "hardware_execution":native_result.get("hardware_execution") is True,"task_success":False}
 
 
+def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
+    """Bind saved wrist features to the measured seed; propose, never dispatch."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "research/src"))
+    from dapier_research.control_intent import arm_joint_position_intent
+    from dapier_research.wrist_servo_adapter import (
+        WristObservation, WristServoConfig, WristServoError, wrist_correction_intent,
+    )
+    raw = path.read_bytes()
+    observation = json.loads(raw)
+    if (not isinstance(observation, dict)
+            or observation.get("schema_version") != "dapier.wrist-observation.v1"
+            or observation.get("side") != "left"
+            or observation.get("clock") != "host_monotonic_ns"
+            or observation.get("measured_state_sha256") != measured_source["sha256"]):
+        raise ValueError("wrist observation frame/clock/readback binding mismatch")
+    measured = finite_vector(observation["measured_q_model_rad"], 6, "wrist measured model radians")
+    if not np.allclose(measured, seed[:6], rtol=0, atol=1e-9):
+        raise ValueError("wrist exposure state differs from measured path start")
+    frame = observation["frame_source"]
+    if fingerprint(Path(frame["path"]))["sha256"] != frame["sha256"]:
+        raise ValueError("wrist source frame changed")
+    nominal = arm_joint_position_intent(
+        sequence=1, source="fresh_measured_state", source_monotonic_ns=now_ns,
+        ttl_ns=250_000_000, joint_names=JOINTS, joint_position_rad=tuple(measured),
+        joint_max_velocity_rad_s=(.3,) * 6,
+    )
+    joint_ids = model.actuator_trnid[:6, 0].astype(int)
+    lo = np.maximum(model.actuator_ctrlrange[:6, 0], model.jnt_range[joint_ids, 0])
+    hi = np.minimum(model.actuator_ctrlrange[:6, 1], model.jnt_range[joint_ids, 1])
+    # Exposure state is measured input, not the proposed command or copied feedback.
+    obs = WristObservation(observation["timestamp_ns"],
+        {name: math.degrees(measured[i]) for i, name in enumerate(JOINTS[:5])},
+        observation["feature_center_uv"], observation["confidence"])
+    try:
+        intent = wrist_correction_intent(obs, nominal,
+            WristServoConfig(target_uv=tuple(observation["target_uv"])), now_ns,
+            sequence=2, joint_limits_rad=dict(zip(JOINTS, zip(lo, hi))))
+    except WristServoError as exc:
+        raise ValueError(str(exc)) from exc
+    action = seed.copy()
+    action[:6] = intent.joint_position_rad
+    return action, intent, {"path":str(path), "sha256":hashlib.sha256(raw).hexdigest(),
+                            "frame_source":frame}
+
+
 def evaluate(args):
     now_s = time.time()
+    wrist_path = getattr(args, "wrist_observation_json", None)
+    if wrist_path is not None and args.sim_home_seed:
+        raise ValueError("wrist feedback requires a measured path start")
     if not args.sim_home_seed:
         if args.measured_state_json is None or args.right_measured_state_json is None:
             raise ValueError("both complete readbacks are required unless --sim-home-seed is explicit")
@@ -256,29 +305,40 @@ def evaluate(args):
     apply_control_as_pose(model, measured_preview, seed)
     seed_tcp = {side: measured_preview.site(f"{side}_cube_grasp").xpos.copy().tolist()
                 for side in ("left", "right")}
-    result = solve_bimanual_position_ik(model, seed, {"left": world},
-        site_names={"left": "left_cube_grasp"}, tool_axis_targets={"left": [0, 0, -1]},
-        max_iterations=300, tolerance_m=5e-4)
-    solved = np.asarray(result.action_rad).copy()
-    # The measured seed stays unchanged; opening is part of the checked candidate path.
-    solved[5] = model.actuator_ctrlrange[5, 1]
+    goal_intent, wrist_source = None, None
+    if wrist_path is not None:
+        solved, goal_intent, wrist_source = load_wrist_correction(
+            wrist_path, model, seed, left_source, now_ns=time.monotonic_ns())
+        result = None
+    else:
+        result = solve_bimanual_position_ik(model, seed, {"left": world},
+            site_names={"left": "left_cube_grasp"}, tool_axis_targets={"left": [0, 0, -1]},
+            max_iterations=300, tolerance_m=5e-4)
+        solved = np.asarray(result.action_rad).copy()
+        # Opening belongs to PREGRASP; wrist feedback preserves measured gripper state.
+        solved[5] = model.actuator_ctrlrange[5, 1]
     validate_model_action(model, solved, "IK solution")
     preview = mujoco.MjData(model)
     apply_control_as_pose(model, preview, solved)
     actual = preview.site("left_cube_grasp").xpos.copy()
     error = float(np.linalg.norm(actual - world))
+    axis = preview.site("left_cube_grasp").xmat.reshape(3, 3)[:, 0]
+    axis_error = math.acos(float(np.clip(axis @ np.array([0., 0., -1.]), -1., 1.)))
     joint_ids = model.actuator_trnid[:, 0].astype(int)
     margins = np.minimum(solved - model.jnt_range[joint_ids, 0],
                          model.jnt_range[joint_ids, 1] - solved)
     guard = check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
                                task_phase="pregrasp", reference_data=data)
-    candidate_ok = bool(result.converged and error <= 5e-4 and guard.safe
+    candidate_ok = bool((result is None or result.converged)
+                        and error <= 5e-4 and axis_error <= math.radians(2.) and guard.safe
                         and math.isfinite(guard.minimum_clearance_m)
                         and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M)
     return {
-        "ik_converged": bool(result.converged), "offline_candidate_accepted": candidate_ok,
-        "iterations": result.iterations, "position_error_m": error,
-        "tool_axis_error_rad_by_side": result.tool_axis_error_rad_by_side,
+        "candidate_mode": "wrist_feedback" if wrist_path is not None else "pregrasp_ik",
+        **({"goal_intent":goal_intent.as_dict(), "wrist_source":wrist_source} if goal_intent else {}),
+        "ik_converged": bool(result and result.converged), "offline_candidate_accepted": candidate_ok,
+        "iterations": result.iterations if result else 0, "position_error_m": error,
+        "tool_axis_error_rad_by_side": {"left":axis_error},
         "joint_margins_rad": {model.actuator(i).name: float(margins[i]) for i in range(model.nu)},
         "kinematic_analysis": {"target_arm_xyz_m": target.tolist(), "target_world_xyz_m": world.tolist(),
             "actual_arm_xyz_m": (rotation.T @ (actual - origin)).tolist(),
@@ -314,6 +374,8 @@ def main(argv=None):
     seeds.add_argument("--sim-home-seed", action="store_true",
                        help="SIM diagnostic only: synthetic home and historical candidate target")
     parser.add_argument("--right-measured-state-json", type=Path)
+    parser.add_argument("--wrist-observation-json", type=Path,
+                        help="Measured-state-bound wrist features; validate correction with FK/path, without IK")
     calibration = Path.home() / ".config/dapier/lerobot-calibration"
     for side in ("left", "right"):
         parser.add_argument(f"--{side}-calibration", type=Path,
