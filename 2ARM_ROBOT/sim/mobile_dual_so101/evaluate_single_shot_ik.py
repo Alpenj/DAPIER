@@ -20,6 +20,9 @@ import time
 import mujoco
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "research/src"))
+from dapier_research.real_sensor_ik_adapter import load_block_observation
+
 from collision_guard import DEFAULT_CLEARANCE_M, TASK_GENERAL_QUERY_CAP_M, check_bimanual_path
 from integration_scenes import task_env, portable_model_sha256
 from mobile_dual_so101 import apply_control_as_pose, HUMANOID_HOME_ACTION
@@ -219,7 +222,7 @@ def check_native_feedback_endpoint(candidate, native_result):
         source = candidate["block_source"]
         if fingerprint(Path(source["path"]))["sha256"] != source["sha256"]:
             raise ValueError("endpoint observation differs from planned observation")
-        block = json.loads(Path(source["path"]).read_text())
+        block = load_block_observation(Path(source["path"]))
         env, rebuilt = observed_task_env(block, support["motor_datum_in_model_base_m"])
         if rebuilt != support:
             raise ValueError("endpoint support differs from checked support")
@@ -329,7 +332,7 @@ def evaluate(args):
         if abs(datetime.fromisoformat(left_source["timestamp"]).timestamp()
                - datetime.fromisoformat(right_source["timestamp"]).timestamp()) > 2:
             raise ValueError("left/right readbacks are more than 2 s apart")
-    block = json.loads(args.block_json.read_text())
+    block = load_block_observation(args.block_json)
     target = target_in_model_base(block, args.motor_datum_in_base_m)
     timestamp_ns = block.get("timing", {}).get("rgb_timestamp_ns", block.get("rgb_timestamp_ns"))
     if not args.sim_home_seed and (type(timestamp_ns) is not int or not 0 <= now_s - timestamp_ns / 1e9 <= 60):

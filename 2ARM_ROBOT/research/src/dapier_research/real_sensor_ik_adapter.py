@@ -21,6 +21,40 @@ from dapier_research.control_intent import ControlIntent, arm_joint_position_int
 from dapier_research.vision_target import VisionTargetError, VisionTargetEstimate, _finite_transform
 
 
+def load_block_observation(path: Path) -> dict:
+    """Normalize observed board/cube geometry for the existing IK/executor path."""
+    document = json.loads(path.read_text())
+    if not isinstance(document, dict):
+        raise ValueError("block observation must be an object")
+    if "board_cube_observation" not in document:
+        return document
+    from dapier_research.camera_board_transform import known_cube_from_board
+    observation = document["board_cube_observation"]
+    frame = observation["frame_source"]
+    calibration = observation["calibration_sources"]
+    if (not isinstance(calibration, list) or not calibration
+            or observation["board_pose_frame_sha256"] != frame["sha256"]
+            or observation["top_corners_frame_sha256"] != frame["sha256"]):
+        raise ValueError("same-frame board pose and calibration sources required")
+    for source in [frame, *calibration]:
+        if hashlib.sha256(Path(source["path"]).read_bytes()).hexdigest() != source["sha256"]:
+            raise ValueError("block observation source changed")
+    image = np.load(frame["path"], allow_pickle=False)
+    k = observation["intrinsics"]
+    if image.shape != (k["height"], k["width"], 3) or image.dtype != np.uint8:
+        raise ValueError("rectified uint8 BGR frame must match the intrinsics resolution")
+    result = known_cube_from_board(observation)
+    metric = document.get("metric_evidence", {})
+    if not isinstance(metric, dict):
+        raise ValueError("metric target evidence must be an object")
+    # Computed geometry never promotes its own execution verdict. The source
+    # review remains explicit and is re-read by the bounded executor adapter.
+    result["metric_evidence"] = {**metric, "method":result["geometry_evidence"]["method"],
+                                  "direct_depth_used":False}
+    result["source_evidence"] = [frame, *calibration]
+    return result
+
+
 def transform_optical_point_to_arm(
     point_optical_m: Sequence[float],
     T_arm_from_camera: np.ndarray,
@@ -181,7 +215,8 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     for source in sources:
         if hashlib.sha256(Path(source["path"]).read_bytes()).hexdigest() != source["sha256"]:
             raise ValueError("candidate source changed since validation")
-    block = json.loads(Path(candidate["block_source"]["path"]).read_text())
+    block = load_block_observation(Path(candidate["block_source"]["path"]))
+    sources.extend(block.get("source_evidence", []))
     timestamp_ns = block.get("timing", {}).get("rgb_timestamp_ns", block.get("rgb_timestamp_ns"))
     if type(timestamp_ns) is not int:
         raise ValueError("target acquisition timestamp missing")

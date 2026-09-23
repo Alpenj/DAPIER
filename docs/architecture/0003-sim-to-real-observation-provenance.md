@@ -143,3 +143,28 @@ native 피드백의 endpoint FK도 같은 원본 관측 SHA와 지지면으로 �
 이 결과는 좌표·충돌 장면 연결 검사이며 현재 실물 시작 상태의 IK/경로 PASS나
 물리적 관절 매핑 검증을 의미하지 않는다. 다음 실제 입력은 승인된 최신 관측과
 양팔 readback이며, 보존 시각을 바꿔 fresh 입력으로 만들지 않는다.
+
+### 같은 프레임의 보드·큐브 관측 입력
+
+`load_block_observation()`을 IK 후보 생성과 bounded plan 및 endpoint 로더가
+공유한다. `--block-json`에 기존 좌표 파일 대신 `board_cube_observation`을 넣으면
+기존 40 mm 큐브 ray/plane 계산을 재사용한다. 새 검출기는 포함하지 않는다.
+
+입력 필드는 `camera_frame="os30a_rectified_left_optical"`, `cube_side_m=0.04`,
+`clock="unix_ns"`, 원본 `timestamp_ns`, `calibration_revision`, `intrinsics`
+(`width,height,fx,fy,cx,cy`), 순환 순서의 상면 코너 `top_corners_uv`,
+`T_camera_from_board`, `T_datum_from_board`다. `frame_source`는 rectified BGR
+uint8 NPY의 `path,sha256`이며 `board_pose_frame_sha256`와
+`top_corners_frame_sha256`는 그 원본을 가리켜야 한다. `calibration_sources`에
+실제로 사용한 보정 원본들의 `path,sha256`을 기록한다.
+
+로더는 원본 SHA, 영상·보정 해상도 일치, 좌표계, 유한한 교차점과 코너 순서를
+검사한다. 해시와 해상도 확인이 실제 보정 정확도·코너 검출 품질을 보증하지는
+않으므로 방법과 보정 적용 여부는 생산자 근거로 검토한다. SDK 원시 버퍼나
+다른 해상도 K를 자동 변환하지 않는다. 환경에 있는 OpenCV/NumPy만 사용한다.
+
+상면 목표·물체 중심·방향·지지면을 기존 실행 입력 필드로 변환하며, 원본 시각을
+그대로 유지한다. `metric_evidence.metric_target_verified`는 별도 검토값이고
+기하 계산이 자동으로 켜지 않는다. 예전 table median에서 고정값을 뺀 진단
+함수는 이 분기에 사용하지 않는다. 합성 관측의 양/음성 검사와 보존 관측의
+기존 좌표 대조로 로더를 확인했으며, 실제 카메라 추적·실물 실행은 미검증이다.
