@@ -1,5 +1,6 @@
 import math
 import hashlib
+import json
 import tempfile
 from pathlib import Path
 import sys
@@ -21,6 +22,46 @@ from dapier_research.vision_target import VisionTargetError, VisionTargetEstimat
 
 
 class RealSensorIkAdapterTest(unittest.TestCase):
+    def test_metric_geometry_verdict_reaches_plan_without_depth(self):
+        # Synthetic inputs exercise the real boundary, not physical acceptance.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def source(name, value):
+                path = root / name
+                path.write_text(json.dumps(value))
+                return {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+            names = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
+            profile = source("profile.json", {
+                "arm_signs": [1]*5, "arm_zero_offsets_deg": [0.]*5,
+                "gripper_rad_limits": [0., 2.],
+                "joints": [{"name": name, "sign": 1, "zero_offset_deg": 0.,
+                            "maximum_velocity_rad_s": .3} for name in names]})
+            measured = {**profile, "timestamp": "1970-01-01T00:16:40+00:00", "calibration": profile}
+            candidate = {"offline_candidate_accepted": True,
+                "scene_object": {"bound_to_path_reference": True},
+                "seed_posture": {"seed_q_rad": [0.]*12, "left": measured, "right": measured},
+                "solved_action_rad": [0.]*12, "mapping": {"profile": profile},
+                "model": {**profile, "gripper_ranges_rad": [[0., 2.]]},
+                "position_error_m": 0., "tool_axis_error_rad_by_side": {"left": 0.},
+                "structured_clearance": {"safe": True, "minimum_clearance_m": .05}}
+            cases = [({"metric_evidence": {"method": "known_cube_board_geometry", "metric_target_verified": True}}, True),
+                     ({"depth_evidence": {"metric_target_verified": True}}, True),
+                     ({"metric_evidence": {"metric_target_verified": False},
+                       "depth_evidence": {"metric_target_verified": True}}, False),
+                     ({"P2_PASS": True}, False),
+                     ({"metric_evidence": {"metric_target_verified": "true"}}, False)]
+            for evidence, expected in cases:
+                with self.subTest(evidence=evidence):
+                    candidate["block_source"] = source("block.json", {"rgb_timestamp_ns": 1_000_000_000_000, **evidence})
+                    plan = bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.)
+                    self.assertIs(plan["sensor_target_verified"], expected)
+                    self.assertFalse(plan["path_envelope_verified"])
+                    self.assertFalse(plan["task_success"])
+            candidate["block_source"] = source("block.json", {"rgb_timestamp_ns": 1_000_000_000_000,
+                "metric_evidence": None, "depth_evidence": {"metric_target_verified": True}})
+            with self.assertRaisesRegex(ValueError, "metric target evidence"):
+                bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.)
+
     def test_changed_wrist_frame_is_rejected_before_plan_dispatch(self):
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory) / "source"

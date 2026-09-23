@@ -219,7 +219,11 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
             or not np.array_equal(goal_intent.joint_position_rad, goal[:6])):
         raise ValueError("intent endpoint differs from checked FK/IK/path candidate")
     envelope = candidate.get("path_envelope", {})
-    depth = block.get("depth_evidence", {})
+    # Metric geometry can establish a target without direct depth. An explicit
+    # current verdict takes precedence over legacy depth evidence, even if false.
+    metric = block.get("metric_evidence", block.get("depth_evidence", {}))
+    if not isinstance(metric, Mapping):
+        raise ValueError("metric target evidence must be an object")
     duration = max(2.5, float(np.max(1.875*np.abs(goal[:6]-start[:6])/velocities))*1.15)
     if duration+1 > 60:
         raise ValueError("bounded motion exceeds maximum duration")
@@ -232,7 +236,7 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
         "observation_unix_s":timestamps[-1], "measured_state_unix_s":min(timestamps[:2]),
         "position_error_m":position_error,"axis_error_rad":axis_error,
         "offline_candidate_accepted":True,"path_clear":True,"path_clearance_m":distance,
-        "sensor_target_verified":depth.get("metric_target_verified") is True,
+        "sensor_target_verified":metric.get("metric_target_verified") is True,
         "path_tracking_tolerance_rad":float(envelope.get("tracking_tolerance_rad",.01)),
         "path_envelope_verified":envelope.get("verified") is True,
         "path_envelope_clearance_m":envelope.get("minimum_clearance_m",0.),

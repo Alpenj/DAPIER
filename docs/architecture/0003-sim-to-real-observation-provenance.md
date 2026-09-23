@@ -102,3 +102,20 @@ boolean 또는 0/1 정수 NPY다. 원본 영상은 H×W×3 uint8 NPY 또는 이�
 합성 목표가 거부되고, 손목 분기에서 IK가 호출되지 않는 것도 검사했다.
 기존 native MOCK 전송·지연 피드백 검증은 재사용했다. 실제 손목 영상 취득,
 장착 방향별 보정 효과, 실물 연속 피드백 루프와 집기 성공은 아직 검증하지 못했다.
+
+### Metric 목표의 근거와 depth 취득 방식 분리
+
+실행 계획 어댑터가 `depth_evidence`만 읽어 기하 기반 목표의 검증 결과를
+전달할 수 없는 부분을 확인했다. 관측 JSON의 `metric_evidence`를 우선 읽고,
+그 필드가 없을 때만 기존 `depth_evidence`를 사용하도록 수정했다.
+`metric_target_verified`가 실제 boolean `true`일 때만 기존 native 검증값으로
+전달한다. 기하 추정에는 방법·전제·보정 revision·불확실성을 원본 관측에 남긴다.
+해당 관측 파일은 기존 source SHA 확인 대상이다.
+
+`P2_PASS`는 관측 단계 판정이므로 이 실행 검증값으로 자동 변환하지 않는다.
+현재 근거가 거부이면 예전 depth 승인으로 대체하지 않고, 잘못된 근거 형식은
+거부한다. synthetic 입력으로 이 분기와 기존 depth 호환성을 검사했다:
+`python -m unittest discover -s 2ARM_ROBOT/research/test -p test_real_sensor_ik_adapter.py`
+(8개 통과). 실제 장치 접근 없이 검사했으며, 새 관측·실측 시작 상태·경로 검증과
+실행 승인은 별도로 필요하다. 다음 작업은 관측 좌표와 충돌 장면의 책상 기준을
+맞추는 것이다. direct depth 자체를 추가 촬영의 필수 사유로 삼지 않는다.
