@@ -158,6 +158,8 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
         raise ValueError("finite audit time required")
     if candidate.get("offline_candidate_accepted") is not True:
         raise ValueError("current sensor candidate has not passed IK/path acceptance")
+    if (candidate.get("scene_object") or {}).get("bound_to_path_reference") is not True:
+        raise ValueError("observed object was not bound to the checked collision scene")
     start = np.asarray(candidate["seed_posture"]["seed_q_rad"], dtype=float)
     goal = np.asarray(candidate["solved_action_rad"], dtype=float)
     if any(q.shape != (12,) or not np.isfinite(q).all() for q in (start, goal)):

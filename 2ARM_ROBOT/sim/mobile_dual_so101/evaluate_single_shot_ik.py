@@ -142,6 +142,40 @@ def target_in_model_base(block, motor_datum_in_base_m):
     return target + offset
 
 
+def bind_observed_block(model, data, block, motor_datum_in_base_m):
+    """Place the observed object in the collision scene, separately from its TCP goal."""
+    observed = block["scene_object"]
+    if (observed.get("frame") != "left_motor1_datum"
+            or observed.get("position_semantics") != "object_center"):
+        raise ValueError("collision object requires explicit motor-datum object center")
+    center = finite_vector(observed["center_xyz_m"], 3, "observed object center")
+    size = finite_vector(observed["size_m"], 3, "observed object dimensions")
+    quat = finite_vector(observed["quaternion_wxyz"], 4, "observed object orientation")
+    if not np.allclose(size, [.04] * 3, rtol=0, atol=1e-9):
+        raise ValueError("observed object must be the confirmed 4 cm cube")
+    if not math.isclose(float(np.linalg.norm(quat)), 1., rel_tol=0, abs_tol=1e-6):
+        raise ValueError("observed object quaternion must be unit length")
+    geom = model.geom("red_block_geom")
+    if (geom.type != mujoco.mjtGeom.mjGEOM_BOX
+            or not np.allclose(2 * geom.size, size, rtol=0, atol=1e-9)):
+        raise ValueError("collision geometry differs from observed object dimensions")
+    datum = finite_vector(motor_datum_in_base_m, 3, "motor datum in model base")
+    mujoco.mj_forward(model, data)
+    base = data.body("left_base")
+    rotation = base.xmat.reshape(3, 3)
+    world = base.xpos + rotation @ (center + datum)
+    base_quat, world_quat = np.empty(4), np.empty(4)
+    mujoco.mju_mat2Quat(base_quat, rotation.ravel())
+    mujoco.mju_mulQuat(world_quat, base_quat, quat)
+    address = int(model.joint("red_block_free").qposadr[0])
+    # Never derive the observed center from the simulator or the offset approach TCP.
+    data.qpos[address:address + 7] = np.r_[world, world_quat]
+    mujoco.mj_forward(model, data)
+    return {"bound_to_path_reference": True, "source": observed,
+            "center_world_m": world.tolist(), "quaternion_world_wxyz": world_quat.tolist(),
+            "uncertainty_covered_by_path_envelope": False}
+
+
 def check_native_feedback_endpoint(candidate, native_result):
     """Evaluate returned measured joints with the same model/TCP/down axis, no IK.
 
@@ -209,6 +243,10 @@ def evaluate(args):
         seed = candidate_seed(model, left, right, profile)
         seed_source = {"source": "complete measured samples under unverified model mapping",
                        "left": left_source, "right": right_source}
+    scene_object = (bind_observed_block(model, data, block, args.motor_datum_in_base_m)
+                    if "scene_object" in block else None)
+    if scene_object is None and not args.sim_home_seed:
+        raise ValueError("observed object center/orientation missing; nominal SIM block cannot certify real path")
     mujoco.mj_forward(model, data)
     base = model.body("left_base").id
     rotation = data.xmat[base].reshape(3, 3).copy()
@@ -233,7 +271,7 @@ def evaluate(args):
     margins = np.minimum(solved - model.jnt_range[joint_ids, 0],
                          model.jnt_range[joint_ids, 1] - solved)
     guard = check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
-                               task_phase="pregrasp")
+                               task_phase="pregrasp", reference_data=data)
     candidate_ok = bool(result.converged and error <= 5e-4 and guard.safe
                         and math.isfinite(guard.minimum_clearance_m)
                         and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M)
@@ -251,6 +289,7 @@ def evaluate(args):
             "reachability": "IK convergence is local; no physical maximum reach is asserted"},
         "seed_posture": {**seed_source, "seed_q_rad": seed.tolist(), "clipped": False},
         "seed_fk_world_m": seed_tcp,
+        "scene_object": scene_object,
         "solved_action_rad": solved.tolist(),
         "structured_clearance": {"safe": guard.safe, "reason": guard.reason,
             "minimum_clearance_m": guard.minimum_clearance_m,

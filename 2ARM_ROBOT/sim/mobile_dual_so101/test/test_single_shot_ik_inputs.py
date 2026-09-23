@@ -15,10 +15,33 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state,
-    target_in_model_base, check_native_feedback_endpoint, fingerprint)
+    target_in_model_base, check_native_feedback_endpoint, fingerprint, bind_observed_block)
 
 
 class SingleShotInputsTest(unittest.TestCase):
+    def test_observed_center_replaces_nominal_collision_block_not_approach_target(self):
+        from integration_scenes import task_env
+        from mobile_dual_so101 import apply_control_as_pose
+        env = task_env("desk")
+        model, data = env.model, env.data
+        nominal = data.body("red_block").xpos.copy()
+        observed = {"frame":"left_motor1_datum", "position_semantics":"object_center",
+                    "center_xyz_m":[.12, -.05, -.0054], "size_m":[.04]*3,
+                    "quaternion_wxyz":[1.,0.,0.,0.]}
+        block = {"scene_object":observed, "target_arm_xyz_candidate_m":[.12,-.05,.0546]}
+        result = bind_observed_block(model, data, block, [.0388353,0.,.0254])
+        expected = data.body("left_base").xpos + data.body("left_base").xmat.reshape(3,3) @ np.array([.1588353,-.05,.02])
+        np.testing.assert_allclose(data.body("red_block").xpos, expected)
+        self.assertGreater(np.linalg.norm(expected - nominal), .01)
+        apply_control_as_pose(model, data, np.zeros(12))
+        np.testing.assert_allclose(data.body("red_block").xpos, expected)
+        self.assertFalse(result["uncertainty_covered_by_path_envelope"])
+        for field, value in (("position_semantics","surface"), ("frame","camera"),
+                             ("size_m",[.025]*3), ("quaternion_wxyz",[2.,0.,0.,0.]),
+                             ("center_xyz_m",[0.,0.,float("nan")])):
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                bind_observed_block(model, data, {"scene_object":{**observed,field:value}}, [.0388353,0.,.0254])
+
     def test_native_feedback_position_match_does_not_discard_axis(self):
         from integration_scenes import task_env, portable_model_sha256
         from mobile_dual_so101 import apply_control_as_pose

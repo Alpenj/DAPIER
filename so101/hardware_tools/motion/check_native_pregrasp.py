@@ -67,6 +67,7 @@ def main(binary, directory):
                         "calibration":fingerprint(cal)}
             candidate = {"schema_version":"dapier.offline-ik-candidate.v1",
                 "offline_candidate_accepted":True,"fixture":"MOCK_synthetic_not_physical_IK",
+                "scene_object":{"bound_to_path_reference":True,"fixture":"MOCK_only"},
                 "seed_posture":{"seed_q_rad":[0.,0.,0.,0.,0.,1.]*2,"left":measured,"right":measured},
                 "solved_action_rad":goal+[0.,0.,0.,0.,0.,1.],"goal_intent":intent.as_dict(),
                 "position_error_m":0.,"tool_axis_error_rad_by_side":{"left":0.},

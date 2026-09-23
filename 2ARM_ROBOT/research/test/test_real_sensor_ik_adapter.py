@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from dapier_research.control_intent import ControlIntent, load_contract
 from dapier_research.real_sensor_ik_adapter import (
+    bounded_pregrasp_plan,
     create_joint_position_intents,
     plan_pregrasp_staging_waypoints,
     transform_optical_point_to_arm,
@@ -18,6 +19,10 @@ from dapier_research.vision_target import VisionTargetError, VisionTargetEstimat
 
 
 class RealSensorIkAdapterTest(unittest.TestCase):
+    def test_nominal_scene_candidate_cannot_reach_executor(self):
+        with self.assertRaisesRegex(ValueError, "observed object"):
+            bounded_pregrasp_plan({"offline_candidate_accepted": True}, Path("unused"), now_s=1000.)
+
     def test_transform_optical_point_to_arm(self):
         # Identity transform with translation (0.1, 0.2, 0.3)
         T_arm_camera = np.eye(4)
