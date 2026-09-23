@@ -177,6 +177,31 @@ def bind_observed_block(model, data, block, motor_datum_in_base_m):
             "uncertainty_covered_by_path_envelope": False}
 
 
+def observed_task_env(block, motor_datum_in_base_m):
+    """Compile the measured horizontal support in the existing desk scene."""
+    support = block["scene_support"]
+    if (not isinstance(support, dict) or support.get("frame") != "left_motor1_datum"
+            or support.get("normal_xyz") != [0., 0., 1.]
+            or not isinstance(support.get("revision"), str) or not support["revision"].strip()):
+        raise ValueError("support requires a revision and horizontal motor-datum plane")
+    top = float(support["top_z_m"])
+    if not math.isfinite(top):
+        raise ValueError("support height must be finite")
+    datum = finite_vector(motor_datum_in_base_m, 3, "motor datum in model base")
+    # Existing desk left_base has world Z=0 and a vertical +Z axis. Check that
+    # assumption explicitly; a tilted/new mount needs its measured transform.
+    world_z = top + float(datum[2])
+    env = task_env("desk", table_top_z_m=world_z)
+    base = env.data.body("left_base")
+    if (not math.isclose(float(base.xpos[2]), 0., abs_tol=1e-9)
+            or not np.allclose(base.xmat.reshape(3, 3)[:, 2], [0., 0., 1.], rtol=0, atol=1e-9)):
+        raise ValueError("observed support needs the changed base transform")
+    return env, {"bound_to_path_reference": True, "source": support,
+                 "top_world_z_m": world_z, "motor_datum_in_model_base_m": datum.tolist(),
+                 "near_support_policy": "general_clearance_no_sim_exception",
+                 "extent_source": "existing desk profile; unchanged nominal XY extent"}
+
+
 def check_native_feedback_endpoint(candidate, native_result):
     """Evaluate returned measured joints with the same model/TCP/down axis, no IK.
 
@@ -189,7 +214,17 @@ def check_native_feedback_endpoint(candidate, native_result):
     if fingerprint(model_path)["sha256"] != candidate["model"]["sha256"]:
         raise ValueError("endpoint model differs from planned model")
     os.environ["DAPIER_SO101_MJCF"] = str(model_path.resolve(strict=True))
-    env = task_env("desk")
+    support = candidate.get("scene_support")
+    if support is not None:
+        source = candidate["block_source"]
+        if fingerprint(Path(source["path"]))["sha256"] != source["sha256"]:
+            raise ValueError("endpoint observation differs from planned observation")
+        block = json.loads(Path(source["path"]).read_text())
+        env, rebuilt = observed_task_env(block, support["motor_datum_in_model_base_m"])
+        if rebuilt != support:
+            raise ValueError("endpoint support differs from checked support")
+    else:
+        env = task_env("desk")
     model, data = env.model, env.data
     if portable_model_sha256(model) != candidate["model"]["compiled_sha256"]:
         raise ValueError("compiled endpoint model differs from planned model")
@@ -303,7 +338,12 @@ def evaluate(args):
         raise ValueError("pregrasp offset must be finite and within [0, 0.10] m")
     target[2] += args.pregrasp_offset_z
     os.environ["DAPIER_SO101_MJCF"] = str(args.model.resolve(strict=True))
-    env = task_env("desk")
+    if "scene_support" in block:
+        env, scene_support = observed_task_env(block, args.motor_datum_in_base_m)
+    elif args.sim_home_seed:
+        env, scene_support = task_env("desk"), None
+    else:
+        raise ValueError("observed support plane missing; nominal SIM table cannot certify real path")
     model, data = env.model, env.data
     profile_path = Path(__file__).with_name("tabletop_replay.json")
     profile = json.loads(profile_path.read_text())
@@ -351,7 +391,8 @@ def evaluate(args):
     margins = np.minimum(solved - model.jnt_range[joint_ids, 0],
                          model.jnt_range[joint_ids, 1] - solved)
     guard = check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
-                               task_phase="pregrasp", reference_data=data)
+                               task_phase="pregrasp", reference_data=data,
+                               allow_sim_near_support=scene_support is None)
     candidate_ok = bool((result is None or result.converged)
                         and error <= 5e-4 and axis_error <= math.radians(2.) and guard.safe
                         and math.isfinite(guard.minimum_clearance_m)
@@ -373,6 +414,7 @@ def evaluate(args):
         "seed_posture": {**seed_source, "seed_q_rad": seed.tolist(), "clipped": False},
         "seed_fk_world_m": seed_tcp,
         "scene_object": scene_object,
+        "scene_support": scene_support,
         "solved_action_rad": solved.tolist(),
         "structured_clearance": {"safe": guard.safe, "reason": guard.reason,
             "minimum_clearance_m": guard.minimum_clearance_m,

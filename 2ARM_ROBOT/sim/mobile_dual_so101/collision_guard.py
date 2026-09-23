@@ -1231,6 +1231,7 @@ def check_bimanual_path(
     obstacle_geom_names: Sequence[str] = (),
     task_phase: str | None = None,
     reference_data: mujoco.MjData | None = None,
+    allow_sim_near_support: bool = True,
 ) -> CollisionAssessment:
     """Reject a target if its interpolated path violates protected clearance."""
 
@@ -1242,6 +1243,8 @@ def check_bimanual_path(
         raise ValueError("required_clearance_m must be finite and positive")
     if not math.isfinite(max_joint_step_rad) or max_joint_step_rad <= 0:
         raise ValueError("max_joint_step_rad must be finite and positive")
+    if type(allow_sim_near_support) is not bool:
+        raise ValueError("SIM near-support policy must be boolean")
 
     current = np.asarray(current_action, dtype=float)
     target = np.asarray(target_action, dtype=float)
@@ -1267,7 +1270,9 @@ def check_bimanual_path(
         *_same_arm_geom_pairs(model, _collision_geoms_for_arm(model, "right")),
     )
     same_arm_pair_set = set(same_arm_pairs)
-    structural_pairs = set(structural_near_support_pairs(model))
+    # Observed support geometry cannot inherit the nominal SIM-only exception.
+    # With the exception disabled these pairs stay in general clearance_pairs.
+    structural_pairs = set(structural_near_support_pairs(model)) if allow_sim_near_support else set()
     initial = mujoco.MjData(model)
     if reference_data is not None:
         initial.qpos[:] = reference_data.qpos
@@ -1301,7 +1306,7 @@ def check_bimanual_path(
                 path_fraction=fraction,checked_samples=sample_index+1,
                 first_body=_body_name_for_geom(model,a),second_body=_body_name_for_geom(model,b),
                 first_geom_id=a,second_geom_id=b)
-        structural = structural_near_support_status(model, data)
+        structural = structural_near_support_status(model, data) if allow_sim_near_support else []
         failed = next((row for row in structural if not row["safe"]), None)
         if failed:
             first, second = failed["pair"]

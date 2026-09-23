@@ -17,7 +17,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state,
     target_in_model_base, check_native_feedback_endpoint, fingerprint, bind_observed_block,
-    load_wrist_correction, evaluate)
+    load_wrist_correction, evaluate, observed_task_env)
 
 
 class SingleShotInputsTest(unittest.TestCase):
@@ -128,6 +128,8 @@ class SingleShotInputsTest(unittest.TestCase):
             block = root / "MOCK-block.json"
             block.write_text(json.dumps({"arm_mapping":{"candidate_frame":"left_motor1_datum"},
                 "target_arm_xyz_candidate_m":target.tolist(), "rgb_timestamp_ns":time.time_ns(),
+                "scene_support":{"frame":"left_motor1_datum", "normal_xyz":[0.,0.,1.],
+                    "revision":"MOCK support", "top_z_m":0.},
                 "scene_object":{"frame":"left_motor1_datum", "position_semantics":"object_center",
                     "center_xyz_m":[.12,-.05,0.], "size_m":[.04]*3, "quaternion_wxyz":[1.,0.,0.,0.]}}))
             args = SimpleNamespace(sim_home_seed=False, wrist_observation_json=wrist,
@@ -146,6 +148,7 @@ class SingleShotInputsTest(unittest.TestCase):
             solver.assert_not_called()
             np.testing.assert_array_equal(path.call_args.args[1], seed)
             np.testing.assert_allclose(path.call_args.args[2], goal)
+            self.assertIs(path.call_args.kwargs["allow_sim_near_support"], False)
             self.assertEqual(result["candidate_mode"], "wrist_feedback")
             self.assertEqual(result["goal_intent"]["source"], "wrist_servo_adapter")
             self.assertLess(result["position_error_m"], 1e-12)
@@ -174,6 +177,54 @@ class SingleShotInputsTest(unittest.TestCase):
                              ("center_xyz_m",[0.,0.,float("nan")])):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 bind_observed_block(model, data, {"scene_object":{**observed,field:value}}, [.0388353,0.,.0254])
+
+    def test_observed_support_and_block_share_datum_through_endpoint_rebuild(self):
+        from integration_scenes import task_env, portable_model_sha256
+        from mobile_dual_so101 import apply_control_as_pose
+        datum = [.0388353, 0., .0254]
+        support = {"frame":"left_motor1_datum", "normal_xyz":[0.,0.,1.],
+                   "revision":"MOCK measured support", "top_z_m":-.04}
+        block = {"scene_support":support, "scene_object":{
+            "frame":"left_motor1_datum", "position_semantics":"object_center",
+            "center_xyz_m":[.24,-.14,-.02], "size_m":[.04]*3, "quaternion_wxyz":[1.,0.,0.,0.]}}
+        env, bound = observed_task_env(block, datum)
+        model, data = env.model, env.data
+        bind_observed_block(model, data, block, datum)
+        table_top = float(data.geom("table").xpos[2] + model.geom("table").size[2])
+        self.assertAlmostEqual(table_top, -.0146)
+        self.assertAlmostEqual(float(data.body("red_block").xpos[2]) - .02, table_top)
+        nominal = task_env("desk")
+        self.assertAlmostEqual(float(nominal.data.geom("table").xpos[2] + nominal.model.geom("table").size[2]), 0.)
+        import collision_guard as guard
+        expected_pairs = guard.structural_near_support_pairs(nominal.model)
+        with (mock.patch.object(guard, "structural_near_support_pairs", side_effect=AssertionError("SIM exception used")),
+              mock.patch.object(guard, "structural_near_support_status", side_effect=AssertionError("SIM exception used")),
+              mock.patch.object(guard, "minimum_protected_clearance", return_value=(.05,0,1)),
+              mock.patch.object(guard, "evaluate_clearance_set", wraps=guard.evaluate_clearance_set) as checked):
+            guard.check_bimanual_path(model, np.zeros(12), np.zeros(12), task_phase="pregrasp",
+                                      reference_data=data, allow_sim_near_support=False)
+        self.assertTrue(set(expected_pairs).issubset(set(checked.call_args.args[2])))
+        q = np.zeros(12)
+        apply_control_as_pose(model, data, q)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "observation.json"
+            path.write_text(json.dumps(block))
+            candidate = {"model":{**fingerprint(Path(os.environ["DAPIER_SO101_MJCF"])),
+                                   "compiled_sha256":portable_model_sha256(model)},
+                "scene_support":bound, "block_source":fingerprint(path),
+                "seed_posture":{"seed_q_rad":q.tolist()}, "mapping":{"physically_verified":False},
+                "kinematic_analysis":{"target_world_xyz_m":data.site("left_cube_grasp").xpos.tolist()}}
+            feedback = {"reached_joint_endpoint":True, "final_measured_rad":q[:6].tolist(), "hardware_execution":False}
+            result = check_native_feedback_endpoint(candidate, feedback)
+            self.assertLess(result["position_error_m"], 1e-12)
+            self.assertFalse(result["task_success"])
+            path.write_text("{}")
+            with self.assertRaisesRegex(ValueError, "observation differs"):
+                check_native_feedback_endpoint(candidate, feedback)
+        for key, value in (("top_z_m",float("nan")), ("frame","camera"),
+                           ("normal_xyz",[0.,1.,0.]), ("revision","")):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                observed_task_env({"scene_support":{**support,key:value}}, datum)
 
     def test_native_feedback_position_match_does_not_discard_axis(self):
         from integration_scenes import task_env, portable_model_sha256
