@@ -15,7 +15,10 @@ from dataclasses import dataclass
 import math
 from typing import Mapping, Sequence
 
+import numpy as np
+
 from dapier_research.control_intent import ControlIntent, arm_joint_position_intent, validate_intent
+from dapier_research.vision_target import PixelDetection, _validate_detection
 
 
 class WristServoError(RuntimeError):
@@ -46,6 +49,28 @@ class WristServoConfig:
     max_delta_deg: float = 0.50  # maximum correction step per cycle
     max_age_ns: int = 1_000_000_000  # 1.0 second freshness deadline
     min_confidence: float = 0.60
+
+
+def wrist_observation_from_detection(
+    detection: PixelDetection, *, image_shape: tuple[int, int],
+    timestamp_ns: int, measured_q: Mapping[str, float],
+) -> WristObservation:
+    """Convert the existing RGB mask contract to wrist features; no depth required.
+
+    The mask centroid is an image feature, not a physical grasp center. The
+    perception producer must bind this mask to the supplied image and timestamp.
+    """
+    if (len(image_shape) != 2 or any(type(v) is not int or v < 2 for v in image_shape)
+            or type(timestamp_ns) is not int or timestamp_ns < 0):
+        raise WristServoError("invalid wrist image dimensions or acquisition timestamp")
+    mask = _validate_detection(detection, image_shape=image_shape)
+    y, x = np.nonzero(mask)
+    if not len(x):
+        raise TargetLostError("Target mask is empty")
+    height, width = image_shape
+    uv = (2 * float(x.mean()) / (width - 1) - 1,
+          2 * float(y.mean()) / (height - 1) - 1)
+    return WristObservation(timestamp_ns, dict(measured_q), uv, detection.confidence)
 
 
 def compute_bounded_wrist_correction(

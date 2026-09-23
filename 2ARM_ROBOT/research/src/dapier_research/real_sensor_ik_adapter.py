@@ -170,6 +170,8 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     if candidate.get("candidate_mode") == "wrist_feedback":
         wrist = candidate["wrist_source"]
         sources.extend((wrist, wrist["frame_source"]))
+        if "mask_source" in wrist:
+            sources.append(wrist["mask_source"])
     timestamps = []
     for side in ("left", "right"):
         from datetime import datetime

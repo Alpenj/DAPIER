@@ -21,6 +21,45 @@ from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state
 
 
 class SingleShotInputsTest(unittest.TestCase):
+    def test_rgb_mask_becomes_bounded_wrist_command_without_depth(self):
+        from integration_scenes import task_env
+        env = task_env("desk")
+        seed = np.zeros(12)
+        seed[5] = .7
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frame, mask_path = root / "rgb.npy", root / "mask.npy"
+            image = np.full((11, 11, 3), 255, np.uint8)
+            image[2:5,7:10] = 0
+            np.save(frame, image)
+            mask = np.all(image == 0, axis=2)
+            np.save(mask_path, mask)
+            observation = {"schema_version":"dapier.wrist-observation.v1", "side":"left",
+                "clock":"host_monotonic_ns", "timestamp_ns":100,
+                "measured_state_sha256":"a"*64, "measured_q_model_rad":seed[:6].tolist(),
+                "frame_source":fingerprint(frame), "target_uv":[0.,0.],
+                "detection":{"label":"MOCK black patch", "detector":"MOCK pixel threshold",
+                    "confidence":.95, "uses_privileged_labels":False, "mask_source":fingerprint(mask_path)}}
+            path = root / "wrist.json"
+            path.write_text(json.dumps(observation))
+            q, intent, evidence = load_wrist_correction(path, env.model, seed, {"sha256":"a"*64}, now_ns=101)
+            np.testing.assert_allclose(q[3:5], np.deg2rad([.5,-.5]))
+            self.assertEqual(q[5], .7)
+            self.assertEqual(evidence["mask_source"], fingerprint(mask_path))
+            self.assertEqual(intent.source, "wrist_servo_adapter")
+            for bad_mask in (np.zeros_like(mask), np.ones((2,2), bool), np.full(mask.shape,2,np.uint8)):
+                np.save(mask_path, bad_mask)
+                observation["detection"]["mask_source"] = fingerprint(mask_path)
+                path.write_text(json.dumps(observation))
+                with self.subTest(mask=bad_mask.shape), self.assertRaises(ValueError):
+                    load_wrist_correction(path, env.model, seed, {"sha256":"a"*64}, now_ns=101)
+            np.save(mask_path, mask)
+            observation["detection"]["mask_source"] = fingerprint(mask_path)
+            observation["detection"]["uses_privileged_labels"] = True
+            path.write_text(json.dumps(observation))
+            with self.assertRaisesRegex(ValueError, "simulator segmentation"):
+                load_wrist_correction(path, env.model, seed, {"sha256":"a"*64}, now_ns=101)
+
     def test_saved_wrist_features_bind_to_measured_start_and_preserve_gripper(self):
         from integration_scenes import task_env
         env = task_env("desk")

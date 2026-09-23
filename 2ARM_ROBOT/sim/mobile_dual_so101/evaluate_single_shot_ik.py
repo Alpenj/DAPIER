@@ -219,6 +219,7 @@ def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
     from dapier_research.control_intent import arm_joint_position_intent
     from dapier_research.wrist_servo_adapter import (
         WristObservation, WristServoConfig, WristServoError, wrist_correction_intent,
+        wrist_observation_from_detection,
     )
     raw = path.read_bytes()
     observation = json.loads(raw)
@@ -243,10 +244,31 @@ def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
     lo = np.maximum(model.actuator_ctrlrange[:6, 0], model.jnt_range[joint_ids, 0])
     hi = np.minimum(model.actuator_ctrlrange[:6, 1], model.jnt_range[joint_ids, 1])
     # Exposure state is measured input, not the proposed command or copied feedback.
-    obs = WristObservation(observation["timestamp_ns"],
-        {name: math.degrees(measured[i]) for i, name in enumerate(JOINTS[:5])},
-        observation["feature_center_uv"], observation["confidence"])
+    measured_deg = {name: math.degrees(measured[i]) for i, name in enumerate(JOINTS[:5])}
+    mask_source = None
     try:
+        if "detection" in observation:
+            import cv2
+            from dapier_research.vision_target import PixelDetection
+            if "feature_center_uv" in observation or "confidence" in observation:
+                raise ValueError("supply either a detection mask or explicit wrist features")
+            detection = observation["detection"]
+            mask_source = detection["mask_source"]
+            if fingerprint(Path(mask_source["path"]))["sha256"] != mask_source["sha256"]:
+                raise ValueError("wrist detection mask changed")
+            frame_path = Path(frame["path"])
+            image = (np.load(frame_path, allow_pickle=False) if frame_path.suffix == ".npy"
+                     else cv2.imread(str(frame_path), cv2.IMREAD_COLOR))
+            if image is None or image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
+                raise ValueError("wrist source must be an HxWx3 uint8 image")
+            obs = wrist_observation_from_detection(PixelDetection(
+                detection["label"], np.load(mask_source["path"], allow_pickle=False),
+                detection["confidence"], detection["detector"], detection["uses_privileged_labels"]),
+                image_shape=image.shape[:2], timestamp_ns=observation["timestamp_ns"],
+                measured_q=measured_deg)
+        else:
+            obs = WristObservation(observation["timestamp_ns"], measured_deg,
+                observation["feature_center_uv"], observation["confidence"])
         intent = wrist_correction_intent(obs, nominal,
             WristServoConfig(target_uv=tuple(observation["target_uv"])), now_ns,
             sequence=2, joint_limits_rad=dict(zip(JOINTS, zip(lo, hi))))
@@ -255,7 +277,8 @@ def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
     action = seed.copy()
     action[:6] = intent.joint_position_rad
     return action, intent, {"path":str(path), "sha256":hashlib.sha256(raw).hexdigest(),
-                            "frame_source":frame}
+                            "frame_source":frame,
+                            **({"mask_source":mask_source} if mask_source else {})}
 
 
 def evaluate(args):

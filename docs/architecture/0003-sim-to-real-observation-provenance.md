@@ -83,8 +83,17 @@ UV는 [-1, 1] 정규화 좌표이며, 영상 취득과 관절 상태의 실제 �
 확인해야 한다. 해시 일치만으로 노출 시점 동기화나 카메라 장착 방향을 검증했다고
 판정하지 않는다. 현재 연결은 특징 관측 파일을 소비하며 카메라를 직접 열지 않는다.
 
+특징 좌표 대신 기존 `PixelDetection` 결과를 사용할 때는 `detection`에
+`label`, `detector`, `confidence`, `uses_privileged_labels`,
+`mask_source`(`path`, `sha256`)를 넣는다. 마스크는 원본 RGB와 같은 크기의
+boolean 또는 0/1 정수 NPY다. 원본 영상은 H×W×3 uint8 NPY 또는 이미지 파일이다.
+이 경로는 마스크 중심을 [-1, 1] 영상 좌표로 변환하며 depth를 요구하지 않는다.
+마스크 중심은 영상 특징이고 물리적인 파지 중심으로 자동 해석하지 않는다.
+빈 마스크·크기 불일치·시뮬레이터 정답 라벨은 거부한다. 마스크와 명시적
+`feature_center_uv`/`confidence` 입력을 동시에 제공할 수 없다.
+
 후보에는 `goal_intent`와 손목 관측 원본이 함께 남는다.
-`bounded_pregrasp_plan()`은 그 원본과 영상 해시를 다시 확인하고,
+`bounded_pregrasp_plan()`은 그 원본과 영상·마스크 해시를 다시 확인하고,
 기존 `execute_bounded_pregrasp.py` 및 C++ `WRIST_ALIGN` 경로를 사용한다.
 실측과 다른 시작값, 오래된/유실된 특징, 바뀐 영상은 거부한다.
 위치 오차 0.5 mm, 수직축 2도, 기존 30 mm 경로 기준을 유지한다.
