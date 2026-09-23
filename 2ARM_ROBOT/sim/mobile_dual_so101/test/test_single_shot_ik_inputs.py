@@ -1,0 +1,147 @@
+"""Offline regressions for forged/stale seeds and model-limit clipping."""
+import copy
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest import mock
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state,
+    target_in_model_base, check_native_feedback_endpoint, fingerprint)
+
+
+class SingleShotInputsTest(unittest.TestCase):
+    def test_native_feedback_position_match_does_not_discard_axis(self):
+        from integration_scenes import task_env, portable_model_sha256
+        from mobile_dual_so101 import apply_control_as_pose
+        env = task_env("desk")
+        model, data = env.model, env.data
+        q = np.zeros(12)
+        apply_control_as_pose(model, data, q)
+        candidate = {"model":{**fingerprint(Path(os.environ["DAPIER_SO101_MJCF"])),
+                              "compiled_sha256":portable_model_sha256(model)},
+                     "seed_posture":{"seed_q_rad":q.tolist()},
+                     "kinematic_analysis":{"target_world_xyz_m":data.site("left_cube_grasp").xpos.tolist()},
+                     "mapping":{"physically_verified":True}}
+        result = check_native_feedback_endpoint(candidate,
+            {"reached_joint_endpoint":True,"final_measured_rad":q[:6].tolist(),"hardware_execution":False})
+        self.assertLess(result["position_error_m"], 1e-12)
+        self.assertGreater(result["axis_error_rad"], np.deg2rad(2))
+        self.assertFalse(result["kinematic_endpoint_within_tolerance"])
+        self.assertFalse(result["cartesian_endpoint_verified"])
+        self.assertFalse(result["task_success"])
+
+    def test_actual_readonly_writer_to_loader_without_hardware(self):
+        from test_dual_so101_smoke import SMOKE, FakeBus, write_profile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            profile = write_profile(root)
+            path = root / "snapshot.json"
+            with (mock.patch.dict(SMOKE["main"].__globals__, {
+                    "load_bus": lambda *_: FakeBus(),
+                    "controller_serial": lambda port: f"synthetic-controller-{Path(port).name}"}),
+                  mock.patch.object(SMOKE["os"], "isatty", return_value=True),
+                  mock.patch("builtins.print"),
+                  mock.patch("sys.argv", ["dual_so101_smoke", "--profile", str(profile),
+                      "--log", str(path), "--operator-present", "--confirm", SMOKE["READONLY_CONFIRMATION"]])):
+                self.assertEqual(SMOKE["main"](), 0)
+            record = json.loads(path.read_text())
+            now = datetime.fromisoformat(record["finished_at"]).timestamp() + 1
+            for side in ("left", "right"):
+                values, evidence = load_measured_state(path, root / f"{side}.json", side, now_s=now)
+                self.assertEqual(values.tolist(), [-180] * 5 + [0])
+                self.assertFalse(evidence["connected_endpoint_identity_bound"])
+                self.assertEqual(evidence["reader_source_sha256"], record["source_sha256"])
+            mutations = [
+                lambda r: r.update(schema_version="dapier.dual-so101-smoke.v0.4"),
+                lambda r: r.update(error="read failed"),
+                lambda r: r["arms"]["left"].update(calibration_sha256="wrong"),
+                lambda r: r["arms"]["left"]["position_raw_tick"].update(elbow_flex=4096),
+                lambda r: r["arms"]["left"].update(position_read_duration_ns=-1),
+                lambda r: r["controller_identity_revalidated"].update(left=False),
+            ]
+            for mutate in mutations:
+                bad = copy.deepcopy(record)
+                mutate(bad)
+                path.write_text(json.dumps(bad))
+                with self.assertRaises(ValueError):
+                    load_measured_state(path, root / "left.json", "left", now_s=now)
+            path.write_text(json.dumps(record))
+            with self.assertRaisesRegex(ValueError, "stale"):
+                load_measured_state(path, root / "left.json", "left", now_s=now + 61)
+
+    def test_motor_datum_is_not_silently_used_as_model_base(self):
+        block = {"arm_mapping": {"candidate_frame": "left_motor1_datum"},
+                 "target_arm_xyz_candidate_m": [.224, -.145, 0.]}
+        np.testing.assert_allclose(target_in_model_base(block, [.0388353, 0., .0254]),
+                                   [.2628353, -.145, .0254])
+        for offset in (None, [0., 0., float("nan")]):
+            with self.assertRaises(ValueError):
+                target_in_model_base(block, offset)
+        with self.assertRaises(ValueError):
+            target_in_model_base({**block, "arm_mapping": {}}, [0., 0., 0.])
+
+    def test_complete_sample_and_negative_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.jsonl"
+            cal = Path(directory) / "calibration.json"
+            cal.write_text(json.dumps({j: {"range_min": 1000, "range_max": 3000} for j in JOINTS}))
+            record = {"timestamp": datetime.fromtimestamp(1000, timezone.utc).isoformat(),
+                "role": "follower", "device_id": "dapier_dual_follower_left",
+                "calibration_sha256": hashlib.sha256(cal.read_bytes()).hexdigest(),
+                "raw_ticks": dict.fromkeys(JOINTS, 2000),
+                "calibrated_position": {j: 50 if j == "gripper" else 0 for j in JOINTS},
+                "units": {j: "range_0_100" if j == "gripper" else "degrees (mid-relative)" for j in JOINTS}}
+            path.write_text(json.dumps(record))
+            values, evidence = load_measured_state(path, cal, "left", now_s=1001)
+            self.assertEqual(values.tolist(), [0, 0, 0, 0, 0, 50])
+            self.assertEqual(evidence["age_s"], 1)
+            for now in (999, 1061, float("nan")):
+                with self.subTest(now=now), self.assertRaises(ValueError):
+                    load_measured_state(path, cal, "left", now_s=now)
+            bad = []
+            for field, key, value in (("raw_ticks", "elbow_flex", 3161),
+                                      ("calibrated_position", "gripper", float("nan")),
+                                      ("calibrated_position", "elbow_flex", 1),
+                                      ("units", "wrist_roll", "rad")):
+                item = copy.deepcopy(record)
+                item[field][key] = value
+                bad.append(item)
+            for field, value in (("calibration_sha256", "wrong"), ("role", "leader"),
+                                 ("device_id", "dapier_dual_follower_right")):
+                item = copy.deepcopy(record)
+                item[field] = value
+                bad.append(item)
+            for item in bad:
+                path.write_text(json.dumps(item))
+                with self.subTest(record=item), self.assertRaises(ValueError):
+                    load_measured_state(path, cal, "left", now_s=1001)
+
+    def test_pgripper_range_and_no_seed_clipping(self):
+        ranges = np.tile([-1.69, 1.69], (12, 1))
+        ranges[[5, 11]] = [0, 2.2028]
+        model = SimpleNamespace(nu=12, actuator_ctrlrange=ranges,
+            actuator_trnid=np.column_stack((np.arange(12), np.zeros(12))), jnt_range=ranges,
+            actuator=lambda i: SimpleNamespace(name=f"joint_{i}"))
+        profile = {"arm_signs": [1] * 10, "arm_zero_offsets_deg": [0] * 10}
+        left = np.array([0, 0, 0, 0, 0, 100.])
+        right = np.zeros(6)
+        seed = candidate_seed(model, left, right, profile)
+        self.assertEqual(seed[5], 2.2028)
+        self.assertEqual(seed[11], 0)
+        left[2] = 98.7252747
+        with self.assertRaisesRegex(ValueError, "not clipped"):
+            candidate_seed(model, left, right, profile)
+        self.assertEqual(left[2], 98.7252747)
+
+
+if __name__ == "__main__":
+    unittest.main()
