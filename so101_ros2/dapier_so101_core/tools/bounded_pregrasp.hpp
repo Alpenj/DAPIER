@@ -77,6 +77,40 @@ inline bool within_path_envelope(const std::vector<double>& q,
   return true;
 }
 
+inline std::vector<double> rate_limited_path_point(const JointModel& model,
+    const std::vector<double>& measured, const std::vector<double>& start,
+    const std::vector<double>& goal, double progress, double horizon_s) {
+  if (!model.within_limits(measured) || !model.within_limits(start) || !model.within_limits(goal) ||
+      !std::isfinite(progress) || progress < 0 || progress > 1 ||
+      !std::isfinite(horizon_s) || horizon_s <= 0)
+    throw std::invalid_argument("invalid synchronized path command");
+  double lower = 0., upper = 1.;
+  for (std::size_t i = 0; i < start.size(); ++i) {
+    const auto& joint = model.joints()[i];
+    const double step = joint.max_velocity * horizon_s;
+    const double lo = std::max(joint.lower_limit, measured[i]-step);
+    const double hi = std::min(joint.upper_limit, measured[i]+step);
+    const double delta = goal[i]-start[i];
+    if (delta == 0.) {
+      if (start[i] < lo || start[i] > hi)
+        throw std::runtime_error("fixed path joint outside bounded command interval");
+      continue;
+    }
+    const double a = (lo-start[i])/delta, b = (hi-start[i])/delta;
+    lower = std::max(lower, std::min(a,b));
+    upper = std::min(upper, std::max(a,b));
+  }
+  if (lower > upper)
+    throw std::runtime_error("no common path progress satisfies joint velocity limits");
+  // Independent clipping rotates a checked joint-space line. Intersect each
+  // joint's allowed progress interval before the existing safety limiter instead.
+  const double bounded = std::clamp(progress, lower, upper);
+  std::vector<double> command(start.size());
+  for (std::size_t i = 0; i < start.size(); ++i)
+    command[i] = start[i] + bounded*(goal[i]-start[i]);
+  return command;
+}
+
 inline PregraspResult execute_pregrasp(
     MotorTransport& transport, const JointModel& model, SafetyControllerConfig config,
     const std::vector<double>& expected_start, const std::vector<double>& goal,
@@ -137,11 +171,14 @@ inline PregraspResult execute_pregrasp(
       }
       const double elapsed_s = (current_ns - started_ns) * 1e-9;
       const double u = std::clamp(elapsed_s / duration_s, 0., 1.);
-      const double blend = u*u*u*(10. + u*(-15. + 6.*u));
+      // The analytic blend is in [0,1]; rounding near u=1 can exceed it by ulps.
+      const double blend = std::clamp(u*u*u*(10. + u*(-15. + 6.*u)), 0., 1.);
       std::vector<double> requested(goal.size());
       for (std::size_t i = 0; i < goal.size(); ++i)
         requested[i] = initial[i] + blend*(goal[i] - initial[i]);
-      const auto limited = model.limit(positions, requested, config.command_horizon_s);
+      const auto synchronized = rate_limited_path_point(model, positions, initial, goal,
+                                                        blend, config.command_horizon_s);
+      const auto limited = model.limit(positions, synchronized, config.command_horizon_s);
       if (!within_path_envelope(limited.command, expected_start, goal, path_tolerance_rad))
         throw std::runtime_error("limited command left checked path envelope");
       dapier_so101_core::ResearchControlIntent intent;

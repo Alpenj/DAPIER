@@ -5,16 +5,18 @@ using namespace dapier_so101_executor;
 struct LaggedTransport : MotorTransport {
   std::int64_t& clock;
   std::vector<double> q{0.}, target{0.};
+  std::vector<std::string> names{"joint"};
   bool enabled{false}, stalled{false}, stale{false}, fail_arming{false}, read_cancel{false};
   bool cancel{false};
   unsigned writes{};
   explicit LaggedTransport(std::int64_t& value) : clock(value) {}
   MeasuredRobotState read() override {
     if (read_cancel) cancel = true;
-    if (enabled && !stalled) q[0] += .25 * (target[0] - q[0]);
+    if (enabled && !stalled)
+      for (std::size_t i=0; i<q.size(); ++i) q[i] += .25 * (target[i] - q[i]);
     MeasuredRobotState state;
     state.received_monotonic_ns = stale ? 0 : clock;
-    state.joint_names = {"joint"}; state.joint_position_rad = q;
+    state.joint_names = names; state.joint_position_rad = q;
     state.base_settled = state.collision_clear = true;
     return state;
   }
@@ -25,11 +27,53 @@ struct LaggedTransport : MotorTransport {
   SentPositions send(const std::vector<double>& value) override {
     target = value; ++writes;
     // No assignment to q: subsequent reads advance an independent lagged plant.
-    return {value, {static_cast<int>(std::lround(value[0] * 10000))}};
+    std::vector<int> raw;
+    for (double v:value) raw.push_back(static_cast<int>(std::lround(v*10000)));
+    return {value, raw};
   }
 };
 
 int main() {
+  // Different joint travel must share a progress fraction after velocity limits.
+  // Per-axis clipping of [.2,.4] from [.1,.2] gives [.115,.215], off the line.
+  const JointModel pair({{"a",1,-3.,3.,.3},{"b",2,-3.,3.,.3}});
+  const auto synchronized = rate_limited_path_point(pair,{.1,.2},{0.,0.},{1.,2.},.2,.05);
+  if (!within_path_envelope(synchronized,{0.,0.},{1.,2.},1e-12) ||
+      std::abs(synchronized[0]-.1075)>1e-12 || std::abs(synchronized[1]-.215)>1e-12)
+    return 7;
+  const auto backwards = rate_limited_path_point(pair,{0.,.5},{.3,1.},{-.3,0.},.9,.05);
+  if (!within_path_envelope(backwards,{.3,1.},{-.3,0.},1e-12) ||
+      std::abs(backwards[0])>.015 || std::abs(backwards[1]-.5)>.015000000001)
+    return 8;
+  bool no_progress_rejected=false;
+  try { rate_limited_path_point(pair,{.1,.5},{0.,0.},{1.,2.},.2,.05); }
+  catch (const std::runtime_error&) { no_progress_rejected=true; }
+  if (!no_progress_rejected) return 9;
+  // Actual executor regression: unequal travel + independent measured lag.
+  // Jump near u=1 also exercises quintic roundoff (unclamped blend exceeds1).
+  std::int64_t pair_time=1000000000;
+  LaggedTransport pair_transport(pair_time);
+  pair_transport.names=pair.names(); pair_transport.q=pair_transport.target={0.,0.};
+  SafetyControllerConfig pair_config;
+  pair_config.joints={{"a",-3.,3.,.3},{"b",-3.,3.,.3}};
+  bool limited_pair=false, lagged_pair=false;
+  const auto pair_result=execute_pregrasp(pair_transport,pair,pair_config,{0.,0.},{.1,.2},12.,
+    [&] { return pair_time; }, [&] {
+      pair_time += pair_time==1000000000 ? 2499997500LL : 50000000LL;
+    }, [] { return false; }, [&](const StepTrace& trace) {
+      if (trace.sent.position_rad.empty()) return;
+      if (!within_path_envelope(trace.sent.position_rad,{0.,0.},{.1,.2},1e-12))
+        throw std::runtime_error("sent pair command left checked line");
+      for (std::size_t i=0; i<2; ++i) {
+        if (std::abs(trace.sent.position_rad[i]-trace.measured_rad[i])>.015000000001)
+          throw std::runtime_error("pair command exceeds velocity interval");
+        limited_pair |= std::abs(trace.requested_rad[i]-trace.limited_rad[i])>1e-4;
+        lagged_pair |= std::abs(trace.sent.position_rad[i]-trace.measured_rad[i])>1e-4;
+      }
+    });
+  if (!pair_result.reached || pair_result.task_success || !limited_pair || !lagged_pair) {
+    std::cerr<<pair_result.reason<<'\n'; return 10;
+  }
   for (bool inverted : {false, true}) {
     dapier_so101_core::CalibrationEntry cal{"joint",1,0,0,4095,-std::acos(-1.),std::acos(-1.),inverted};
     const double current = cal.raw_to_position(2048);
