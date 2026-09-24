@@ -12,7 +12,10 @@ Features:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 import math
+from pathlib import Path
 from typing import Mapping, Sequence
 
 import numpy as np
@@ -31,6 +34,52 @@ class StaleObservationError(WristServoError):
 
 class TargetLostError(WristServoError):
     pass
+
+
+def bind_native_wrist_observation(document, measured_source, measured_model_rad, *, now_ns):
+    """Join saved native frame and already validated readback, without device I/O.
+
+    A bounded timestamp gap is association evidence, not an assertion that joints
+    were sampled at exposure. Keep both intervals for the downstream motion review.
+    """
+    def read_source(source):
+        raw = Path(source["path"]).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != source["sha256"]:
+            raise WristServoError("wrist acquisition/readback source changed")
+        return json.loads(raw)
+
+    capture = read_source(document["capture_source"])
+    readback = read_source(measured_source)
+    measured = readback["arms"]["left"]
+    if (capture.get("schema_version") != "dapier.wrist-frame.v1"
+            or capture.get("side") != "left" or capture.get("clock") != "host_monotonic_ns"
+            or capture.get("frame_acquired") is not True
+            or capture.get("normal_stream_close") is not True):
+        raise WristServoError("completed native left wrist acquisition required")
+    if (not isinstance(capture.get("host_boot_id"), str) or not capture["host_boot_id"]
+            or capture["host_boot_id"] != readback.get("host_boot_id")):
+        raise WristServoError("wrist/readback host boot differs")
+    stamp = capture.get("timestamp_ns")
+    start, finish = (measured.get(f"position_{part}_monotonic_ns") for part in ("started", "finished"))
+    if (any(type(v) is not int for v in (stamp, start, finish, now_ns))
+            or not 0 < start <= finish <= now_ns or finish-start > 100_000_000
+            or not 0 <= now_ns-stamp <= 1_000_000_000
+            or max(start-stamp, stamp-finish, 0) > 100_000_000):
+        raise StaleObservationError("wrist frame/readback timing missing or outside 100ms association")
+    frame = Path(capture["frame_path"])
+    frame_sha = hashlib.sha256(frame.read_bytes()).hexdigest()
+    if frame_sha != capture.get("frame_sha256"):
+        raise WristServoError("native wrist frame changed after acquisition")
+    association = {"frame_timestamp_ns":stamp, "read_start_ns":start, "read_finish_ns":finish,
+                   "interval_gap_ns":max(start-stamp, stamp-finish, 0),
+                   "exact_exposure_state_verified":False}
+    return {"schema_version":"dapier.wrist-observation.v1", "side":"left",
+            "clock":"host_monotonic_ns", "timestamp_ns":stamp,
+            "measured_state_sha256":measured_source["sha256"],
+            "measured_q_model_rad":list(measured_model_rad),
+            "frame_source":{"path":str(frame), "sha256":frame_sha},
+            "detection":document["detection"], "target_uv":document["target_uv"],
+            "capture_source":document["capture_source"], "time_association":association}
 
 
 @dataclass(frozen=True)

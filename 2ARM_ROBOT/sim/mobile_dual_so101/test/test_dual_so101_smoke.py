@@ -253,6 +253,9 @@ class DualSO101SmokeTest(unittest.TestCase):
                 self.assertEqual(arm["device_id"], f"dapier_dual_follower_{side}")
                 self.assertLessEqual(arm["position_started_at"], arm["position_finished_at"])
                 self.assertGreaterEqual(arm["position_read_duration_ns"], 0)
+                self.assertEqual(arm["position_finished_monotonic_ns"]-arm["position_started_monotonic_ns"],
+                                 arm["position_read_duration_ns"])
+                self.assertTrue(record["host_boot_id"])
 
             with self.assertRaisesRegex(ValueError, "already exists"):
                 SMOKE["_open_new_log"](log)

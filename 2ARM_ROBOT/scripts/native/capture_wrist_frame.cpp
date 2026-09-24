@@ -8,16 +8,27 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <nlohmann/json.hpp>
+#include <openssl/sha.h>
 #include <chrono>
 #include <cerrno>
 #include <cstring>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 #include <vector>
 
 using json = nlohmann::json;
 namespace {
+std::string sha256(const void* data, std::size_t size) {
+  unsigned char digest[SHA256_DIGEST_LENGTH];
+  SHA256(static_cast<const unsigned char*>(data),size,digest);
+  std::ostringstream out;
+  for (unsigned char byte:digest) out<<std::hex<<std::setw(2)<<std::setfill('0')<<static_cast<unsigned>(byte);
+  return out.str();
+}
 std::int64_t now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -62,6 +73,8 @@ struct Camera {
   }
 };
 void self_test() {
+  if (sha256("abc",3)!="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    throw std::runtime_error("frame digest failed");
   v4l2_buffer b{}; b.flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
   b.timestamp.tv_sec=1; b.timestamp.tv_usec=123;
   if (frame_timestamp(b,1000200000)!=1000123000) throw std::runtime_error("timestamp conversion failed");
@@ -97,6 +110,10 @@ int main(int argc,char** argv) {
     const std::string device=argv[2], bus_info=argv[3]; output=argv[4];
     if (device!="/dev/dapier/left_wrist_rgb" || bus_info.empty() || std::string(argv[5])!="--operator-present")
       throw std::runtime_error("explicit left wrist role, bus identity and attendance required");
+    std::ifstream boot_file("/proc/sys/kernel/random/boot_id");
+    std::string boot_id;
+    if (!(boot_file>>boot_id) || boot_id.size()!=36) throw std::runtime_error("host boot identity unavailable");
+    result["host_boot_id"]=boot_id;
     // Reserve the run before opening a device. Failures also retain this evidence.
     save(output+".reserved", "wrist acquisition\n",18);
     if (access((output+".png").c_str(),F_OK)==0 || access((output+".json").c_str(),F_OK)==0)
@@ -151,7 +168,8 @@ int main(int argc,char** argv) {
               {"timestamp_source_flags",b.flags&V4L2_BUF_FLAG_TSTAMP_SRC_MASK},
               {"timestamp_semantics","V4L2 frame timestamp; source flags preserve SOE/EOF distinction"},
               {"sequence",b.sequence},{"frames_dequeued",frame},{"width",320},{"height",240},
-              {"encoding","bgr8 decoded from YUYV"},{"frame_path",output+".png"}});
+              {"encoding","bgr8 decoded from YUYV"},{"frame_path",output+".png"},
+              {"frame_sha256",sha256(png.data(),png.size())}});
         }
         camera.call(VIDIOC_QBUF,&b);
       }

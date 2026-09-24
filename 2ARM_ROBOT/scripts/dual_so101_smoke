@@ -338,6 +338,7 @@ def main() -> int:
     record: dict[str, object] = {
         "schema_version": "dapier.dual-so101-smoke.v0.5",
         "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "host_boot_id": Path("/proc/sys/kernel/random/boot_id").read_text().strip(),
         "started_at": datetime.now().astimezone().isoformat(),
         "motion_requested_deg": 0.0,
         "motion_enabled": False,
@@ -366,12 +367,15 @@ def main() -> int:
             captured_at = datetime.now().astimezone().isoformat()
             started_ns = time.monotonic_ns()
             positions = bus.sync_read("Present_Position", normalize=False, num_retry=2)
+            finished_ns = time.monotonic_ns()
             record["arms"][side] = {
                 "role": "follower", "device_id": f"dapier_dual_follower_{side}",
                 "calibration_sha256": profile[side]["calibration_sha256"],
                 "position_started_at": captured_at,
                 "position_finished_at": datetime.now().astimezone().isoformat(),
-                "position_read_duration_ns": time.monotonic_ns() - started_ns,
+                "position_read_duration_ns": finished_ns - started_ns,
+                "position_started_monotonic_ns": started_ns,
+                "position_finished_monotonic_ns": finished_ns,
                 "position_raw_tick": positions,
             }
         for side, bus in buses.items():

@@ -17,10 +17,30 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state,
     target_in_model_base, check_native_feedback_endpoint, fingerprint, bind_observed_block,
-    load_wrist_correction, evaluate, observed_task_env)
+    load_wrist_correction, evaluate, observed_task_env, load_staging_reference)
 
 
 class SingleShotInputsTest(unittest.TestCase):
+    def test_staging_rebuilds_from_current_center_not_stored_absolute_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "MOCK-stage.json"
+            reference = {"schema_version":"dapier.sensor-staging-reference.v1", "frame":"left_base",
+                         "phase":"ALIGN_HIGH", "center_to_stage_offset_m":[0,.07,.06],
+                         "ik_seed_rad":[0.]*12, "old_absolute_target_m":[99,99,99]}
+            path.write_text(json.dumps(reference))
+            block = {"scene_object":{"frame":"left_motor1_datum", "center_xyz_m":[.1,-.12,0.]}}
+            target, seed, evidence = load_staging_reference(path, block, [.03,0,.025])
+            np.testing.assert_allclose(target,[.13,-.05,.085])
+            self.assertEqual(evidence, fingerprint(path))
+            block["scene_object"]["center_xyz_m"][0] += .01
+            moved, _, _ = load_staging_reference(path, block, [.03,0,.025])
+            np.testing.assert_allclose(moved-target,[.01,0,0])
+            self.assertEqual(seed.shape,(12,))
+            reference["frame"] = "sim_object"
+            path.write_text(json.dumps(reference))
+            with self.assertRaises(ValueError):
+                load_staging_reference(path, block, [.03,0,.025])
+
     def test_rgb_mask_becomes_bounded_wrist_command_without_depth(self):
         from integration_scenes import task_env
         env = task_env("desk")
@@ -47,6 +67,30 @@ class SingleShotInputsTest(unittest.TestCase):
             self.assertEqual(q[5], .7)
             self.assertEqual(evidence["mask_source"], fingerprint(mask_path))
             self.assertEqual(intent.source, "wrist_servo_adapter")
+            # Native producer metadata reaches the same measured-seed/intent path.
+            capture_path, read_path = root / "MOCK-capture.json", root / "MOCK-read.json"
+            capture = {"schema_version":"dapier.wrist-frame.v1", "side":"left",
+                "clock":"host_monotonic_ns", "frame_acquired":True, "normal_stream_close":True,
+                "timestamp_ns":100, "host_boot_id":"MOCK boot", "frame_path":str(frame),
+                "frame_sha256":fingerprint(frame)["sha256"]}
+            capture_path.write_text(json.dumps(capture))
+            read_path.write_text(json.dumps({"host_boot_id":"MOCK boot", "arms":{"left":{
+                "position_started_monotonic_ns":95, "position_finished_monotonic_ns":99}}}))
+            native = {"schema_version":"dapier.wrist-observation.v2", "capture_source":fingerprint(capture_path),
+                      "detection":observation["detection"], "target_uv":[0.,0.]}
+            path.write_text(json.dumps(native))
+            native_q, _, native_evidence = load_wrist_correction(path, env.model, seed, fingerprint(read_path), now_ns=101)
+            np.testing.assert_allclose(native_q, q)
+            self.assertEqual(native_evidence["time_association"]["interval_gap_ns"], 1)
+            self.assertFalse(native_evidence["time_association"]["exact_exposure_state_verified"])
+            for field, bad_value in (("host_boot_id","another boot"), ("timestamp_ns",200_000_000),
+                                     ("frame_sha256","0"*64), ("normal_stream_close",False)):
+                bad_capture = {**capture,field:bad_value}
+                capture_path.write_text(json.dumps(bad_capture))
+                native["capture_source"] = fingerprint(capture_path)
+                path.write_text(json.dumps(native))
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    load_wrist_correction(path, env.model, seed, fingerprint(read_path), now_ns=200_000_001)
             for bad_mask in (np.zeros_like(mask), np.ones((2,2), bool), np.full(mask.shape,2,np.uint8)):
                 np.save(mask_path, bad_mask)
                 observation["detection"]["mask_source"] = fingerprint(mask_path)
@@ -138,8 +182,13 @@ class SingleShotInputsTest(unittest.TestCase):
                 left_calibration=root / "left-cal", right_calibration=root / "right-cal",
                 block_json=block, model=Path(os.environ["DAPIER_SO101_MJCF"]),
                 motor_datum_in_base_m=[0.,0.,0.], pregrasp_offset_z=0.)
+            mapping_path = root / "MOCK-joint-mapping.json"
+            mapping_document = {"arm_signs":[1]*10, "arm_zero_offsets_deg":[0,0,-6,0,0,0,0,-7,0,0],
+                                "joint_mapping_physically_verified":False}
+            mapping_path.write_text(json.dumps(mapping_document))
+            args.mapping_profile = mapping_path
             with (mock.patch("evaluate_single_shot_ik.load_measured_state", return_value=(np.zeros(6),source)),
-                  mock.patch("evaluate_single_shot_ik.candidate_seed", return_value=seed),
+                  mock.patch("evaluate_single_shot_ik.candidate_seed", return_value=seed) as mapped_seed,
                   mock.patch("evaluate_single_shot_ik.task_env", return_value=env),
                   mock.patch("evaluate_single_shot_ik.time.monotonic_ns", return_value=101),
                   mock.patch("evaluate_single_shot_ik.solve_bimanual_position_ik") as solver,
@@ -148,6 +197,9 @@ class SingleShotInputsTest(unittest.TestCase):
                           0., 1, "right_shoulder", "right_lower_arm", 44, 56)) as path):
                 result = evaluate(args)
             solver.assert_not_called()
+            self.assertEqual(mapped_seed.call_args.args[3], mapping_document)
+            self.assertEqual(result["mapping"]["profile"], fingerprint(mapping_path))
+            self.assertFalse(result["mapping"]["physically_verified"])
             np.testing.assert_array_equal(path.call_args.args[1], seed)
             np.testing.assert_allclose(path.call_args.args[2], goal)
             self.assertIs(path.call_args.kwargs["allow_sim_near_support"], False)

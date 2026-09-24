@@ -146,6 +146,22 @@ def target_in_model_base(block, motor_datum_in_base_m):
     return target + offset
 
 
+def load_staging_reference(path, block, motor_datum_in_base_m):
+    """Reuse a relative waypoint and IK seed, never its old absolute target/q path."""
+    reference = json.loads(path.read_text())
+    if (reference.get("schema_version") != "dapier.sensor-staging-reference.v1"
+            or reference.get("frame") != "left_base" or reference.get("phase") != "ALIGN_HIGH"
+            or block["scene_object"].get("frame") != "left_motor1_datum"):
+        raise ValueError("explicit left-base ALIGN_HIGH reference and observed object frame required")
+    offset = finite_vector(reference["center_to_stage_offset_m"], 3, "relative staging offset")
+    if np.any(np.abs(offset) > .15) or offset[2] < 0:
+        raise ValueError("staging offset outside bounded task region")
+    center = finite_vector(block["scene_object"]["center_xyz_m"], 3, "observed object center")
+    datum = finite_vector(motor_datum_in_base_m, 3, "motor datum")
+    seed = finite_vector(reference["ik_seed_rad"], 12, "staging IK seed")
+    return center + datum + offset, seed, fingerprint(path)
+
+
 def bind_observed_block(model, data, block, motor_datum_in_base_m):
     """Place the observed object in the collision scene, separately from its TCP goal."""
     observed = block["scene_object"]
@@ -258,9 +274,15 @@ def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
     from dapier_research.wrist_servo_adapter import (
         WristObservation, WristServoConfig, WristServoError, wrist_correction_intent,
         wrist_observation_from_detection,
+        bind_native_wrist_observation,
     )
     raw = path.read_bytes()
     observation = json.loads(raw)
+    if isinstance(observation, dict) and observation.get("schema_version") == "dapier.wrist-observation.v2":
+        try:
+            observation = bind_native_wrist_observation(observation, measured_source, seed[:6], now_ns=now_ns)
+        except WristServoError as exc:
+            raise ValueError(str(exc)) from exc
     if (not isinstance(observation, dict)
             or observation.get("schema_version") != "dapier.wrist-observation.v1"
             or observation.get("side") != "left"
@@ -316,6 +338,9 @@ def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
     action[:6] = intent.joint_position_rad
     return action, intent, {"path":str(path), "sha256":hashlib.sha256(raw).hexdigest(),
                             "frame_source":frame,
+                            **({"capture_source":observation["capture_source"],
+                                "time_association":observation["time_association"]}
+                               if "capture_source" in observation else {}),
                             **({"mask_source":mask_source} if mask_source else {})}
 
 
@@ -340,6 +365,12 @@ def evaluate(args):
     if not math.isfinite(args.pregrasp_offset_z) or not 0 <= args.pregrasp_offset_z <= .10:
         raise ValueError("pregrasp offset must be finite and within [0, 0.10] m")
     target[2] += args.pregrasp_offset_z
+    staging_path = getattr(args, "staging_reference", None)
+    staging_seed, staging_source = None, None
+    if staging_path is not None:
+        if args.sim_home_seed or wrist_path is not None:
+            raise ValueError("sensor staging requires measured start and a separate wrist phase")
+        target, staging_seed, staging_source = load_staging_reference(staging_path, block, args.motor_datum_in_base_m)
     os.environ["DAPIER_SO101_MJCF"] = str(args.model.resolve(strict=True))
     if "scene_support" in block:
         env, scene_support = observed_task_env(block, args.motor_datum_in_base_m)
@@ -348,7 +379,7 @@ def evaluate(args):
     else:
         raise ValueError("observed support plane missing; nominal SIM table cannot certify real path")
     model, data = env.model, env.data
-    profile_path = Path(__file__).with_name("tabletop_replay.json")
+    profile_path = getattr(args, "mapping_profile", None) or Path(__file__).with_name("tabletop_replay.json")
     profile = json.loads(profile_path.read_text())
     if args.sim_home_seed:
         seed = np.asarray(home_action(model, HUMANOID_HOME_ACTION))
@@ -377,7 +408,12 @@ def evaluate(args):
             wrist_path, model, seed, left_source, now_ns=time.monotonic_ns())
         result = None
     else:
-        result = solve_bimanual_position_ik(model, seed, {"left": world},
+        solver_seed = seed.copy() if staging_seed is None else staging_seed.copy()
+        # A successful historical q is initialization only. Both physical path
+        # start and passive right arm remain the new measured sample.
+        solver_seed[6:] = seed[6:]
+        validate_model_action(model, solver_seed, "IK initialization")
+        result = solve_bimanual_position_ik(model, solver_seed, {"left": world},
             site_names={"left": "left_cube_grasp"}, tool_axis_targets={"left": [0, 0, -1]},
             max_iterations=300, tolerance_m=5e-4)
         solved = np.asarray(result.action_rad).copy()
@@ -390,6 +426,8 @@ def evaluate(args):
     error = float(np.linalg.norm(actual - world))
     axis = preview.site("left_cube_grasp").xmat.reshape(3, 3)[:, 0]
     axis_error = math.acos(float(np.clip(axis @ np.array([0., 0., -1.]), -1., 1.)))
+    closing_error = math.acos(float(np.clip(preview.site("left_cube_grasp").xmat.reshape(3,3)[:,2]
+                                          @ rotation[:,0], -1., 1.)))
     joint_ids = model.actuator_trnid[:, 0].astype(int)
     margins = np.minimum(solved - model.jnt_range[joint_ids, 0],
                          model.jnt_range[joint_ids, 1] - solved)
@@ -399,12 +437,16 @@ def evaluate(args):
     candidate_ok = bool((result is None or result.converged)
                         and error <= 5e-4 and axis_error <= math.radians(2.) and guard.safe
                         and math.isfinite(guard.minimum_clearance_m)
-                        and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M)
+                        and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M
+                        and (staging_source is None or closing_error <= math.radians(15)))
     return {
         "candidate_mode": "wrist_feedback" if wrist_path is not None else "pregrasp_ik",
         **({"goal_intent":goal_intent.as_dict(), "wrist_source":wrist_source} if goal_intent else {}),
         "ik_converged": bool(result and result.converged), "offline_candidate_accepted": candidate_ok,
         "iterations": result.iterations if result else 0, "position_error_m": error,
+        **({"staging_reference":staging_source, "planning_phase":"ALIGN_HIGH",
+            "closing_error_rad":closing_error, "solver_seed_rad":solver_seed.tolist()}
+           if staging_source else {}),
         "tool_axis_error_rad_by_side": {"left":axis_error},
         "joint_margins_rad": {model.actuator(i).name: float(margins[i]) for i in range(model.nu)},
         "kinematic_analysis": {"target_arm_xyz_m": target.tolist(), "target_world_xyz_m": world.tolist(),
@@ -443,6 +485,10 @@ def main(argv=None):
     seeds.add_argument("--sim-home-seed", action="store_true",
                        help="SIM diagnostic only: synthetic home and historical candidate target")
     parser.add_argument("--right-measured-state-json", type=Path)
+    parser.add_argument("--mapping-profile", type=Path,
+                        help="Explicit joint sign/zero candidate; preserved with its SHA, never self-certifies physical mapping")
+    parser.add_argument("--staging-reference", type=Path,
+                        help="Relative ALIGN_HIGH waypoint and IK seed; target is rebuilt from current observation")
     parser.add_argument("--wrist-observation-json", type=Path,
                         help="Measured-state-bound wrist features; validate correction with FK/path, without IK")
     calibration = Path.home() / ".config/dapier/lerobot-calibration"
