@@ -49,3 +49,40 @@ plan의 시간은 이 옵션으로 바꿀 수 없다. 명시한 시간은 승인
 실제 wrist frame/관절 시각 연결, 접촉·들림·3.000초 HOLD·지지 종료 검증.
 외부 SDK 한 호출 내부의 재시도/OS drain은 즉시 취소를 보장하지 않는다. 호출 사이의 취소·시간
 검사와 별도 프로세스 종료 제한은 독립 하드웨어 watchdog 또는 graceful stop의 증명이 아니다.
+
+## 관측 기반 HOLD 진입점 — 장치 없는 검증
+
+기존 native 실행기에서 `phase=HOLD`, `initial_torque_enabled=true`, `start_rad=goal_rad`인
+정지 계획을 처리한다. 같은 C++ 명령 제한·transport·실측 feedback 경로를 사용한다.
+관절이 도착한 뒤 독립 물체 관측으로 연속 3.000초를 확인하며, 관절 도착이나 CLOSE 전송은
+물체 파지 근거로 사용하지 않는다. `observed_hold_verified=true`라도 지지 종료가 별도이므로
+전체 `task_success`는 false다. 자동 torque-off는 하지 않는다.
+
+계획의 `hold_observation`은 `path`, `run_id`, `object_id`, `calibration_revision`,
+`producer_sha256`, `boot_id`, `observer_physically_verified`를 고정한다. producer는 관측 JSON을
+임시 파일 작성 후 rename으로 갱신하고, 참조하는 원본 프레임은 보존해야 한다.
+관측 계약 `dapier.block-hold-observation.v1`은 위 식별자와 다음 필드를 요구한다.
+
+- `source_kind`: `mock` 또는 `hardware`; 실제 transport와 일치해야 한다.
+- `sequence`, `captured_monotonic_ns`: 같은 부팅의 증가하는 취득 번호·시각. 취득 후 나이는
+  250ms 이하이며 관측 간격도 250ms를 넘으면 중단한다. HOLD 이전 시간은 유지 시간에 포함하지 않는다.
+- `frame_path`, `frame_sha256`: 보존한 원본 파일과 SHA. 같은 bytes를 새 번호/시각으로 다시 제출하면
+  중단한다. 완전히 같은 영상의 새로운 취득인지 구분할 수 없는 경우도 통과 근거로 쓰지 않는다.
+- `bilateral_grasp_verified`, `external_support`: 실제 관측에서 양쪽 jaw 파지를 확인하고 외부 지지가
+  없음을 확인한 결과. 명령값이나 모터 위치만으로 true/false를 만들어서는 안 된다.
+- `bottom_clearance_lower_bound_m`: 원래 지지면에서 물체 바닥까지 들린 거리의 보수적 하한.
+  불확실성을 반영한 값이 0.030m 이상이어야 한다. camera Z나 물체 중심 높이로 대체하지 않는다.
+
+실제 관측 producer의 위 의미는 아직 실물 검증하지 않았다. 실물 모드는 기존 물리 매핑·센서·경로
+검사에 더해 검증된 observer와 **`VISIBLE_LEFT_OBSERVED_HOLD`** 승인을 요구한다.
+이 문자열은 실행안의 승인 범위를 정의할 뿐이며 이 문서가 장치 실행 승인은 아니다.
+CLOSE/GRASP_CONFIRM/LIFT에서 이 진입점으로 넘어오는 연결과 지지 종료는 아직 미완료다.
+
+```bash
+python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/observed-hold-evidence-new hold
+```
+
+위 검사는 명시적 MOCK 원본·관측을 생성하며 카메라를 열지 않는다. 실제 launcher→native 실행에서
+정상 HOLD, 외부 지지 발생, 관측 정지, 원본 재사용을 확인했다. C++ smoke는 마지막 관측 처리 중
+관절 feedback이 만료되는 경우와 기존 PREGRASP 경로·오류 중단도 검사한다. 신규 증거 파일을 사용하고
+이미 통과한 전체 IK/physics 회귀는 반복하지 않았다.

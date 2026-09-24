@@ -14,12 +14,12 @@ using namespace dapier_so101_executor;
 namespace {
 volatile std::sig_atomic_t interrupted = 0;
 void interrupt(int) { interrupted = 1; }
-std::string bytes(const std::string& path, bool private_file) {
+std::string bytes(const std::string& path, bool private_file, std::size_t maximum_bytes = 1048576) {
   const int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
   if (fd < 0) throw std::runtime_error("cannot open input file");
   struct stat st{};
   if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != getuid() ||
-      st.st_size < 1 || st.st_size > 1048576 || (private_file && (st.st_mode & 077))) {
+      st.st_size < 1 || static_cast<std::uint64_t>(st.st_size) > maximum_bytes || (private_file && (st.st_mode & 077))) {
     close(fd); throw std::runtime_error("input ownership, permissions or size invalid");
   }
   std::string result;
@@ -50,6 +50,34 @@ void write_line(int fd, const json& value) {
     if (n <= 0) throw std::runtime_error("trace write failed");
     offset += n;
   }
+}
+
+BlockHoldObservation read_hold_observation(const json& binding, bool hardware, int output_fd) {
+  const auto raw = bytes(binding.at("path"), false);
+  const auto value = json::parse(raw);
+  if (value.at("schema_version") != "dapier.block-hold-observation.v1" ||
+      value.at("source_kind") != (hardware ? "hardware" : "mock") ||
+      value.at("boot_id") != binding.at("boot_id"))
+    throw std::runtime_error("HOLD observation source/clock identity mismatch");
+  for (const char* key : {"run_id", "object_id", "calibration_revision", "producer_sha256"}) {
+    if (!binding.at(key).is_string() || binding.at(key).get<std::string>().empty() ||
+        value.at(key) != binding.at(key))
+      throw std::runtime_error("HOLD observation does not belong to the approved task/source");
+  }
+  const auto frame_raw = bytes(value.at("frame_path"), false, 16777216);
+  if (sha256(frame_raw) != value.at("frame_sha256").get<std::string>())
+    throw std::runtime_error("HOLD raw frame SHA mismatch");
+  for (const char* key : {"sequence", "captured_monotonic_ns"})
+    if (!value.at(key).is_number_integer()) throw std::runtime_error("HOLD integer sequence/time required");
+  for (const char* key : {"bilateral_grasp_verified", "external_support"})
+    if (!value.at(key).is_boolean()) throw std::runtime_error("HOLD boolean evidence required");
+  BlockHoldObservation observation{value.at("sequence"), value.at("captured_monotonic_ns"),
+      finite_number(value.at("bottom_clearance_lower_bound_m")),
+      value.at("bilateral_grasp_verified"), value.at("external_support"), value.at("frame_sha256")};
+  // Persist the consumed observation, not only a mutable producer filename.
+  write_line(output_fd, {{"event", "hold_observation"}, {"received_monotonic_ns", monotonic_ns()},
+      {"observation_sha256", sha256(raw)}, {"observation", value}});
+  return observation;
 }
 
 class LaggedMock final : public MotorTransport {
@@ -98,7 +126,8 @@ int main(int argc, char** argv) {
     }
     const bool hardware = args.at("--transport") == "hardware";
     if (!hardware && args.at("--transport") != "mock") throw std::runtime_error("transport must be mock or hardware");
-    if (hardware && (!present || args["--confirm"] != "VISIBLE_LEFT_SENSOR_PREGRASP" || !isatty(0) || !isatty(1)))
+    if (hardware && (!present || (args["--confirm"] != "VISIBLE_LEFT_SENSOR_PREGRASP" &&
+        args["--confirm"] != "VISIBLE_LEFT_OBSERVED_HOLD") || !isatty(0) || !isatty(1)))
       throw std::runtime_error("attended hardware confirmation required before any device access");
     output_fd = open(args.at("--output").c_str(), O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW, 0600);
     if (output_fd < 0) throw std::runtime_error("new exclusive output path required");
@@ -198,8 +227,33 @@ int main(int argc, char** argv) {
     if (duration <= 0 || duration > 60) throw std::runtime_error("invalid bounded duration");
     const std::string phase = plan.value("phase", "PREGRASP");
     const bool already_holding = plan.value("initial_torque_enabled", false);
-    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN") || already_holding != (phase == "WRIST_ALIGN"))
+    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN" && phase != "HOLD") ||
+        already_holding != (phase != "PREGRASP"))
       throw std::runtime_error("phase and expected initial torque state mismatch");
+    if (hardware && args["--confirm"] != (phase == "HOLD" ?
+        "VISIBLE_LEFT_OBSERVED_HOLD" : "VISIBLE_LEFT_SENSOR_PREGRASP"))
+      throw std::runtime_error("hardware confirmation does not authorize this phase");
+    ObservedBlockHold hold;
+    std::function<bool(std::int64_t)> observe_hold;
+    if (phase == "HOLD") {
+      if (start != goal || duration < 3.1)
+        throw std::runtime_error("HOLD requires a stationary plan with at least3.1s budget");
+      const auto binding = plan.at("hold_observation");
+      std::ifstream boot_stream("/proc/sys/kernel/random/boot_id");
+      std::string boot_id; std::getline(boot_stream, boot_id);
+      if (!boot_stream || boot_id.empty()) throw std::runtime_error("local boot identity unavailable");
+      if (binding.at("boot_id") != boot_id ||
+          (hardware && binding.at("observer_physically_verified") != true))
+        throw std::runtime_error("HOLD requires same-boot observations and a verified physical observer");
+      // Fail before opening a port if evidence is absent, stale or not lifted.
+      ObservedBlockHold preflight;
+      const auto initial_observation = read_hold_observation(binding, hardware, output_fd);
+      preflight.update(initial_observation, monotonic_ns());
+      observe_hold = [&, binding](std::int64_t) {
+        const auto observation = read_hold_observation(binding, hardware, output_fd);
+        return hold.update(observation, monotonic_ns());
+      };
+    }
     std::signal(SIGINT, interrupt); std::signal(SIGTERM, interrupt);
     std::unique_ptr<MotorTransport> transport;
     if (hardware) {
@@ -220,10 +274,16 @@ int main(int argc, char** argv) {
           {"requested_rad", trace.requested_rad}, {"limited_rad", trace.limited_rad},
           {"sent_rad", trace.sent.position_rad}, {"sent_raw_ticks", trace.sent.raw_ticks},
           {"measured_before_command_rad", trace.measured_rad}, {"reason", trace.reason}});
-      }, path_tolerance, phase);
+      }, path_tolerance, phase, observe_hold);
     report["event"] = "result"; report["phase"] = result.phase; report["reason"] = result.reason;
     report["reached_joint_endpoint"] = result.reached; report["final_measured_rad"] = result.final_measured_rad;
     report["cartesian_endpoint_verified"] = false;
+    report["observed_hold_verified"] = result.observed_hold_verified;
+    if (phase == "HOLD") {
+      report["hold_entered_monotonic_ns"] = hold.entered_ns;
+      report["observed_hold_span_s"] = hold.first_capture_ns && hold.last_capture_ns ?
+          (hold.last_capture_ns-hold.first_capture_ns)*1e-9 : 0.;
+    }
     report["ending"] = "retain_torque_and_last_bounded_goal; supported ending is a separate approved phase";
     if (auto* real = dynamic_cast<FeetechPregraspTransport*>(transport.get())) {
       report["motor_writes"] = {{"Goal_Position", real->goal_position_writes}, {"Goal_Velocity", real->goal_velocity_writes},

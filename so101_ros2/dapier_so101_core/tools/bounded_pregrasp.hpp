@@ -8,6 +8,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <set>
 #include <vector>
 
 namespace dapier_so101_executor {
@@ -59,6 +60,52 @@ struct PregraspResult {
   std::vector<double> final_measured_rad;
   // Reaching joints does not prove TCP, contact, lift, or task success.
   bool task_success{false};
+  bool observed_hold_verified{false};
+};
+
+struct BlockHoldObservation {
+  std::int64_t sequence{}, captured_ns{};
+  double bottom_clearance_lower_bound_m{};
+  bool bilateral_grasp_verified{false}, external_support{true};
+  std::string frame_sha256;
+};
+
+// Count a 3s span of distinct fresh observations AFTER entering HOLD. Commands
+// and joint convergence cannot establish object grasp, lift or continued support.
+struct ObservedBlockHold {
+  std::int64_t entered_ns{}, first_capture_ns{}, last_capture_ns{}, last_sequence{};
+  std::string last_frame_sha256;
+  std::set<std::string> consumed_frames;
+  bool update(const BlockHoldObservation& observation, std::int64_t now_ns) {
+    constexpr std::int64_t maximum_gap_ns = 250000000;
+    if (now_ns <= 0 || observation.sequence <= 0 || observation.captured_ns <= 0 ||
+        observation.captured_ns > now_ns || now_ns-observation.captured_ns > maximum_gap_ns ||
+        !std::isfinite(observation.bottom_clearance_lower_bound_m) ||
+        observation.bottom_clearance_lower_bound_m < .030 ||
+        !observation.bilateral_grasp_verified || observation.external_support ||
+        observation.frame_sha256.size() != 64 ||
+        observation.frame_sha256.find_first_not_of("0123456789abcdef") != std::string::npos)
+      throw std::runtime_error("HOLD requires fresh observed grasp and >=30mm unsupported lift");
+    if (!entered_ns) entered_ns = now_ns;
+    if (observation.captured_ns < entered_ns) return false;
+    if (last_sequence && (observation.sequence < last_sequence ||
+        observation.captured_ns < last_capture_ns ||
+        (observation.sequence == last_sequence && (observation.captured_ns != last_capture_ns ||
+         observation.frame_sha256 != last_frame_sha256)) ||
+        (observation.sequence > last_sequence && observation.captured_ns <= last_capture_ns)))
+      throw std::runtime_error("HOLD observation order changed or frame was retimestamped");
+    if (last_capture_ns && (now_ns-last_capture_ns > maximum_gap_ns ||
+        observation.captured_ns-last_capture_ns > maximum_gap_ns))
+      throw std::runtime_error("HOLD observation continuity lost");
+    if (observation.sequence == last_sequence) return false;
+    if (!consumed_frames.insert(observation.frame_sha256).second)
+      throw std::runtime_error("HOLD raw frame reused with a new identity");
+    if (!first_capture_ns) first_capture_ns = observation.captured_ns;
+    last_sequence = observation.sequence; last_capture_ns = observation.captured_ns;
+    last_frame_sha256 = observation.frame_sha256;
+    return observation.captured_ns-first_capture_ns >= 3000000000LL &&
+           now_ns-entered_ns >= 3000000000LL;
+  }
 };
 
 inline bool within_path_envelope(const std::vector<double>& q,
@@ -117,12 +164,16 @@ inline PregraspResult execute_pregrasp(
     double maximum_duration_s, const std::function<std::int64_t()>& now,
     const std::function<void()>& wait_cycle, const std::function<bool()>& cancelled,
     const std::function<void(const StepTrace&)>& record, double path_tolerance_rad = .01,
-    const std::string& phase = "PREGRASP") {
+    const std::string& phase = "PREGRASP",
+    const std::function<bool(std::int64_t)>& observe_hold = {}) {
   PregraspResult result;
   if (!model.within_limits(expected_start) || !model.within_limits(goal) ||
       !std::isfinite(maximum_duration_s) || maximum_duration_s <= 0 || maximum_duration_s > 60) {
     throw std::invalid_argument("invalid bounded pregrasp plan");
   }
+  if ((phase == "HOLD" && (!observe_hold || goal != expected_start || maximum_duration_s < 3.1)) ||
+      (phase != "HOLD" && observe_hold))
+    throw std::invalid_argument("observed HOLD requires a stationary checked plan and observation callback");
   SafetyController safety(config);
   // These represent the caller's already verified attended-run permit; not an
   // independent physical E-stop/watchdog verification or permission to open a port.
@@ -133,12 +184,13 @@ inline PregraspResult execute_pregrasp(
   context.localization_decision = dapier_localization_core::MotionDecision::kProceed;
   const auto started_ns = now();
   std::vector<double> initial;
-  double duration_s = 2.5;
+  double duration_s = phase == "HOLD" ? 0. : 2.5;
   std::uint64_t sequence = 0;
   unsigned settled_samples = 0;
   bool armed = false;
   bool arming_attempted = false;
   bool sent_any = false;
+  bool holding_started = false;
   try {
     for (;;) {
       if (cancelled()) throw std::runtime_error("operator interruption; retain last bounded goal");
@@ -170,7 +222,7 @@ inline PregraspResult execute_pregrasp(
           throw std::runtime_error("plan duration exceeds approved deadline");
       }
       const double elapsed_s = (current_ns - started_ns) * 1e-9;
-      const double u = std::clamp(elapsed_s / duration_s, 0., 1.);
+      const double u = duration_s > 0 ? std::clamp(elapsed_s / duration_s, 0., 1.) : 1.;
       // The analytic blend is in [0,1]; rounding near u=1 can exceed it by ulps.
       const double blend = std::clamp(u*u*u*(10. + u*(-15. + 6.*u)), 0., 1.);
       std::vector<double> requested(goal.size());
@@ -216,11 +268,23 @@ inline PregraspResult execute_pregrasp(
       trace.phase = phase + (u < 1. ? "_TRAVEL" : "_SETTLING");
       record(trace);
       if (settled_samples >= 3) {
+        if (phase == "HOLD") {
+          holding_started = true;
+          const bool observed = observe_hold(current_ns);
+          const auto observed_ns = now();
+          if (cancelled() || observed_ns-started_ns > maximum_duration_s*1e9)
+            throw std::runtime_error("HOLD observation exceeded deadline or was interrupted");
+          if (const auto stop = safety.tick(measured, observed_ns))
+            throw std::runtime_error(stop->reason);
+          if (!observed) { wait_cycle(); continue; }
+          result.observed_hold_verified = true;
+        }
         result.reached = true;
         result.phase = phase+"_REACHED_HOLDING";
         result.reason = "measured joint endpoint reached; TCP validation and task acceptance remain separate";
         return result;
       }
+      if (holding_started) throw std::runtime_error("joint endpoint lost during observed HOLD");
       wait_cycle();
     }
   } catch (const std::exception& error) {

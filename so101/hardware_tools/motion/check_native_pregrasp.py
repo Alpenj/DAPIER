@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import threading
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -22,7 +23,9 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def main(binary, directory):
+def main(binary, directory, mode="pregrasp"):
+    if mode not in ("pregrasp", "hold"):
+        raise ValueError("check mode must be pregrasp or hold")
     binary, directory = Path(binary).resolve(strict=True), Path(directory)
     directory.mkdir(mode=0o700)
     joints = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -41,9 +44,13 @@ def main(binary, directory):
     profile.chmod(0o600)
     launcher = Path(__file__).with_name("execute_bounded_pregrasp.py")
     results = []
-    for name in ("lagged", "stalled", "wrist"):
+    cases = ("hold", "hold_lost", "hold_stale", "hold_relabelled") if mode == "hold" else ("lagged", "stalled", "wrist")
+    for name in cases:
+        hold_case = name.startswith("hold")
         stalled = name == "stalled"
         goal = [.08, -.03, .04, 0., 0., 1.] if name != "wrist" else [0.,0.,0.,0.,0.,1.]
+        if hold_case:
+            goal = [0.,0.,0.,0.,0.,1.]
         now = time.monotonic_ns()
         intent = arm_joint_position_intent(sequence=1, source="MOCK_sensor_fixture",
             joint_names=tuple(joints), joint_position_rad=tuple(goal),
@@ -55,7 +62,42 @@ def main(binary, directory):
                 joint_limits_rad={j:(0.,2.) if j=="gripper" else (-.5,.5) for j in joints})
             goal = list(intent.joint_position_rad)
         plan, output = directory / f"{name}-plan.json", directory / f"{name}-trace.jsonl"
-        if not stalled:
+        stop, producer = threading.Event(), None
+        if hold_case:
+            observation = directory / f"{name}-observation.json"
+            binding = dict(path=str(observation.resolve()), run_id=name, object_id="MOCK-cube",
+                           calibration_revision="MOCK", producer_sha256=sha(Path(__file__)),
+                           boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+                           observer_physically_verified=False)
+            sequence = 0
+            began = time.monotonic_ns()
+            def publish():
+                nonlocal sequence
+                sequence += 1
+                stamp = time.monotonic_ns()
+                frame = directory / f"{name}-frame-{1 if name=='hold_relabelled' else sequence}.bin"
+                if not frame.exists():
+                    frame.write_bytes(f"MOCK synthetic frame {sequence}; not camera evidence".encode())
+                value = {**binding, "schema_version":"dapier.block-hold-observation.v1",
+                         "source_kind":"mock", "sequence":sequence, "captured_monotonic_ns":stamp,
+                         "frame_path":str(frame.resolve()), "frame_sha256":sha(frame),
+                         "bottom_clearance_lower_bound_m":.030, "bilateral_grasp_verified":True,
+                         "external_support":name=='hold_lost' and stamp-began>=1_000_000_000}
+                temporary = observation.with_suffix('.tmp')
+                temporary.write_text(json.dumps(value))
+                temporary.replace(observation)
+            publish()
+            def produce():
+                while not stop.wait(.05):
+                    if name != "hold_stale":
+                        publish()
+            producer = threading.Thread(target=produce)
+            plan.write_text(json.dumps({"schema_version":"dapier.bounded-pregrasp-plan.v1",
+                "profile_sha256":sha(profile), "start_rad":goal, "goal_rad":goal,
+                "goal_intent":intent.as_dict(), "maximum_duration_s":5.,
+                "path_tracking_tolerance_rad":.01, "phase":"HOLD", "initial_torque_enabled":True,
+                "hold_observation":binding}))
+        elif not stalled:
             # Synthetic, explicitly unverified sensor/IK audit exercises the same
             # source loader/plan builder as real inputs. It is not a SIM/HW IK pass.
             block = directory / f"{name}-MOCK-observation.json"
@@ -80,11 +122,33 @@ def main(binary, directory):
                 "profile_sha256": sha(profile), "start_rad": [0., 0., 0., 0., 0., 1.],
                 "goal_rad": goal, "goal_intent":intent.as_dict(), "maximum_duration_s": 4.,
                 "path_tracking_tolerance_rad": .01, "mock_stalled": True}))
-        completed = subprocess.run([sys.executable, str(launcher), "--ik-result", str(plan),
-            "--profile", str(profile), "--native-executor", str(binary), "--native-sha256", sha(binary),
-            "--transport", "mock", "--output", str(output)], capture_output=True, text=True, timeout=8)
+        try:
+            if producer is not None:
+                producer.start()
+            completed = subprocess.run([sys.executable, str(launcher), "--ik-result", str(plan),
+                "--profile", str(profile), "--native-executor", str(binary), "--native-sha256", sha(binary),
+                "--transport", "mock", "--output", str(output)], capture_output=True, text=True, timeout=8)
+        finally:
+            stop.set()
+            if producer is not None and producer.ident is not None:
+                producer.join(timeout=1.)
         events = [json.loads(line) for line in output.read_text().splitlines()]
         result = events[-1]
+        if hold_case:
+            passed = name == "hold"
+            assert completed.returncode == int(not passed), (completed, result)
+            assert result.get("observed_hold_verified", False) is passed, result
+            assert not result["hardware_execution"] and not result["task_success"]
+            assert not result.get("hardware_access_attempted", False)
+            if passed:
+                assert result["observed_hold_span_s"] >= 3.
+                assert result["phase"] == "HOLD_REACHED_HOLDING"
+            else:
+                assert "HOLD" in result["reason"], result
+            results.append({"case":name,"phase":result["phase"],"reason":result["reason"],
+                            "hold_verified":result.get("observed_hold_verified",False),
+                            "trace_sha256":sha(output)})
+            continue
         assert completed.returncode == int(stalled), (completed, result)
         assert not result["hardware_execution"] and not result["task_success"], result
         assert result["reached_joint_endpoint"] == (not stalled), result

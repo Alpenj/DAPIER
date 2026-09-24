@@ -34,6 +34,56 @@ struct LaggedTransport : MotorTransport {
 };
 
 int main() {
+  const auto frame_id=[](std::int64_t sequence) {
+    const auto digits=std::to_string(sequence);
+    return std::string(64-digits.size(),'0')+digits;
+  };
+  ObservedBlockHold hold;
+  BlockHoldObservation obs{1,1000000000,.030,true,false,frame_id(1)};
+  if (hold.update(obs,obs.captured_ns)) return 11;
+  for (int i=1; i<=30; ++i) {
+    ++obs.sequence; obs.captured_ns+=100000000;
+    obs.frame_sha256=frame_id(obs.sequence);
+    if (hold.update(obs,obs.captured_ns) != (i==30)) return 12;
+  }
+  // A static frame, frame retimestamp, support or unknown/nonfinite lift cannot
+  // establish continuous object HOLD even when every motor is motionless.
+  for (int mode=0; mode<6; ++mode) {
+    ObservedBlockHold invalid;
+    BlockHoldObservation a{1,1000000000,.030,true,false,frame_id(1)};
+    invalid.update(a,a.captured_ns);
+    auto now=a.captured_ns+100000000;
+    if (mode==0) now+=250000001;
+    if (mode==1) a.captured_ns+=100000000;
+    if (mode==2) a.external_support=true;
+    if (mode==3) a.bottom_clearance_lower_bound_m=std::nan("");
+    if (mode==4) a.bilateral_grasp_verified=false;
+    if (mode==5) { ++a.sequence; a.captured_ns+=100000000; }
+    bool refused=false;
+    try { invalid.update(a,now); } catch (const std::runtime_error&) { refused=true; }
+    if (!refused) return 13;
+  }
+  for (int mode=0; mode<4; ++mode) {
+    std::int64_t hold_time=1000000000;
+    LaggedTransport plant(hold_time);
+    const JointModel single({{"joint",1,-1.,1.,.3}});
+    SafetyControllerConfig config; config.joints={{"joint",-1.,1.,.3}};
+    ObservedBlockHold observed;
+    std::int64_t sequence=0, first_frame=0;
+    const auto result=execute_pregrasp(plant,single,config,{0.},{0.},4.,
+      [&]{return hold_time;},[&]{hold_time+=50000000;},[]{return false;},[](const StepTrace&){},
+      .01,"HOLD",[&](std::int64_t now) {
+        if (!first_frame) first_frame=now;
+        BlockHoldObservation sample{++sequence,mode==2 ? first_frame : now,.030,true,
+                                    mode==1 && now-first_frame>=1000000000,frame_id(sequence)};
+        const bool completed=observed.update(sample,now);
+        if (mode==3 && completed) hold_time+=150000000; // Fresh object, stale robot feedback.
+        return completed;
+      });
+    if (result.reached != (mode==0) || result.observed_hold_verified != (mode==0) ||
+        result.task_success || (mode==0 && observed.last_capture_ns-observed.first_capture_ns<3000000000LL))
+      return 14;
+  }
   // Different joint travel must share a progress fraction after velocity limits.
   // Per-axis clipping of [.2,.4] from [.1,.2] gives [.115,.215], off the line.
   const JointModel pair({{"a",1,-3.,3.,.3},{"b",2,-3.,3.,.3}});
