@@ -271,6 +271,22 @@ def health(bus) -> dict[str, dict[str, float]]:
     }
 
 
+def inspect_motor_calibration(bus, expected):
+    # Loading a calibration JSON does not verify the servo EEPROM. Read it;
+    # never call write_calibration/configure to make a mismatch disappear.
+    # LeRobot supplies id/drive_mode from configuration here, not a register read.
+    fields = ("homing_offset", "range_min", "range_max")
+    actual = {
+        name: {field: getattr(entry, field) for field in fields}
+        for name, entry in bus.read_calibration().items()
+    }
+    mismatches = [f"{name}.{field}" for name in MOTORS for field in fields
+                  if actual.get(name, {}).get(field) != expected[name][field]]
+    return {"actual": actual, "matches_saved_calibration": not mismatches,
+            "mismatched_fields": sorted(mismatches),
+            "physical_model_zero_verified": False}
+
+
 def _open_new_log(path: Path):
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW
     try:
@@ -293,6 +309,8 @@ def main() -> int:
     parser.add_argument("--move-deg", type=float, default=0.0)
     parser.add_argument("--confirm", default="")
     parser.add_argument("--operator-present", action="store_true")
+    parser.add_argument("--inspect-calibration", action="store_true",
+                        help="also read motor homing/limits and compare with the saved calibration; no writes")
     parser.add_argument("--log", type=Path, default=Path("/tmp/dapier-dual-so101-smoke.json"))
     args = parser.parse_args()
     try:
@@ -358,6 +376,12 @@ def main() -> int:
             }
         for side, bus in buses.items():
             record["arms"][side]["health"] = health(bus)
+            if args.inspect_calibration:
+                audit = inspect_motor_calibration(bus, profile[side]["calibration"])
+                record["arms"][side]["motor_calibration_audit"] = audit
+                if not audit["matches_saved_calibration"]:
+                    failure = RuntimeError("motor calibration mismatch")
+                    record["error"] = "motor calibration mismatch"
     except BaseException as error:
         record["error"] = type(error).__name__
         failure = error

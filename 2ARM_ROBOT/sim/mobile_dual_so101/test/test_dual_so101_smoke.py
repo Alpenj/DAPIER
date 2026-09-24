@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import runpy
 import tempfile
+from types import SimpleNamespace
 from unittest import mock
 import unittest
 
@@ -68,8 +69,22 @@ class FakeBus:
         value = 0 if register in {"Torque_Enable", "Status", "Moving"} else 1
         return {name: value for name in SMOKE["MOTORS"]}
 
+    def read_calibration(self):
+        return {name: SimpleNamespace(**entry) for name, entry in calibration().items()}
+
 
 class DualSO101SmokeTest(unittest.TestCase):
+    def test_eeprom_read_distinguishes_file_match_from_physical_model_zero(self):
+        bus = FakeBus()
+        expected = calibration()
+        audit = SMOKE["inspect_motor_calibration"](bus, expected)
+        self.assertTrue(audit["matches_saved_calibration"])
+        self.assertFalse(audit["physical_model_zero_verified"])
+        expected["elbow_flex"]["homing_offset"] = 73
+        audit = SMOKE["inspect_motor_calibration"](bus, expected)
+        self.assertFalse(audit["matches_saved_calibration"])
+        self.assertEqual(audit["mismatched_fields"], ["elbow_flex.homing_offset"])
+
     def test_trusted_profile_binds_roles_and_rejects_untrusted_input(self):
         with tempfile.TemporaryDirectory() as directory:
             profile = write_profile(Path(directory))
@@ -202,6 +217,7 @@ class DualSO101SmokeTest(unittest.TestCase):
                 "--profile", str(profile),
                 "--confirm", SMOKE["READONLY_CONFIRMATION"],
                 "--operator-present",
+                "--inspect-calibration",
                 "--log", str(log),
             ]
             with (
@@ -232,6 +248,7 @@ class DualSO101SmokeTest(unittest.TestCase):
             self.assertEqual(record["source_sha256"], hashlib.sha256(SCRIPT.read_bytes()).hexdigest())
             for side in ("left", "right"):
                 arm = record["arms"][side]
+                self.assertTrue(arm["motor_calibration_audit"]["matches_saved_calibration"])
                 self.assertEqual(arm["calibration_sha256"], hashlib.sha256((root / f"{side}.json").read_bytes()).hexdigest())
                 self.assertEqual(arm["device_id"], f"dapier_dual_follower_{side}")
                 self.assertLessEqual(arm["position_started_at"], arm["position_finished_at"])
