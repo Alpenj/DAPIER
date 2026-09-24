@@ -181,7 +181,8 @@ def create_joint_position_intents(
 
 
 def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
-                         *, now_s: float, goal_intent: ControlIntent | None = None) -> dict:
+                         *, now_s: float, goal_intent: ControlIntent | None = None,
+                         maximum_duration_s: float | None = None) -> dict:
     """Bind a checked current sensor candidate to the existing native executor.
 
     A wrist proposal uses this same boundary after FK/axis/path revalidation; its
@@ -266,12 +267,18 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     duration = max(2.5, float(np.max(1.875*np.abs(goal[:6]-start[:6])/velocities))*1.15)
     if duration+1 > 60:
         raise ValueError("bounded motion exceeds maximum duration")
+    # Nominal interpolation time does not bound plant settling. A longer budget
+    # must be explicit in the plan reviewed for approval, never an automatic retry.
+    deadline = duration+1 if maximum_duration_s is None else maximum_duration_s
+    if (isinstance(deadline, bool) or not isinstance(deadline, (int, float))
+            or not math.isfinite(deadline) or not duration+1 <= deadline <= 60):
+        raise ValueError("maximum duration must cover nominal motion plus 1s and be at most 60s")
     return {"schema_version":"dapier.bounded-pregrasp-plan.v1",
         "phase":"WRIST_ALIGN" if goal_intent.source == "wrist_servo_adapter" else "PREGRASP",
         "initial_torque_enabled":goal_intent.source == "wrist_servo_adapter",
         "profile_sha256":hashlib.sha256(profile_raw).hexdigest(),
         "start_rad":start[:6].tolist(), "goal_rad":goal[:6].tolist(),
-        "goal_intent":goal_intent.as_dict(), "maximum_duration_s":duration+1,
+        "goal_intent":goal_intent.as_dict(), "maximum_duration_s":float(deadline),
         "observation_unix_s":timestamps[-1], "measured_state_unix_s":min(timestamps[:2]),
         "position_error_m":position_error,"axis_error_rad":axis_error,
         "offline_candidate_accepted":True,"path_clear":True,"path_clearance_m":distance,

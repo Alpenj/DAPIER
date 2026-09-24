@@ -25,6 +25,8 @@ def main(argv=None):
     parser.add_argument("--native-executor", type=Path)
     parser.add_argument("--native-sha256")
     parser.add_argument("--transport", choices=("mock", "hardware"), default="mock")
+    parser.add_argument("--maximum-duration-s", type=float,
+                        help="Explicit candidate execution budget, up to 60s; part of the hardware approval plan")
     args = parser.parse_args(argv)
     if args.output.exists() or args.output.is_symlink():
         raise FileExistsError("refusing to overwrite execution evidence")
@@ -44,13 +46,16 @@ def main(argv=None):
         report["ik_source_sha256"] = hashlib.sha256(raw).hexdigest()
         ik = json.loads(raw)
         candidate = ik if ik.get("schema_version") == "dapier.offline-ik-candidate.v1" else None
+        if args.maximum_duration_s is not None and (candidate is None or args.profile is None):
+            raise ValueError("maximum duration requires a candidate and profile; cannot override a prepared plan")
         plan_path = args.ik_result
         if ik.get("schema_version") == "dapier.offline-ik-candidate.v1" and args.profile is not None:
             sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "2ARM_ROBOT/research/src"))
             from dapier_research.real_sensor_ik_adapter import bounded_pregrasp_plan
             from dapier_research.control_intent import intent_from_mapping
             intent = intent_from_mapping(ik["goal_intent"]) if "goal_intent" in ik else None
-            ik = bounded_pregrasp_plan(ik, args.profile, now_s=time.time(), goal_intent=intent)
+            ik = bounded_pregrasp_plan(ik, args.profile, now_s=time.time(), goal_intent=intent,
+                                      maximum_duration_s=args.maximum_duration_s)
             args.output.parent.mkdir(parents=True, exist_ok=True)
             plan_path = args.output.with_suffix(".plan.json")
             with plan_path.open("x") as stream:

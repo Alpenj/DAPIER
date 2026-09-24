@@ -27,6 +27,18 @@ python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregras
 손목 제안은 `WRIST_ALIGN_REACHED_HOLDING`으로 끝난다. `task_success`는 항상 false다.
 `bounded_pregrasp_smoke.cpp`는 stale/cancel/부분 arming/양자화 경계도 검사한다.
 
+명목 quintic 이동 시간과 실제 정착 시간은 다르다. 저장된 후보를 지연 MOCK으로
+실행했을 때 공통 진행률 제한으로 경로 이탈은 해소됐지만, 기존 `명목 시간 + 1초`
+예산에서는 종점에 도달하지 못했다. 후보 launcher의 `--maximum-duration-s`로
+최대 60초 안에서 실행 예산을 명시할 수 있다. 기본값은 그대로이며 이미 작성된
+plan의 시간은 이 옵션으로 바꿀 수 없다. 명시한 시간은 승인할 plan에 저장되고,
+타임아웃 시 자동 연장·재시도하지 않는다. MOCK에서 정한 시간은 실물 응답 근거가 아니다.
+같은 저장 후보의 별도 40초 MOCK 실행은 기록 구간 약 24.07초에 관절 종점에 도달했다
+(최대 관절 잔차 0.000424 rad). 원래 16.97초 실패는 그대로 보존했다.
+이 결과는 `PREGRASP_REACHED_HOLDING`이며 Cartesian endpoint·실물 task 성공은 아니다.
+옵션 전달·잘못된 예산·stale 입력 거부는 `test_real_sensor_ik_adapter.py`와
+`test_pregrasp_refusal.py`에서 장치 없이 검사한다.
+
 실물 실행에는 별도 현장 승인, 실제 source/binary/profile/plan 고정, 최신 target/readback,
 물리적으로 확인한 매핑, 위치 0.5 mm·수직축 2° 및 tracking envelope 전체의 clearance
 30 mm 증거가 필요하다. 후보의 단일 경로 clearance를 envelope 증거로 승격하지 않는다.

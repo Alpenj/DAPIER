@@ -57,6 +57,20 @@ class RealSensorIkAdapterTest(unittest.TestCase):
                     self.assertIs(plan["sensor_target_verified"], expected)
                     self.assertFalse(plan["path_envelope_verified"])
                     self.assertFalse(plan["task_success"])
+            self.assertEqual(plan["maximum_duration_s"], 3.5)
+            explicit = bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.,
+                                            maximum_duration_s=40.)
+            self.assertEqual(explicit["maximum_duration_s"], 40.)
+            self.assertFalse(explicit["sensor_target_verified"])
+            self.assertFalse(explicit["path_envelope_verified"])
+            self.assertEqual(explicit["goal_rad"], plan["goal_rad"])
+            for budget in (True, "40", 0., 3.49, 60.01, float("nan"), float("inf")):
+                with self.subTest(budget=budget), self.assertRaisesRegex(ValueError, "maximum duration"):
+                    bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.,
+                                          maximum_duration_s=budget)
+            with self.assertRaisesRegex(ValueError, "stale or future"):
+                bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1061.,
+                                      maximum_duration_s=40.)
             candidate["block_source"] = source("block.json", {"rgb_timestamp_ns": 1_000_000_000_000,
                 "metric_evidence": None, "depth_evidence": {"metric_target_verified": True}})
             with self.assertRaisesRegex(ValueError, "metric target evidence"):
