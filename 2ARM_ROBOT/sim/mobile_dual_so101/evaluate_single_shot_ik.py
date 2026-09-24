@@ -422,6 +422,7 @@ def evaluate(args):
         "structured_clearance": {"safe": guard.safe, "reason": guard.reason,
             "minimum_clearance_m": guard.minimum_clearance_m,
             "required_clearance_m": DEFAULT_CLEARANCE_M, "query_cap_m": TASK_GENERAL_QUERY_CAP_M},
+        "path_assessment": guard.as_report(),
         "model": {**fingerprint(args.model), "compiled_sha256": portable_model_sha256(model),
             "gripper_ranges_rad": model.actuator_ctrlrange[[5, 11]].tolist()},
         "mapping": {"profile": fingerprint(profile_path), "physically_verified": False,

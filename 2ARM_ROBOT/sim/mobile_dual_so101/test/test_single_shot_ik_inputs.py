@@ -104,6 +104,7 @@ class SingleShotInputsTest(unittest.TestCase):
             solver.assert_not_called()
 
     def test_wrist_evaluation_reaches_fk_path_gate_without_running_ik(self):
+        from collision_guard import CollisionAssessment
         from integration_scenes import task_env
         from mobile_dual_so101 import apply_control_as_pose
         env = task_env("desk")
@@ -143,7 +144,8 @@ class SingleShotInputsTest(unittest.TestCase):
                   mock.patch("evaluate_single_shot_ik.time.monotonic_ns", return_value=101),
                   mock.patch("evaluate_single_shot_ik.solve_bimanual_position_ik") as solver,
                   mock.patch("evaluate_single_shot_ik.check_bimanual_path",
-                      return_value=SimpleNamespace(safe=True, reason="MOCK path", minimum_clearance_m=.05)) as path):
+                      return_value=CollisionAssessment(False, "MOCK start collision", -.01, 0.,
+                          0., 1, "right_shoulder", "right_lower_arm", 44, 56)) as path):
                 result = evaluate(args)
             solver.assert_not_called()
             np.testing.assert_array_equal(path.call_args.args[1], seed)
@@ -154,6 +156,10 @@ class SingleShotInputsTest(unittest.TestCase):
             self.assertLess(result["position_error_m"], 1e-12)
             self.assertGreater(result["tool_axis_error_rad_by_side"]["left"], np.deg2rad(2))
             self.assertFalse(result["offline_candidate_accepted"])
+            self.assertEqual(result["path_assessment"]["path_fraction"], 0.)
+            self.assertEqual(result["path_assessment"]["checked_samples"], 1)
+            self.assertEqual(result["path_assessment"]["first_body"], "right_shoulder")
+            self.assertEqual(result["path_assessment"]["second_geom_id"], 56)
 
     def test_observed_center_replaces_nominal_collision_block_not_approach_target(self):
         from integration_scenes import task_env
