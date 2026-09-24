@@ -45,6 +45,21 @@ class RuntimeCandidateTest(unittest.TestCase):
         self.assertEqual(c['close_commands_rad'],old['close_commands_rad'])
         self.assertEqual([p['phase'] for p in c['lift_commands']],['LIFT_5MM','LIFT_15MM','LIFT_30MM'])
 
+    def test_command_precision_can_reserve_tracking_error_without_relaxing_gate(self):
+        import waypoint_block_teacher as waypoint
+        t=self.t
+        before=t.d.qpos.copy()
+        with patch.object(t,'phase','SAFE_STAGE'),patch.object(waypoint,'solve_bimanual_position_ik',
+                wraps=waypoint.solve_bimanual_position_ik) as solve:
+            t.solve(t.d.site_xpos[t.site].copy(),position_tolerance_m=.0001)
+            self.assertEqual(solve.call_args.kwargs['tolerance_m'],.0001)
+        np.testing.assert_array_equal(t.d.qpos,before)
+        for invalid in (0.,float('nan'),float('inf'),.000501):
+            with self.subTest(tolerance=invalid),patch.object(waypoint,'solve_bimanual_position_ik') as solve:
+                with self.assertRaisesRegex(ValueError,'at most 0.5 mm'):
+                    t.solve(t.d.site_xpos[t.site],position_tolerance_m=invalid)
+                solve.assert_not_called()
+
     def test_saved_geometry_mismatch_stops_before_trial_or_physics(self):
         t=self.t
         t.staging_reference['provenance']['scene_id']=t.report['provenance']['scene_id']
