@@ -63,6 +63,9 @@ struct PregraspResult {
   bool task_success{false};
   bool observed_hold_verified{false};
   bool observed_grasp_verified{false};
+  bool observed_lift_verified{false};
+  std::int64_t hold_entered_ns{};
+  double observed_hold_span_s{};
 };
 
 struct BlockGraspObservation {
@@ -209,7 +212,9 @@ inline PregraspResult execute_pregrasp(
     const std::string& phase = "PREGRASP",
     const std::function<bool(std::int64_t)>& observe_hold = {},
     const std::function<BlockGraspObservation()>& observe_grasp = {},
-    const std::optional<BlockGraspObservation>& initial_grasp = std::nullopt) {
+    const std::optional<BlockGraspObservation>& initial_grasp = std::nullopt,
+    const std::function<BlockHoldObservation()>& observe_lift = {},
+    const std::optional<BlockHoldObservation>& initial_lift = std::nullopt) {
   PregraspResult result;
   if (!model.within_limits(expected_start) || !model.within_limits(goal) ||
       !std::isfinite(maximum_duration_s) || maximum_duration_s <= 0 || maximum_duration_s > 60) {
@@ -223,6 +228,11 @@ inline PregraspResult execute_pregrasp(
         !std::equal(goal.begin(), goal.end()-1, expected_start.begin()))
       throw std::invalid_argument("CLOSE requires observed gripper-only closure with fixed arm joints");
   } else if (observe_grasp || initial_grasp) throw std::invalid_argument("grasp callback is only valid for CLOSE");
+  if (phase == "LIFT") {
+    if (!observe_lift || !initial_lift || model.names().back() != "gripper" ||
+        goal.back() != expected_start.back() || goal == expected_start || maximum_duration_s < 4.1)
+      throw std::invalid_argument("LIFT requires observed grasp, fixed measured aperture and moving arm plan");
+  } else if (observe_lift || initial_lift) throw std::invalid_argument("lift callback is only valid for LIFT");
   SafetyController safety(config);
   // These represent the caller's already verified attended-run permit; not an
   // independent physical E-stop/watchdog verification or permission to open a port.
@@ -241,11 +251,27 @@ inline PregraspResult execute_pregrasp(
   bool sent_any = false;
   bool holding_started = false;
   ObservedGrasp grasp;
+  ObservedBlockHold lifted_hold;
+  std::optional<BlockHoldObservation> last_lift;
   std::vector<double> contact_stop;
+  const auto consume_lift = [&](const BlockHoldObservation& observation, std::int64_t stamp) {
+    if (!std::isfinite(observation.bottom_clearance_lower_bound_m))
+      throw std::runtime_error("LIFT metric bottom clearance is unknown/nonfinite");
+    if (last_lift && observation.sequence == last_lift->sequence &&
+        (observation.bottom_clearance_lower_bound_m != last_lift->bottom_clearance_lower_bound_m ||
+         observation.external_support != last_lift->external_support))
+      throw std::runtime_error("LIFT observation changed within the same frame identity");
+    grasp.update({observation.sequence, observation.captured_ns,
+                  observation.bilateral_grasp_verified, observation.frame_sha256}, stamp);
+    if (!observation.bilateral_grasp_verified)
+      throw std::runtime_error("LIFT requires observed bilateral grasp before further motion");
+    last_lift = observation;
+  };
   try {
     // Keep the preflight evidence history across driver construction. Otherwise
     // a positive->negative transition could restart closure after grasp loss.
     if (initial_grasp) grasp.update(*initial_grasp, now());
+    if (initial_lift) consume_lift(*initial_lift, now());
     for (;;) {
       if (cancelled()) throw std::runtime_error("operator interruption; retain last bounded goal");
       if (now() - started_ns > maximum_duration_s * 1e9)
@@ -266,13 +292,18 @@ inline PregraspResult execute_pregrasp(
       }
       if (initial.empty()) {
         initial = positions;
+        if (phase == "LIFT" && std::abs(initial.back()-expected_start.back()) > .001)
+          throw std::runtime_error("LIFT measured grasp aperture changed since planning");
+        // Keep the approved aperture constant in the command path even when
+        // readback differs by a tick. Measured positions/result stay untouched.
+        if (phase == "LIFT") initial.back() = expected_start.back();
         for (std::size_t i = 0; i < initial.size(); ++i) {
           if (std::abs(initial[i] - expected_start[i]) > 0.5 * std::acos(-1.) / 180.)
             throw std::runtime_error("measured start differs from checked path start");
           duration_s = std::max(duration_s, 1.875 * std::abs(goal[i] - initial[i]) /
               model.joints()[i].max_velocity * 1.15);
         }
-        if (duration_s + 1.0 > maximum_duration_s)
+        if (duration_s + (phase == "LIFT" ? 4.1 : 1.0) > maximum_duration_s)
           throw std::runtime_error("plan duration exceeds approved deadline");
       }
       if (phase == "CLOSE") {
@@ -284,6 +315,13 @@ inline PregraspResult execute_pregrasp(
         // A contact observation stops closure at measured aperture, not at the
         // fully-closed command. Separate fresh frames must then confirm grasp.
         if (grasp.positive_frames && contact_stop.empty()) contact_stop = positions;
+      }
+      if (phase == "LIFT") {
+        const auto observation = observe_lift();
+        current_ns = now();
+        if (cancelled() || current_ns < started_ns || current_ns-started_ns > maximum_duration_s*1e9)
+          throw std::runtime_error("LIFT observation exceeded deadline or was interrupted");
+        consume_lift(observation, current_ns);
       }
       const double elapsed_s = (current_ns - started_ns) * 1e-9;
       const double u = duration_s > 0 ? std::clamp(elapsed_s / duration_s, 0., 1.) : 1.;
@@ -332,6 +370,7 @@ inline PregraspResult execute_pregrasp(
       settled_samples = settled ? settled_samples + 1 : 0;
       trace.phase = phase + (u < 1. ? "_TRAVEL" : "_SETTLING");
       if (!contact_stop.empty()) trace.phase = "GRASP_CONFIRM";
+      if (phase == "LIFT" && holding_started) trace.phase = "HOLD_OBSERVING";
       record(trace);
       if (settled_samples >= 3) {
         if (phase == "CLOSE") {
@@ -341,6 +380,27 @@ inline PregraspResult execute_pregrasp(
           result.reached = true;
           result.phase = "GRASP_CONFIRMED_HOLDING";
           result.reason = "closure stopped at measured aperture; distinct frames confirmed bilateral grasp; lift unverified";
+          return result;
+        }
+        if (phase == "LIFT") {
+          const auto observed_ns = now();
+          if (cancelled() || observed_ns-started_ns > maximum_duration_s*1e9)
+            throw std::runtime_error("LIFT/HOLD dispatch exceeded deadline or was interrupted");
+          if (const auto stop = safety.tick(measured, observed_ns))
+            throw std::runtime_error(stop->reason);
+          // Reuse the existing predicate. Travel time does not count as HOLD;
+          // endpoint joints alone cannot prove unsupported object lift.
+          const bool complete = lifted_hold.update(*last_lift, observed_ns);
+          result.observed_lift_verified = true;
+          holding_started = true;
+          result.hold_entered_ns = lifted_hold.entered_ns;
+          result.observed_hold_span_s = lifted_hold.first_capture_ns && lifted_hold.last_capture_ns ?
+              (lifted_hold.last_capture_ns-lifted_hold.first_capture_ns)*1e-9 : 0.;
+          if (!complete) { wait_cycle(); continue; }
+          result.observed_hold_verified = true;
+          result.reached = true;
+          result.phase = "HOLD_REACHED_HOLDING";
+          result.reason = "observed unsupported lift and continuous HOLD; supported ending remains separate";
           return result;
         }
         if (phase == "HOLD") {

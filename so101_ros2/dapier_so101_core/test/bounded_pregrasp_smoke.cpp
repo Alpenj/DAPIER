@@ -85,6 +85,52 @@ int main() {
     }
     if (mode==3 && !confirm_seen) return 19;
   }
+  // Preserve the same independent plant from CLOSE into LIFT/HOLD. No reset of
+  // measured positions to the next command, and travel cannot count as HOLD.
+  for (int mode=0; mode<9; ++mode) {
+    std::int64_t clock=1000000000, sequence=0;
+    LaggedTransport plant(clock);
+    plant.names={"arm","gripper"}; plant.q=plant.target={0.,1.};
+    const JointModel model({{"arm",1,-1.,1.,.3},{"gripper",2,0.,2.,.3}});
+    SafetyControllerConfig config; config.joints={{"arm",-1.,1.,.3},{"gripper",0.,2.,.3}};
+    const auto closed=execute_pregrasp(plant,model,config,{0.,1.},{0.,.8},8.,
+      [&]{return clock;},[&]{clock+=50000000;},[]{return false;},[](const StepTrace&){},
+      .01,"CLOSE",{},[&]{return BlockGraspObservation{++sequence,clock,clock>=1800000000,frame_id(sequence)};});
+    if (!closed.observed_grasp_verified) return 20;
+    const auto start=closed.final_measured_rad;
+    const std::vector<double> goal{.06,start.back()};
+    const auto lift_started=clock;
+    const auto before_writes=plant.writes;
+    if (mode==6) plant.q.back()-=.002;
+    if (mode==8) plant.q.back()+=.0005;
+    std::int64_t hold_seen=0;
+    const auto lifted=execute_pregrasp(plant,model,config,start,goal,8.,
+      [&]{return clock;},[&]{clock+=50000000;},[]{return false;},[&](const StepTrace& step) {
+        if (step.sent.position_rad.empty()) return;
+        if (std::abs(step.sent.position_rad.back()-start.back())>1e-12)
+          throw std::runtime_error("LIFT changed grasp aperture");
+        if (step.phase=="HOLD_OBSERVING" && !hold_seen) hold_seen=clock;
+      },.01,"LIFT",{}, {},std::nullopt,[&] {
+        const auto elapsed=clock-lift_started;
+        BlockHoldObservation sample{++sequence,clock,elapsed>=1000000000 ? .035 : 0.,true,
+                                    elapsed<1000000000,frame_id(sequence)};
+        if (mode==1 && elapsed>=500000000) sample.bilateral_grasp_verified=false;
+        if (mode==2) sample.captured_ns=clock-500000000;
+        if (mode==3) sample.external_support=true;
+        if (mode==4) sample.bottom_clearance_lower_bound_m=.01;
+        if (mode==5) clock+=150000000;
+        if (mode==7 && hold_seen && clock-hold_seen>=1000000000) sample.external_support=true;
+        return sample;
+      },BlockHoldObservation{++sequence,clock-1,0.,true,true,frame_id(sequence)});
+    const bool passed=mode==0 || mode==8;
+    if (lifted.reached!=passed || lifted.observed_hold_verified!=passed || lifted.task_success)
+      return 21;
+    if (passed && (!lifted.observed_lift_verified || lifted.phase!="HOLD_REACHED_HOLDING" ||
+        lifted.observed_hold_span_s<3. || lifted.hold_entered_ns-lift_started<2500000000LL || !hold_seen))
+      return 22;
+    if ((mode==2 || mode==5 || mode==6) && plant.writes!=before_writes) return 23;
+    if (mode==7 && (!hold_seen || !lifted.observed_lift_verified)) return 24;
+  }
   ObservedBlockHold hold;
   BlockHoldObservation obs{1,1000000000,.030,true,false,frame_id(1)};
   if (hold.update(obs,obs.captured_ns)) return 11;

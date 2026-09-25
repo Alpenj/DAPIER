@@ -76,7 +76,7 @@ plan의 시간은 이 옵션으로 바꿀 수 없다. 명시한 시간은 승인
 실제 관측 producer의 위 의미는 아직 실물 검증하지 않았다. 실물 모드는 기존 물리 매핑·센서·경로
 검사에 더해 검증된 observer와 **`VISIBLE_LEFT_OBSERVED_HOLD`** 승인을 요구한다.
 이 문자열은 실행안의 승인 범위를 정의할 뿐이며 이 문서가 장치 실행 승인은 아니다.
-GRASP_CONFIRM 이후 LIFT에서 이 진입점으로 넘어오는 연결과 지지 종료는 아직 미완료다.
+아래 LIFT 연결은 MOCK에서 검사했다. 실제 목표의 접촉 경로 준비와 지지 종료는 아직 미완료다.
 
 ```bash
 python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/observed-hold-evidence-new hold
@@ -115,5 +115,32 @@ python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregras
 이 검사는 장치를 열지 않는 동일 launcher/native 경로다. CLOSE의 **실물 실행은 코드에서 차단**한다.
 기존 PREGRASP의 일반 30mm certificate는 jaw/block 접촉 경로 검증을 대신할 수 없고, 실물 observer도
 미검증이기 때문이다. 별도 승인 문자열이나 true 플래그만으로 이 차단을 우회할 수 없다.
-GRASP_CONFIRM 이후 LIFT의 actual-target IK/접촉 경로, 기존 observed HOLD로의 인계, 지지 종료는
-후속 연결로 남아 있다. 이 단계는 물체를 집어 들었다는 실물 성공이 아니다.
+LIFT의 actual-target IK/접촉 경로와 지지 종료는 후속 작업으로 남아 있다.
+이 단계는 물체를 집어 들었다는 실물 성공이 아니다.
+
+### GRASP_CONFIRM → LIFT → 기존 observed HOLD 연결
+
+`phase=LIFT` 계획은 `grasp_confirmation: {path, sha256}`으로 직전 native CLOSE trace를 참조한다.
+같은 run/object/calibration/producer/boot, profile와 transport인지 확인하고, 실제로 기록된
+`GRASP_CONFIRMED_HOLDING`의 실측 자세와 시작값을 대조한다. 이전 fully-closed 목표를 시작값으로
+사용하지 않는다. 기존 raw frame의 재사용과 이전 sequence/시각은 단계 경계에서도 거부한다.
+
+집게 goal은 start aperture와 같아야 하며 팔 관절만 이동한다. 실측 초기 aperture의 0.001rad 초과
+차이는 거부하고, 허용 오차 내에서도 명령 경로는 승인된 aperture에 고정한다. 실측값은 수정하지 않는다.
+`hold_observation`의 기존 원본·시간·metric 계약을 LIFT 중에도 읽고 파지 유실/미확정/stale를
+거부한다. 지지면 위에 아직 놓인 이동 초기에는 외부 지지가 있을 수 있다.
+
+관절 종점 도달 후 기존 `ObservedBlockHold`가 unsupported bottom clearance >=30mm를 검사하고
+그때부터 연속3.000초를 센다. 이동 시간은 포함하지 않는다. 동일 native 실행/transport 안에서
+`LIFT_TRAVEL → HOLD_OBSERVING → HOLD_REACHED_HOLDING`으로 이어진다. 종료 시 torque를 유지하며
+`task_success=false`다. 객체를 지지면에 되놓는 정상 종료는 별도 연결이 필요하다.
+
+```bash
+python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/lift-evidence-new lift
+```
+
+검사는 먼저 native CLOSE를 실행한 결과에 다음 LIFT 계획을 묶는다. CLI 단계별 mock transport의
+초기값은 이전 실측 결과이며, C++ smoke는 같은 lagged plant를 CLOSE부터 HOLD까지 계속 사용한다.
+프레임은 명시적 synthetic MOCK 관측이다. 실제 블록 LIFT의 IK/경로 검사나 물리 마찰/접촉 검증이 아니다.
+단일 실패 연결을 다시 검사할 때 마지막 인자로 `lift_old_grasp_frame` 등 해당 case를 선택할 수 있다.
+CLOSE와 LIFT의 실물 실행 차단은 유지한다. 실물 observer가 미확정인 값을 true로 바꾸지 않는다.

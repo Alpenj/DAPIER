@@ -24,9 +24,9 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def main(binary, directory, mode="pregrasp"):
-    if mode not in ("pregrasp", "hold", "close"):
-        raise ValueError("check mode must be pregrasp, hold or close")
+def main(binary, directory, mode="pregrasp", case=None):
+    if mode not in ("pregrasp", "hold", "close", "lift"):
+        raise ValueError("check mode must be pregrasp, hold, close or lift")
     binary, directory = Path(binary).resolve(strict=True), Path(directory)
     directory.mkdir(mode=0o700)
     joints = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -48,13 +48,32 @@ def main(binary, directory, mode="pregrasp"):
     cases = ("hold", "hold_lost", "hold_stale", "hold_relabelled") if mode == "hold" else ("lagged", "stalled", "wrist")
     if mode == "close":
         cases = ("close", "close_unknown", "close_lost", "close_no_contact", "close_stale", "close_relabelled")
+    if mode == "lift":
+        cases = ("close", "lift", "lift_lost", "lift_stale", "lift_supported", "lift_low",
+                 "lift_wrong_grasp", "lift_changed_aperture", "lift_old_grasp_frame")
+    if case is not None:
+        if mode != "lift" or case not in cases[1:]:
+            raise ValueError("single-case selection requires a LIFT case")
+        cases = ("close", case)  # Preserve the real preceding native phase.
     for name in cases:
         hold_case = name.startswith("hold")
         close_case = name.startswith("close")
+        lift_case = name.startswith("lift")
+        start = [0.,0.,0.,0.,0.,1.]
         stalled = name == "stalled"
         goal = [.08, -.03, .04, 0., 0., 1.] if name != "wrist" else [0.,0.,0.,0.,0.,1.]
         if hold_case or close_case:
             goal = [0.,0.,0.,0.,0.,.8 if close_case else 1.]
+        if lift_case:
+            grasp_trace = directory / "close-trace.jsonl"
+            grasp_events = [json.loads(line) for line in grasp_trace.read_text().splitlines()]
+            confirmed = grasp_events[-1]
+            prior_sequence = [e["observation"]["sequence"] for e in grasp_events if e["event"]=="grasp_observation"][-1]
+            assert confirmed["observed_grasp_verified"] and not confirmed["task_success"]
+            start = confirmed["final_measured_rad"]
+            goal = list(start); goal[0] += .06
+            if name == "lift_changed_aperture":
+                goal[-1] -= .01
         now = time.monotonic_ns()
         intent = arm_joint_position_intent(sequence=1, source="MOCK_sensor_fixture",
             joint_names=tuple(joints), joint_position_rad=tuple(goal),
@@ -67,16 +86,18 @@ def main(binary, directory, mode="pregrasp"):
             goal = list(intent.joint_position_rad)
         plan, output = directory / f"{name}-plan.json", directory / f"{name}-trace.jsonl"
         stop, producer = threading.Event(), None
-        if hold_case or close_case:
+        if hold_case or close_case or lift_case:
             observation = directory / f"{name}-observation.json"
             binding = dict(path=str(observation.resolve()), run_id=name, object_id="MOCK-cube",
                            calibration_revision="MOCK", producer_sha256=sha(Path(__file__)),
                            boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
                            observer_physically_verified=False)
+            if lift_case:
+                binding["run_id"] = "wrong-run" if name == "lift_wrong_grasp" else "close"
             if name == "close_unknown":
                 import inspect
                 binding["producer_sha256"] = sha(Path(inspect.getfile(block_grasp_observation_from_wrist)))
-            sequence = 0
+            sequence = prior_sequence if lift_case else 0
             began = time.monotonic_ns()
             def publish():
                 nonlocal sequence
@@ -84,7 +105,7 @@ def main(binary, directory, mode="pregrasp"):
                 stamp = time.monotonic_ns()
                 frame = directory / f"{name}-frame-{1 if name.endswith('_relabelled') else sequence}.bin"
                 if not frame.exists():
-                    frame.write_bytes(f"MOCK synthetic frame {sequence}; not camera evidence".encode())
+                    frame.write_bytes(f"MOCK {name} synthetic frame {sequence}; not camera evidence".encode())
                 value = {**binding, "schema_version":"dapier.block-hold-observation.v1",
                          "source_kind":"mock", "sequence":sequence, "captured_monotonic_ns":stamp,
                          "frame_path":str(frame.resolve()), "frame_sha256":sha(frame),
@@ -98,6 +119,17 @@ def main(binary, directory, mode="pregrasp"):
                     # wall-clock window that the native reader might miss.
                     if name == "close_lost" and output.exists() and '"phase":"GRASP_CONFIRM"' in output.read_text():
                         value["bilateral_grasp_verified"] = False
+                if lift_case:
+                    elapsed = stamp-began
+                    value["bilateral_grasp_verified"] = not (name == "lift_lost" and elapsed>=500_000_000)
+                    value["bottom_clearance_lower_bound_m"] = .035 if elapsed>=1_000_000_000 else 0.
+                    value["external_support"] = elapsed<1_000_000_000 or name=="lift_supported"
+                    if name == "lift_low":
+                        value["bottom_clearance_lower_bound_m"] = .01
+                    if name == "lift_old_grasp_frame":
+                        consumed = next(e["observation"] for e in grasp_events if e["event"]=="grasp_observation")
+                        value["frame_path"] = consumed["frame_path"]
+                        value["frame_sha256"] = consumed["frame_sha256"]
                 if name == "close_unknown":
                     # Reuse the real saved-wrist producer. A visible RGB image
                     # supplies no independent jaw/contact evidence, hence null.
@@ -123,11 +155,14 @@ def main(binary, directory, mode="pregrasp"):
                     if not name.endswith('_stale'):
                         publish()
             producer = threading.Thread(target=produce)
-            plan.write_text(json.dumps({"schema_version":"dapier.bounded-pregrasp-plan.v1",
-                "profile_sha256":sha(profile), "start_rad":[0.,0.,0.,0.,0.,1.], "goal_rad":goal,
-                "goal_intent":intent.as_dict(), "maximum_duration_s":6. if close_case else 5.,
-                "path_tracking_tolerance_rad":.01, "phase":"CLOSE" if close_case else "HOLD", "initial_torque_enabled":True,
-                "grasp_observation" if close_case else "hold_observation":binding}))
+            prepared = {"schema_version":"dapier.bounded-pregrasp-plan.v1",
+                "profile_sha256":sha(profile), "start_rad":start, "goal_rad":goal,
+                "goal_intent":intent.as_dict(), "maximum_duration_s":9. if lift_case else 6. if close_case else 5.,
+                "path_tracking_tolerance_rad":.01, "phase":"LIFT" if lift_case else "CLOSE" if close_case else "HOLD",
+                "initial_torque_enabled":True, "grasp_observation" if close_case else "hold_observation":binding}
+            if lift_case:
+                prepared["grasp_confirmation"] = {"path":str(grasp_trace.resolve()), "sha256":sha(grasp_trace)}
+            plan.write_text(json.dumps(prepared))
         elif not stalled:
             # Synthetic, explicitly unverified sensor/IK audit exercises the same
             # source loader/plan builder as real inputs. It is not a SIM/HW IK pass.
@@ -158,13 +193,38 @@ def main(binary, directory, mode="pregrasp"):
                 producer.start()
             completed = subprocess.run([sys.executable, str(launcher), "--ik-result", str(plan),
                 "--profile", str(profile), "--native-executor", str(binary), "--native-sha256", sha(binary),
-                "--transport", "mock", "--output", str(output)], capture_output=True, text=True, timeout=8)
+                "--transport", "mock", "--output", str(output)], capture_output=True, text=True, timeout=12 if lift_case else 8)
         finally:
             stop.set()
             if producer is not None and producer.ident is not None:
                 producer.join(timeout=1.)
         events = [json.loads(line) for line in output.read_text().splitlines()]
         result = events[-1]
+        if lift_case:
+            passed = name == "lift"
+            assert completed.returncode == int(not passed), (completed, result)
+            assert result.get("observed_hold_verified", False) is passed, result
+            assert not result["hardware_execution"] and not result["task_success"]
+            assert not result.get("hardware_access_attempted", False)
+            steps = [e for e in events if e["event"] == "step" and e["sent_rad"]]
+            if passed:
+                assert result["observed_lift_verified"] and result["phase"] == "HOLD_REACHED_HOLDING"
+                assert result["observed_hold_span_s"] >= 3.
+                assert result["hold_entered_monotonic_ns"] - steps[0]["time_ns"] >= 2_000_000_000
+                assert any(e["phase"] == "HOLD_OBSERVING" for e in steps)
+                assert any(e["sent_rad"] != e["measured_before_command_rad"] for e in steps)
+                assert all(e["sent_rad"][-1] == start[-1] for e in steps)
+            else:
+                expected = {"lift_lost":"lost bilateral", "lift_stale":"fresh frame",
+                    "lift_supported":"unsupported lift", "lift_low":"unsupported lift",
+                    "lift_wrong_grasp":"another task/source", "lift_changed_aperture":"keep measured grasp aperture",
+                    "lift_old_grasp_frame":"reused a prior grasp frame"}
+                assert expected[name] in result["reason"], result
+                if name in ("lift_wrong_grasp", "lift_changed_aperture", "lift_old_grasp_frame"):
+                    assert not steps
+            results.append({"case":name,"phase":result["phase"],"reason":result["reason"],
+                            "hold_verified":result.get("observed_hold_verified",False), "trace_sha256":sha(output)})
+            continue
         if close_case:
             passed = name == "close"
             assert completed.returncode == int(not passed), (completed, result)
