@@ -1221,6 +1221,56 @@ def task_clearance_status(model, data, phase, required=.03):
     )
 
 
+def _carried_object_attachment(model, data, current):
+    """Planning hypothesis from the observed object pose and measured-start FK."""
+    block = _required_active_geom_id(model, "red_block_geom")
+    joint = model.joint("red_block_free").id
+    body = int(model.jnt_bodyid[joint])
+    address = int(model.jnt_qposadr[joint])
+    if (model.jnt_type[joint] != mujoco.mjtJoint.mjJNT_FREE or model.body_parentid[body] != 0
+            or model.geom_bodyid[block] != body or model.geom_type[block] != mujoco.mjtGeom.mjGEOM_BOX
+            or not np.allclose(model.geom_pos[block], 0., rtol=0, atol=1e-12)
+            or not np.allclose(model.geom_quat[block], [1.,0.,0.,0.], rtol=0, atol=1e-12)):
+        raise ValueError("carry requires the world-parented free cube with centered box geometry")
+    for geom in range(model.ngeom):
+        if geom == block or not (model.geom_contype[geom] or model.geom_conaffinity[geom]):
+            continue
+        ancestor = int(model.geom_bodyid[geom])
+        while ancestor and ancestor != body:
+            ancestor = int(model.body_parentid[ancestor])
+        if ancestor == body:
+            raise ValueError("carry supports one collision box only; additional payload geometry found")
+    pose = data.qpos[address:address+7]
+    if not np.isfinite(pose).all() or abs(np.linalg.norm(pose[3:])-1.) > 1e-6:
+        raise ValueError("carry reference object pose must be finite with a unit quaternion")
+    apply_control_as_pose(model, data, current, preserve_raw_pose=True)
+    tcp = data.site("left_cube_grasp")
+    rotation = tcp.xmat.reshape(3,3)
+    return (address, rotation.T @ (data.geom_xpos[block]-tcp.xpos),
+            rotation.T @ data.geom_xmat[block].reshape(3,3))
+
+
+def _apply_carried_object(model, data, attachment):
+    # Only a private kinematic preview changes; no live data or physical attachment.
+    address, offset, relative_rotation = attachment
+    tcp = data.site("left_cube_grasp")
+    rotation = tcp.xmat.reshape(3,3)
+    data.qpos[address:address+3] = tcp.xpos + rotation @ offset
+    quat = np.empty(4)
+    mujoco.mju_mat2Quat(quat, (rotation @ relative_rotation).ravel())
+    data.qpos[address+3:address+7] = quat
+    mujoco.mj_forward(model, data)
+
+
+def _carried_support_clearance(model, data, block, table):
+    """Conservative signed gap above the support box's infinite top plane."""
+    if model.geom_type[table] != mujoco.mjtGeom.mjGEOM_BOX:
+        raise ValueError("carry support must be the modeled box table")
+    normal = data.geom_xmat[table].reshape(3,3)[:,2]
+    extent = np.abs(data.geom_xmat[block].reshape(3,3).T @ normal) @ model.geom_size[block]
+    return float((data.geom_xpos[block]-data.geom_xpos[table]) @ normal - extent - model.geom_size[table,2])
+
+
 def check_bimanual_path(
     model: mujoco.MjModel,
     current_action: Sequence[float],
@@ -1232,6 +1282,7 @@ def check_bimanual_path(
     task_phase: str | None = None,
     reference_data: mujoco.MjData | None = None,
     allow_sim_near_support: bool = True,
+    carried_object: bool = False,
 ) -> CollisionAssessment:
     """Reject a target if its interpolated path violates protected clearance."""
 
@@ -1245,11 +1296,16 @@ def check_bimanual_path(
         raise ValueError("max_joint_step_rad must be finite and positive")
     if type(allow_sim_near_support) is not bool:
         raise ValueError("SIM near-support policy must be boolean")
+    if type(carried_object) is not bool or (carried_object and
+            (reference_data is None or task_phase not in ("LIFT", "PLACE"))):
+        raise ValueError("carry path requires observed reference data and explicit LIFT/PLACE")
 
     current = np.asarray(current_action, dtype=float)
     target = np.asarray(target_action, dtype=float)
     if not np.all(np.isfinite(current)) or not np.all(np.isfinite(target)):
         raise ValueError("all action values must be finite")
+    if carried_object and (current[5] != target[5] or not np.array_equal(current[6:], target[6:])):
+        raise ValueError("carry path must preserve measured aperture and passive right arm")
     max_delta = float(np.max(np.abs(target - current)))
     intervals = max(1, math.ceil(max_delta / max_joint_step_rad))
     pairs = list(protected_geom_pairs(model))
@@ -1276,12 +1332,26 @@ def check_bimanual_path(
     initial = mujoco.MjData(model)
     if reference_data is not None:
         initial.qpos[:] = reference_data.qpos
-    mujoco.mj_forward(model, initial)
-    task_rows = manipulation_pair_status(model, initial, task_phase)
+    if carried_object and not np.isfinite(initial.qpos).all():
+        raise ValueError("carry reference state must be finite")
+    if not carried_object:
+        mujoco.mj_forward(model, initial)
+    attachment = _carried_object_attachment(model, initial, current) if carried_object else None
+    # Reuse the existing SIM-only finger-contact rules; this is not HW policy.
+    policy_phase = "HOLD" if carried_object else task_phase
+    task_rows = manipulation_pair_status(model, initial, policy_phase)
     task_pairs = {tuple(row["pair"]) for row in task_rows}
     if task_phase is not None:
         target_id = model.geom("red_block_geom").id
         pairs.extend((g,target_id) for g in arm_geoms)
+    if carried_object:
+        support_id = _required_active_geom_id(model, "table")
+        # The payload needs obstacle coverage too, including objects not in the
+        # arm's structural pair list. Its own body and intended support are separate.
+        pairs.extend((target_id,g) for g in range(model.ngeom)
+                     if g not in arm_geoms and g != support_id
+                     and model.geom_bodyid[g] != model.geom_bodyid[target_id]
+                     and (model.geom_contype[g] or model.geom_conaffinity[g]))
 
     clearance_pairs = tuple(
         dict.fromkeys(pair for pair in pairs
@@ -1297,7 +1367,16 @@ def check_bimanual_path(
         action = current + fraction * (target - current)
         # Interpolated measured poses must not be silently clamped to command limits.
         apply_control_as_pose(model, data, action, preserve_raw_pose=True)
-        task_rows = manipulation_pair_status(model,data,task_phase)
+        if attachment is not None:
+            _apply_carried_object(model, data, attachment)
+            gap = _carried_support_clearance(model, data, target_id, support_id)
+            if not math.isfinite(gap) or gap < 0:
+                return CollisionAssessment(safe=False,reason="carried object intersects support half-space",
+                    minimum_clearance_m=gap if math.isfinite(gap) else 0., required_clearance_m=0.,
+                    path_fraction=fraction,checked_samples=sample_index+1,
+                    first_body=_body_name_for_geom(model,target_id),second_body=_body_name_for_geom(model,support_id),
+                    first_geom_id=target_id,second_geom_id=support_id)
+        task_rows = manipulation_pair_status(model,data,policy_phase)
         failed_task = next((row for row in task_rows if not row["safe"]),None)
         if failed_task:
             a,b = failed_task["pair"]
@@ -1476,7 +1555,8 @@ def check_bimanual_path(
     distance, first, second, fraction = best
     return CollisionAssessment(
         safe=True,
-        reason="interpolated simulator path satisfies protected clearance",
+        reason=("sampled rigid-payload simulator path satisfies protected clearance; hardware unverified"
+                if carried_object else "interpolated simulator path satisfies protected clearance"),
         minimum_clearance_m=distance,
         required_clearance_m=required_clearance_m,
         path_fraction=fraction,

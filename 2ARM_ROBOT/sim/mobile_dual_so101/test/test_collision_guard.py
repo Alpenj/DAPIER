@@ -25,6 +25,7 @@ from collision_guard import (
     minimum_protected_clearance,
     evaluate_pair_clearance_evidence, evaluate_clearance_set, ClearanceStatus,
     protected_geom_pairs,
+    _carried_object_attachment, _apply_carried_object, _carried_support_clearance,
 )
 from mobile_dual_so101 import (
     HUMANOID_HOME_ACTION,
@@ -105,6 +106,94 @@ class ClearanceEvidenceTest(unittest.TestCase):
                 required_clearance_m=.03,query_cap_m=.05)
             self.assertFalse(evidence.safe);self.assertIsNone(evidence.exact_distance_m)
             self.assertEqual(evidence.status,ClearanceStatus.UNVERIFIABLE_FAIL)
+
+
+class CarriedObjectPathTest(unittest.TestCase):
+    @staticmethod
+    def model(joint_type="hinge", extra="", masks="0 1"):
+        contype, affinity=masks.split()
+        bodies=''.join(f'<body name="j{i}" pos="{i+2} 0 0"><joint name="j{i}"/>'
+                       '<geom type="sphere" size=".01" mass="1" contype="0" conaffinity="0"/></body>'
+                       for i in range(1,12))
+        actuators=''.join(f'<position joint="j{i}" ctrlrange="-2 2"/>' for i in range(12))
+        return mujoco.MjModel.from_xml_string(f'''<mujoco model="desk_learning_OS30A_UNVERIFIED">
+          <worldbody><body name="hand"><joint name="j0" type="{joint_type}" axis="0 0 1"/>
+            <geom type="sphere" size=".01" mass="1" contype="0" conaffinity="0"/>
+            <site name="left_cube_grasp" pos=".1 0 .3"/></body>{bodies}
+            <geom name="table" type="box" size="1 1 .1" pos="0 0 -.1"/>
+            <geom name="obstacle" type="sphere" size=".01" pos="0 .15 .3" contype="{contype}" conaffinity="{affinity}"/>
+            <body name="payload" pos=".15 0 .3"><freejoint name="red_block_free"/>
+              <geom name="red_block_geom" type="box" size=".02 .02 .02" mass="1"/>{extra}</body>
+          </worldbody><actuator>{actuators}</actuator></mujoco>''')
+
+    def check_path(self, model, data, goal):
+        # Isolate new payload traversal from robot-specific CAD policy. Distances,
+        # FK, payload transforms and every interpolation sample are real MuJoCo.
+        with (patch("collision_guard.protected_geom_pairs", return_value=()),
+              patch("collision_guard._collision_geoms_for_arm", return_value=()),
+              patch("collision_guard.manipulation_pair_status", return_value=[]),
+              patch("collision_guard.minimum_protected_clearance", side_effect=lambda m,d,p,**kw:
+                    minimum_protected_clearance(m,d,p,**kw) if p else (.05,0,1))):
+            return check_bimanual_path(model, np.zeros(12), goal, reference_data=data,
+                task_phase="LIFT" if goal[0]>0 else "PLACE", carried_object=True,
+                allow_sim_near_support=False)
+
+    def test_rotation_moves_offset_cube_and_preserves_original_reference(self):
+        model=self.model(); reference=mujoco.MjData(model)
+        original=reference.qpos.copy()
+        preview=mujoco.MjData(model); preview.qpos[:]=reference.qpos
+        attachment=_carried_object_attachment(model,preview,np.zeros(12))
+        goal=np.zeros(12); goal[0]=np.pi/2
+        apply_control_as_pose(model,preview,goal,preserve_raw_pose=True)
+        _apply_carried_object(model,preview,attachment)
+        np.testing.assert_allclose(preview.geom("red_block_geom").xpos,[0,.15,.3],atol=1e-12)
+        np.testing.assert_allclose(preview.geom("red_block_geom").xmat.reshape(3,3),
+            [[0,-1,0],[1,0,0],[0,0,1]],atol=1e-12)
+        np.testing.assert_array_equal(reference.qpos,original)
+
+    def test_swept_cube_hits_one_way_mask_obstacle_that_static_cube_misses(self):
+        for masks in ("0 1", "1 0"):
+            model=self.model(masks=masks); data=mujoco.MjData(model); mujoco.mj_forward(model,data)
+            initial=data.qpos.copy()
+            block, obstacle=model.geom("red_block_geom").id,model.geom("obstacle").id
+            self.assertGreater(mujoco.mj_geomDistance(model,data,block,obstacle,.5,None),.03)
+            near_goal=np.zeros(12); near_goal[0]=.2
+            clear=self.check_path(model,data,near_goal)
+            self.assertTrue(clear.safe)
+            self.assertGreaterEqual(clear.minimum_clearance_m,.03)
+            self.assertFalse(clear.hardware_dispatch_authorized)
+            goal=np.zeros(12); goal[0]=np.pi/2
+            assessment=self.check_path(model,data,goal)
+            self.assertFalse(assessment.safe)
+            self.assertGreater(assessment.checked_samples,1)
+            self.assertEqual({assessment.first_geom_id,assessment.second_geom_id},{block,obstacle})
+            np.testing.assert_array_equal(data.qpos,initial)
+
+    def test_support_intersection_and_extra_payload_shape_are_rejected(self):
+        model=self.model(joint_type="slide"); data=mujoco.MjData(model)
+        goal=np.zeros(12); goal[0]=-.3
+        assessment=self.check_path(model,data,goal)
+        self.assertFalse(assessment.safe)
+        self.assertIn("support half-space",assessment.reason)
+        self.assertLess(assessment.minimum_clearance_m,0.)
+        # A tilted box must use its projected extent, not just nominal half-height.
+        address=int(model.joint("red_block_free").qposadr[0])
+        data.qpos[address+2]=.025
+        data.qpos[address+3:address+7]=[np.cos(np.pi/8),0,np.sin(np.pi/8),0]
+        mujoco.mj_forward(model,data)
+        self.assertAlmostEqual(_carried_support_clearance(model,data,model.geom("red_block_geom").id,
+            model.geom("table").id),.025-.02*np.sqrt(2))
+        data.qpos[address+3:address+7]=0.
+        with self.assertRaisesRegex(ValueError,"unit quaternion"):
+            self.check_path(model,data,goal)
+        data.qpos[address]=float("nan")
+        with self.assertRaisesRegex(ValueError,"reference state must be finite"):
+            self.check_path(model,data,goal)
+        for extra in ('<geom type="sphere" size=".01" contype="0" conaffinity="1"/>',
+                      '<body><geom type="sphere" size=".01" contype="1" conaffinity="0"/></body>'):
+            model=self.model(extra=extra)
+            with self.assertRaisesRegex(ValueError,"additional payload"):
+                _carried_object_attachment(model,mujoco.MjData(model),np.zeros(12))
 
 
 class CollisionGuardTest(unittest.TestCase):

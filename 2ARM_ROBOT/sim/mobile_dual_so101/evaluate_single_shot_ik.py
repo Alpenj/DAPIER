@@ -23,7 +23,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "research/src"))
 from dapier_research.real_sensor_ik_adapter import load_block_observation
 
-from collision_guard import DEFAULT_CLEARANCE_M, TASK_GENERAL_QUERY_CAP_M, check_bimanual_path
+from collision_guard import (DEFAULT_CLEARANCE_M, TASK_GENERAL_QUERY_CAP_M, NEAR_SUPPORT_SCOPE,
+    check_bimanual_path, _carried_object_attachment, _apply_carried_object)
 from integration_scenes import task_env, portable_model_sha256
 from mobile_dual_so101 import apply_control_as_pose, HUMANOID_HOME_ACTION
 from pgripper import home_action
@@ -177,9 +178,9 @@ def load_carry_reference(path, measured_tcp_world_m, observed_center_world_m):
     center = finite_vector(observed_center_world_m, 3, "observed object center")
     shift = np.array([0., 0., dz])
     return tcp + shift, {"phase":phase, "reference":fingerprint(path),
-        "translation_world_m":shift.tolist(), "object_goal_center_world_m":(center+shift).tolist(),
+        "translation_world_m":shift.tolist(), "desired_object_goal_center_world_m":(center+shift).tolist(),
         "tcp_minus_object_center_world_m":(tcp-center).tolist(),
-        "object_motion_model":"rigid translation hypothesis; not observed attachment",
+        "object_motion_model":"rigid TCP-relative attachment hypothesis; not observed attachment",
         "contact_path_verified":False}
 
 
@@ -460,13 +461,26 @@ def evaluate(args):
     joint_ids = model.actuator_trnid[:, 0].astype(int)
     margins = np.minimum(solved - model.jnt_range[joint_ids, 0],
                          model.jnt_range[joint_ids, 1] - solved)
-    # The static-object PREGRASP guard cannot certify a held object's swept path.
-    # Keep endpoint planning usable without issuing a false contact-path PASS.
-    guard = None if carry is not None else check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
-                               task_phase="pregrasp", reference_data=data,
-                               allow_sim_near_support=scene_support is None)
-    candidate_ok = bool((result is None or result.converged)
-                        and error <= 5e-4 and axis_error <= math.radians(2.) and guard is not None and guard.safe
+    guard = check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
+                               task_phase=carry["phase"] if carry else "pregrasp", reference_data=data,
+                               allow_sim_near_support=scene_support is None, carried_object=carry is not None)
+    if carry is not None:
+        carry.update(model_path_checked=True, model_path_safe=guard.safe, path_policy_scope=NEAR_SUPPORT_SCOPE)
+        payload_preview = mujoco.MjData(model)
+        payload_preview.qpos[:] = data.qpos
+        attachment = _carried_object_attachment(model, payload_preview, seed)
+        apply_control_as_pose(model, payload_preview, solved, preserve_raw_pose=True)
+        _apply_carried_object(model, payload_preview, attachment)
+        predicted = payload_preview.geom("red_block_geom").xpos.copy()
+        address = attachment[0]
+        carry.update(predicted_endpoint_center_world_m=predicted.tolist(),
+            predicted_endpoint_quaternion_wxyz=payload_preview.qpos[address+3:address+7].tolist(),
+            object_center_goal_error_m=float(np.linalg.norm(predicted-np.asarray(carry["desired_object_goal_center_world_m"]))),
+            endpoint_semantics="kinematic hypothesis only; does not imply path or physical acceptance")
+    # A sampled rigid-payload path under SIM contact rules is not a physical
+    # contact certificate and cannot enter the PREGRASP/native plan adapter.
+    candidate_ok = bool(carry is None and (result is None or result.converged)
+                        and error <= 5e-4 and axis_error <= math.radians(2.) and guard.safe
                         and math.isfinite(guard.minimum_clearance_m)
                         and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M
                         and (staging_source is None or closing_error <= math.radians(15)))
@@ -493,11 +507,10 @@ def evaluate(args):
         "scene_object": scene_object,
         "scene_support": scene_support,
         "solved_action_rad": solved.tolist(),
-        "structured_clearance": {"safe": bool(guard and guard.safe), "reason": guard.reason if guard else "carried-object contact/swept path not yet checked",
-            "minimum_clearance_m": guard.minimum_clearance_m if guard else None,
+        "structured_clearance": {"safe": guard.safe, "reason": guard.reason,
+            "minimum_clearance_m": guard.minimum_clearance_m,
             "required_clearance_m": DEFAULT_CLEARANCE_M, "query_cap_m": TASK_GENERAL_QUERY_CAP_M},
-        "path_assessment": guard.as_report() if guard else {"safe":False, "checked_samples":0,
-            "reason":"carried-object contact/swept path not yet checked"},
+        "path_assessment": guard.as_report(),
         "model": {**fingerprint(args.model), "compiled_sha256": portable_model_sha256(model),
             "gripper_ranges_rad": model.actuator_ctrlrange[[5, 11]].tolist()},
         "mapping": {"profile": fingerprint(profile_path), "physically_verified": False,
@@ -523,7 +536,7 @@ def main(argv=None):
     parser.add_argument("--staging-reference", type=Path,
                         help="Relative ALIGN_HIGH waypoint and IK seed; target is rebuilt from current observation")
     parser.add_argument("--carry-reference", type=Path,
-                        help="Measured-start LIFT/PLACE endpoint only; carried-object path remains unverified")
+                        help="Measured-start LIFT/PLACE with sampled rigid-payload path; SIM-only contact rules")
     parser.add_argument("--wrist-observation-json", type=Path,
                         help="Measured-state-bound wrist features; validate correction with FK/path, without IK")
     calibration = Path.home() / ".config/dapier/lerobot-calibration"

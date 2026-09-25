@@ -176,16 +176,23 @@ python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregras
 C++ smoke는 동일 lagged plant를 CLOSE부터 RELEASE까지 유지하고, 관측 입력만 별도 fixture로
 주입한다. 실제 접촉·마찰·영상 정확성 또는 실물 성공을 검증한 결과가 아니다.
 
-### 운반 종점 계획 입력 — 경로 승인은 아직 없음
+### 운반 종점·예상 물체 경로 — 실물 승인은 아직 없음
 
 기존 `evaluate_single_shot_ik.py --carry-reference FILE`은 양팔 최신 readback과 관측 물체를
 기존 loader로 읽고 LIFT/PLACE 종점을 계산한다. FILE은
 `{"schema_version":"dapier.sensor-carry-reference.v1","frame":"model_world","phase":"LIFT","translation_z_m":0.035}`
 형태다. PLACE는 음수 변위다. 0이 아닌 최대100mm 수직 변위만 받으며 SIM home/wrist/staging과 혼용하지 않는다.
 물체 중심을 TCP로 대체하지 않고 실측 FK TCP에 변위를 더한다. 기존 수직 접근축·DLS·관절 제한을
-유지하고 집게를 열지 않는다. 중심 이동은 강체 병진 가정이며 실제 물체 부착/들림 관측이 아니다.
+유지하고 집게를 열지 않는다. 실제 물체 부착/들림을 관측했다는 의미는 아니다.
 
-현재 static-object PREGRASP guard는 운반 물체의 swept path를 검증하지 못하므로 이 경로에서
-호출하지 않는다. `path_assessment.checked_samples=0`, clearance=null,
-`offline_candidate_accepted=false`를 반환한다. 기존 native plan adapter도 carry 후보를
-PREGRASP로 바꿔 보내지 않는다. 종점 계산 연결을 완료한 범위이며 운반 경로/실물 실행 PASS가 아니다.
+`check_bimanual_path(carried_object=True)`는 시작 관측 물체와 실측 FK의 상대 pose를 유지하는
+강체 부착 가정으로 각 관절 경로 샘플의 물체 pose도 갱신한다. 원본 관측 대신 private MjData만
+변경한다. payload와 다른 활성 형상은 일반30mm 검사에 포함하고 table은 보수적인 무한 상면으로
+침투를 거부한다. 한쪽 collision mask만 있는 장애물도 포함한다. 지원하지 않는 복합 payload는 거부한다.
+손가락 접촉은 기존 SIM_ONLY/HARDWARE_UNVERIFIED 정책을 재사용하므로 실물 접촉 증거가 아니다.
+
+원하는 물체 중심과 예상 부착 모델의 종점·자세·중심 오차를 구분해 기록한다. TCP 회전으로 인해
+둘은 달라질 수 있다. 검사는 유한 개의 관절 샘플이며 연속 swept volume/동적 파지/슬립 검증은 아니다.
+관측 불확실성과 추종 오차를 포함한 실제 접촉 경로·관측 판정도 미완료다.
+`offline_candidate_accepted=false`를 유지하고 기존 native plan adapter는 carry 후보를 PREGRASP로
+바꿔 보내지 않는다. native LIFT/PLACE phase 계획 연결과 물리 검증은 별도로 남아 있다.

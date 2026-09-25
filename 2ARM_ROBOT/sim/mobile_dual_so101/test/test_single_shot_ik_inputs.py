@@ -30,7 +30,7 @@ class SingleShotInputsTest(unittest.TestCase):
                 path.write_text(json.dumps({**ref, "phase":phase, "translation_z_m":dz}))
                 target, report = load_carry_reference(path, [.2,.1,.15], [.21,.12,.13])
                 np.testing.assert_allclose(target, [.2,.1,.15+dz])
-                np.testing.assert_allclose(report["object_goal_center_world_m"], [.21,.12,.13+dz])
+                np.testing.assert_allclose(report["desired_object_goal_center_world_m"], [.21,.12,.13+dz])
                 np.testing.assert_allclose(report["tcp_minus_object_center_world_m"], [-.01,-.02,.02])
                 self.assertFalse(report["contact_path_verified"])
             for change in ({"translation_z_m":0}, {"translation_z_m":-.035},
@@ -230,7 +230,7 @@ class SingleShotInputsTest(unittest.TestCase):
             self.assertGreater(result["tool_axis_error_rad_by_side"]["left"], np.deg2rad(2))
             self.assertFalse(result["offline_candidate_accepted"])
             # Exercise the actual evaluate entry, substituting only sensor/solver
-            # inputs. Static-object PREGRASP clearance must not certify carry.
+            # inputs. Carry must request a moving-payload path, never PREGRASP.
             carry_path = root/"MOCK-carry.json"
             carry_path.write_text(json.dumps({"schema_version":"dapier.sensor-carry-reference.v1",
                 "frame":"model_world", "phase":"LIFT", "translation_z_m":.035}))
@@ -242,17 +242,21 @@ class SingleShotInputsTest(unittest.TestCase):
                   mock.patch("evaluate_single_shot_ik.task_env", return_value=env),
                   mock.patch("evaluate_single_shot_ik.solve_bimanual_position_ik",
                       return_value=SimpleNamespace(action_rad=solver_output, converged=True, iterations=1)) as carry_solver,
-                  mock.patch("evaluate_single_shot_ik.check_bimanual_path") as static_path):
+                  mock.patch("evaluate_single_shot_ik.check_bimanual_path", return_value=
+                      CollisionAssessment(True,"MOCK sampled carry",.05,.03,0.,2,"a","b",1,2)) as carry_guard):
                 carry_result=evaluate(args)
-            static_path.assert_not_called()
+            self.assertIs(carry_guard.call_args.kwargs["carried_object"], True)
+            self.assertEqual(carry_guard.call_args.kwargs["task_phase"], "LIFT")
             np.testing.assert_array_equal(carry_solver.call_args.args[1], seed)
             np.testing.assert_allclose(carry_solver.call_args.args[2]["left"],
                 np.array(carry_result["seed_fk_world_m"]["left"])+[0,0,.035])
             self.assertEqual(carry_result["solved_action_rad"][5], seed[5])
             self.assertEqual(carry_result["planning_phase"], "LIFT")
             self.assertFalse(carry_result["offline_candidate_accepted"])
-            self.assertEqual(carry_result["path_assessment"]["checked_samples"], 0)
-            self.assertIsNone(carry_result["structured_clearance"]["minimum_clearance_m"])
+            self.assertEqual(carry_result["path_assessment"]["checked_samples"], 2)
+            self.assertTrue(carry_result["carry_planning"]["model_path_safe"])
+            self.assertIn("SIM_ONLY", carry_result["carry_planning"]["path_policy_scope"])
+            self.assertAlmostEqual(carry_result["carry_planning"]["object_center_goal_error_m"], .035)
             self.assertEqual(result["path_assessment"]["path_fraction"], 0.)
             self.assertEqual(result["path_assessment"]["checked_samples"], 1)
             self.assertEqual(result["path_assessment"]["first_body"], "right_shoulder")
