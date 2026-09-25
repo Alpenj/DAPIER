@@ -102,6 +102,20 @@ def block_grasp_observation_from_wrist(document, *, run_id, object_id,
             "unknown_reason": "RGB feature visibility does not establish bilateral grasp, lift or external support"}
 
 
+def block_support_observation_from_wrist(document, *, support_id, **identity):
+    """Bind existing saved wrist features to the supported-ending input schema.
+
+    Visibility is not support or release evidence. Preserve unknowns so the
+    native consumer cannot open a gripper on a feature-only observation.
+    """
+    if not isinstance(support_id, str) or not support_id.strip():
+        raise WristServoError("approved support identity required")
+    observation = block_grasp_observation_from_wrist(document, **identity)
+    return {**observation, "schema_version": "dapier.block-support-observation.v1",
+            "support_id": support_id, "approved_support_verified": None,
+            "object_released_verified": None}
+
+
 def bind_native_wrist_observation(document, measured_source, measured_model_rad, *, now_ns):
     """Join saved native frame and already validated readback, without device I/O.
 

@@ -17,6 +17,7 @@ from dapier_research.wrist_servo_adapter import (
     compute_bounded_wrist_correction,
     wrist_correction_intent,
     block_grasp_observation_from_wrist,
+    block_support_observation_from_wrist,
 )
 from dapier_research.real_sensor_ik_adapter import create_joint_position_intents
 
@@ -48,6 +49,14 @@ class TestWristServoAdapter(unittest.TestCase):
             for key in ("bilateral_grasp_verified", "external_support", "bottom_clearance_lower_bound_m"):
                 self.assertIsNone(observed[key])
             self.assertFalse(observed["observer_physically_verified"])
+            supported = block_support_observation_from_wrist(document, support_id="MOCK-table", **kwargs)
+            self.assertEqual(supported["schema_version"], "dapier.block-support-observation.v1")
+            self.assertEqual(supported["captured_monotonic_ns"], 123456)
+            self.assertEqual(supported["visible_feature"], observed["visible_feature"])
+            self.assertIsNone(supported["approved_support_verified"])
+            self.assertIsNone(supported["object_released_verified"])
+            with self.assertRaises(WristServoError):
+                block_support_observation_from_wrist(document, support_id="", **kwargs)
             document["detection"]["frame_sha256"] = "0"*64
             with self.assertRaises(WristServoError):
                 block_grasp_observation_from_wrist(document, **kwargs)

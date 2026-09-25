@@ -115,7 +115,7 @@ python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregras
 이 검사는 장치를 열지 않는 동일 launcher/native 경로다. CLOSE의 **실물 실행은 코드에서 차단**한다.
 기존 PREGRASP의 일반 30mm certificate는 jaw/block 접촉 경로 검증을 대신할 수 없고, 실물 observer도
 미검증이기 때문이다. 별도 승인 문자열이나 true 플래그만으로 이 차단을 우회할 수 없다.
-LIFT의 actual-target IK/접촉 경로와 지지 종료는 후속 작업으로 남아 있다.
+LIFT의 actual-target IK/접촉 경로는 후속 작업으로 남아 있다. 지지 종료 연결은 아래와 같다.
 이 단계는 물체를 집어 들었다는 실물 성공이 아니다.
 
 ### GRASP_CONFIRM → LIFT → 기존 observed HOLD 연결
@@ -133,7 +133,7 @@ LIFT의 actual-target IK/접촉 경로와 지지 종료는 후속 작업으로 �
 관절 종점 도달 후 기존 `ObservedBlockHold`가 unsupported bottom clearance >=30mm를 검사하고
 그때부터 연속3.000초를 센다. 이동 시간은 포함하지 않는다. 동일 native 실행/transport 안에서
 `LIFT_TRAVEL → HOLD_OBSERVING → HOLD_REACHED_HOLDING`으로 이어진다. 종료 시 torque를 유지하며
-`task_success=false`다. 객체를 지지면에 되놓는 정상 종료는 별도 연결이 필요하다.
+`task_success=false`다. 객체를 지지면에 되놓는 연결은 아래 PLACE/RELEASE가 담당한다.
 
 ```bash
 python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/lift-evidence-new lift
@@ -144,3 +144,34 @@ python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregras
 프레임은 명시적 synthetic MOCK 관측이다. 실제 블록 LIFT의 IK/경로 검사나 물리 마찰/접촉 검증이 아니다.
 단일 실패 연결을 다시 검사할 때 마지막 인자로 `lift_old_grasp_frame` 등 해당 case를 선택할 수 있다.
 CLOSE와 LIFT의 실물 실행 차단은 유지한다. 실물 observer가 미확정인 값을 true로 바꾸지 않는다.
+
+### observed HOLD → PLACE → SUPPORT_CONFIRM → RELEASE
+
+`phase=PLACE/RELEASE`는 같은 native 루프·제한·transport·실측 feedback을 사용한다.
+`previous_phase: {path, sha256}`은 각각 완료된 HOLD/PLACE trace를 가리킨다.
+같은 task/source/profile/transport와 이전 실측 종점을 확인하고, 앞선 모든 단계의 raw SHA 이력을
+상속해 CLOSE 영상을 PLACE에서 새 시각으로 재사용하는 경우도 거부한다.
+
+`support_observation`은 기존 binding에 `support_id`를 추가하며
+`dapier.block-support-observation.v1` schema를 사용한다. 기존 block 관측에
+`approved_support_verified`와 `object_released_verified`의 true/false/null을 구분한다.
+PLACE는 파지 간격을 유지하다 승인된 지지가 관측되면 실측 자세에서 하강을 멈춘다.
+서로 다른 관측과 관절 안정이 확인되면 `SUPPORTED_PLACED_HOLDING`이다.
+RELEASE는 팔 자세를 고정하고 집게만 열며, 지지가 유지되고 실제 해제가 별도 관측되어야
+`SUPPORTED_RELEASED_HOLDING_TORQUE`가 된다. 집게 열림 종점만으로는 성공하지 않는다.
+지지 미확정/유실/승인되지 않은 표면 접촉은 다음 전송 전에 거부하며,
+전송 중 feedback 또는 object 관측이 만료된 경우에도 성공을 반환하지 않는다.
+
+물체가 지지됐다는 사실은 팔의 무토크 지지를 뜻하지 않으므로 torque를 유지한다.
+`task_success=false` 및 접촉 phase의 hardware 차단을 유지한다.
+실제 목표의 내려놓기 IK/접촉 경로와 물리 관측 판정기는 아직 미구현·미검증이다.
+`block_support_observation_from_wrist()`는 기존 영상 loader/특징 추출과 provenance를 재사용하지만
+현재 자료가 입증하지 못하는 지지·해제 필드는 null로 남긴다.
+
+```bash
+python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/support-evidence-new support
+```
+
+이 검사는 native CLOSE/LIFT 결과를 이어 받아 PLACE/RELEASE 및 거부 경로를 검사한다.
+C++ smoke는 동일 lagged plant를 CLOSE부터 RELEASE까지 유지하고, 관측 입력만 별도 fixture로
+주입한다. 실제 접촉·마찰·영상 정확성 또는 실물 성공을 검증한 결과가 아니다.

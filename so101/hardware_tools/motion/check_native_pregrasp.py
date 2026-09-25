@@ -25,8 +25,8 @@ def sha(path):
 
 
 def main(binary, directory, mode="pregrasp", case=None):
-    if mode not in ("pregrasp", "hold", "close", "lift"):
-        raise ValueError("check mode must be pregrasp, hold, close or lift")
+    if mode not in ("pregrasp", "hold", "close", "lift", "support"):
+        raise ValueError("check mode must be pregrasp, hold, close, lift or support")
     binary, directory = Path(binary).resolve(strict=True), Path(directory)
     directory.mkdir(mode=0o700)
     joints = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -51,6 +51,9 @@ def main(binary, directory, mode="pregrasp", case=None):
     if mode == "lift":
         cases = ("close", "lift", "lift_lost", "lift_stale", "lift_supported", "lift_low",
                  "lift_wrong_grasp", "lift_changed_aperture", "lift_old_grasp_frame")
+    if mode == "support":
+        cases = ("close", "lift", "place", "release", "place_unknown", "place_unapproved",
+                 "release_lost", "release_no_release", "release_wrong_support", "place_ancestor_frame")
     if case is not None:
         if mode != "lift" or case not in cases[1:]:
             raise ValueError("single-case selection requires a LIFT case")
@@ -59,6 +62,8 @@ def main(binary, directory, mode="pregrasp", case=None):
         hold_case = name.startswith("hold")
         close_case = name.startswith("close")
         lift_case = name.startswith("lift")
+        place_case, release_case = name.startswith("place"), name.startswith("release")
+        support_case = place_case or release_case
         start = [0.,0.,0.,0.,0.,1.]
         stalled = name == "stalled"
         goal = [.08, -.03, .04, 0., 0., 1.] if name != "wrist" else [0.,0.,0.,0.,0.,1.]
@@ -74,6 +79,17 @@ def main(binary, directory, mode="pregrasp", case=None):
             goal = list(start); goal[0] += .06
             if name == "lift_changed_aperture":
                 goal[-1] -= .01
+        if support_case:
+            previous_trace = directory / ("place-trace.jsonl" if release_case else "lift-trace.jsonl")
+            previous_events = [json.loads(line) for line in previous_trace.read_text().splitlines()]
+            previous = previous_events[-1]
+            start = previous["final_measured_rad"]
+            goal = list(start)
+            if release_case:
+                goal[-1] += .12
+            else:
+                goal[0] -= .06
+            prior_sequence = max(e["observation"]["sequence"] for e in previous_events if "observation" in e)
         now = time.monotonic_ns()
         intent = arm_joint_position_intent(sequence=1, source="MOCK_sensor_fixture",
             joint_names=tuple(joints), joint_position_rad=tuple(goal),
@@ -86,7 +102,7 @@ def main(binary, directory, mode="pregrasp", case=None):
             goal = list(intent.joint_position_rad)
         plan, output = directory / f"{name}-plan.json", directory / f"{name}-trace.jsonl"
         stop, producer = threading.Event(), None
-        if hold_case or close_case or lift_case:
+        if hold_case or close_case or lift_case or support_case:
             observation = directory / f"{name}-observation.json"
             binding = dict(path=str(observation.resolve()), run_id=name, object_id="MOCK-cube",
                            calibration_revision="MOCK", producer_sha256=sha(Path(__file__)),
@@ -94,10 +110,13 @@ def main(binary, directory, mode="pregrasp", case=None):
                            observer_physically_verified=False)
             if lift_case:
                 binding["run_id"] = "wrong-run" if name == "lift_wrong_grasp" else "close"
+            if support_case:
+                binding["run_id"] = "close"
+                binding["support_id"] = "MOCK-wrong-table" if name == "release_wrong_support" else "MOCK-table"
             if name == "close_unknown":
                 import inspect
                 binding["producer_sha256"] = sha(Path(inspect.getfile(block_grasp_observation_from_wrist)))
-            sequence = prior_sequence if lift_case else 0
+            sequence = prior_sequence if lift_case or support_case else 0
             began = time.monotonic_ns()
             def publish():
                 nonlocal sequence
@@ -146,6 +165,24 @@ def main(binary, directory, mode="pregrasp", case=None):
                         {"capture_source":{"path":str(capture.resolve()), "sha256":sha(capture)}},
                         run_id=name, object_id=binding["object_id"], calibration_revision="MOCK",
                         sequence=sequence, source_kind="mock")
+                if support_case:
+                    elapsed = stamp-began
+                    supported = release_case or elapsed>=800_000_000
+                    released = release_case and elapsed>=1_000_000_000 and name!="release_no_release"
+                    if name == "release_lost" and elapsed>=500_000_000:
+                        supported=False
+                    value.update(schema_version="dapier.block-support-observation.v1",
+                        approved_support_verified=supported, object_released_verified=released,
+                        external_support=supported, bilateral_grasp_verified=not released,
+                        bottom_clearance_lower_bound_m=0. if supported else .035)
+                    if name == "place_unknown":
+                        value["approved_support_verified"]=None
+                    if name == "place_unapproved":
+                        value.update(external_support=True, approved_support_verified=False)
+                    if name == "place_ancestor_frame":
+                        close_events = [json.loads(line) for line in (directory/"close-trace.jsonl").read_text().splitlines()]
+                        consumed = next(e["observation"] for e in close_events if e["event"]=="grasp_observation")
+                        value.update(frame_path=consumed["frame_path"], frame_sha256=consumed["frame_sha256"])
                 temporary = observation.with_suffix('.tmp')
                 temporary.write_text(json.dumps(value))
                 temporary.replace(observation)
@@ -162,6 +199,11 @@ def main(binary, directory, mode="pregrasp", case=None):
                 "initial_torque_enabled":True, "grasp_observation" if close_case else "hold_observation":binding}
             if lift_case:
                 prepared["grasp_confirmation"] = {"path":str(grasp_trace.resolve()), "sha256":sha(grasp_trace)}
+            if support_case:
+                prepared.pop("hold_observation")
+                prepared.update(phase="RELEASE" if release_case else "PLACE", maximum_duration_s=6.,
+                    support_observation=binding,
+                    previous_phase={"path":str(previous_trace.resolve()), "sha256":sha(previous_trace)})
             plan.write_text(json.dumps(prepared))
         elif not stalled:
             # Synthetic, explicitly unverified sensor/IK audit exercises the same
@@ -200,6 +242,36 @@ def main(binary, directory, mode="pregrasp", case=None):
                 producer.join(timeout=1.)
         events = [json.loads(line) for line in output.read_text().splitlines()]
         result = events[-1]
+        if support_case:
+            passed = name in ("place", "release")
+            steps = [e for e in events if e["event"]=="step" and e["sent_rad"]]
+            assert completed.returncode == int(not passed), (completed, result)
+            assert not result["hardware_execution"] and not result["task_success"]
+            assert not result.get("hardware_access_attempted", False)
+            if passed:
+                assert result["observed_support_verified"]
+                assert result["observed_release_verified"] == release_case
+                assert result["phase"] == ("SUPPORTED_RELEASED_HOLDING_TORQUE" if release_case else "SUPPORTED_PLACED_HOLDING")
+                assert set(previous["observed_frame_history"]) < set(result["observed_frame_history"])
+                assert steps and any(e["sent_rad"]!=e["measured_before_command_rad"] for e in steps)
+                if place_case:
+                    assert all(e["sent_rad"][-1]==start[-1] for e in steps)
+                    assert any(e["phase"]=="SUPPORT_CONFIRM" for e in steps)
+                    assert not result["reached_joint_endpoint"]
+                else:
+                    assert all(e["sent_rad"][:-1]==start[:-1] for e in steps)
+                    assert "retain arm torque" in result["ending"]
+            else:
+                expected={"place_unknown":"unknown", "place_unapproved":"unapproved external support",
+                    "release_lost":"support lost", "release_no_release":"without distinct observed object release",
+                    "release_wrong_support":"support", "place_ancestor_frame":"reused"}
+                assert expected[name] in result["reason"], result
+                if name in ("place_unknown", "place_unapproved", "release_wrong_support", "place_ancestor_frame"):
+                    assert not steps
+            results.append({"case":name,"phase":result["phase"],"reason":result["reason"],
+                            "support_verified":result.get("observed_support_verified",False),
+                            "release_verified":result.get("observed_release_verified",False),"trace_sha256":sha(output)})
+            continue
         if lift_case:
             passed = name == "lift"
             assert completed.returncode == int(not passed), (completed, result)

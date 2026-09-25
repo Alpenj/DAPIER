@@ -66,6 +66,7 @@ struct PregraspResult {
   bool observed_lift_verified{false};
   std::int64_t hold_entered_ns{};
   double observed_hold_span_s{};
+  bool observed_support_verified{false}, observed_release_verified{false};
 };
 
 struct BlockGraspObservation {
@@ -113,6 +114,53 @@ struct BlockHoldObservation {
   double bottom_clearance_lower_bound_m{};
   bool bilateral_grasp_verified{false}, external_support{true};
   std::string frame_sha256;
+};
+
+struct BlockSupportObservation {
+  BlockHoldObservation block;
+  std::optional<bool> approved_support_verified, object_released_verified;
+};
+
+struct ObservedSupport {
+  std::optional<BlockSupportObservation> last;
+  std::set<std::string> consumed_frames;
+  unsigned supported_frames{}, released_frames{};
+  void update(const BlockSupportObservation& value, std::int64_t now_ns) {
+    const auto& sample = value.block;
+    if (!value.approved_support_verified.has_value())
+      throw std::runtime_error("approved support observation is unknown");
+    if (sample.external_support && !*value.approved_support_verified)
+      throw std::runtime_error("unapproved external support; stop supported ending");
+    if (sample.sequence <= 0 || sample.captured_ns <= 0 || sample.captured_ns > now_ns ||
+        now_ns-sample.captured_ns > 250000000 || !std::isfinite(sample.bottom_clearance_lower_bound_m) ||
+        sample.frame_sha256.size() != 64 || sample.frame_sha256.find_first_not_of("0123456789abcdef") != std::string::npos)
+      throw std::runtime_error("supported ending requires fresh frame-bound evidence");
+    if ((*value.approved_support_verified && !sample.external_support) ||
+        (value.object_released_verified.value_or(false) &&
+         (!*value.approved_support_verified || sample.bilateral_grasp_verified)))
+      throw std::runtime_error("contradictory support/release observation");
+    if (last) {
+      const auto& old = last->block;
+      if (sample.sequence < old.sequence || sample.captured_ns < old.captured_ns ||
+          now_ns-old.captured_ns > 250000000 ||
+          (sample.sequence > old.sequence && sample.captured_ns <= old.captured_ns) ||
+          (sample.sequence == old.sequence && (sample.captured_ns != old.captured_ns ||
+           sample.frame_sha256 != old.frame_sha256 || sample.bilateral_grasp_verified != old.bilateral_grasp_verified ||
+           sample.external_support != old.external_support ||
+           sample.bottom_clearance_lower_bound_m != old.bottom_clearance_lower_bound_m ||
+           value.approved_support_verified != last->approved_support_verified ||
+           value.object_released_verified != last->object_released_verified)))
+        throw std::runtime_error("supported ending observation identity/order/continuity changed");
+      if (supported_frames && !*value.approved_support_verified)
+        throw std::runtime_error("observed support lost; stop supported ending");
+      if (sample.sequence == old.sequence) return;
+    }
+    if (!consumed_frames.insert(sample.frame_sha256).second)
+      throw std::runtime_error("supported ending raw frame reused");
+    last = value;
+    if (*value.approved_support_verified) ++supported_frames;
+    released_frames = value.object_released_verified.value_or(false) ? released_frames+1 : 0;
+  }
 };
 
 // Count a 3s span of distinct fresh observations AFTER entering HOLD. Commands
@@ -214,7 +262,9 @@ inline PregraspResult execute_pregrasp(
     const std::function<BlockGraspObservation()>& observe_grasp = {},
     const std::optional<BlockGraspObservation>& initial_grasp = std::nullopt,
     const std::function<BlockHoldObservation()>& observe_lift = {},
-    const std::optional<BlockHoldObservation>& initial_lift = std::nullopt) {
+    const std::optional<BlockHoldObservation>& initial_lift = std::nullopt,
+    const std::function<BlockSupportObservation()>& observe_support = {},
+    const std::optional<BlockSupportObservation>& initial_support = std::nullopt) {
   PregraspResult result;
   if (!model.within_limits(expected_start) || !model.within_limits(goal) ||
       !std::isfinite(maximum_duration_s) || maximum_duration_s <= 0 || maximum_duration_s > 60) {
@@ -233,6 +283,15 @@ inline PregraspResult execute_pregrasp(
         goal.back() != expected_start.back() || goal == expected_start || maximum_duration_s < 4.1)
       throw std::invalid_argument("LIFT requires observed grasp, fixed measured aperture and moving arm plan");
   } else if (observe_lift || initial_lift) throw std::invalid_argument("lift callback is only valid for LIFT");
+  if (phase == "PLACE" || phase == "RELEASE") {
+    if (!observe_support || !initial_support || model.names().back() != "gripper")
+      throw std::invalid_argument("supported ending requires observations and calibrated gripper");
+    if (phase == "PLACE" && (goal.back() != expected_start.back() || goal == expected_start))
+      throw std::invalid_argument("PLACE must retain grasp aperture while moving the arm");
+    if (phase == "RELEASE" && (goal.back() <= expected_start.back() ||
+        !std::equal(goal.begin(), goal.end()-1, expected_start.begin())))
+      throw std::invalid_argument("RELEASE requires fixed arm and increasing gripper opening");
+  } else if (observe_support || initial_support) throw std::invalid_argument("unexpected support callback");
   SafetyController safety(config);
   // These represent the caller's already verified attended-run permit; not an
   // independent physical E-stop/watchdog verification or permission to open a port.
@@ -252,6 +311,7 @@ inline PregraspResult execute_pregrasp(
   bool holding_started = false;
   ObservedGrasp grasp;
   ObservedBlockHold lifted_hold;
+  ObservedSupport support;
   std::optional<BlockHoldObservation> last_lift;
   std::vector<double> contact_stop;
   const auto consume_lift = [&](const BlockHoldObservation& observation, std::int64_t stamp) {
@@ -272,6 +332,10 @@ inline PregraspResult execute_pregrasp(
     // a positive->negative transition could restart closure after grasp loss.
     if (initial_grasp) grasp.update(*initial_grasp, now());
     if (initial_lift) consume_lift(*initial_lift, now());
+    if (initial_support) support.update(*initial_support, now());
+    if ((phase == "PLACE" && !initial_support->block.bilateral_grasp_verified) ||
+        (phase == "RELEASE" && !initial_support->approved_support_verified.value_or(false)))
+      throw std::runtime_error("supported ending initial grasp/support is unverified");
     for (;;) {
       if (cancelled()) throw std::runtime_error("operator interruption; retain last bounded goal");
       if (now() - started_ns > maximum_duration_s * 1e9)
@@ -292,11 +356,18 @@ inline PregraspResult execute_pregrasp(
       }
       if (initial.empty()) {
         initial = positions;
-        if (phase == "LIFT" && std::abs(initial.back()-expected_start.back()) > .001)
-          throw std::runtime_error("LIFT measured grasp aperture changed since planning");
+        if ((phase == "LIFT" || phase == "PLACE") && std::abs(initial.back()-expected_start.back()) > .001)
+          throw std::runtime_error("measured grasp aperture changed since planning");
         // Keep the approved aperture constant in the command path even when
         // readback differs by a tick. Measured positions/result stay untouched.
-        if (phase == "LIFT") initial.back() = expected_start.back();
+        if (phase == "LIFT" || phase == "PLACE") initial.back() = expected_start.back();
+        if (phase == "RELEASE") {
+          for (std::size_t i=0; i+1<initial.size(); ++i) {
+            if (std::abs(initial[i]-expected_start[i]) > .001)
+              throw std::runtime_error("RELEASE measured arm moved since placement");
+            initial[i] = expected_start[i]; // Command path only; feedback remains raw.
+          }
+        }
         for (std::size_t i = 0; i < initial.size(); ++i) {
           if (std::abs(initial[i] - expected_start[i]) > 0.5 * std::acos(-1.) / 180.)
             throw std::runtime_error("measured start differs from checked path start");
@@ -322,6 +393,23 @@ inline PregraspResult execute_pregrasp(
         if (cancelled() || current_ns < started_ns || current_ns-started_ns > maximum_duration_s*1e9)
           throw std::runtime_error("LIFT observation exceeded deadline or was interrupted");
         consume_lift(observation, current_ns);
+      }
+      if (phase == "PLACE" || phase == "RELEASE") {
+        const auto observation = observe_support();
+        current_ns = now();
+        if (cancelled() || current_ns < started_ns || current_ns-started_ns > maximum_duration_s*1e9)
+          throw std::runtime_error("support observation exceeded deadline or was interrupted");
+        support.update(observation, current_ns);
+        if (phase == "PLACE") {
+          if (!observation.block.bilateral_grasp_verified)
+            throw std::runtime_error("PLACE lost grasp before release");
+          // Stop descent on observed support, even before the planned endpoint.
+          if (support.supported_frames && contact_stop.empty()) {
+            contact_stop = positions;
+            contact_stop.back() = expected_start.back();
+          }
+        } else if (!support.supported_frames)
+          throw std::runtime_error("RELEASE requires currently observed approved support");
       }
       const double elapsed_s = (current_ns - started_ns) * 1e-9;
       const double u = duration_s > 0 ? std::clamp(elapsed_s / duration_s, 0., 1.) : 1.;
@@ -369,10 +457,36 @@ inline PregraspResult execute_pregrasp(
         settled = settled && std::abs(positions[i] - (contact_stop.empty() ? goal[i] : contact_stop[i])) <= .001;
       settled_samples = settled ? settled_samples + 1 : 0;
       trace.phase = phase + (u < 1. ? "_TRAVEL" : "_SETTLING");
-      if (!contact_stop.empty()) trace.phase = "GRASP_CONFIRM";
+      if (!contact_stop.empty()) trace.phase = phase == "PLACE" ? "SUPPORT_CONFIRM" : "GRASP_CONFIRM";
       if (phase == "LIFT" && holding_started) trace.phase = "HOLD_OBSERVING";
       record(trace);
+      const auto dispatched_ns = now();
+      if (cancelled() || dispatched_ns-started_ns > maximum_duration_s*1e9)
+        throw std::runtime_error("dispatch exceeded deadline or was interrupted");
+      if (const auto stop = safety.tick(measured, dispatched_ns))
+        throw std::runtime_error(stop->reason);
+      if ((grasp.last_capture_ns && dispatched_ns-grasp.last_capture_ns > 250000000) ||
+          (support.last && dispatched_ns-support.last->block.captured_ns > 250000000))
+        throw std::runtime_error("object observation expired during dispatch");
       if (settled_samples >= 3) {
+        if (phase == "PLACE") {
+          if (contact_stop.empty()) throw std::runtime_error("PLACE endpoint without observed approved support");
+          if (support.supported_frames < 2) { wait_cycle(); continue; }
+          result.reached = true;
+          result.observed_support_verified = true;
+          result.phase = "SUPPORTED_PLACED_HOLDING";
+          result.reason = "descent stopped on observed approved support; release and arm shutdown unverified";
+          return result;
+        }
+        if (phase == "RELEASE") {
+          if (support.released_frames < 2)
+            throw std::runtime_error("RELEASE endpoint without distinct observed object release");
+          result.reached = true;
+          result.observed_support_verified = result.observed_release_verified = true;
+          result.phase = "SUPPORTED_RELEASED_HOLDING_TORQUE";
+          result.reason = "object release and approved support observed; retain arm torque";
+          return result;
+        }
         if (phase == "CLOSE") {
           if (contact_stop.empty()) throw std::runtime_error("CLOSE endpoint without observed bilateral grasp");
           if (grasp.positive_frames < 2) { wait_cycle(); continue; }

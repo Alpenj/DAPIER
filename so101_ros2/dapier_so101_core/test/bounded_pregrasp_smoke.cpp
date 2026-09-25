@@ -8,6 +8,8 @@ struct LaggedTransport : MotorTransport {
   std::vector<std::string> names{"joint"};
   bool enabled{false}, stalled{false}, stale{false}, fail_arming{false}, read_cancel{false};
   bool cancel{false};
+  bool slow_send{false};
+  std::int64_t send_delay_ns{};
   unsigned writes{};
   explicit LaggedTransport(std::int64_t& value) : clock(value) {}
   MeasuredRobotState read() override {
@@ -26,6 +28,8 @@ struct LaggedTransport : MotorTransport {
   }
   SentPositions send(const std::vector<double>& value) override {
     target = value; ++writes;
+    if (slow_send) clock += 150000000;
+    clock += send_delay_ns;
     // No assignment to q: subsequent reads advance an independent lagged plant.
     std::vector<int> raw;
     for (double v:value) raw.push_back(static_cast<int>(std::lround(v*10000)));
@@ -37,6 +41,81 @@ int main() {
   const auto frame_id=[](std::int64_t sequence) {
     const auto digits=std::to_string(sequence);
     return std::string(64-digits.size(),'0')+digits;
+  };
+  const auto supported_ending = [&](LaggedTransport& plant, const JointModel& model,
+      SafetyControllerConfig config, std::int64_t& clock, std::int64_t& sequence, int mode) {
+    for (const std::string phase : {"PLACE", "RELEASE"}) {
+      const bool release=phase=="RELEASE";
+      const auto start=plant.q;
+      auto goal=start;
+      if (release) goal.back()+=.12; else goal[0]-=.06;
+      const auto began=clock;
+      const auto before_writes=plant.writes;
+      plant.slow_send=mode==7 && release;
+      bool support_seen=false;
+      BlockSupportObservation initial{{++sequence,clock-1,release ? 0. : .035,true,release,frame_id(sequence)},release,false};
+      if (mode==11) initial.block.external_support=true;
+      if (mode==10) initial.block.captured_ns=clock-220000001;
+      unsigned writes_before_rejected_observation=0;
+      const auto result=execute_pregrasp(plant,model,config,start,goal,6.,
+        [&]{return clock;},[&]{clock+=mode==10 ? 10000000 : 50000000;},[]{return false;},[&](const StepTrace& step) {
+          if (step.sent.position_rad.empty()) return;
+          if (!release && std::abs(step.sent.position_rad.back()-start.back())>1e-12)
+            throw std::runtime_error("PLACE changed grasp aperture");
+          if (release && std::abs(step.sent.position_rad.front()-start.front())>1e-12)
+            throw std::runtime_error("RELEASE moved arm");
+          support_seen |= step.phase=="SUPPORT_CONFIRM";
+        },.01,phase,{}, {},std::nullopt,{},std::nullopt,[&] {
+          const auto elapsed=clock-began;
+          bool supported=release || elapsed>=800000000;
+          bool released=release && elapsed>=1000000000;
+          if (mode==1 && !release) supported=false;
+          if ((mode==2 && !release && elapsed>=850000000) ||
+              (mode==6 && release && elapsed>=500000000)) supported=false;
+          if (mode==5 && release) released=false;
+          BlockSupportObservation observation{{++sequence,clock,supported ? 0. : .035,
+              !released,supported,frame_id(sequence)},supported,released};
+          if (mode==3) observation.approved_support_verified=std::nullopt;
+          if (mode==4) clock+=150000000;
+          if (mode==8) {
+            observation=initial;
+            observation.approved_support_verified=true; observation.block.external_support=true;
+          }
+          if (mode==9) observation.block.captured_ns=clock-500000000;
+          if (mode==10 && elapsed>=800000000) {
+            // Robot feedback remains fresh (80ms); only object evidence expires.
+            observation=initial;
+            observation.block={++sequence,clock-220000000,0.,true,true,frame_id(sequence)};
+            observation.approved_support_verified=true;
+            plant.send_delay_ns=80000000;
+          } else if (mode==10) {
+            observation.block.captured_ns-=220000000;
+          }
+          if (mode==12 && elapsed>=500000000) {
+            observation.block.external_support=true;
+            observation.approved_support_verified=false;
+            writes_before_rejected_observation=plant.writes;
+          }
+          return observation;
+        },initial);
+      const bool should_pass=mode==0 || (!release && (mode==5 || mode==6 || mode==7));
+      if (result.reached!=should_pass || result.task_success) return false;
+      if (!should_pass) {
+        const std::vector<std::string> reasons={"", "without observed approved support", "support lost",
+          "unknown", "measured robot state is stale", "without distinct observed object release", "support lost",
+          "measured-state watchdog expired", "identity/order", "fresh frame", "object observation expired",
+          "unapproved external support", "unapproved external support"};
+        if (result.reason.find(reasons[mode])==std::string::npos) {
+          std::cerr<<mode<<" "<<result.reason<<'\n'; return false;
+        }
+        if ((mode==3 || mode==4 || mode==8 || mode==9 || mode==11) && plant.writes!=before_writes) return false;
+        if (mode==12 && plant.writes!=writes_before_rejected_observation) return false;
+        return true;
+      }
+      if (!result.observed_support_verified || result.observed_release_verified!=release ||
+          (!release && !support_seen) || !plant.enabled) return false;
+    }
+    return true;
   };
   // Scripted independent observations drive the same CLOSE dispatch/feedback
   // loop. Contact precedes full closure; measured positions still lag commands.
@@ -130,6 +209,16 @@ int main() {
       return 22;
     if ((mode==2 || mode==5 || mode==6) && plant.writes!=before_writes) return 23;
     if (mode==7 && (!hold_seen || !lifted.observed_lift_verified)) return 24;
+    if (mode==0 && !supported_ending(plant,model,config,clock,sequence,0)) return 25;
+  }
+  for (int mode=1; mode<13; ++mode) {
+    std::int64_t clock=1000000000, sequence=0;
+    LaggedTransport plant(clock); plant.names={"arm","gripper"}; plant.q=plant.target={.06,.95};
+    const JointModel model({{"arm",1,-1.,1.,.3},{"gripper",2,0.,2.,.3}});
+    SafetyControllerConfig config; config.joints={{"arm",-1.,1.,.3},{"gripper",0.,2.,.3}};
+    if (!supported_ending(plant,model,config,clock,sequence,mode)) {
+      std::cerr<<"supported ending mode "<<mode<<'\n'; return 26;
+    }
   }
   ObservedBlockHold hold;
   BlockHoldObservation obs{1,1000000000,.030,true,false,frame_id(1)};

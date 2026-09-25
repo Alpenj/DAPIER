@@ -54,7 +54,7 @@ void write_line(int fd, const json& value) {
 }
 
 json read_bound_block_observation(const json& binding, bool hardware, int output_fd,
-    const std::string& schema, const std::string& event) {
+    const std::string& schema, const std::string& event, std::set<std::string>& history) {
   const auto raw = bytes(binding.at("path"), false);
   const auto value = json::parse(raw);
   if (value.at("schema_version") != schema ||
@@ -69,6 +69,7 @@ json read_bound_block_observation(const json& binding, bool hardware, int output
   const auto frame_raw = bytes(value.at("frame_path"), false, 16777216);
   if (sha256(frame_raw) != value.at("frame_sha256").get<std::string>())
     throw std::runtime_error("HOLD raw frame SHA mismatch");
+  history.insert(value.at("frame_sha256").get<std::string>());
   for (const char* key : {"sequence", "captured_monotonic_ns"})
     if (!value.at(key).is_number_integer()) throw std::runtime_error("HOLD integer sequence/time required");
   // Preserve even unknown/negative observations before a phase gate rejects them.
@@ -77,10 +78,10 @@ json read_bound_block_observation(const json& binding, bool hardware, int output
   return value;
 }
 
-BlockHoldObservation read_hold_observation(const json& binding, bool hardware, int output_fd,
+BlockHoldObservation read_hold_observation(const json& binding, bool hardware, int output_fd, std::set<std::string>& history,
     const std::string& event = "hold_observation") {
   const auto value = read_bound_block_observation(binding, hardware, output_fd,
-      "dapier.block-hold-observation.v1", event);
+      "dapier.block-hold-observation.v1", event, history);
   for (const char* key : {"bilateral_grasp_verified", "external_support"})
     if (!value.at(key).is_boolean()) throw std::runtime_error("HOLD boolean evidence required");
   BlockHoldObservation observation{value.at("sequence"), value.at("captured_monotonic_ns"),
@@ -89,9 +90,9 @@ BlockHoldObservation read_hold_observation(const json& binding, bool hardware, i
   return observation;
 }
 
-BlockGraspObservation read_grasp_observation(const json& binding, bool hardware, int output_fd) {
+BlockGraspObservation read_grasp_observation(const json& binding, bool hardware, int output_fd, std::set<std::string>& history) {
   const auto value = read_bound_block_observation(binding, hardware, output_fd,
-      "dapier.block-grasp-observation.v1", "grasp_observation");
+      "dapier.block-grasp-observation.v1", "grasp_observation", history);
   const auto& grasp = value.at("bilateral_grasp_verified");
   if (!grasp.is_null() && !grasp.is_boolean())
     throw std::runtime_error("CLOSE grasp evidence must be boolean or unknown/null");
@@ -99,8 +100,31 @@ BlockGraspObservation read_grasp_observation(const json& binding, bool hardware,
       grasp.is_null() ? std::nullopt : std::optional<bool>(grasp.get<bool>()), value.at("frame_sha256")};
 }
 
-std::tuple<std::int64_t, std::int64_t, std::set<std::string>> bind_grasp_confirmation(const json& source, const json& binding, bool hardware,
-    const std::string& profile_sha, const std::vector<double>& start) {
+BlockSupportObservation read_support_observation(const json& binding, bool hardware, int output_fd,
+    std::set<std::string>& history) {
+  const auto value = read_bound_block_observation(binding, hardware, output_fd,
+      "dapier.block-support-observation.v1", "support_observation", history);
+  if (!binding.at("support_id").is_string() || binding.at("support_id").get<std::string>().empty() ||
+      value.at("support_id") != binding.at("support_id"))
+    throw std::runtime_error("observed support differs from approved support destination");
+  const auto optional_bool = [&](const char* key) -> std::optional<bool> {
+    const auto& field = value.at(key);
+    if (field.is_null()) return std::nullopt;
+    if (!field.is_boolean()) throw std::runtime_error("support observation boolean or null required");
+    return field.get<bool>();
+  };
+  for (const char* key : {"bilateral_grasp_verified", "external_support"})
+    if (!value.at(key).is_boolean()) throw std::runtime_error("known grasp/support observations required");
+  return {{value.at("sequence"), value.at("captured_monotonic_ns"),
+      finite_number(value.at("bottom_clearance_lower_bound_m")), value.at("bilateral_grasp_verified"),
+      value.at("external_support"), value.at("frame_sha256")},
+      optional_bool("approved_support_verified"), optional_bool("object_released_verified")};
+}
+
+std::tuple<std::int64_t, std::int64_t, std::set<std::string>> bind_completed_phase(const json& source, const json& binding, bool hardware,
+    const std::string& profile_sha, const std::vector<double>& start,
+    const std::string& expected_phase = "GRASP_CONFIRMED_HOLDING",
+    const std::string& verified_flag = "observed_grasp_verified") {
   const auto raw = bytes(source.at("path"), false, 16777216);
   if (sha256(raw) != source.at("sha256").get<std::string>())
     throw std::runtime_error("LIFT grasp-confirmation source SHA mismatch");
@@ -113,7 +137,9 @@ std::tuple<std::int64_t, std::int64_t, std::set<std::string>> bind_grasp_confirm
   std::int64_t last_sequence = 0;
   while (std::getline(input, line)) {
     result = json::parse(line);
-    if (result.value("event", "") != "grasp_observation") continue;
+    const auto event = result.value("event", "");
+    if (event != "grasp_observation" && event != "lift_observation" &&
+        event != "hold_observation" && event != "support_observation") continue;
     const auto& observation = result.at("observation");
     for (const char* key : {"run_id", "object_id", "calibration_revision", "producer_sha256", "boot_id"})
       if (observation.at(key) != binding.at(key))
@@ -121,16 +147,37 @@ std::tuple<std::int64_t, std::int64_t, std::set<std::string>> bind_grasp_confirm
     if (observation.at("source_kind") != (hardware ? "hardware" : "mock"))
       throw std::runtime_error("LIFT prior grasp transport scope mismatch");
     all_frames.insert(observation.at("frame_sha256").get<std::string>());
-    if (observation.at("bilateral_grasp_verified") == true) {
+    bool positive = observation.at("bilateral_grasp_verified") == true;
+    if (expected_phase == "HOLD_REACHED_HOLDING")
+      positive = positive && observation.at("external_support") == false &&
+          finite_number(observation.at("bottom_clearance_lower_bound_m")) >= .030;
+    if (expected_phase == "SUPPORTED_PLACED_HOLDING") {
+      if (observation.at("support_id") != binding.at("support_id"))
+        throw std::runtime_error("prior placement used another support destination");
+      positive = positive && observation.at("approved_support_verified") == true;
+    }
+    if (positive) {
       positive_frames.insert(observation.at("frame_sha256").get<std::string>());
       last_capture = observation.at("captured_monotonic_ns");
       last_sequence = observation.at("sequence");
     }
   }
-  if (result.value("event", "") != "result" || result.value("phase", "") != "GRASP_CONFIRMED_HOLDING" ||
-      result.at("observed_grasp_verified") != true || result.at("hardware_execution") != hardware ||
+  if (result.value("event", "") != "result" || result.value("phase", "") != expected_phase ||
+      result.at(verified_flag) != true || result.at("hardware_execution") != hardware ||
       result.at("profile_sha256") != profile_sha || positive_frames.size() < 2)
     throw std::runtime_error("LIFT requires completed observed grasp from the same profile/transport");
+  if (expected_phase == "HOLD_REACHED_HOLDING" && finite_number(result.at("observed_hold_span_s")) < 3.)
+    throw std::runtime_error("placement requires completed3s observed HOLD");
+  if (expected_phase != "GRASP_CONFIRMED_HOLDING" && !result.contains("observed_frame_history"))
+    throw std::runtime_error("supported ending requires inherited phase frame history");
+  if (result.contains("observed_frame_history")) {
+    for (const auto& entry : result.at("observed_frame_history")) {
+      const auto hash = entry.get<std::string>();
+      if (hash.size()!=64 || hash.find_first_not_of("0123456789abcdef")!=std::string::npos)
+        throw std::runtime_error("invalid inherited observation SHA");
+      all_frames.insert(hash);
+    }
+  }
   const auto now = monotonic_ns();
   if (last_capture <= 0 || now < last_capture || now-last_capture > 60000000000LL)
     throw std::runtime_error("LIFT prior grasp confirmation is stale/future");
@@ -289,22 +336,54 @@ int main(int argc, char** argv) {
     if (duration <= 0 || duration > 60) throw std::runtime_error("invalid bounded duration");
     const std::string phase = plan.value("phase", "PREGRASP");
     const bool already_holding = plan.value("initial_torque_enabled", false);
-    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN" && phase != "HOLD" && phase != "CLOSE" && phase != "LIFT") ||
+    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN" && phase != "HOLD" && phase != "CLOSE" && phase != "LIFT" &&
+         phase != "PLACE" && phase != "RELEASE") ||
         already_holding != (phase != "PREGRASP"))
       throw std::runtime_error("phase and expected initial torque state mismatch");
     // The existing >=30mm pregrasp certificate excludes intended jaw/block
     // contact. MOCK coverage cannot authorize a physical contact policy.
-    if (hardware && (phase == "CLOSE" || phase == "LIFT"))
+    if (hardware && (phase == "CLOSE" || phase == "LIFT" || phase == "PLACE" || phase == "RELEASE"))
       throw std::runtime_error("contact phase hardware unavailable: physical contact-path policy and observer unverified");
     if (hardware && args["--confirm"] != (phase == "HOLD" ?
         "VISIBLE_LEFT_OBSERVED_HOLD" : "VISIBLE_LEFT_SENSOR_PREGRASP"))
       throw std::runtime_error("hardware confirmation does not authorize this phase");
     ObservedBlockHold hold;
+    std::set<std::string> observed_frame_history;
     std::function<bool(std::int64_t)> observe_hold;
     std::function<BlockGraspObservation()> observe_grasp;
     std::optional<BlockGraspObservation> initial_grasp;
     std::function<BlockHoldObservation()> observe_lift;
     std::optional<BlockHoldObservation> initial_lift;
+    std::function<BlockSupportObservation()> observe_support;
+    std::optional<BlockSupportObservation> initial_support;
+    if (phase == "PLACE" || phase == "RELEASE") {
+      const auto binding = plan.at("support_observation");
+      std::ifstream boot_stream("/proc/sys/kernel/random/boot_id");
+      std::string boot_id; std::getline(boot_stream, boot_id);
+      if (!boot_stream || boot_id.empty() || binding.at("boot_id") != boot_id)
+        throw std::runtime_error("supported ending observation boot mismatch");
+      if ((phase == "PLACE" && (start.back()!=goal.back() || start==goal)) ||
+          (phase == "RELEASE" && (goal.back()<=start.back() || !std::equal(goal.begin(),goal.end()-1,start.begin()))))
+        throw std::runtime_error("supported ending joint plan changes forbidden axes");
+      const auto [prior_capture, prior_sequence, prior_frames] = bind_completed_phase(
+          plan.at("previous_phase"), binding, hardware, sha256(profile_raw), start,
+          phase=="PLACE" ? "HOLD_REACHED_HOLDING" : "SUPPORTED_PLACED_HOLDING",
+          phase=="PLACE" ? "observed_hold_verified" : "observed_support_verified");
+      observed_frame_history = prior_frames;
+      report["previous_phase"] = plan.at("previous_phase");
+      observe_support = [&, binding, prior_capture, prior_sequence, prior_frames] {
+        const auto observation = read_support_observation(binding, hardware, output_fd, observed_frame_history);
+        if (observation.block.captured_ns<=prior_capture || observation.block.sequence<=prior_sequence ||
+            prior_frames.contains(observation.block.frame_sha256))
+          throw std::runtime_error("supported ending reused a prior phase frame/time");
+        return observation;
+      };
+      initial_support = observe_support();
+      ObservedSupport preflight; preflight.update(*initial_support, monotonic_ns());
+      if ((phase=="PLACE" && !initial_support->block.bilateral_grasp_verified) ||
+          (phase=="RELEASE" && !initial_support->approved_support_verified.value_or(false)))
+        throw std::runtime_error("supported ending initial grasp/support is unverified");
+    }
     if (phase == "LIFT") {
       if (start.back() != goal.back() || start == goal)
         throw std::runtime_error("LIFT must keep measured grasp aperture and move the arm");
@@ -313,11 +392,12 @@ int main(int argc, char** argv) {
       std::string boot_id; std::getline(boot_stream, boot_id);
       if (!boot_stream || boot_id.empty() || binding.at("boot_id") != boot_id)
         throw std::runtime_error("LIFT observation boot identity mismatch");
-      const auto [prior_capture, prior_sequence, prior_frames] = bind_grasp_confirmation(
+      const auto [prior_capture, prior_sequence, prior_frames] = bind_completed_phase(
           plan.at("grasp_confirmation"), binding, hardware, sha256(profile_raw), start);
       report["grasp_confirmation"] = plan.at("grasp_confirmation");
+      observed_frame_history = prior_frames;
       observe_lift = [&, binding, prior_capture, prior_sequence, prior_frames] {
-        const auto observation = read_hold_observation(binding, hardware, output_fd, "lift_observation");
+        const auto observation = read_hold_observation(binding, hardware, output_fd, observed_frame_history, "lift_observation");
         if (observation.captured_ns <= prior_capture || observation.sequence <= prior_sequence ||
             prior_frames.contains(observation.frame_sha256))
           throw std::runtime_error("LIFT reused a prior grasp frame or capture time");
@@ -339,10 +419,10 @@ int main(int argc, char** argv) {
       if (!boot_stream || boot_id.empty() || binding.at("boot_id") != boot_id)
         throw std::runtime_error("CLOSE observation boot identity mismatch");
       ObservedGrasp preflight;
-      const auto initial_observation = read_grasp_observation(binding, hardware, output_fd);
+      const auto initial_observation = read_grasp_observation(binding, hardware, output_fd, observed_frame_history);
       preflight.update(initial_observation, monotonic_ns());
       initial_grasp = initial_observation;
-      observe_grasp = [&, binding] { return read_grasp_observation(binding, hardware, output_fd); };
+      observe_grasp = [&, binding] { return read_grasp_observation(binding, hardware, output_fd, observed_frame_history); };
     }
     if (phase == "HOLD") {
       if (start != goal || duration < 3.1)
@@ -356,10 +436,10 @@ int main(int argc, char** argv) {
         throw std::runtime_error("HOLD requires same-boot observations and a verified physical observer");
       // Fail before opening a port if evidence is absent, stale or not lifted.
       ObservedBlockHold preflight;
-      const auto initial_observation = read_hold_observation(binding, hardware, output_fd);
+      const auto initial_observation = read_hold_observation(binding, hardware, output_fd, observed_frame_history);
       preflight.update(initial_observation, monotonic_ns());
       observe_hold = [&, binding](std::int64_t) {
-        const auto observation = read_hold_observation(binding, hardware, output_fd);
+        const auto observation = read_hold_observation(binding, hardware, output_fd, observed_frame_history);
         return hold.update(observation, monotonic_ns());
       };
     }
@@ -383,15 +463,18 @@ int main(int argc, char** argv) {
           {"requested_rad", trace.requested_rad}, {"limited_rad", trace.limited_rad},
           {"sent_rad", trace.sent.position_rad}, {"sent_raw_ticks", trace.sent.raw_ticks},
           {"measured_before_command_rad", trace.measured_rad}, {"reason", trace.reason}});
-      }, path_tolerance, phase, observe_hold, observe_grasp, initial_grasp, observe_lift, initial_lift);
+      }, path_tolerance, phase, observe_hold, observe_grasp, initial_grasp, observe_lift, initial_lift, observe_support, initial_support);
     report["event"] = "result"; report["phase"] = result.phase; report["reason"] = result.reason;
     report["phase_completed"] = result.reached;
-    report["reached_joint_endpoint"] = result.reached && !result.observed_grasp_verified;
+    report["reached_joint_endpoint"] = result.reached && !result.observed_grasp_verified && phase!="PLACE";
     report["final_measured_rad"] = result.final_measured_rad;
     report["cartesian_endpoint_verified"] = false;
     report["observed_hold_verified"] = result.observed_hold_verified;
     report["observed_grasp_verified"] = result.observed_grasp_verified;
     report["observed_lift_verified"] = result.observed_lift_verified;
+    report["observed_support_verified"] = result.observed_support_verified;
+    report["observed_release_verified"] = result.observed_release_verified;
+    report["observed_frame_history"] = observed_frame_history;
     if (phase == "LIFT") {
       report["hold_entered_monotonic_ns"] = result.hold_entered_ns;
       report["observed_hold_span_s"] = result.observed_hold_span_s;
@@ -401,7 +484,9 @@ int main(int argc, char** argv) {
       report["observed_hold_span_s"] = hold.first_capture_ns && hold.last_capture_ns ?
           (hold.last_capture_ns-hold.first_capture_ns)*1e-9 : 0.;
     }
-    report["ending"] = "retain_torque_and_last_bounded_goal; supported ending is a separate approved phase";
+    report["ending"] = result.observed_release_verified ?
+        "object supported and released; retain arm torque; arm shutdown not verified" :
+        "retain_torque_and_last_bounded_goal; supported ending is a separate approved phase";
     if (auto* real = dynamic_cast<FeetechPregraspTransport*>(transport.get())) {
       report["motor_writes"] = {{"Goal_Position", real->goal_position_writes}, {"Goal_Velocity", real->goal_velocity_writes},
           {"Torque_Enable_1", real->torque_enable_writes}, {"Torque_Enable_0", 0}, {"protection_or_calibration", 0}};
