@@ -162,6 +162,27 @@ def load_staging_reference(path, block, motor_datum_in_base_m):
     return center + datum + offset, seed, fingerprint(path)
 
 
+def load_carry_reference(path, measured_tcp_world_m, observed_center_world_m):
+    """Vertical task displacement preserves the measured TCP/object separation."""
+    reference = json.loads(path.read_text())
+    phase = reference.get("phase")
+    if (reference.get("schema_version") != "dapier.sensor-carry-reference.v1"
+            or reference.get("frame") != "model_world" or phase not in ("LIFT", "PLACE")):
+        raise ValueError("explicit world-frame LIFT/PLACE carry reference required")
+    dz = reference.get("translation_z_m")
+    if (type(dz) not in (int, float) or not math.isfinite(dz) or not 0 < abs(dz) <= .10
+            or (dz > 0) != (phase == "LIFT")):
+        raise ValueError("carry displacement must be signed vertical metres within0.10m")
+    tcp = finite_vector(measured_tcp_world_m, 3, "measured FK TCP")
+    center = finite_vector(observed_center_world_m, 3, "observed object center")
+    shift = np.array([0., 0., dz])
+    return tcp + shift, {"phase":phase, "reference":fingerprint(path),
+        "translation_world_m":shift.tolist(), "object_goal_center_world_m":(center+shift).tolist(),
+        "tcp_minus_object_center_world_m":(tcp-center).tolist(),
+        "object_motion_model":"rigid translation hypothesis; not observed attachment",
+        "contact_path_verified":False}
+
+
 def bind_observed_block(model, data, block, motor_datum_in_base_m):
     """Place the observed object in the collision scene, separately from its TCP goal."""
     observed = block["scene_object"]
@@ -347,6 +368,10 @@ def load_wrist_correction(path, model, seed, measured_source, *, now_ns):
 def evaluate(args):
     now_s = time.time()
     wrist_path = getattr(args, "wrist_observation_json", None)
+    carry_path = getattr(args, "carry_reference", None)
+    if carry_path is not None and (args.sim_home_seed or wrist_path is not None
+                                   or getattr(args, "staging_reference", None) is not None):
+        raise ValueError("carry planning requires measured start and a separate carry phase")
     if wrist_path is not None and args.sim_home_seed:
         raise ValueError("wrist feedback requires a measured path start")
     if not args.sim_home_seed:
@@ -402,6 +427,10 @@ def evaluate(args):
     apply_control_as_pose(model, measured_preview, seed)
     seed_tcp = {side: measured_preview.site(f"{side}_cube_grasp").xpos.copy().tolist()
                 for side in ("left", "right")}
+    carry = None
+    if carry_path is not None:
+        world, carry = load_carry_reference(carry_path, seed_tcp["left"], scene_object["center_world_m"])
+        target = rotation.T @ (world-origin)
     goal_intent, wrist_source = None, None
     if wrist_path is not None:
         solved, goal_intent, wrist_source = load_wrist_correction(
@@ -417,8 +446,8 @@ def evaluate(args):
             site_names={"left": "left_cube_grasp"}, tool_axis_targets={"left": [0, 0, -1]},
             max_iterations=300, tolerance_m=5e-4)
         solved = np.asarray(result.action_rad).copy()
-        # Opening belongs to PREGRASP; wrist feedback preserves measured gripper state.
-        solved[5] = model.actuator_ctrlrange[5, 1]
+        # Only PREGRASP opens: carrying and wrist feedback keep measured aperture.
+        solved[5] = seed[5] if carry is not None else model.actuator_ctrlrange[5, 1]
     validate_model_action(model, solved, "IK solution")
     preview = mujoco.MjData(model)
     apply_control_as_pose(model, preview, solved)
@@ -431,16 +460,19 @@ def evaluate(args):
     joint_ids = model.actuator_trnid[:, 0].astype(int)
     margins = np.minimum(solved - model.jnt_range[joint_ids, 0],
                          model.jnt_range[joint_ids, 1] - solved)
-    guard = check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
+    # The static-object PREGRASP guard cannot certify a held object's swept path.
+    # Keep endpoint planning usable without issuing a false contact-path PASS.
+    guard = None if carry is not None else check_bimanual_path(model, seed, solved, required_clearance_m=DEFAULT_CLEARANCE_M,
                                task_phase="pregrasp", reference_data=data,
                                allow_sim_near_support=scene_support is None)
     candidate_ok = bool((result is None or result.converged)
-                        and error <= 5e-4 and axis_error <= math.radians(2.) and guard.safe
+                        and error <= 5e-4 and axis_error <= math.radians(2.) and guard is not None and guard.safe
                         and math.isfinite(guard.minimum_clearance_m)
                         and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M
                         and (staging_source is None or closing_error <= math.radians(15)))
     return {
-        "candidate_mode": "wrist_feedback" if wrist_path is not None else "pregrasp_ik",
+        "candidate_mode": "carry_endpoint_ik" if carry is not None else "wrist_feedback" if wrist_path is not None else "pregrasp_ik",
+        **({"planning_phase":carry["phase"], "carry_planning":carry} if carry is not None else {}),
         **({"goal_intent":goal_intent.as_dict(), "wrist_source":wrist_source} if goal_intent else {}),
         "ik_converged": bool(result and result.converged), "offline_candidate_accepted": candidate_ok,
         "iterations": result.iterations if result else 0, "position_error_m": error,
@@ -461,10 +493,11 @@ def evaluate(args):
         "scene_object": scene_object,
         "scene_support": scene_support,
         "solved_action_rad": solved.tolist(),
-        "structured_clearance": {"safe": guard.safe, "reason": guard.reason,
-            "minimum_clearance_m": guard.minimum_clearance_m,
+        "structured_clearance": {"safe": bool(guard and guard.safe), "reason": guard.reason if guard else "carried-object contact/swept path not yet checked",
+            "minimum_clearance_m": guard.minimum_clearance_m if guard else None,
             "required_clearance_m": DEFAULT_CLEARANCE_M, "query_cap_m": TASK_GENERAL_QUERY_CAP_M},
-        "path_assessment": guard.as_report(),
+        "path_assessment": guard.as_report() if guard else {"safe":False, "checked_samples":0,
+            "reason":"carried-object contact/swept path not yet checked"},
         "model": {**fingerprint(args.model), "compiled_sha256": portable_model_sha256(model),
             "gripper_ranges_rad": model.actuator_ctrlrange[[5, 11]].tolist()},
         "mapping": {"profile": fingerprint(profile_path), "physically_verified": False,
@@ -489,6 +522,8 @@ def main(argv=None):
                         help="Explicit joint sign/zero candidate; preserved with its SHA, never self-certifies physical mapping")
     parser.add_argument("--staging-reference", type=Path,
                         help="Relative ALIGN_HIGH waypoint and IK seed; target is rebuilt from current observation")
+    parser.add_argument("--carry-reference", type=Path,
+                        help="Measured-start LIFT/PLACE endpoint only; carried-object path remains unverified")
     parser.add_argument("--wrist-observation-json", type=Path,
                         help="Measured-state-bound wrist features; validate correction with FK/path, without IK")
     calibration = Path.home() / ".config/dapier/lerobot-calibration"

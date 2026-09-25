@@ -17,10 +17,31 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluate_single_shot_ik import (JOINTS, candidate_seed, load_measured_state,
     target_in_model_base, check_native_feedback_endpoint, fingerprint, bind_observed_block,
-    load_wrist_correction, evaluate, observed_task_env, load_staging_reference)
+    load_wrist_correction, evaluate, observed_task_env, load_staging_reference, load_carry_reference)
 
 
 class SingleShotInputsTest(unittest.TestCase):
+    def test_carry_keeps_tcp_and_center_distinct_and_rejects_bad_direction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"MOCK-carry.json"
+            ref = {"schema_version":"dapier.sensor-carry-reference.v1", "frame":"model_world",
+                   "phase":"LIFT", "translation_z_m":.035}
+            for phase, dz in (("LIFT", .035), ("PLACE", -.035)):
+                path.write_text(json.dumps({**ref, "phase":phase, "translation_z_m":dz}))
+                target, report = load_carry_reference(path, [.2,.1,.15], [.21,.12,.13])
+                np.testing.assert_allclose(target, [.2,.1,.15+dz])
+                np.testing.assert_allclose(report["object_goal_center_world_m"], [.21,.12,.13+dz])
+                np.testing.assert_allclose(report["tcp_minus_object_center_world_m"], [-.01,-.02,.02])
+                self.assertFalse(report["contact_path_verified"])
+            for change in ({"translation_z_m":0}, {"translation_z_m":-.035},
+                           {"translation_z_m":True}, {"translation_z_m":float("nan")},
+                           {"translation_z_m":.101}, {"frame":"camera_optical"}, {"phase":"CLOSE"}):
+                path.write_text(json.dumps({**ref, **change}))
+                with self.subTest(change=change), self.assertRaises(ValueError):
+                    load_carry_reference(path, [.2,.1,.15], [.21,.12,.13])
+            with self.assertRaisesRegex(ValueError, "measured start"):
+                evaluate(SimpleNamespace(carry_reference=path, sim_home_seed=True))
+
     def test_staging_rebuilds_from_current_center_not_stored_absolute_target(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "MOCK-stage.json"
@@ -208,6 +229,30 @@ class SingleShotInputsTest(unittest.TestCase):
             self.assertLess(result["position_error_m"], 1e-12)
             self.assertGreater(result["tool_axis_error_rad_by_side"]["left"], np.deg2rad(2))
             self.assertFalse(result["offline_candidate_accepted"])
+            # Exercise the actual evaluate entry, substituting only sensor/solver
+            # inputs. Static-object PREGRASP clearance must not certify carry.
+            carry_path = root/"MOCK-carry.json"
+            carry_path.write_text(json.dumps({"schema_version":"dapier.sensor-carry-reference.v1",
+                "frame":"model_world", "phase":"LIFT", "translation_z_m":.035}))
+            args.wrist_observation_json=None
+            args.carry_reference=carry_path
+            solver_output=seed.copy(); solver_output[5]=env.model.actuator_ctrlrange[5,1]
+            with (mock.patch("evaluate_single_shot_ik.load_measured_state", return_value=(np.zeros(6),source)),
+                  mock.patch("evaluate_single_shot_ik.candidate_seed", return_value=seed),
+                  mock.patch("evaluate_single_shot_ik.task_env", return_value=env),
+                  mock.patch("evaluate_single_shot_ik.solve_bimanual_position_ik",
+                      return_value=SimpleNamespace(action_rad=solver_output, converged=True, iterations=1)) as carry_solver,
+                  mock.patch("evaluate_single_shot_ik.check_bimanual_path") as static_path):
+                carry_result=evaluate(args)
+            static_path.assert_not_called()
+            np.testing.assert_array_equal(carry_solver.call_args.args[1], seed)
+            np.testing.assert_allclose(carry_solver.call_args.args[2]["left"],
+                np.array(carry_result["seed_fk_world_m"]["left"])+[0,0,.035])
+            self.assertEqual(carry_result["solved_action_rad"][5], seed[5])
+            self.assertEqual(carry_result["planning_phase"], "LIFT")
+            self.assertFalse(carry_result["offline_candidate_accepted"])
+            self.assertEqual(carry_result["path_assessment"]["checked_samples"], 0)
+            self.assertIsNone(carry_result["structured_clearance"]["minimum_clearance_m"])
             self.assertEqual(result["path_assessment"]["path_fraction"], 0.)
             self.assertEqual(result["path_assessment"]["checked_samples"], 1)
             self.assertEqual(result["path_assessment"]["first_body"], "right_shoulder")

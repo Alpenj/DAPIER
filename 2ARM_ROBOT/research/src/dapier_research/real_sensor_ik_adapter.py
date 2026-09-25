@@ -191,6 +191,10 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     """
     if not math.isfinite(now_s):
         raise ValueError("finite audit time required")
+    # Contact phases cannot inherit a PREGRASP certificate or its open-gripper semantics.
+    if (candidate.get("candidate_mode") not in (None, "pregrasp_ik", "wrist_feedback")
+            or candidate.get("planning_phase") not in (None, "ALIGN_HIGH", "PREGRASP", "WRIST_ALIGN")):
+        raise ValueError("contact/carry candidate requires its own checked phase path")
     if candidate.get("offline_candidate_accepted") is not True:
         raise ValueError("current sensor candidate has not passed IK/path acceptance")
     if (candidate.get("scene_object") or {}).get("bound_to_path_reference") is not True:

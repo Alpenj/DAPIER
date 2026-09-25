@@ -22,6 +22,12 @@ from dapier_research.vision_target import VisionTargetError, VisionTargetEstimat
 
 
 class RealSensorIkAdapterTest(unittest.TestCase):
+    def test_carry_cannot_be_relabelled_pregrasp_even_with_success_flag(self):
+        for extra in ({"candidate_mode":"carry_endpoint_ik"}, {"planning_phase":"LIFT"},
+                      {"planning_phase":"PLACE"}, {"planning_phase":"CLOSE"}):
+            with self.subTest(extra=extra), self.assertRaisesRegex(ValueError, "own checked phase path"):
+                bounded_pregrasp_plan({"offline_candidate_accepted":True, **extra}, Path("unused"), now_s=1000.)
+
     def test_metric_geometry_verdict_reaches_plan_without_depth(self):
         # Synthetic inputs exercise the real boundary, not physical acceptance.
         with tempfile.TemporaryDirectory() as directory:
