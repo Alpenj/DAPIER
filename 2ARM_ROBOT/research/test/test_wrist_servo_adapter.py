@@ -1,6 +1,11 @@
 import time
 import math
 import unittest
+import tempfile
+import hashlib
+import json
+from pathlib import Path
+import numpy as np
 from dataclasses import replace
 
 from dapier_research.wrist_servo_adapter import (
@@ -11,11 +16,47 @@ from dapier_research.wrist_servo_adapter import (
     WristServoError,
     compute_bounded_wrist_correction,
     wrist_correction_intent,
+    block_grasp_observation_from_wrist,
 )
 from dapier_research.real_sensor_ik_adapter import create_joint_position_intents
 
 
 class TestWristServoAdapter(unittest.TestCase):
+    def test_saved_wrist_producer_preserves_time_and_unknown_contact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def source(path):
+                return {"path":str(path), "sha256":hashlib.sha256(path.read_bytes()).hexdigest()}
+            frame, mask, capture = root/"frame.npy", root/"mask.npy", root/"capture.json"
+            np.save(frame, np.zeros((12,16,3), dtype=np.uint8))
+            region = np.zeros((12,16), dtype=bool); region[3:6,5:9] = True
+            np.save(mask, region)
+            capture.write_text(json.dumps({"schema_version":"dapier.wrist-frame.v1", "side":"left",
+                "clock":"host_monotonic_ns", "frame_acquired":True, "normal_stream_close":True,
+                "timestamp_ns":123456, "host_boot_id":"MOCK-boot", "frame_path":str(frame),
+                "frame_sha256":source(frame)["sha256"]}))
+            document = {"capture_source":source(capture), "detection":{
+                "frame_sha256":source(frame)["sha256"], "mask_source":source(mask), "label":"block",
+                "confidence":.9, "detector":"MOCK-mask", "uses_privileged_labels":False}}
+            kwargs = dict(run_id="MOCK-run", object_id="cube", calibration_revision="MOCK",
+                          sequence=1, source_kind="mock")
+            observed = block_grasp_observation_from_wrist(document, **kwargs)
+            self.assertEqual(observed["captured_monotonic_ns"], 123456)
+            self.assertEqual(observed["boot_id"], "MOCK-boot")
+            self.assertEqual(observed["frame_sha256"], source(frame)["sha256"])
+            self.assertIsNotNone(observed["visible_feature"])
+            for key in ("bilateral_grasp_verified", "external_support", "bottom_clearance_lower_bound_m"):
+                self.assertIsNone(observed[key])
+            self.assertFalse(observed["observer_physically_verified"])
+            document["detection"]["frame_sha256"] = "0"*64
+            with self.assertRaises(WristServoError):
+                block_grasp_observation_from_wrist(document, **kwargs)
+            document.pop("detection")
+            self.assertIsNone(block_grasp_observation_from_wrist(document, **kwargs)["visible_feature"])
+            np.save(frame, np.ones((12,16,3), dtype=np.uint8))
+            with self.assertRaises(WristServoError):
+                block_grasp_observation_from_wrist(document, **kwargs)
+
     def test_ik_intent_through_image_correction_keeps_rad_gripper_and_limits(self):
         names = tuple(self.nominal_cmd)
         q = [math.radians(self.nominal_cmd[name]) if name != "gripper" else 1.0 for name in names]

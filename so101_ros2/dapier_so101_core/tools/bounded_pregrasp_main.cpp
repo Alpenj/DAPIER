@@ -52,10 +52,11 @@ void write_line(int fd, const json& value) {
   }
 }
 
-BlockHoldObservation read_hold_observation(const json& binding, bool hardware, int output_fd) {
+json read_bound_block_observation(const json& binding, bool hardware, int output_fd,
+    const std::string& schema, const std::string& event) {
   const auto raw = bytes(binding.at("path"), false);
   const auto value = json::parse(raw);
-  if (value.at("schema_version") != "dapier.block-hold-observation.v1" ||
+  if (value.at("schema_version") != schema ||
       value.at("source_kind") != (hardware ? "hardware" : "mock") ||
       value.at("boot_id") != binding.at("boot_id"))
     throw std::runtime_error("HOLD observation source/clock identity mismatch");
@@ -69,15 +70,31 @@ BlockHoldObservation read_hold_observation(const json& binding, bool hardware, i
     throw std::runtime_error("HOLD raw frame SHA mismatch");
   for (const char* key : {"sequence", "captured_monotonic_ns"})
     if (!value.at(key).is_number_integer()) throw std::runtime_error("HOLD integer sequence/time required");
+  // Preserve even unknown/negative observations before a phase gate rejects them.
+  write_line(output_fd, {{"event", event}, {"received_monotonic_ns", monotonic_ns()},
+      {"observation_sha256", sha256(raw)}, {"observation", value}});
+  return value;
+}
+
+BlockHoldObservation read_hold_observation(const json& binding, bool hardware, int output_fd) {
+  const auto value = read_bound_block_observation(binding, hardware, output_fd,
+      "dapier.block-hold-observation.v1", "hold_observation");
   for (const char* key : {"bilateral_grasp_verified", "external_support"})
     if (!value.at(key).is_boolean()) throw std::runtime_error("HOLD boolean evidence required");
   BlockHoldObservation observation{value.at("sequence"), value.at("captured_monotonic_ns"),
       finite_number(value.at("bottom_clearance_lower_bound_m")),
       value.at("bilateral_grasp_verified"), value.at("external_support"), value.at("frame_sha256")};
-  // Persist the consumed observation, not only a mutable producer filename.
-  write_line(output_fd, {{"event", "hold_observation"}, {"received_monotonic_ns", monotonic_ns()},
-      {"observation_sha256", sha256(raw)}, {"observation", value}});
   return observation;
+}
+
+BlockGraspObservation read_grasp_observation(const json& binding, bool hardware, int output_fd) {
+  const auto value = read_bound_block_observation(binding, hardware, output_fd,
+      "dapier.block-grasp-observation.v1", "grasp_observation");
+  const auto& grasp = value.at("bilateral_grasp_verified");
+  if (!grasp.is_null() && !grasp.is_boolean())
+    throw std::runtime_error("CLOSE grasp evidence must be boolean or unknown/null");
+  return {value.at("sequence"), value.at("captured_monotonic_ns"),
+      grasp.is_null() ? std::nullopt : std::optional<bool>(grasp.get<bool>()), value.at("frame_sha256")};
 }
 
 class LaggedMock final : public MotorTransport {
@@ -227,14 +244,34 @@ int main(int argc, char** argv) {
     if (duration <= 0 || duration > 60) throw std::runtime_error("invalid bounded duration");
     const std::string phase = plan.value("phase", "PREGRASP");
     const bool already_holding = plan.value("initial_torque_enabled", false);
-    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN" && phase != "HOLD") ||
+    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN" && phase != "HOLD" && phase != "CLOSE") ||
         already_holding != (phase != "PREGRASP"))
       throw std::runtime_error("phase and expected initial torque state mismatch");
+    // The existing >=30mm pregrasp certificate excludes intended jaw/block
+    // contact. MOCK coverage cannot authorize a physical contact policy.
+    if (hardware && phase == "CLOSE")
+      throw std::runtime_error("CLOSE hardware unavailable: physical contact-path policy and observer unverified");
     if (hardware && args["--confirm"] != (phase == "HOLD" ?
         "VISIBLE_LEFT_OBSERVED_HOLD" : "VISIBLE_LEFT_SENSOR_PREGRASP"))
       throw std::runtime_error("hardware confirmation does not authorize this phase");
     ObservedBlockHold hold;
     std::function<bool(std::int64_t)> observe_hold;
+    std::function<BlockGraspObservation()> observe_grasp;
+    std::optional<BlockGraspObservation> initial_grasp;
+    if (phase == "CLOSE") {
+      if (goal.back() >= start.back() || !std::equal(goal.begin(), goal.end()-1, start.begin()))
+        throw std::runtime_error("CLOSE requires gripper-only closure");
+      const auto binding = plan.at("grasp_observation");
+      std::ifstream boot_stream("/proc/sys/kernel/random/boot_id");
+      std::string boot_id; std::getline(boot_stream, boot_id);
+      if (!boot_stream || boot_id.empty() || binding.at("boot_id") != boot_id)
+        throw std::runtime_error("CLOSE observation boot identity mismatch");
+      ObservedGrasp preflight;
+      const auto initial_observation = read_grasp_observation(binding, hardware, output_fd);
+      preflight.update(initial_observation, monotonic_ns());
+      initial_grasp = initial_observation;
+      observe_grasp = [&, binding] { return read_grasp_observation(binding, hardware, output_fd); };
+    }
     if (phase == "HOLD") {
       if (start != goal || duration < 3.1)
         throw std::runtime_error("HOLD requires a stationary plan with at least3.1s budget");
@@ -274,11 +311,14 @@ int main(int argc, char** argv) {
           {"requested_rad", trace.requested_rad}, {"limited_rad", trace.limited_rad},
           {"sent_rad", trace.sent.position_rad}, {"sent_raw_ticks", trace.sent.raw_ticks},
           {"measured_before_command_rad", trace.measured_rad}, {"reason", trace.reason}});
-      }, path_tolerance, phase, observe_hold);
+      }, path_tolerance, phase, observe_hold, observe_grasp, initial_grasp);
     report["event"] = "result"; report["phase"] = result.phase; report["reason"] = result.reason;
-    report["reached_joint_endpoint"] = result.reached; report["final_measured_rad"] = result.final_measured_rad;
+    report["phase_completed"] = result.reached;
+    report["reached_joint_endpoint"] = result.reached && !result.observed_grasp_verified;
+    report["final_measured_rad"] = result.final_measured_rad;
     report["cartesian_endpoint_verified"] = false;
     report["observed_hold_verified"] = result.observed_hold_verified;
+    report["observed_grasp_verified"] = result.observed_grasp_verified;
     if (phase == "HOLD") {
       report["hold_entered_monotonic_ns"] = hold.entered_ns;
       report["observed_hold_span_s"] = hold.first_capture_ns && hold.last_capture_ns ?

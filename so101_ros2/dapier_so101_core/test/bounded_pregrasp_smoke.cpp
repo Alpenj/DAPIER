@@ -38,6 +38,53 @@ int main() {
     const auto digits=std::to_string(sequence);
     return std::string(64-digits.size(),'0')+digits;
   };
+  // Scripted independent observations drive the same CLOSE dispatch/feedback
+  // loop. Contact precedes full closure; measured positions still lag commands.
+  for (int mode=0; mode<9; ++mode) {
+    std::int64_t clock=1000000000, sequence=0;
+    if (mode==7) sequence=1;
+    LaggedTransport plant(clock);
+    plant.names={"gripper"}; plant.q=plant.target={1.};
+    const JointModel model({{"gripper",1,0.,2.,.3}});
+    SafetyControllerConfig config; config.joints={{"gripper",0.,2.,.3}};
+    bool confirm_seen=false, lag_seen=false;
+    double frozen=-1.;
+    const auto result=execute_pregrasp(plant,model,config,{1.},{.8},8.,
+      [&]{return clock;},[&]{clock+=50000000;},[]{return false;},[&](const StepTrace& step) {
+        if (step.sent.position_rad.empty()) return;
+        lag_seen |= std::abs(step.sent.position_rad[0]-step.measured_rad[0])>1e-5;
+        if (std::abs(step.sent.position_rad[0]-step.measured_rad[0])>.01500000001)
+          throw std::runtime_error("CLOSE exceeded velocity bound");
+        if (step.phase=="GRASP_CONFIRM") {
+          confirm_seen=true;
+          if (frozen<0.) frozen=step.sent.position_rad[0];
+          if (std::abs(step.sent.position_rad[0]-frozen)>1e-12)
+            throw std::runtime_error("closure continued during GRASP_CONFIRM");
+        }
+      },.01,"CLOSE",{},[&] {
+        ++sequence;
+        const bool contact=clock>=1800000000 && mode!=6;
+        BlockGraspObservation observation{sequence,clock,contact,frame_id(sequence)};
+        if (mode==1) observation.bilateral_grasp_verified=std::nullopt;
+        if (mode==2) observation.captured_ns=clock-500000000;
+        if (mode==3 && clock>=1850000000) observation.bilateral_grasp_verified=false;
+        if (mode==4 && contact) observation.frame_sha256=frame_id(1);
+        if (mode==5 && contact) clock+=150000000; // Fresh object but robot feedback expired.
+        if (mode==8) observation={1,1000000000,clock>1000000000,frame_id(1)};
+        return observation;
+      },mode==7 ? std::optional<BlockGraspObservation>({1,999999999,true,frame_id(0)}) : std::nullopt);
+    if (result.reached!=(mode==0) || result.observed_grasp_verified!=(mode==0) || result.task_success)
+      return 15;
+    if (mode==0 && (!confirm_seen || !lag_seen || result.phase!="GRASP_CONFIRMED_HOLDING" ||
+                   result.final_measured_rad[0]<=.81)) return 16;
+    if ((mode==1 || mode==2 || mode==7 || mode==8) && plant.writes) return 17;
+    const std::vector<std::string> reasons={"", "unknown", "fresh frame", "lost bilateral",
+        "raw frame reused", "measured robot state is stale", "endpoint without", "lost bilateral", "identity/order"};
+    if (mode && result.reason.find(reasons[mode])==std::string::npos) {
+      std::cerr<<mode<<' '<<result.reason<<'\n'; return 18;
+    }
+    if (mode==3 && !confirm_seen) return 19;
+  }
   ObservedBlockHold hold;
   BlockHoldObservation obs{1,1000000000,.030,true,false,frame_id(1)};
   if (hold.update(obs,obs.captured_ns)) return 11;

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import io
 import json
 import math
 from pathlib import Path
@@ -34,6 +35,71 @@ class StaleObservationError(WristServoError):
 
 class TargetLostError(WristServoError):
     pass
+
+
+def block_grasp_observation_from_wrist(document, *, run_id, object_id,
+                                       calibration_revision, sequence, source_kind):
+    """Produce frame-bound object features for native CLOSE, without device I/O.
+
+    Existing centroid processing establishes visibility, not jaw contact, lift
+    or absence of support. Those facts remain null until an estimator can prove
+    them; the native grasp gate rejects null before dispatch. Capture time is
+    preserved even when replaying old frames, never replaced with processing time.
+    """
+    import cv2
+
+    if (source_kind not in ("mock", "hardware") or type(sequence) is not int or sequence <= 0
+            or any(not isinstance(v, str) or not v.strip()
+                   for v in (run_id, object_id, calibration_revision))):
+        raise WristServoError("invalid object observation identity")
+
+    def source_bytes(source):
+        path = Path(source["path"])
+        if not path.is_file() or not 0 < path.stat().st_size <= 16_777_216:
+            raise WristServoError("saved regular observation file required")
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != source["sha256"]:
+            raise WristServoError("object observation source changed")
+        return raw
+
+    capture = json.loads(source_bytes(document["capture_source"]))
+    if (capture.get("schema_version") != "dapier.wrist-frame.v1"
+            or capture.get("side") != "left" or capture.get("clock") != "host_monotonic_ns"
+            or capture.get("frame_acquired") is not True
+            or capture.get("normal_stream_close") is not True
+            or type(capture.get("timestamp_ns")) is not int or capture["timestamp_ns"] <= 0
+            or not isinstance(capture.get("host_boot_id"), str) or not capture["host_boot_id"]):
+        raise WristServoError("completed native wrist capture with original clock identity required")
+    frame = {"path": capture["frame_path"], "sha256": capture["frame_sha256"]}
+    raw = source_bytes(frame)
+    image = (np.load(io.BytesIO(raw), allow_pickle=False) if Path(frame["path"]).suffix == ".npy"
+             else cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR))
+    if image is None or image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
+        raise WristServoError("object source must be an HxWx3 uint8 image")
+    feature = None
+    detection = document.get("detection")
+    if detection is not None:
+        if detection.get("frame_sha256") != frame["sha256"]:
+            raise WristServoError("object mask must identify its source frame")
+        mask = np.load(io.BytesIO(source_bytes(detection["mask_source"])), allow_pickle=False)
+        try:
+            visible = wrist_observation_from_detection(PixelDetection(
+                detection["label"], mask, detection["confidence"], detection["detector"],
+                detection["uses_privileged_labels"]), image_shape=image.shape[:2],
+                timestamp_ns=capture["timestamp_ns"], measured_q={})
+            feature = {"center_uv": list(visible.feature_center_uv), "confidence": visible.confidence,
+                       "mask_source": detection["mask_source"]}
+        except TargetLostError:
+            pass
+    return {"schema_version": "dapier.block-grasp-observation.v1", "source_kind": source_kind,
+            "run_id": run_id, "object_id": object_id, "calibration_revision": calibration_revision,
+            "producer_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "boot_id": capture["host_boot_id"], "sequence": sequence,
+            "captured_monotonic_ns": capture["timestamp_ns"], "frame_path": frame["path"],
+            "frame_sha256": frame["sha256"], "capture_source": document["capture_source"],
+            "visible_feature": feature, "bilateral_grasp_verified": None, "external_support": None,
+            "bottom_clearance_lower_bound_m": None, "observer_physically_verified": False,
+            "unknown_reason": "RGB feature visibility does not establish bilateral grasp, lift or external support"}
 
 
 def bind_native_wrist_observation(document, measured_source, measured_model_rad, *, now_ns):

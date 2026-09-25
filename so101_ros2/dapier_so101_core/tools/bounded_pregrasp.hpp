@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <set>
+#include <optional>
 #include <vector>
 
 namespace dapier_so101_executor {
@@ -61,6 +62,47 @@ struct PregraspResult {
   // Reaching joints does not prove TCP, contact, lift, or task success.
   bool task_success{false};
   bool observed_hold_verified{false};
+  bool observed_grasp_verified{false};
+};
+
+struct BlockGraspObservation {
+  std::int64_t sequence{}, captured_ns{};
+  std::optional<bool> bilateral_grasp_verified;
+  std::string frame_sha256;
+};
+
+struct ObservedGrasp {
+  std::int64_t last_sequence{}, last_capture_ns{};
+  std::string last_frame_sha256;
+  std::set<std::string> consumed_frames;
+  unsigned positive_frames{};
+  bool last_bilateral_grasp{};
+  void update(const BlockGraspObservation& observation, std::int64_t now_ns) {
+    if (!observation.bilateral_grasp_verified.has_value())
+      throw std::runtime_error("CLOSE bilateral grasp observation is unknown");
+    if (observation.sequence <= 0 || observation.captured_ns <= 0 ||
+        observation.captured_ns > now_ns || now_ns-observation.captured_ns > 250000000 ||
+        observation.frame_sha256.size() != 64 ||
+        observation.frame_sha256.find_first_not_of("0123456789abcdef") != std::string::npos)
+      throw std::runtime_error("CLOSE requires fresh frame-bound grasp evidence");
+    if (last_sequence && (observation.sequence < last_sequence ||
+        observation.captured_ns < last_capture_ns ||
+        (observation.sequence == last_sequence && (observation.captured_ns != last_capture_ns ||
+         observation.frame_sha256 != last_frame_sha256 ||
+         *observation.bilateral_grasp_verified != last_bilateral_grasp)) ||
+        (observation.sequence > last_sequence && observation.captured_ns <= last_capture_ns) ||
+        now_ns-last_capture_ns > 250000000))
+      throw std::runtime_error("CLOSE observation identity/order/continuity changed");
+    if (positive_frames && !*observation.bilateral_grasp_verified)
+      throw std::runtime_error("GRASP_CONFIRM lost bilateral grasp; no further closure");
+    if (observation.sequence == last_sequence) return;
+    if (!consumed_frames.insert(observation.frame_sha256).second)
+      throw std::runtime_error("CLOSE raw frame reused with a new identity");
+    last_sequence = observation.sequence; last_capture_ns = observation.captured_ns;
+    last_frame_sha256 = observation.frame_sha256;
+    last_bilateral_grasp = *observation.bilateral_grasp_verified;
+    if (*observation.bilateral_grasp_verified) ++positive_frames;
+  }
 };
 
 struct BlockHoldObservation {
@@ -165,7 +207,9 @@ inline PregraspResult execute_pregrasp(
     const std::function<void()>& wait_cycle, const std::function<bool()>& cancelled,
     const std::function<void(const StepTrace&)>& record, double path_tolerance_rad = .01,
     const std::string& phase = "PREGRASP",
-    const std::function<bool(std::int64_t)>& observe_hold = {}) {
+    const std::function<bool(std::int64_t)>& observe_hold = {},
+    const std::function<BlockGraspObservation()>& observe_grasp = {},
+    const std::optional<BlockGraspObservation>& initial_grasp = std::nullopt) {
   PregraspResult result;
   if (!model.within_limits(expected_start) || !model.within_limits(goal) ||
       !std::isfinite(maximum_duration_s) || maximum_duration_s <= 0 || maximum_duration_s > 60) {
@@ -174,6 +218,11 @@ inline PregraspResult execute_pregrasp(
   if ((phase == "HOLD" && (!observe_hold || goal != expected_start || maximum_duration_s < 3.1)) ||
       (phase != "HOLD" && observe_hold))
     throw std::invalid_argument("observed HOLD requires a stationary checked plan and observation callback");
+  if (phase == "CLOSE") {
+    if (!observe_grasp || model.names().back() != "gripper" || goal.back() >= expected_start.back() ||
+        !std::equal(goal.begin(), goal.end()-1, expected_start.begin()))
+      throw std::invalid_argument("CLOSE requires observed gripper-only closure with fixed arm joints");
+  } else if (observe_grasp || initial_grasp) throw std::invalid_argument("grasp callback is only valid for CLOSE");
   SafetyController safety(config);
   // These represent the caller's already verified attended-run permit; not an
   // independent physical E-stop/watchdog verification or permission to open a port.
@@ -191,14 +240,19 @@ inline PregraspResult execute_pregrasp(
   bool arming_attempted = false;
   bool sent_any = false;
   bool holding_started = false;
+  ObservedGrasp grasp;
+  std::vector<double> contact_stop;
   try {
+    // Keep the preflight evidence history across driver construction. Otherwise
+    // a positive->negative transition could restart closure after grasp loss.
+    if (initial_grasp) grasp.update(*initial_grasp, now());
     for (;;) {
       if (cancelled()) throw std::runtime_error("operator interruption; retain last bounded goal");
       if (now() - started_ns > maximum_duration_s * 1e9)
         throw std::runtime_error("pregrasp deadline exceeded");
       const auto measured = transport.read();
       if (cancelled()) throw std::runtime_error("operator interruption after readback");
-      const auto current_ns = now();
+      auto current_ns = now();
       if (current_ns < started_ns || current_ns - started_ns > maximum_duration_s * 1e9)
         throw std::runtime_error("readback exceeded approved execution deadline");
       auto positions = model.reorder(measured.joint_names, measured.joint_position_rad);
@@ -221,6 +275,16 @@ inline PregraspResult execute_pregrasp(
         if (duration_s + 1.0 > maximum_duration_s)
           throw std::runtime_error("plan duration exceeds approved deadline");
       }
+      if (phase == "CLOSE") {
+        const auto observation = observe_grasp();
+        current_ns = now();
+        if (cancelled() || current_ns < started_ns || current_ns-started_ns > maximum_duration_s*1e9)
+          throw std::runtime_error("CLOSE observation exceeded deadline or was interrupted");
+        grasp.update(observation, current_ns);
+        // A contact observation stops closure at measured aperture, not at the
+        // fully-closed command. Separate fresh frames must then confirm grasp.
+        if (grasp.positive_frames && contact_stop.empty()) contact_stop = positions;
+      }
       const double elapsed_s = (current_ns - started_ns) * 1e-9;
       const double u = duration_s > 0 ? std::clamp(elapsed_s / duration_s, 0., 1.) : 1.;
       // The analytic blend is in [0,1]; rounding near u=1 can exceed it by ulps.
@@ -228,8 +292,9 @@ inline PregraspResult execute_pregrasp(
       std::vector<double> requested(goal.size());
       for (std::size_t i = 0; i < goal.size(); ++i)
         requested[i] = initial[i] + blend*(goal[i] - initial[i]);
-      const auto synchronized = rate_limited_path_point(model, positions, initial, goal,
-                                                        blend, config.command_horizon_s);
+      const auto synchronized = contact_stop.empty() ?
+          rate_limited_path_point(model, positions, initial, goal, blend, config.command_horizon_s) : contact_stop;
+      if (!contact_stop.empty()) requested = contact_stop;
       const auto limited = model.limit(positions, synchronized, config.command_horizon_s);
       if (!within_path_envelope(limited.command, expected_start, goal, path_tolerance_rad))
         throw std::runtime_error("limited command left checked path envelope");
@@ -261,13 +326,23 @@ inline PregraspResult execute_pregrasp(
       if (cancelled()) throw std::runtime_error("operator interruption before dispatch");
       trace.sent = transport.send(command.joint_position_rad);
       sent_any = true;
-      bool settled = u == 1.;
+      bool settled = !contact_stop.empty() || u == 1.;
       for (std::size_t i = 0; i < goal.size(); ++i)
-        settled = settled && std::abs(positions[i] - goal[i]) <= .001;
+        settled = settled && std::abs(positions[i] - (contact_stop.empty() ? goal[i] : contact_stop[i])) <= .001;
       settled_samples = settled ? settled_samples + 1 : 0;
       trace.phase = phase + (u < 1. ? "_TRAVEL" : "_SETTLING");
+      if (!contact_stop.empty()) trace.phase = "GRASP_CONFIRM";
       record(trace);
       if (settled_samples >= 3) {
+        if (phase == "CLOSE") {
+          if (contact_stop.empty()) throw std::runtime_error("CLOSE endpoint without observed bilateral grasp");
+          if (grasp.positive_frames < 2) { wait_cycle(); continue; }
+          result.observed_grasp_verified = true;
+          result.reached = true;
+          result.phase = "GRASP_CONFIRMED_HOLDING";
+          result.reason = "closure stopped at measured aperture; distinct frames confirmed bilateral grasp; lift unverified";
+          return result;
+        }
         if (phase == "HOLD") {
           holding_started = true;
           const bool observed = observe_hold(current_ns);

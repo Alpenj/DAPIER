@@ -76,7 +76,7 @@ plan의 시간은 이 옵션으로 바꿀 수 없다. 명시한 시간은 승인
 실제 관측 producer의 위 의미는 아직 실물 검증하지 않았다. 실물 모드는 기존 물리 매핑·센서·경로
 검사에 더해 검증된 observer와 **`VISIBLE_LEFT_OBSERVED_HOLD`** 승인을 요구한다.
 이 문자열은 실행안의 승인 범위를 정의할 뿐이며 이 문서가 장치 실행 승인은 아니다.
-CLOSE/GRASP_CONFIRM/LIFT에서 이 진입점으로 넘어오는 연결과 지지 종료는 아직 미완료다.
+GRASP_CONFIRM 이후 LIFT에서 이 진입점으로 넘어오는 연결과 지지 종료는 아직 미완료다.
 
 ```bash
 python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/observed-hold-evidence-new hold
@@ -86,3 +86,34 @@ python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregras
 정상 HOLD, 외부 지지 발생, 관측 정지, 원본 재사용을 확인했다. C++ smoke는 마지막 관측 처리 중
 관절 feedback이 만료되는 경우와 기존 PREGRASP 경로·오류 중단도 검사한다. 신규 증거 파일을 사용하고
 이미 통과한 전체 IK/physics 회귀는 반복하지 않았다.
+
+### 관측 기반 CLOSE → GRASP_CONFIRM (장치 없는 검증)
+
+기존 native 루프에 `phase=CLOSE`를 연결했다. 팔 5개 관절의 목표는 시작값과 같아야 하며,
+gripper 목표만 감소한다. 모든 명령은 기존 ControlIntent 검증·속도/관절 제한·path envelope·
+transport·measured feedback을 통과한다. `grasp_observation`은 HOLD와 같은 run/object/calibration/
+producer/boot/raw SHA binding을 쓰고 schema는 `dapier.block-grasp-observation.v1`이다.
+`bilateral_grasp_verified`는 true/false/null을 구분한다. null은 불확실하므로 전송 전에 거부한다.
+
+첫 positive 관측은 측정된 집게 간격에서 닫힘을 멈춘다. 이후 서로 다른 fresh frame에서 파지를
+재확인하고 관절이 안정되면 `GRASP_CONFIRMED_HOLDING`을 반환한다. 완전 닫힘 목표 도달이나
+실제 들림을 뜻하지 않는다. `phase_completed=true`, `observed_grasp_verified=true`여도
+`reached_joint_endpoint=false`, `task_success=false`다. 판정 변경/유실/오래된 관측/원본 재사용은
+추가 닫힘을 중단한다. preflight 관측 이력도 실행 진입에 보존한다. 정상 종료에서 torque-off하지 않는다.
+
+`wrist_servo_adapter.block_grasp_observation_from_wrist()`는 기존 native wrist 캡처 JSON과
+원본 PNG/NPY, 선택적 frame-bound detection mask를 읽어 기존 centroid 처리를 재사용한다.
+취득 시각·boot·원본 SHA를 보존하며 visibility와 파지 판정을 구분한다. 현재 RGB 특징만으로는
+양쪽 접촉·들림·외부 지지를 판정할 수 없으므로 해당 필드는 null이다. 이 producer의 출력을
+native reader까지 넣어 unknown이 motion 없이 거부되는 것을 검사한다. 저장 영상 replay를
+fresh 관측으로 바꾸지 않는다.
+
+```bash
+python so101/hardware_tools/motion/check_native_pregrasp.py /tmp/bounded_pregrasp_native /tmp/observed-close-evidence-new close
+```
+
+이 검사는 장치를 열지 않는 동일 launcher/native 경로다. CLOSE의 **실물 실행은 코드에서 차단**한다.
+기존 PREGRASP의 일반 30mm certificate는 jaw/block 접촉 경로 검증을 대신할 수 없고, 실물 observer도
+미검증이기 때문이다. 별도 승인 문자열이나 true 플래그만으로 이 차단을 우회할 수 없다.
+GRASP_CONFIRM 이후 LIFT의 actual-target IK/접촉 경로, 기존 observed HOLD로의 인계, 지지 종료는
+후속 연결로 남아 있다. 이 단계는 물체를 집어 들었다는 실물 성공이 아니다.
