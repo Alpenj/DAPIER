@@ -237,7 +237,11 @@ class WaypointBlockTeacher(CenterBlockTeacher):
             return best["segments"]
         raise ValueError("no complete staging/approach chain passed within geometry-derived retreat bound")
 
-    def solve(self,xyz):
+    def solve(self,xyz,*,position_tolerance_m=.0005):
+        # Reserve part of the unchanged 0.5 mm measured endpoint gate for
+        # tracking error when a caller requests a more precise command pose.
+        if not math.isfinite(position_tolerance_m) or not 0 < position_tolerance_m <= .0005:
+            raise ValueError("command position tolerance must be positive and at most 0.5 mm")
         xyz=np.asarray(xyz,float);self.waypoint_xyz=xyz
         seed=actuator_targets_from_qpos(self.m,self.d.qpos)
         seed=list(seed)
@@ -247,7 +251,7 @@ class WaypointBlockTeacher(CenterBlockTeacher):
         ik=solve_bimanual_position_ik(self.m,seed,{"left":xyz},
             site_names={"left":self.m.site(self.site).name},
             tool_axis_targets={"left":self.approach} if alignment else None,
-            axis_formulation="axis_direction",max_iterations=300)
+            axis_formulation="axis_direction",max_iterations=300,tolerance_m=position_tolerance_m)
         # Roll is not an IK target: position3 + axis2 fit the arm's five DoF.
         # Closing-face alignment remains an independent acceptance gate.
         p=mujoco.MjData(self.m);p.qpos[:]=self.d.qpos
@@ -341,7 +345,7 @@ class WaypointBlockTeacher(CenterBlockTeacher):
                 self.waypoint_xyz=np.asarray(row["xyz"])
                 target=row["ik"]["action_rad"]
                 self.report["plans"].append(row)
-                self.move(target)
+                self.move(target, duration=row.get("duration_s", .8))
                 self.previous_ik=target
                 if endpoint_preflight is not None:
                     from dynamic_preflight import integration_state
@@ -350,11 +354,13 @@ class WaypointBlockTeacher(CenterBlockTeacher):
                     self.report["endpoint_preflight_live_comparison"]=dict(
                         bitwise_equal=bool(np.array_equal(predicted,actual)),
                         maximum_state_difference=float(np.max(np.abs(predicted-actual))))
-                if row["phase"]=="ALIGN_HIGH":
+                preflight=self.report["staging_search"]["selected"]["dynamic_preflight"]
+                if row["phase"]==preflight["scope"][-1]:
                     from dynamic_preflight import integration_state
-                    predicted=np.asarray(self.report["staging_search"]["selected"]["dynamic_preflight"]["final_state"])
+                    predicted=np.asarray(preflight["final_state"])
                     actual=integration_state(self.m,self.d)
-                    self.report["preflight_live_comparison"]=dict(bitwise_equal=bool(np.array_equal(predicted,actual)),
+                    self.report["preflight_live_comparison"]=dict(scope=preflight["scope"],
+                        comparison="final mjSTATE_INTEGRATION only", bitwise_equal=bool(np.array_equal(predicted,actual)),
                         maximum_state_difference=float(np.max(np.abs(predicted-actual))))
             if self.execute_plan:self.finish_task(grasp)
             else:self.transition("STAGING_READY")

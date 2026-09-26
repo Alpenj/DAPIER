@@ -1,0 +1,529 @@
+"""Sensor-to-IK staging and ControlIntent translation adapter.
+
+This module accepts a validated VisionTargetEstimate and calibrated extrinsic transform,
+transforms the target into the arm base frame, plans staging waypoints, and formats
+versioned ControlIntents according to contracts/research_realtime_control_v1.json.
+It performs no hardware I/O and authorizes no motor execution.
+"""
+
+from __future__ import annotations
+
+import math
+import hashlib
+import json
+from pathlib import Path
+import time
+from typing import Any, Mapping, Sequence
+
+import numpy as np
+
+from dapier_research.control_intent import ControlIntent, arm_joint_position_intent, load_contract, validate_intent
+from dapier_research.vision_target import VisionTargetError, VisionTargetEstimate, _finite_transform
+
+# dapier_safety_core SafetyControllerConfig::command_horizon_s used by the native executor.
+NATIVE_COMMAND_HORIZON_S = 0.05
+
+
+def load_block_observation(path: Path) -> dict:
+    """Normalize observed board/cube geometry for the existing IK/executor path."""
+    document = json.loads(path.read_text())
+    if not isinstance(document, dict):
+        raise ValueError("block observation must be an object")
+    if "board_cube_observation" not in document:
+        return document
+    from dapier_research.camera_board_transform import known_cube_from_board
+    observation = document["board_cube_observation"]
+    frame = observation["frame_source"]
+    calibration = observation["calibration_sources"]
+    if (not isinstance(calibration, list) or not calibration
+            or observation["board_pose_frame_sha256"] != frame["sha256"]
+            or observation["top_corners_frame_sha256"] != frame["sha256"]):
+        raise ValueError("same-frame board pose and calibration sources required")
+    for source in [frame, *calibration]:
+        if hashlib.sha256(Path(source["path"]).read_bytes()).hexdigest() != source["sha256"]:
+            raise ValueError("block observation source changed")
+    image = np.load(frame["path"], allow_pickle=False)
+    k = observation["intrinsics"]
+    if image.shape != (k["height"], k["width"], 3) or image.dtype != np.uint8:
+        raise ValueError("rectified uint8 BGR frame must match the intrinsics resolution")
+    result = known_cube_from_board(observation)
+    metric = document.get("metric_evidence", {})
+    if not isinstance(metric, dict):
+        raise ValueError("metric target evidence must be an object")
+    # Computed geometry never promotes its own execution verdict. The source
+    # review remains explicit and is re-read by the bounded executor adapter.
+    result["metric_evidence"] = {**metric, "method":result["geometry_evidence"]["method"],
+                                  "direct_depth_used":False}
+    result["source_evidence"] = [frame, *calibration]
+    return result
+
+
+def transform_optical_point_to_arm(
+    point_optical_m: Sequence[float],
+    T_arm_from_camera: np.ndarray,
+) -> np.ndarray:
+    """Transform a 3D point from camera optical frame (+X right, +Y down, +Z forward) to arm frame."""
+    point = np.asarray(point_optical_m, dtype=np.float64)
+    if point.shape != (3,) or not np.all(np.isfinite(point)):
+        raise VisionTargetError("invalid_point", "point_optical_m must be finite 3D coordinates")
+
+    transform = _finite_transform(T_arm_from_camera)
+    homo = np.append(point, 1.0)
+    transformed = transform @ homo
+    return transformed[:3]
+
+
+def validate_sensor_estimate_for_motion(
+    estimate: VisionTargetEstimate,
+    *,
+    now_monotonic_ns: int | None = None,
+    max_age_ns: int = 2_000_000_000,  # 2.0s
+    minimum_confidence: float = 0.50,
+) -> None:
+    """Fail-closed check for freshness, confidence, and finite values before planning."""
+    if not isinstance(estimate, VisionTargetEstimate):
+        raise VisionTargetError("invalid_estimate", "estimate must be a VisionTargetEstimate")
+    if (not math.isfinite(minimum_confidence) or not 0 <= minimum_confidence <= 1
+            or type(max_age_ns) is not int or max_age_ns <= 0):
+        raise VisionTargetError("invalid_bounds", "finite confidence and positive freshness bounds required")
+
+    if not math.isfinite(estimate.confidence) or estimate.confidence < minimum_confidence:
+        raise VisionTargetError(
+            "low_confidence",
+            f"target confidence {estimate.confidence:.3f} is below minimum {minimum_confidence:.3f}",
+        )
+
+    pos_optical = np.asarray(estimate.position_optical_m, dtype=np.float64)
+    if pos_optical.shape != (3,) or not np.all(np.isfinite(pos_optical)):
+        raise VisionTargetError("nonfinite_target", "target position must be finite")
+
+    if estimate.median_depth_m <= 0.0 or not math.isfinite(estimate.median_depth_m):
+        raise VisionTargetError("invalid_depth", "target depth must be positive and finite")
+
+    if now_monotonic_ns is not None:
+        if type(now_monotonic_ns) is not int or type(estimate.timestamp_ns) is not int:
+            raise VisionTargetError("invalid_timestamp", "integer nanosecond timestamps required")
+        age_ns = now_monotonic_ns - estimate.timestamp_ns
+        if age_ns < 0 or age_ns > max_age_ns:
+            raise VisionTargetError(
+                "stale_sensor_target",
+                f"sensor target age {age_ns * 1e-6:.1f}ms exceeds maximum allowance {max_age_ns * 1e-6:.1f}ms",
+            )
+
+
+def plan_pregrasp_staging_waypoints(
+    grasp_target_arm_m: Sequence[float],
+    *,
+    pregrasp_offset_m: Sequence[float] = (0.0, 0.0, 0.050),
+    stage_offset_m: Sequence[float] = (0.0, 0.070, 0.050),
+) -> dict[str, list[float]]:
+    """Derive staging waypoints (SAFE_STAGE, PREGRASP, GRASP) from arm-frame target."""
+    grasp = np.asarray(grasp_target_arm_m, dtype=np.float64)
+    if grasp.shape != (3,) or not np.all(np.isfinite(grasp)):
+        raise VisionTargetError("invalid_target", "grasp_target_arm_m must be finite 3D coordinates")
+
+    pregrasp_off = np.asarray(pregrasp_offset_m, dtype=np.float64)
+    stage_off = np.asarray(stage_offset_m, dtype=np.float64)
+    if any(offset.shape != (3,) or not np.isfinite(offset).all() for offset in (pregrasp_off, stage_off)):
+        raise VisionTargetError("invalid_offset", "staging offsets must be finite 3D vectors")
+
+    pregrasp = grasp + pregrasp_off
+    safe_stage = pregrasp + stage_off
+
+    return {
+        "SAFE_STAGE": safe_stage.tolist(),
+        "PREGRASP_NEAR": pregrasp.tolist(),
+        "GRASP": grasp.tolist(),
+    }
+
+
+def create_joint_position_intents(
+    joint_trajectory_rad: Sequence[Sequence[float]],
+    joint_names: Sequence[str],
+    *,
+    source: str = "real_sensor_ik_adapter",
+    update_period_s: float = 0.050,  # 20 Hz
+    max_velocity_rad_s: float = 0.50,
+    start_sequence: int = 1,
+    start_monotonic_ns: int | None = None,
+    ttl_ns: int = 250_000_000,  # 250 ms
+) -> list[ControlIntent]:
+    """Format a sequenced list of ControlIntents from joint waypoints."""
+    if not joint_names or not all(isinstance(name, str) and name.strip() for name in joint_names):
+        raise ValueError("joint_names must be a non-empty sequence of strings")
+
+    num_joints = len(joint_names)
+    if not math.isfinite(update_period_s) or update_period_s <= 0:
+        raise ValueError("update_period_s must be positive and finite")
+    intents = []
+    base_ns = time.monotonic_ns() if start_monotonic_ns is None else start_monotonic_ns
+    dt_ns = int(round(update_period_s * 1e9))
+    if dt_ns <= 0:
+        raise ValueError("update period is below timestamp resolution")
+
+    contract = load_contract()
+    for idx, q in enumerate(joint_trajectory_rad):
+        q_arr = np.asarray(q, dtype=np.float64)
+        if q_arr.shape != (num_joints,) or not np.all(np.isfinite(q_arr)):
+            raise ValueError(f"step {idx}: joint positions must match joint count {num_joints} and be finite")
+
+        step_ns = base_ns + idx * dt_ns
+        intent = arm_joint_position_intent(
+            sequence=start_sequence + idx,
+            source=source,
+            joint_names=tuple(joint_names),
+            joint_position_rad=tuple(q_arr.tolist()),
+            joint_max_velocity_rad_s=tuple([max_velocity_rad_s] * num_joints),
+            ttl_ns=ttl_ns,
+            source_monotonic_ns=step_ns,
+            contract=contract,
+        )
+        intents.append(intent)
+
+    return intents
+
+
+def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
+                         *, now_s: float, goal_intent: ControlIntent | None = None,
+                         maximum_duration_s: float | None = None,
+                         prerequisite_records: Sequence[Path] = ()) -> dict:
+    """Bind a checked current sensor candidate to the existing native executor.
+
+    A wrist proposal uses this same boundary after FK/axis/path revalidation; its
+    joint endpoint must exactly match the validated candidate. Missing physical
+    evidence remains false and the native hardware gate refuses it.
+    """
+    if not math.isfinite(now_s):
+        raise ValueError("finite audit time required")
+    # Contact phases cannot inherit a PREGRASP certificate or its open-gripper semantics.
+    if (candidate.get("candidate_mode") not in (None, "pregrasp_ik", "wrist_feedback")
+            or candidate.get("planning_phase") not in (None, "ALIGN_HIGH", "PREGRASP", "WRIST_ALIGN")):
+        raise ValueError("contact/carry candidate requires its own checked phase path")
+    if candidate.get("offline_candidate_accepted") is not True:
+        raise ValueError("current sensor candidate has not passed IK/path acceptance")
+    return _bounded_motion_plan(candidate, profile_path, now_s=now_s, goal_intent=goal_intent,
+                                maximum_duration_s=maximum_duration_s,
+                                prerequisite_records=prerequisite_records)
+
+
+def bounded_carry_plan(candidate: Mapping[str, Any], profile_path: Path,
+                       previous_phase_trace: Path, observation_binding_path: Path, *, now_s: float,
+                       goal_intent: ControlIntent | None = None,
+                       maximum_duration_s: float | None = None) -> dict:
+    """Compile a model-only carry candidate for the same native MOCK phase loop.
+
+    Native code verifies the preceding observed phase, measured start and each
+    fresh frame before dispatch. This adapter does not authorize physical contact.
+    """
+    phase = candidate.get("planning_phase")
+    carry = candidate.get("carry_planning", {})
+    if (candidate.get("candidate_mode") != "carry_endpoint_ik" or phase not in ("LIFT", "PLACE")
+            or carry.get("phase") != phase or candidate.get("ik_converged") is not True
+            or carry.get("model_path_checked") is not True or carry.get("model_path_safe") is not True
+            or carry.get("path_policy_scope") != "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"
+            or carry.get("contact_path_verified") is not False):
+        raise ValueError("checked SIM-only carry phase and explicit unverified physical contact required")
+    error = carry.get("object_center_goal_error_m")
+    if type(error) not in (int, float) or not math.isfinite(error) or not 0 <= error <= .0005:
+        raise ValueError("predicted carried object center misses its goal")
+    assessment = candidate.get("path_assessment", {})
+    if (assessment.get("safe") is not True or type(assessment.get("checked_samples")) is not int
+            or assessment["checked_samples"] < 2):
+        raise ValueError("sampled carried-object path evidence required")
+    if goal_intent is not None and goal_intent.source == "wrist_servo_adapter":
+        raise ValueError("wrist intent cannot stand in for a carry phase")
+    plan = _bounded_motion_plan(candidate, profile_path, now_s=now_s, goal_intent=goal_intent,
+                                maximum_duration_s=maximum_duration_s, carry_phase=phase)
+    reference = json.loads(Path(carry["reference"]["path"]).read_text())
+    if (reference.get("schema_version") != "dapier.sensor-carry-reference.v1"
+            or reference.get("phase") != phase or reference.get("frame") != "model_world"):
+        raise ValueError("carry phase differs from its pinned waypoint reference")
+    if plan["start_rad"][-1] != plan["goal_rad"][-1] or plan["start_rad"] == plan["goal_rad"]:
+        raise ValueError("carry requires a moving arm and fixed measured aperture")
+    binding_raw = observation_binding_path.read_bytes()
+    binding = json.loads(binding_raw)
+    for key in ("path", "run_id", "object_id", "calibration_revision", "producer_sha256", "boot_id"):
+        if not isinstance(binding.get(key), str) or not binding[key].strip():
+            raise ValueError("complete native observation binding required")
+    if phase == "PLACE" and (not isinstance(binding.get("support_id"), str) or not binding["support_id"].strip()):
+        raise ValueError("PLACE requires the approved support destination identity")
+    previous = {"path":str(previous_phase_trace.resolve(strict=True)),
+                "sha256":hashlib.sha256(previous_phase_trace.read_bytes()).hexdigest()}
+    plan["grasp_confirmation" if phase == "LIFT" else "previous_phase"] = previous
+    plan["hold_observation" if phase == "LIFT" else "support_observation"] = binding
+    plan["source_evidence"].extend((previous, {"path":str(observation_binding_path.resolve()),
+        "sha256":hashlib.sha256(binding_raw).hexdigest()}))
+    plan.update(offline_candidate_accepted=False, model_carry_candidate_verified=True,
+                physical_contact_path_verified=False, allowed_transport="mock",
+                contact_policy_scope=carry["path_policy_scope"])
+    return plan
+
+
+def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, now_s: float,
+                         goal_intent: ControlIntent | None, maximum_duration_s: float | None,
+                         carry_phase: str | None = None, phase_name: str | None = None,
+                         prerequisite_records: Sequence[Path] = ()) -> dict:
+    """Shared source, mapping, metric and command checks; no device I/O."""
+    if not math.isfinite(now_s):
+        raise ValueError("finite audit time required")
+    if (candidate.get("scene_object") or {}).get("bound_to_path_reference") is not True:
+        raise ValueError("observed object was not bound to the checked collision scene")
+    start = np.asarray(candidate["seed_posture"]["seed_q_rad"], dtype=float)
+    goal = np.asarray(candidate["solved_action_rad"], dtype=float)
+    if any(q.shape != (12,) or not np.isfinite(q).all() for q in (start, goal)):
+        raise ValueError("complete finite bimanual radian states required")
+    if not np.array_equal(start[6:], goal[6:]):
+        raise ValueError("left-only executor cannot dispatch right-arm changes")
+    sources = [candidate["block_source"], candidate["model"], candidate["mapping"]["profile"]]
+    if "staging_reference" in candidate:
+        sources.append(candidate["staging_reference"])
+    if carry_phase is not None:
+        sources.append(candidate["carry_planning"]["reference"])
+    if candidate.get("candidate_mode") == "wrist_feedback":
+        wrist = candidate["wrist_source"]
+        sources.extend((wrist, wrist["frame_source"]))
+        if "capture_source" in wrist:
+            sources.append(wrist["capture_source"])
+        if "mask_source" in wrist:
+            sources.append(wrist["mask_source"])
+    timestamps = []
+    for side in ("left", "right"):
+        from datetime import datetime
+        measured = candidate["seed_posture"][side]
+        timestamps.append(datetime.fromisoformat(measured["timestamp"]).timestamp())
+        sources.extend((measured, measured["calibration"]))
+    for source in sources:
+        if hashlib.sha256(Path(source["path"]).read_bytes()).hexdigest() != source["sha256"]:
+            raise ValueError("candidate source changed since validation")
+    block = load_block_observation(Path(candidate["block_source"]["path"]))
+    sources.extend(block.get("source_evidence", []))
+    timestamp_ns = block.get("timing", {}).get("rgb_timestamp_ns", block.get("rgb_timestamp_ns"))
+    if type(timestamp_ns) is not int:
+        raise ValueError("target acquisition timestamp missing")
+    timestamps.append(timestamp_ns / 1e9)
+    if any(not 0 <= now_s - stamp <= 60 for stamp in timestamps):
+        raise ValueError("current target/readback is stale or future")
+    position_error = float(candidate["position_error_m"])
+    axis_error = float(candidate["tool_axis_error_rad_by_side"]["left"])
+    clearance = candidate["structured_clearance"]
+    distance = float(clearance["minimum_clearance_m"])
+    if (not all(math.isfinite(x) for x in (position_error, axis_error, distance))
+            or not 0 <= position_error <= .0005 or not 0 <= axis_error <= math.radians(2)
+            or clearance["safe"] is not True or distance < .030):
+        raise ValueError("position/vertical-axis/path acceptance failed")
+    profile_raw = profile_path.read_bytes()
+    profile = json.loads(profile_raw)
+    mapping_profile = json.loads(Path(candidate["mapping"]["profile"]["path"]).read_text())
+    for i, spec in enumerate(profile["joints"][:5]):
+        if (spec["sign"] != mapping_profile["arm_signs"][i]
+                or spec["zero_offset_deg"] != mapping_profile["arm_zero_offsets_deg"][i]):
+            raise ValueError("native joint mapping differs from FK/IK mapping")
+    if profile["gripper_rad_limits"] != candidate["model"]["gripper_ranges_rad"][0]:
+        raise ValueError("native PGripper range differs from FK/IK model")
+    names = tuple(j["name"] for j in profile["joints"])
+    velocities = np.asarray([j["maximum_velocity_rad_s"] for j in profile["joints"]], dtype=float)
+    if velocities.shape != (6,) or not np.isfinite(velocities).all() or np.any((velocities <= 0) | (velocities > .3)):
+        raise ValueError("invalid native velocity bounds")
+    if goal_intent is None:
+        goal_intent = arm_joint_position_intent(sequence=1, source="real_sensor_ik_adapter",
+            joint_names=names, joint_position_rad=tuple(goal[:6]),
+            joint_max_velocity_rad_s=tuple(velocities), ttl_ns=250_000_000,
+            source_monotonic_ns=time.monotonic_ns())
+    validate_intent(goal_intent)
+    if (goal_intent.kind != "arm_joint_position" or goal_intent.joint_names != names
+            or not np.array_equal(goal_intent.joint_position_rad, goal[:6])):
+        raise ValueError("intent endpoint differs from checked FK/IK/path candidate")
+    gate = _tracking_gate(candidate.get("path_envelope", {}), velocities, start[:6], goal[:6],
+                          prerequisite_records, now_s=now_s, measured_unix_s=min(timestamps[:2]),
+                          profile_sha256=hashlib.sha256(profile_raw).hexdigest())
+    sources.extend(gate["record_sources"])
+    # Metric geometry can establish a target without direct depth. An explicit
+    # current verdict takes precedence over legacy depth evidence, even if false.
+    metric = block.get("metric_evidence", block.get("depth_evidence", {}))
+    if not isinstance(metric, Mapping):
+        raise ValueError("metric target evidence must be an object")
+    duration = max(2.5, float(np.max(1.875*np.abs(goal[:6]-start[:6])/velocities))*1.15)
+    minimum_deadline = duration + 1 + (3. if carry_phase == "LIFT" else 0.)
+    if minimum_deadline > 60:
+        raise ValueError("bounded motion exceeds maximum duration")
+    # Nominal interpolation time does not bound plant settling. A longer budget
+    # must be explicit in the plan reviewed for approval, never an automatic retry.
+    deadline = minimum_deadline if maximum_duration_s is None else maximum_duration_s
+    if (isinstance(deadline, bool) or not isinstance(deadline, (int, float))
+            or not math.isfinite(deadline) or not minimum_deadline <= deadline <= 60):
+        raise ValueError("maximum duration must cover nominal motion, settling and phase HOLD budget; at most60s")
+    return {"schema_version":"dapier.bounded-pregrasp-plan.v1",
+        "phase":phase_name or carry_phase or ("WRIST_ALIGN" if goal_intent.source == "wrist_servo_adapter" else "PREGRASP"),
+        "initial_torque_enabled":carry_phase is not None or goal_intent.source == "wrist_servo_adapter",
+        "profile_sha256":hashlib.sha256(profile_raw).hexdigest(),
+        "start_rad":start[:6].tolist(), "goal_rad":goal[:6].tolist(),
+        "goal_intent":goal_intent.as_dict(), "maximum_duration_s":float(deadline),
+        "observation_unix_s":timestamps[-1], "measured_state_unix_s":min(timestamps[:2]),
+        "position_error_m":position_error,"axis_error_rad":axis_error,
+        "offline_candidate_accepted":True,"path_clear":True,"path_clearance_m":distance,
+        "sensor_target_verified":metric.get("metric_target_verified") is True,
+        **gate["plan_fields"],
+        "source_evidence":sources,"task_success":False}
+
+
+TRIAL_CONDITION_KEYS = (
+    "jig_support_in_place_and_arm_resting_on_it_torque_off",
+    "gripper_empty_jaws_set_by_hand_as_recorded",
+    "workspace_clear_except_desk_jig_right_arm_and_recorded_block",
+    "right_arm_at_rest_torque_off",
+    "operator_b_hand_on_left_follower_power_switch",
+    "operator_a_beside_arm_outside_swept_volume")
+SUPERVISED_TRIAL_UNMET = "supervised trial field conditions not confirmed by an operator record"
+NO_OVERSHOOT_UNMET = ("servo monotonic/no-overshoot motion between feedback samples is not qualified "
+                      "by evidence acquired before this execution")
+
+
+def _record(path: Path) -> tuple[dict, dict]:
+    raw = Path(path).read_bytes()
+    return json.loads(raw), {"path": str(Path(path).resolve()), "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def _tracking_gate(envelope: Mapping[str, Any], velocities: np.ndarray, start: np.ndarray, goal: np.ndarray,
+                   records: Sequence[Path], *, now_s: float, measured_unix_s: float,
+                   profile_sha256: str) -> dict:
+    """Model tube -> monitor tolerance; execution prerequisite only via pre-acquired records."""
+    assumed = envelope.get("max_velocity_rad_s")
+    tolerance = envelope.get("tracking_tolerance_rad")
+    model_tube_ok = (envelope.get("model_tube_verified") is True and isinstance(assumed, list)
+        and len(assumed) == 6 and all(type(v) in (int, float) and math.isfinite(v) for v in assumed)
+        and np.all(velocities <= np.asarray(assumed, dtype=float))
+        and envelope.get("command_horizon_s") == NATIVE_COMMAND_HORIZON_S
+        and type(tolerance) in (int, float) and math.isfinite(tolerance) and 0 < tolerance <= .01
+        and type(envelope.get("minimum_clearance_m")) in (int, float)
+        and envelope["minimum_clearance_m"] >= .030)
+    segment_ok = ("segment_start_rad" in envelope
+        and np.allclose(envelope["segment_start_rad"], start, rtol=0, atol=1e-12)
+        and np.allclose(envelope["segment_goal_rad"], goal, rtol=0, atol=1e-12))
+    # The required item is re-derived from the certificate mode, so an edited envelope that
+    # simply omits it cannot pass; only a matching pre-acquired record removes it.
+    required = SUPERVISED_TRIAL_UNMET if envelope.get("excursion_allowance_rad", 0) else NO_OVERSHOOT_UNMET
+    unmet = list(dict.fromkeys([*envelope.get("execution_prerequisites_unmet", []), required]))
+    sources, accepted = [], []
+    for path in records:
+        record, source = _record(path)
+        kind = record.get("schema_version")
+        if kind == "dapier.supervised-trial-conditions.v1" and SUPERVISED_TRIAL_UNMET in unmet:
+            recorded = record.get("recorded_unix_s")
+            if (envelope.get("excursion_allowance_rad", 0) >= .05 and record.get("operator_confirmed") is True
+                    and set(record.get("conditions", {})) == set(TRIAL_CONDITION_KEYS)
+                    and all(v is True for v in record["conditions"].values())
+                    and type(recorded) in (int, float) and 0 <= now_s - recorded <= 900):
+                unmet.remove(SUPERVISED_TRIAL_UNMET); accepted.append(kind); sources.append(source)
+        elif kind == "dapier.tracking-qualification.v1" and NO_OVERSHOOT_UNMET in unmet:
+            covered = np.asarray(record.get("covered_joint_range_rad", []), dtype=float)
+            # Finite evidence qualifies only its own profile/speed/tolerance and posture range,
+            # and only when it was acquired before this execution's measured start.
+            if (record.get("pass") is True and record.get("hardware_execution") is True
+                    and record.get("profile_sha256") == profile_sha256
+                    and record.get("max_velocity_rad_s") == assumed
+                    and record.get("tracking_tolerance_rad") == tolerance
+                    and type(record.get("acquired_unix_s")) in (int, float)
+                    and record["acquired_unix_s"] < measured_unix_s and covered.shape == (6, 2)
+                    and np.all(np.minimum(start, goal) >= covered[:, 0])
+                    and np.all(np.maximum(start, goal) <= covered[:, 1])):
+                unmet.remove(NO_OVERSHOOT_UNMET); accepted.append(kind); sources.append(source)
+    envelope_ok = model_tube_ok and segment_ok and not unmet
+    return {"model_tube_ok": model_tube_ok, "envelope_ok": envelope_ok, "record_sources": sources,
+            "plan_fields": {
+                "path_tracking_tolerance_rad": float(tolerance) if model_tube_ok else .01,
+                "path_envelope_verified": envelope_ok,
+                "path_envelope_clearance_m": float(envelope["minimum_clearance_m"]) if envelope_ok else 0.,
+                "path_envelope_model_clearance_m": float(envelope["minimum_clearance_m"]) if model_tube_ok else None,
+                "path_envelope_unmet_prerequisites": [] if envelope_ok else
+                    (unmet or ["tracking envelope not bound to this segment"]),
+                "path_envelope_accepted_records": accepted,
+                "path_envelope_accepted_assumptions": list(envelope.get("accepted_assumptions", [])),
+                "path_excursion_allowance_rad": envelope.get("excursion_allowance_rad", 0.)}}
+
+
+def bounded_trial_plan(candidate: Mapping[str, Any], profile_path: Path, *, fraction: float,
+                       trial_envelope: Mapping[str, Any], prerequisite_records: Sequence[Path] = (),
+                       now_s: float, maximum_duration_s: float | None = None) -> dict:
+    """First `fraction` of a checked current PREGRASP line, as a supervised TRACKING_TRIAL.
+
+    Every PREGRASP input check still applies; only the goal is truncated on the same line
+    and the tube must be the allowance-based trial certificate for that truncated segment.
+    """
+    if type(fraction) not in (int, float) or not 0 < fraction <= 1:
+        raise ValueError("trial fraction must be in (0, 1]")
+    if trial_envelope.get("excursion_allowance_rad", 0) < .05:
+        raise ValueError("trial requires the supervised excursion-allowance certificate")
+    start = np.asarray(candidate["seed_posture"]["seed_q_rad"], dtype=float)
+    goal = np.asarray(candidate["solved_action_rad"], dtype=float)
+    truncated = dict(candidate)
+    truncated["solved_action_rad"] = (start + fraction * (goal - start)).tolist()
+    truncated["path_envelope"] = trial_envelope
+    if candidate.get("offline_candidate_accepted") is not True or candidate.get("candidate_mode") != "pregrasp_ik":
+        raise ValueError("trial reuses only an accepted non-contact pregrasp candidate")
+    plan = _bounded_motion_plan(truncated, profile_path, now_s=now_s, goal_intent=None,
+                                maximum_duration_s=maximum_duration_s, phase_name="TRACKING_TRIAL",
+                                prerequisite_records=prerequisite_records)
+    plan.update(trial_fraction=float(fraction), trial_source_goal_rad=goal[:6].tolist(),
+                scope="supervised tracking trial; not P4, not task success")
+    return plan
+
+
+def bounded_return_plan(previous_trace: Path, previous_plan: Path, outbound_plan: Path, profile_path: Path, *,
+                        goal_fraction: float, return_envelope: Mapping[str, Any],
+                        prerequisite_records: Sequence[Path] = (), now_s: float, now_monotonic_ns: int,
+                        maximum_duration_s: float) -> dict:
+    """RETURN from the measured held endpoint to a point on the checked outbound line.
+
+    goal_fraction 0 is the outbound's recorded torque-off support start; a positive value
+    is a waypoint on the same line. Native re-verifies every binding before any I/O.
+    """
+    trace_raw = Path(previous_trace).read_bytes()
+    result = json.loads(trace_raw.decode().splitlines()[-1])
+    steps = [json.loads(line) for line in trace_raw.decode().splitlines() if '"event":"step"' in line.replace(" ", "")]
+    outbound, outbound_source = _record(outbound_plan)
+    previous, previous_source = _record(previous_plan)
+    profile_raw = Path(profile_path).read_bytes()
+    profile_sha = hashlib.sha256(profile_raw).hexdigest()
+    if (result.get("event") != "result" or not str(result.get("phase", "")).endswith("_HOLDING_LAST_GOAL")
+            and not str(result.get("phase", "")).endswith("_REACHED_HOLDING")):
+        raise ValueError("RETURN requires a held previous phase result")
+    if (result.get("profile_sha256") != profile_sha or outbound.get("profile_sha256") != profile_sha
+            or result.get("plan_sha256") != previous_source["sha256"] or not steps):
+        raise ValueError("RETURN profile/plan/trace chain mismatch")
+    if type(goal_fraction) not in (int, float) or not 0 <= goal_fraction <= 1:
+        raise ValueError("RETURN goal must lie on the checked outbound segment")
+    a, b = np.asarray(outbound["start_rad"], dtype=float), np.asarray(outbound["goal_rad"], dtype=float)
+    start = np.asarray(result["final_measured_rad"], dtype=float)
+    goal = a + goal_fraction * (b - a)
+    profile = json.loads(profile_raw)
+    velocities = np.asarray([j["maximum_velocity_rad_s"] for j in profile["joints"]], dtype=float)
+    names = tuple(j["name"] for j in profile["joints"])
+    # The measured endpoint time comes from the trace's own monotonic clock (same boot).
+    measured_unix_s = now_s - (now_monotonic_ns - steps[-1]["time_ns"]) / 1e9
+    if not 0 <= now_s - measured_unix_s <= 60:
+        raise ValueError("RETURN measured endpoint is stale or future")
+    gate = _tracking_gate(return_envelope, velocities, start, goal, prerequisite_records, now_s=now_s,
+                          measured_unix_s=measured_unix_s, profile_sha256=profile_sha)
+    intent = arm_joint_position_intent(sequence=1, source="real_sensor_ik_adapter", joint_names=names,
+        joint_position_rad=tuple(goal), joint_max_velocity_rad_s=tuple(velocities), ttl_ns=250_000_000,
+        source_monotonic_ns=time.monotonic_ns())
+    validate_intent(intent)
+    duration = max(2.5, float(np.max(1.875*np.abs(goal-start)/velocities))*1.15) + 1
+    if (type(maximum_duration_s) not in (int, float) or not math.isfinite(maximum_duration_s)
+            or not duration <= maximum_duration_s <= 60):
+        raise ValueError("RETURN budget must cover nominal motion and be at most 60 s")
+    nominal = return_envelope.get("nominal_minimum_clearance_m")
+    previous_trace_source = {"path": str(Path(previous_trace).resolve()),
+                             "sha256": hashlib.sha256(trace_raw).hexdigest()}
+    return {"schema_version": "dapier.bounded-pregrasp-plan.v1", "phase": "RETURN",
+        "initial_torque_enabled": True, "profile_sha256": profile_sha,
+        "start_rad": start.tolist(), "goal_rad": goal.tolist(), "goal_intent": intent.as_dict(),
+        "maximum_duration_s": float(maximum_duration_s), "measured_state_unix_s": measured_unix_s,
+        "observation_unix_s": measured_unix_s, "return_goal_fraction": float(goal_fraction),
+        "offline_candidate_accepted": True, "sensor_target_verified": False,
+        "path_clear": type(nominal) in (int, float) and nominal >= .030,
+        "path_clearance_m": float(nominal) if type(nominal) in (int, float) else 0.,
+        **gate["plan_fields"], "previous_phase": previous_trace_source, "previous_plan": previous_source,
+        "outbound_plan": outbound_source,
+        "source_evidence": [previous_trace_source, previous_source, outbound_source, *gate["record_sources"]],
+        "task_success": False}
