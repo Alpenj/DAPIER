@@ -36,8 +36,14 @@ class TrackingEnvelopeTest(unittest.TestCase):
 
     def test_random_tube_configurations_respect_the_certified_bound(self):
         report, model = self.report, self.model
-        self.assertTrue(report["verified"], report)
+        self.assertTrue(report["model_tube_verified"], report)
+        # The model result never becomes the execution prerequisite by itself.
+        self.assertFalse(report["verified"])
+        self.assertTrue(report["execution_prerequisites_unmet"])
         self.assertGreaterEqual(report["minimum_clearance_m"], .030)
+        bottleneck = report["bottleneck"]
+        self.assertEqual(bottleneck["pair"], report["minimum_clearance_pair"])
+        self.assertTrue(0. <= bottleneck["path_fraction"] <= 1.)
         tolerance = report["tracking_tolerance_rad"]
         delta = self.goal[:6] - self.start[:6]
         # Independent recomputation of the native tube: tolerance + limiter lead + sample gap.
@@ -66,7 +72,8 @@ class TrackingEnvelopeTest(unittest.TestCase):
     def test_faster_velocity_cap_never_widens_the_certified_tube(self):
         fast = check_tracking_envelope(self.model, self.start, self.goal,
                                        reference_data=self.data, max_velocity_rad_s=[.3]*6)
-        if fast["verified"]:
+        self.assertFalse(fast["verified"])
+        if fast["model_tube_verified"]:
             self.assertLessEqual(fast["tracking_tolerance_rad"], self.report["tracking_tolerance_rad"])
         self.assertFalse(fast["hardware_execution"])
 

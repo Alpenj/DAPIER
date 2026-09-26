@@ -1613,6 +1613,23 @@ def _ancestor_joints(model: mujoco.MjModel, geom_id: int) -> frozenset[int]:
     return frozenset(out)
 
 
+def _left_arm_chain(model: mujoco.MjModel, geom_id: int) -> list[tuple[int, int, float]]:
+    """(action index, joint id, slide coupling or 0 for hinge), distal -> proximal."""
+    left = {int(model.actuator_trnid[i, 0]): i for i in range(6)}
+    coupled = {int(model.eq_obj1id[e]): (left[int(model.eq_obj2id[e])], abs(float(model.eq_data[e][1])))
+               for e in range(model.neq)
+               if model.eq_type[e] == mujoco.mjtEq.mjEQ_JOINT and int(model.eq_obj2id[e]) in left}
+    chain, body = [], int(model.geom_bodyid[geom_id])
+    while body > 0:
+        for j in range(model.body_jntadr[body], model.body_jntadr[body] + model.body_jntnum[body]):
+            if j in left:
+                chain.append((left[j], j, 0.))
+            elif j in coupled and model.jnt_type[j] == mujoco.mjtJoint.mjJNT_SLIDE:
+                chain.append((coupled[j][0], j, coupled[j][1]))
+        body = int(model.body_parentid[body])
+    return chain
+
+
 def check_tracking_envelope(
     model: mujoco.MjModel,
     current_action: Sequence[float],
@@ -1624,7 +1641,7 @@ def check_tracking_envelope(
     required_clearance_m: float = DEFAULT_CLEARANCE_M,
     command_horizon_s: float = NATIVE_COMMAND_HORIZON_S,
     max_joint_step_rad: float = math.radians(0.2),
-    maximum_tolerance_rad: float = 0.01,
+    maximum_tolerance_rad: float = 0.004,
     minimum_tolerance_rad: float = ENCODER_TICK_RAD,
 ) -> dict[str, object]:
     """Certify the native L-inf joint tube around a left-arm line path.
@@ -1634,7 +1651,12 @@ def check_tracking_envelope(
     within tol of the line, the inter-sample gap, and the command lead of the
     progress limiter (servo assumed monotonic toward its goal between feedback
     samples; that dynamic property is field-unverified). The largest tol in
-    [minimum, maximum] keeping the same 30 mm pairs clear is returned.
+    [minimum, maximum] keeping the same 30 mm pairs clear is returned as
+    model_tube_verified. The default maximum is a declared monitor tolerance
+    (0.004 rad, about 2.6 encoder ticks), not the largest passing value, so the
+    remaining clearance above 30 mm stays visible instead of being consumed.
+    ``verified`` (the execution prerequisite) stays False:
+    the servo assumption above has no evidence acquired before execution.
     """
     current = np.asarray(current_action, dtype=float)
     target = np.asarray(target_action, dtype=float)
@@ -1701,18 +1723,68 @@ def check_tracking_envelope(
     def distance_at(action, pair):
         apply_control_as_pose(model, data, action, preserve_raw_pose=True)
         return minimum_protected_clearance(model, data, [pair], distance_cap_m=cap)[0]
+    left_joints = model.actuator_trnid[:6, 0].astype(int)
+    anchors = np.empty((len(fractions), 6, 3))
+    axes_world = np.empty((len(fractions), 6, 3))
+    geom_center = {g: np.empty((len(fractions), 3)) for g in left}
     for k, fraction in enumerate(fractions):
         apply_control_as_pose(model, data, current + fraction * (target - current), preserve_raw_pose=True)
+        anchors[k], axes_world[k] = data.xanchor[left_joints], data.xaxis[left_joints]
+        for g in left:
+            geom_center[g][k] = data.geom_xpos[g]
         for i, (pair, _, _) in enumerate(groups):
             nominal_distance[k, i] = minimum_protected_clearance(model, data, [pair], distance_cap_m=cap)[0]
+    chains = {g: _left_arm_chain(model, g) for g in left}
+    excluded = {}
+    for pair, _, floor in groups:
+        excluded[pair] = (_ancestor_joints(model, pair[0]) & _ancestor_joints(model, pair[1])
+                          if floor == 0 else frozenset())
+
+    def local_displacement(k, g, error, skip):
+        # Rigorous sweep bound at this sample: apply deviations distal -> proximal; each
+        # hinge moves points by <= angle x (axis distance at q_k + displacement so far).
+        total = 0.
+        for index, joint, coupling in chains[g]:
+            if joint in skip:
+                continue
+            if coupling:
+                total += coupling * error[index]
+                continue
+            offset = geom_center[g][k] - anchors[k, index]
+            radial = float(np.linalg.norm(offset - (offset @ axes_world[k, index]) * axes_world[k, index]))
+            total += error[index] * (radial + float(model.geom_rbound[g]) + total)
+        return total
     refined: dict[tuple[int, int, float], float] = {}
+
+    def sweep_all(g, error, skip):
+        # local_displacement for every sample at once (no forward kinematics needed).
+        total = np.zeros(len(fractions))
+        for index, joint, coupling in chains[g]:
+            if joint in skip:
+                continue
+            if coupling:
+                total = total + coupling * error[index]
+                continue
+            offset = geom_center[g] - anchors[:, index]
+            axis = axes_world[:, index]
+            radial = np.linalg.norm(offset - np.sum(offset * axis, axis=1)[:, None] * axis, axis=1)
+            total = total + error[index] * (radial + float(model.geom_rbound[g]) + total)
+        return total
+
+    def cheap_bounds(i, error):
+        pair, gain, _ = groups[i]
+        lever = nominal_distance[:, i] - float(gain @ error)
+        sweep = nominal_distance[:, i] - sum(sweep_all(g, error, excluded[pair]) for g in pair if g in chains)
+        return np.maximum(lever, sweep)
 
     def tube_bound(k, i, error):
         pair, gain, _ = groups[i]
         lipschitz = nominal_distance[k, i] - float(gain @ error)
+        local = nominal_distance[k, i] - sum(local_displacement(k, g, error, excluded[pair])
+                                             for g in pair if g in chains)
         axes = np.flatnonzero(gain > 0)
         if len(axes) > 2:
-            return lipschitz
+            return max(lipschitz, local)
         # <=2 relative joints: the pair distance depends on those joints only, so a
         # dense grid over the tube cross-section replaces the global lever bound.
         key = (k, i, float(error[axes].sum()))
@@ -1728,34 +1800,67 @@ def check_tracking_envelope(
                 best = min(best, distance_at(action, pair))
             spacing = np.array([2 * error[a] / (points - 1) for a in axes])
             refined[key] = best - float(gain[axes] @ (spacing / 2))
-        return max(lipschitz, refined[key])
+        return max(lipschitz, local, refined[key])
 
     def evaluate(tolerance):
+        """Per-pair minimum of a valid lower bound: lever/sweep everywhere, grid where both fail."""
         error = base + tolerance
-        worst = {True: (math.inf, None), False: (math.inf, None)}
-        for i, (pair, gain, floor) in enumerate(groups):
-            coarse = nominal_distance[:, i] - float(gain @ error)
-            for k in np.flatnonzero(coarse < floor + (1e-9 if floor == 0 else 0.)):
-                coarse[k] = tube_bound(int(k), i, error)
-            k = int(np.argmin(coarse))
-            general = floor > 0
-            if coarse[k] < worst[general][0]:
-                worst[general] = (float(coarse[k]), pair)
-        return worst[True], worst[False]
+        minima = []
+        for i, (_, _, floor) in enumerate(groups):
+            bound = cheap_bounds(i, error)
+            for k in np.flatnonzero(bound < floor + (1e-9 if floor == 0 else 0.)):
+                bound[k] = tube_bound(int(k), i, error)
+            k = int(np.argmin(bound))
+            minima.append((float(bound[k]), i, k))
+        general = sorted(row for row in minima if groups[row[1]][2] > 0)
+        own = sorted(row for row in minima if groups[row[1]][2] == 0)
+        pick = lambda rows: (rows[0][0], groups[rows[0][1]][0], (rows[0][1], rows[0][2])) if rows else (math.inf, None, None)
+        return pick(general), pick(own), general
+
+    def bottleneck(where, tolerance, value):
+        i, k = where
+        pair, gain, _ = groups[i]
+        lead = np.abs(delta) * min(ratio, 1.)
+        gap = np.abs(delta) / (2 * intervals)
+        return {"pair": [_body_name_for_geom(model, g) for g in pair],
+                "geoms": [model.geom(g).name or str(g) for g in pair], "geom_ids": [int(g) for g in pair],
+                "path_fraction": float(fractions[k]), "sample_index": k,
+                "nominal_distance_m": float(nominal_distance[k, i]),
+                "clearance_bound_m": value,
+                # Chain-length lever terms (additive) and the tighter per-sample sweep bound.
+                "lever_terms_m": {"tracking_tolerance": float(gain @ np.full(6, tolerance)),
+                                  "command_lead": float(gain @ lead), "sample_gap": float(gain @ gap)},
+                "sweep_terms_m": {name: sum(local_displacement(k, g, part, excluded[pair]) for g in pair if g in chains)
+                                  for name, part in (("tracking_tolerance", np.full(6, tolerance)),
+                                                     ("command_lead", lead), ("sample_gap", gap),
+                                                     ("combined", lead + gap + tolerance))},
+                "grid_refinement_applicable": bool(np.count_nonzero(gain) <= 2),
+                "not_included": ["object pose (P2) error", "support/table plane error",
+                                 "TCP/jaw landmark and joint zero/sign mapping error",
+                                 "servo motion between feedback samples"]}
 
     ladder = [t for t in (0.01, 0.008, 0.006, 0.005, 0.004, 0.003, 0.0025, 0.002, 0.0016)
               if minimum_tolerance_rad <= t <= maximum_tolerance_rad]
     names = lambda pair: [_body_name_for_geom(model, g) for g in pair] if pair else None
-    report.update(checked_samples=intervals + 1, tolerance_ladder_rad=ladder,
-                  refined_pair_samples=0)
+    report.update(checked_samples=intervals + 1, tolerance_ladder_rad=ladder, refined_pair_samples=0,
+                  model_tube_verified=False,
+                  # Kinematic model result only. Real servo behaviour between feedback samples
+                  # has no prior qualification evidence, so this can never authorize execution.
+                  execution_prerequisites_unmet=[
+                      "servo monotonic/no-overshoot motion between feedback samples is not qualified "
+                      "by evidence acquired before this execution"])
     for tolerance in ladder:
-        (env_general, general_pair), (env_self, self_pair) = evaluate(tolerance)
+        (env_general, general_pair, general_at), (env_self, self_pair, _), general_rows = evaluate(tolerance)
         report.update(minimum_clearance_m=env_general, self_minimum_clearance_m=env_self,
+                      margin_above_required_m=env_general - required_clearance_m,
                       minimum_clearance_pair=names(general_pair), self_minimum_pair=names(self_pair),
-                      last_checked_tolerance_rad=tolerance, refined_pair_samples=len(refined))
+                      last_checked_tolerance_rad=tolerance, refined_pair_samples=len(refined),
+                      bottleneck=bottleneck(general_at, tolerance, env_general) if general_at else None,
+                      lowest_general_pairs=[bottleneck((i, k), tolerance, value)
+                                            for value, i, k in general_rows[:5]])
         if env_general >= required_clearance_m and env_self > 0:
-            report.update(verified=True, tracking_tolerance_rad=tolerance,
-                          reason="native tracking tube keeps protected clearance in the kinematic model")
+            report.update(model_tube_verified=True, tracking_tolerance_rad=tolerance,
+                          reason="model tube keeps protected clearance; execution prerequisites unmet")
             return report
     report["reason"] = ("no tolerance down to one encoder tick keeps the tube clearance; "
                         "lower the velocity cap or re-plan, never relax 30 mm")

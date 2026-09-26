@@ -331,17 +331,21 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
             or not np.array_equal(goal_intent.joint_position_rad, goal[:6])):
         raise ValueError("intent endpoint differs from checked FK/IK/path candidate")
     envelope = candidate.get("path_envelope", {})
-    # A tube certificate holds only for the velocity cap and command horizon it assumed;
+    # A tube result holds only for the velocity cap and command horizon it assumed;
     # a faster profile lengthens the progress-limiter lead beyond the checked margin.
     assumed = envelope.get("max_velocity_rad_s")
     tolerance = envelope.get("tracking_tolerance_rad")
-    envelope_ok = (envelope.get("verified") is True and isinstance(assumed, list) and len(assumed) == 6
-        and all(type(v) in (int, float) and math.isfinite(v) for v in assumed)
+    model_tube_ok = (envelope.get("model_tube_verified") is True and isinstance(assumed, list)
+        and len(assumed) == 6 and all(type(v) in (int, float) and math.isfinite(v) for v in assumed)
         and np.all(velocities <= np.asarray(assumed, dtype=float))
         and envelope.get("command_horizon_s") == NATIVE_COMMAND_HORIZON_S
         and type(tolerance) in (int, float) and math.isfinite(tolerance) and 0 < tolerance <= .01
         and type(envelope.get("minimum_clearance_m")) in (int, float)
         and envelope["minimum_clearance_m"] >= .030)
+    # The model tube tightens the native runtime monitor, but only an envelope whose
+    # execution prerequisites were met beforehand may satisfy the hardware gate.
+    envelope_ok = (model_tube_ok and envelope.get("verified") is True
+                   and not envelope.get("execution_prerequisites_unmet"))
     # Metric geometry can establish a target without direct depth. An explicit
     # current verdict takes precedence over legacy depth evidence, even if false.
     metric = block.get("metric_evidence", block.get("depth_evidence", {}))
@@ -367,7 +371,10 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
         "position_error_m":position_error,"axis_error_rad":axis_error,
         "offline_candidate_accepted":True,"path_clear":True,"path_clearance_m":distance,
         "sensor_target_verified":metric.get("metric_target_verified") is True,
-        "path_tracking_tolerance_rad":float(tolerance) if envelope_ok else .01,
+        "path_tracking_tolerance_rad":float(tolerance) if model_tube_ok else .01,
         "path_envelope_verified":envelope_ok,
         "path_envelope_clearance_m":float(envelope["minimum_clearance_m"]) if envelope_ok else 0.,
+        "path_envelope_model_clearance_m":float(envelope["minimum_clearance_m"]) if model_tube_ok else None,
+        "path_envelope_unmet_prerequisites":list(envelope.get("execution_prerequisites_unmet",
+            ["no tracking envelope"])) if not envelope_ok else [],
         "source_evidence":sources,"task_success":False}
