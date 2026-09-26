@@ -20,6 +20,9 @@ import numpy as np
 from dapier_research.control_intent import ControlIntent, arm_joint_position_intent, load_contract, validate_intent
 from dapier_research.vision_target import VisionTargetError, VisionTargetEstimate, _finite_transform
 
+# dapier_safety_core SafetyControllerConfig::command_horizon_s used by the native executor.
+NATIVE_COMMAND_HORIZON_S = 0.05
+
 
 def load_block_observation(path: Path) -> dict:
     """Normalize observed board/cube geometry for the existing IK/executor path."""
@@ -328,6 +331,17 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
             or not np.array_equal(goal_intent.joint_position_rad, goal[:6])):
         raise ValueError("intent endpoint differs from checked FK/IK/path candidate")
     envelope = candidate.get("path_envelope", {})
+    # A tube certificate holds only for the velocity cap and command horizon it assumed;
+    # a faster profile lengthens the progress-limiter lead beyond the checked margin.
+    assumed = envelope.get("max_velocity_rad_s")
+    tolerance = envelope.get("tracking_tolerance_rad")
+    envelope_ok = (envelope.get("verified") is True and isinstance(assumed, list) and len(assumed) == 6
+        and all(type(v) in (int, float) and math.isfinite(v) for v in assumed)
+        and np.all(velocities <= np.asarray(assumed, dtype=float))
+        and envelope.get("command_horizon_s") == NATIVE_COMMAND_HORIZON_S
+        and type(tolerance) in (int, float) and math.isfinite(tolerance) and 0 < tolerance <= .01
+        and type(envelope.get("minimum_clearance_m")) in (int, float)
+        and envelope["minimum_clearance_m"] >= .030)
     # Metric geometry can establish a target without direct depth. An explicit
     # current verdict takes precedence over legacy depth evidence, even if false.
     metric = block.get("metric_evidence", block.get("depth_evidence", {}))
@@ -353,7 +367,7 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
         "position_error_m":position_error,"axis_error_rad":axis_error,
         "offline_candidate_accepted":True,"path_clear":True,"path_clearance_m":distance,
         "sensor_target_verified":metric.get("metric_target_verified") is True,
-        "path_tracking_tolerance_rad":float(envelope.get("tracking_tolerance_rad",.01)),
-        "path_envelope_verified":envelope.get("verified") is True,
-        "path_envelope_clearance_m":envelope.get("minimum_clearance_m",0.),
+        "path_tracking_tolerance_rad":float(tolerance) if envelope_ok else .01,
+        "path_envelope_verified":envelope_ok,
+        "path_envelope_clearance_m":float(envelope["minimum_clearance_m"]) if envelope_ok else 0.,
         "source_evidence":sources,"task_success":False}

@@ -1568,6 +1568,200 @@ def check_bimanual_path(
     )
 
 
+ENCODER_TICK_RAD = 2 * math.pi / 4096
+NATIVE_COMMAND_HORIZON_S = 0.05  # dapier_safety_core SafetyControllerConfig default
+
+
+def _left_arm_deviation_gains(model: mujoco.MjModel, geom_id: int,
+                              excluded_joints: frozenset[int] = frozenset()) -> np.ndarray:
+    """Upper bound of geom surface displacement per rad of each left action joint.
+
+    Uses configuration-invariant chain lengths (anchor->body origins->geom->rbound),
+    so it holds anywhere in the tube. Jaw slides use their linear equality coupling.
+    """
+    left = {int(model.actuator_trnid[i, 0]): i for i in range(6)}
+    coupled = {}
+    for e in range(model.neq):
+        if model.eq_type[e] == mujoco.mjtEq.mjEQ_JOINT and int(model.eq_obj2id[e]) in left:
+            if np.any(model.eq_data[e][2:5] != 0):
+                raise ValueError("only linear jaw couplings are supported by the envelope bound")
+            coupled[int(model.eq_obj1id[e])] = (left[int(model.eq_obj2id[e])], abs(float(model.eq_data[e][1])))
+    gains = np.zeros(6)
+    body = int(model.geom_bodyid[geom_id])
+    length = float(np.linalg.norm(model.geom_pos[geom_id]) + model.geom_rbound[geom_id])
+    while body > 0:
+        for j in range(model.body_jntadr[body], model.body_jntadr[body] + model.body_jntnum[body]):
+            if j in excluded_joints:
+                continue
+            if j in left:
+                gains[left[j]] += length + float(np.linalg.norm(model.jnt_pos[j]))
+            elif j in coupled and model.jnt_type[j] == mujoco.mjtJoint.mjJNT_SLIDE:
+                gains[coupled[j][0]] += coupled[j][1]
+            elif _body_name_for_geom(model, geom_id).startswith("left_") and \
+                    mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body).startswith("left_"):
+                raise ValueError("unbounded left-arm joint in envelope chain")
+        length += float(np.linalg.norm(model.body_pos[body]))
+        body = int(model.body_parentid[body])
+    return gains
+
+
+def _ancestor_joints(model: mujoco.MjModel, geom_id: int) -> frozenset[int]:
+    out, body = set(), int(model.geom_bodyid[geom_id])
+    while body > 0:
+        out.update(range(model.body_jntadr[body], model.body_jntadr[body] + model.body_jntnum[body]))
+        body = int(model.body_parentid[body])
+    return frozenset(out)
+
+
+def check_tracking_envelope(
+    model: mujoco.MjModel,
+    current_action: Sequence[float],
+    target_action: Sequence[float],
+    *,
+    reference_data: mujoco.MjData,
+    max_velocity_rad_s: Sequence[float],
+    task_phase: str = "pregrasp",
+    required_clearance_m: float = DEFAULT_CLEARANCE_M,
+    command_horizon_s: float = NATIVE_COMMAND_HORIZON_S,
+    max_joint_step_rad: float = math.radians(0.2),
+    maximum_tolerance_rad: float = 0.01,
+    minimum_tolerance_rad: float = ENCODER_TICK_RAD,
+) -> dict[str, object]:
+    """Certify the native L-inf joint tube around a left-arm line path.
+
+    Native execution aborts when measured or commanded q leaves
+    |q - (start + s (goal-start))| <= tol. This bound covers every configuration
+    within tol of the line, the inter-sample gap, and the command lead of the
+    progress limiter (servo assumed monotonic toward its goal between feedback
+    samples; that dynamic property is field-unverified). The largest tol in
+    [minimum, maximum] keeping the same 30 mm pairs clear is returned.
+    """
+    current = np.asarray(current_action, dtype=float)
+    target = np.asarray(target_action, dtype=float)
+    velocity = np.asarray(max_velocity_rad_s, dtype=float)
+    if (current.shape != (len(ACTION_NAMES),) or target.shape != current.shape
+            or velocity.shape != (6,) or not np.all(np.isfinite(current))
+            or not np.all(np.isfinite(target)) or not np.all(np.isfinite(velocity))
+            or np.any((velocity <= 0) | (velocity > .3))):
+        raise ValueError("finite 12-action path and six velocities in (0, 0.3] rad/s required")
+    if not np.array_equal(current[6:], target[6:]):
+        raise ValueError("tracking envelope covers a moving left arm with a passive right arm only")
+    if any(not model.actuator(i).name.startswith("left_") for i in range(6)):
+        raise ValueError("actions 0..5 must be the left-arm actuators")
+    if task_phase in MANIPULATION_PHASES or task_phase in ("LIFT", "PLACE"):
+        raise ValueError("contact/carry phases have no qualified tracking envelope")
+    if not 0 < minimum_tolerance_rad <= maximum_tolerance_rad <= 0.01 or command_horizon_s <= 0:
+        raise ValueError("invalid tolerance bounds or command horizon")
+    report = {"verified": False, "method": "sampled nominal clearance minus configuration-invariant "
+              "joint-lever bound over native L-inf tube + sample gap + progress-limiter lead",
+              "required_clearance_m": required_clearance_m, "max_velocity_rad_s": velocity.tolist(),
+              "command_horizon_s": command_horizon_s, "max_joint_step_rad": max_joint_step_rad,
+              "assumption": "servo moves monotonically toward its goal between feedback samples; "
+                            "hardware tracking is field-unverified", "hardware_execution": False}
+    # Same nominal guard/contract as the checked path; observed support gets no SIM exception.
+    nominal = check_bimanual_path(model, current, target, required_clearance_m=required_clearance_m,
+        max_joint_step_rad=max_joint_step_rad, task_phase=task_phase,
+        reference_data=reference_data, allow_sim_near_support=False)
+    report["nominal_minimum_clearance_m"] = nominal.minimum_clearance_m
+    if not nominal.safe:
+        report["reason"] = f"nominal fine-step path rejected: {nominal.reason}"
+        return report
+    left = _collision_geoms_for_arm(model, "left")
+    right = _collision_geoms_for_arm(model, "right")
+    # Same pair sets as check_bimanual_path for a non-carry, obstacle-free phase.
+    same_left = tuple(_same_arm_geom_pairs(model, left))
+    same = set(same_left) | set(_same_arm_geom_pairs(model, right))
+    pairs = list(protected_geom_pairs(model))
+    if task_phase is not None:
+        target_id = model.geom("red_block_geom").id
+        pairs.extend((g, target_id) for g in (*left, *right))
+    left_set = set(left)
+    general = [p for p in dict.fromkeys(pairs) if p not in same and (p[0] in left_set or p[1] in left_set)]
+    gains = {g: _left_arm_deviation_gains(model, g) for g in left}
+    general_gain = {p: sum((gains[g] for g in p if g in gains), np.zeros(6)) for p in general}
+    self_gain = {}
+    for a, b in same_left:
+        common = _ancestor_joints(model, a) & _ancestor_joints(model, b)
+        self_gain[(a, b)] = (_left_arm_deviation_gains(model, a, common)
+                             + _left_arm_deviation_gains(model, b, common))
+    delta = target[:6] - current[:6]
+    intervals = max(1, math.ceil(float(np.max(np.abs(target - current))) / max_joint_step_rad))
+    moving = np.abs(delta) > 0
+    ratio = np.min(velocity[moving] * command_horizon_s / np.abs(delta[moving])) if moving.any() else 0.
+    # Progress-limiter lead plus half the sample gap; the tube tolerance is added per candidate.
+    base = np.abs(delta) * min(ratio, 1.) + np.abs(delta) / (2 * intervals)
+    groups = [(p, g, required_clearance_m) for p, g in general_gain.items()]
+    groups += [(p, g, 0.) for p, g in self_gain.items()]
+    groups = [row for row in groups if float(np.sum(row[1])) > 0]
+    cap = required_clearance_m + max(float(np.sum(g)) for _, g, _ in groups) * (maximum_tolerance_rad + float(np.max(base))) + .01
+    fractions = np.arange(intervals + 1) / intervals
+    nominal_distance = np.empty((len(fractions), len(groups)))
+    data = mujoco.MjData(model)
+    data.qpos[:] = reference_data.qpos
+    def distance_at(action, pair):
+        apply_control_as_pose(model, data, action, preserve_raw_pose=True)
+        return minimum_protected_clearance(model, data, [pair], distance_cap_m=cap)[0]
+    for k, fraction in enumerate(fractions):
+        apply_control_as_pose(model, data, current + fraction * (target - current), preserve_raw_pose=True)
+        for i, (pair, _, _) in enumerate(groups):
+            nominal_distance[k, i] = minimum_protected_clearance(model, data, [pair], distance_cap_m=cap)[0]
+    refined: dict[tuple[int, int, float], float] = {}
+
+    def tube_bound(k, i, error):
+        pair, gain, _ = groups[i]
+        lipschitz = nominal_distance[k, i] - float(gain @ error)
+        axes = np.flatnonzero(gain > 0)
+        if len(axes) > 2:
+            return lipschitz
+        # <=2 relative joints: the pair distance depends on those joints only, so a
+        # dense grid over the tube cross-section replaces the global lever bound.
+        key = (k, i, float(error[axes].sum()))
+        if key not in refined:
+            points = 9
+            line = current + fractions[k] * (target - current)
+            offsets = [np.linspace(-error[a], error[a], points) for a in axes]
+            best = math.inf
+            for combo in np.array(np.meshgrid(*offsets)).reshape(len(axes), -1).T:
+                action = line.copy()
+                # Native aborts on measured q outside model limits, so the tube ends there.
+                action[axes] = np.clip(action[axes] + combo, *model.actuator_ctrlrange[axes].T)
+                best = min(best, distance_at(action, pair))
+            spacing = np.array([2 * error[a] / (points - 1) for a in axes])
+            refined[key] = best - float(gain[axes] @ (spacing / 2))
+        return max(lipschitz, refined[key])
+
+    def evaluate(tolerance):
+        error = base + tolerance
+        worst = {True: (math.inf, None), False: (math.inf, None)}
+        for i, (pair, gain, floor) in enumerate(groups):
+            coarse = nominal_distance[:, i] - float(gain @ error)
+            for k in np.flatnonzero(coarse < floor + (1e-9 if floor == 0 else 0.)):
+                coarse[k] = tube_bound(int(k), i, error)
+            k = int(np.argmin(coarse))
+            general = floor > 0
+            if coarse[k] < worst[general][0]:
+                worst[general] = (float(coarse[k]), pair)
+        return worst[True], worst[False]
+
+    ladder = [t for t in (0.01, 0.008, 0.006, 0.005, 0.004, 0.003, 0.0025, 0.002, 0.0016)
+              if minimum_tolerance_rad <= t <= maximum_tolerance_rad]
+    names = lambda pair: [_body_name_for_geom(model, g) for g in pair] if pair else None
+    report.update(checked_samples=intervals + 1, tolerance_ladder_rad=ladder,
+                  refined_pair_samples=0)
+    for tolerance in ladder:
+        (env_general, general_pair), (env_self, self_pair) = evaluate(tolerance)
+        report.update(minimum_clearance_m=env_general, self_minimum_clearance_m=env_self,
+                      minimum_clearance_pair=names(general_pair), self_minimum_pair=names(self_pair),
+                      last_checked_tolerance_rad=tolerance, refined_pair_samples=len(refined))
+        if env_general >= required_clearance_m and env_self > 0:
+            report.update(verified=True, tracking_tolerance_rad=tolerance,
+                          reason="native tracking tube keeps protected clearance in the kinematic model")
+            return report
+    report["reason"] = ("no tolerance down to one encoder tick keeps the tube clearance; "
+                        "lower the velocity cap or re-plan, never relax 30 mm")
+    return report
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Check a simulator-only dual-SO-101 target path."

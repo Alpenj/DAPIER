@@ -79,6 +79,19 @@ class RealSensorIkAdapterTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "stale or future"):
                 bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1061.,
                                       maximum_duration_s=40.)
+            # The tube certificate binds its tolerance only under its own velocity/horizon.
+            envelope = {"verified":True, "tracking_tolerance_rad":.004, "minimum_clearance_m":.0303,
+                        "max_velocity_rad_s":[.3]*6, "command_horizon_s":.05}
+            bound = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]), now_s=1000.)
+            self.assertTrue(bound["path_envelope_verified"])
+            self.assertEqual((bound["path_tracking_tolerance_rad"], bound["path_envelope_clearance_m"]), (.004, .0303))
+            for change in ({"max_velocity_rad_s":[.1]*6}, {"command_horizon_s":.1}, {"verified":"true"},
+                           {"minimum_clearance_m":.029}, {"tracking_tolerance_rad":.02}, {"max_velocity_rad_s":None}):
+                with self.subTest(change=change):
+                    refused = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, **change}},
+                                                    Path(profile["path"]), now_s=1000.)
+                    self.assertFalse(refused["path_envelope_verified"])
+                    self.assertEqual((refused["path_tracking_tolerance_rad"], refused["path_envelope_clearance_m"]), (.01, 0.))
             carry=copy.deepcopy(candidate)
             carry.update(candidate_mode="carry_endpoint_ik", planning_phase="LIFT", ik_converged=True,
                 offline_candidate_accepted=False, path_assessment={"safe":True,"checked_samples":3})

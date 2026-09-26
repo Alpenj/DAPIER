@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "research/src"))
 from dapier_research.real_sensor_ik_adapter import load_block_observation
 
 from collision_guard import (DEFAULT_CLEARANCE_M, TASK_GENERAL_QUERY_CAP_M, NEAR_SUPPORT_SCOPE,
-    check_bimanual_path, _carried_object_attachment, _apply_carried_object)
+    check_bimanual_path, check_tracking_envelope, _carried_object_attachment, _apply_carried_object)
 from integration_scenes import task_env, portable_model_sha256
 from mobile_dual_so101 import apply_control_as_pose, HUMANOID_HOME_ACTION
 from pgripper import home_action
@@ -494,6 +494,14 @@ def evaluate(args):
                         and math.isfinite(guard.minimum_clearance_m)
                         and guard.minimum_clearance_m >= DEFAULT_CLEARANCE_M
                         and (staging_source is None or closing_error <= math.radians(15)))
+    # Nominal path PASS is not a tracking certificate; only a computed tube may set it.
+    if candidate_ok and carry is None and scene_support is not None:
+        velocity = getattr(args, "envelope_velocity_rad_s", .1)
+        path_envelope = check_tracking_envelope(model, seed, solved, reference_data=data,
+            max_velocity_rad_s=[velocity]*6)
+    else:
+        path_envelope = {"verified": False, "reason": "envelope requires an accepted non-carry "
+                         "candidate on an observed support scene"}
     return {
         "candidate_mode": "carry_endpoint_ik" if carry is not None else "wrist_feedback" if wrist_path is not None else "pregrasp_ik",
         **({"planning_phase":carry["phase"], "carry_planning":carry} if carry is not None else {}),
@@ -521,6 +529,7 @@ def evaluate(args):
             "minimum_clearance_m": guard.minimum_clearance_m,
             "required_clearance_m": DEFAULT_CLEARANCE_M, "query_cap_m": TASK_GENERAL_QUERY_CAP_M},
         "path_assessment": guard.as_report(),
+        "path_envelope": path_envelope,
         "model": {**fingerprint(args.model), "compiled_sha256": portable_model_sha256(model),
             "gripper_ranges_rad": model.actuator_ctrlrange[[5, 11]].tolist()},
         "mapping": {"profile": fingerprint(profile_path), "physically_verified": False,
@@ -554,6 +563,9 @@ def main(argv=None):
         parser.add_argument(f"--{side}-calibration", type=Path,
                             default=calibration / f"dapier_dual_follower_{side}.json")
     parser.add_argument("--pregrasp-offset-z", type=float, default=.060)
+    parser.add_argument("--envelope-velocity-rad-s", type=float, default=.1,
+                        help="Native per-joint velocity cap assumed by the tracking envelope; "
+                             "the native profile must not exceed it")
     parser.add_argument("--motor-datum-in-base-m", type=float, nargs=3,
                         help="Audited measured-datum position in model left_base, metres")
     args = parser.parse_args(argv)
