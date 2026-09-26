@@ -1569,6 +1569,8 @@ def check_bimanual_path(
 
 
 ENCODER_TICK_RAD = 2 * math.pi / 4096
+# 0.05 rad is >12x the 0.004 rad native monitor tolerance and >3x the 0.015 rad command lead.
+SUPERVISED_TRIAL_MIN_ALLOWANCE_RAD = 0.05
 NATIVE_COMMAND_HORIZON_S = 0.05  # dapier_safety_core SafetyControllerConfig default
 
 
@@ -1643,6 +1645,7 @@ def check_tracking_envelope(
     max_joint_step_rad: float = math.radians(0.2),
     maximum_tolerance_rad: float = 0.004,
     minimum_tolerance_rad: float = ENCODER_TICK_RAD,
+    excursion_allowance_rad: float = 0.0,
 ) -> dict[str, object]:
     """Certify the native L-inf joint tube around a left-arm line path.
 
@@ -1672,6 +1675,9 @@ def check_tracking_envelope(
         raise ValueError("actions 0..5 must be the left-arm actuators")
     if task_phase in MANIPULATION_PHASES or task_phase in ("LIFT", "PLACE"):
         raise ValueError("contact/carry phases have no qualified tracking envelope")
+    if (not math.isfinite(excursion_allowance_rad) or not 0 <= excursion_allowance_rad <= 0.1
+            or (0 < excursion_allowance_rad < SUPERVISED_TRIAL_MIN_ALLOWANCE_RAD)):
+        raise ValueError("excursion allowance must be 0 or a supervised-trial value in [0.05, 0.1] rad")
     if not 0 < minimum_tolerance_rad <= maximum_tolerance_rad <= 0.01 or command_horizon_s <= 0:
         raise ValueError("invalid tolerance bounds or command horizon")
     report = {"verified": False, "method": "sampled nominal clearance minus configuration-invariant "
@@ -1679,7 +1685,9 @@ def check_tracking_envelope(
               "required_clearance_m": required_clearance_m, "max_velocity_rad_s": velocity.tolist(),
               "command_horizon_s": command_horizon_s, "max_joint_step_rad": max_joint_step_rad,
               "assumption": "servo moves monotonically toward its goal between feedback samples; "
-                            "hardware tracking is field-unverified", "hardware_execution": False}
+                            "hardware tracking is field-unverified", "hardware_execution": False,
+              # Binds the certificate to exactly this left-arm segment.
+              "segment_start_rad": current[:6].tolist(), "segment_goal_rad": target[:6].tolist()}
     # Same nominal guard/contract as the checked path; observed support gets no SIM exception.
     nominal = check_bimanual_path(model, current, target, required_clearance_m=required_clearance_m,
         max_joint_step_rad=max_joint_step_rad, task_phase=task_phase,
@@ -1712,6 +1720,9 @@ def check_tracking_envelope(
     ratio = np.min(velocity[moving] * command_horizon_s / np.abs(delta[moving])) if moving.any() else 0.
     # Progress-limiter lead plus half the sample gap; the tube tolerance is added per candidate.
     base = np.abs(delta) * min(ratio, 1.) + np.abs(delta) / (2 * intervals)
+    # A supervised trial adds an explicit per-joint excursion allowance beyond the native
+    # tube, so its clearance does not rest on the unqualified no-overshoot behaviour.
+    base = base + excursion_allowance_rad
     groups = [(p, g, required_clearance_m) for p, g in general_gain.items()]
     groups += [(p, g, 0.) for p, g in self_gain.items()]
     groups = [row for row in groups if float(np.sum(row[1])) > 0]
@@ -1814,6 +1825,11 @@ def check_tracking_envelope(
             minima.append((float(bound[k]), i, k))
         general = sorted(row for row in minima if groups[row[1]][2] > 0)
         own = sorted(row for row in minima if groups[row[1]][2] == 0)
+        report["all_pairs"] = [{"pair": [_body_name_for_geom(model, g) for g in groups[i][0]],
+            "geom_ids": [int(g) for g in groups[i][0]], "required_m": groups[i][2],
+            "nominal_minimum_m": float(np.min(nominal_distance[:, i])),
+            "tube_minimum_m": value, "tube_minimum_path_fraction": float(fractions[k])}
+            for value, i, k in sorted(minima)]
         pick = lambda rows: (rows[0][0], groups[rows[0][1]][0], (rows[0][1], rows[0][2])) if rows else (math.inf, None, None)
         return pick(general), pick(own), general
 
@@ -1833,7 +1849,8 @@ def check_tracking_envelope(
                 "sweep_terms_m": {name: sum(local_displacement(k, g, part, excluded[pair]) for g in pair if g in chains)
                                   for name, part in (("tracking_tolerance", np.full(6, tolerance)),
                                                      ("command_lead", lead), ("sample_gap", gap),
-                                                     ("combined", lead + gap + tolerance))},
+                                                     ("excursion_allowance", np.full(6, excursion_allowance_rad)),
+                                                     ("combined", base + tolerance))},
                 "grid_refinement_applicable": bool(np.count_nonzero(gain) <= 2),
                 "not_included": ["object pose (P2) error", "support/table plane error",
                                  "TCP/jaw landmark and joint zero/sign mapping error",
@@ -1846,9 +1863,17 @@ def check_tracking_envelope(
                   model_tube_verified=False,
                   # Kinematic model result only. Real servo behaviour between feedback samples
                   # has no prior qualification evidence, so this can never authorize execution.
+                  excursion_allowance_rad=excursion_allowance_rad,
+                  # Trial basis, stated rather than proven: native sets Goal_Speed to the cap and
+                  # rejects any read with |Present_Speed| above it, so between-sample excursion is
+                  # cap x 0.1 s watchdog (0.015 rad at 0.15 rad/s) if the firmware honours the cap.
+                  accepted_assumptions=[] if excursion_allowance_rad == 0 else [
+                      "supervised trial: servo excursion beyond the native tube stays within the "
+                      f"{excursion_allowance_rad} rad allowance (firmware speed-cap adherence unverified)"],
                   execution_prerequisites_unmet=[
                       "servo monotonic/no-overshoot motion between feedback samples is not qualified "
-                      "by evidence acquired before this execution"])
+                      "by evidence acquired before this execution"] if excursion_allowance_rad == 0 else [
+                      "supervised trial field conditions not confirmed by an operator record"])
     for tolerance in ladder:
         (env_general, general_pair, general_at), (env_self, self_pair, _), general_rows = evaluate(tolerance)
         report.update(minimum_clearance_m=env_general, self_minimum_clearance_m=env_self,

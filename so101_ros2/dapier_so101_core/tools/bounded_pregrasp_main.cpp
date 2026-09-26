@@ -121,6 +121,63 @@ BlockSupportObservation read_support_observation(const json& binding, bool hardw
       optional_bool("approved_support_verified"), optional_bool("object_released_verified")};
 }
 
+// RETURN may only retrace a checked outbound line (PREGRASP/TRACKING_TRIAL) back toward its
+// recorded torque-off support start, from the measured end of the same-profile held phase.
+void bind_return(const json& plan, const std::string& profile_sha, bool hardware,
+    const std::vector<double>& start, const std::vector<double>& goal) {
+  const auto trace_raw = bytes(plan.at("previous_phase").at("path"), false, 16777216);
+  if (sha256(trace_raw) != plan.at("previous_phase").at("sha256").get<std::string>())
+    throw std::runtime_error("RETURN previous trace SHA mismatch");
+  std::istringstream input(trace_raw);
+  std::string line;
+  json last;
+  while (std::getline(input, line)) if (!line.empty()) last = json::parse(line);
+  static const std::set<std::string> held{"PREGRASP_REACHED_HOLDING", "PREGRASP_ABORTED_HOLDING_LAST_GOAL",
+      "TRACKING_TRIAL_REACHED_HOLDING", "TRACKING_TRIAL_ABORTED_HOLDING_LAST_GOAL",
+      "RETURN_REACHED_HOLDING", "RETURN_ABORTED_HOLDING_LAST_GOAL"};
+  if (!last.is_object() || last.value("event", "") != "result" || !held.contains(last.value("phase", "")) ||
+      last.value("profile_sha256", "") != profile_sha || last.value("hardware_execution", !hardware) != hardware ||
+      last.value("motion_started", false) != true)
+    throw std::runtime_error("RETURN requires a same-profile, same-transport held phase result");
+  const auto measured = last.at("final_measured_rad").get<std::vector<double>>();
+  if (measured.size() != start.size()) throw std::runtime_error("RETURN previous endpoint size mismatch");
+  for (std::size_t i = 0; i < start.size(); ++i)
+    if (!std::isfinite(measured[i]) || std::abs(start[i] - measured[i]) > .001)
+      throw std::runtime_error("RETURN start differs from the previous measured endpoint");
+  const auto previous_raw = bytes(plan.at("previous_plan").at("path"), false);
+  const auto previous_sha = sha256(previous_raw);
+  if (previous_sha != plan.at("previous_plan").at("sha256").get<std::string>() ||
+      previous_sha != last.value("plan_sha256", ""))
+    throw std::runtime_error("RETURN previous plan is not the plan executed by the previous trace");
+  const auto outbound_raw = bytes(plan.at("outbound_plan").at("path"), false);
+  const auto outbound_sha = sha256(outbound_raw);
+  if (outbound_sha != plan.at("outbound_plan").at("sha256").get<std::string>())
+    throw std::runtime_error("RETURN outbound plan SHA mismatch");
+  const auto previous = json::parse(previous_raw), outbound = json::parse(outbound_raw);
+  const std::string previous_phase = previous.value("phase", "");
+  const bool previous_is_outbound = previous_phase == "PREGRASP" || previous_phase == "TRACKING_TRIAL";
+  if (previous_is_outbound ? previous_sha != outbound_sha :
+      (previous_phase != "RETURN" || previous.at("outbound_plan").at("sha256") != outbound_sha))
+    throw std::runtime_error("RETURN chain does not lead back to its outbound plan");
+  const std::string outbound_phase = outbound.value("phase", "");
+  if ((outbound_phase != "PREGRASP" && outbound_phase != "TRACKING_TRIAL") ||
+      outbound.value("initial_torque_enabled", true) != false || outbound.at("profile_sha256") != profile_sha)
+    throw std::runtime_error("RETURN outbound must be a same-profile torque-off start phase");
+  const auto a = outbound.at("start_rad").get<std::vector<double>>();
+  const auto b = outbound.at("goal_rad").get<std::vector<double>>();
+  if (a.size() != goal.size() || b.size() != goal.size()) throw std::runtime_error("RETURN outbound size mismatch");
+  double numerator = 0., denominator = 0.;
+  for (std::size_t i = 0; i < goal.size(); ++i) {
+    numerator += (goal[i]-a[i])*(b[i]-a[i]);
+    denominator += (b[i]-a[i])*(b[i]-a[i]);
+  }
+  const double w = denominator > 0 ? numerator/denominator : 0.;
+  if (!std::isfinite(w) || w < 0 || w > 1) throw std::runtime_error("RETURN goal is outside the checked outbound segment");
+  for (std::size_t i = 0; i < goal.size(); ++i)
+    if (std::abs(goal[i] - (a[i] + w*(b[i]-a[i]))) > 1e-9)
+      throw std::runtime_error("RETURN goal is not on the checked outbound line");
+}
+
 std::tuple<std::int64_t, std::int64_t, std::set<std::string>> bind_completed_phase(const json& source, const json& binding, bool hardware,
     const std::string& profile_sha, const std::vector<double>& start,
     const std::string& expected_phase = "GRASP_CONFIRMED_HOLDING",
@@ -236,7 +293,8 @@ int main(int argc, char** argv) {
     const bool hardware = args.at("--transport") == "hardware";
     if (!hardware && args.at("--transport") != "mock") throw std::runtime_error("transport must be mock or hardware");
     if (hardware && (!present || (args["--confirm"] != "VISIBLE_LEFT_SENSOR_PREGRASP" &&
-        args["--confirm"] != "VISIBLE_LEFT_OBSERVED_HOLD") || !isatty(0) || !isatty(1)))
+        args["--confirm"] != "VISIBLE_LEFT_OBSERVED_HOLD" && args["--confirm"] != "VISIBLE_LEFT_TRACKING_TRIAL" &&
+        args["--confirm"] != "VISIBLE_LEFT_BOUNDED_RETURN") || !isatty(0) || !isatty(1)))
       throw std::runtime_error("attended hardware confirmation required before any device access");
     output_fd = open(args.at("--output").c_str(), O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW, 0600);
     if (output_fd < 0) throw std::runtime_error("new exclusive output path required");
@@ -248,7 +306,11 @@ int main(int argc, char** argv) {
         profile.at("device_id") != "dapier_dual_follower_left" ||
         plan.at("schema_version") != "dapier.bounded-pregrasp-plan.v1" ||
         plan.at("profile_sha256") != sha256(profile_raw)) throw std::runtime_error("plan/profile identity mismatch");
-    if (hardware && (profile.at("physically_verified") != true || plan.at("sensor_target_verified") != true ||
+    // RETURN retraces a SHA-bound checked outbound line to its recorded support start; it has
+    // no camera target, so only the target-specific gates are replaced by that binding.
+    const bool return_phase = plan.value("phase", "PREGRASP") == "RETURN";
+    if (hardware && (profile.at("physically_verified") != true ||
+        (!return_phase && plan.at("sensor_target_verified") != true) ||
         plan.at("offline_candidate_accepted") != true || plan.at("path_clear") != true))
       throw std::runtime_error("physical mapping, sensor target and checked path are required");
     const double path_tolerance = finite_number(plan.at("path_tracking_tolerance_rad"));
@@ -257,11 +319,13 @@ int main(int argc, char** argv) {
     if (hardware) {
       const double unix_s = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
       for (const char* field : {"observation_unix_s", "measured_state_unix_s"}) {
+        if (return_phase && std::string(field) == "observation_unix_s") continue;
         const double age = unix_s - finite_number(plan.at(field));
         if (age < 0 || age > 60.) throw std::runtime_error("stale or future physical plan input");
       }
-      if (finite_number(plan.at("position_error_m")) < 0 || finite_number(plan.at("position_error_m")) > .0005 ||
-          finite_number(plan.at("axis_error_rad")) < 0 || finite_number(plan.at("axis_error_rad")) > 2.*std::acos(-1.)/180. ||
+      if ((!return_phase && (finite_number(plan.at("position_error_m")) < 0 ||
+           finite_number(plan.at("position_error_m")) > .0005 || finite_number(plan.at("axis_error_rad")) < 0 ||
+           finite_number(plan.at("axis_error_rad")) > 2.*std::acos(-1.)/180.)) ||
           finite_number(plan.at("path_clearance_m")) < .030)
         throw std::runtime_error("Cartesian/axis/path acceptance failed");
       if (plan.at("path_envelope_verified") != true ||
@@ -336,17 +400,23 @@ int main(int argc, char** argv) {
     if (duration <= 0 || duration > 60) throw std::runtime_error("invalid bounded duration");
     const std::string phase = plan.value("phase", "PREGRASP");
     const bool already_holding = plan.value("initial_torque_enabled", false);
-    if ((phase != "PREGRASP" && phase != "WRIST_ALIGN" && phase != "HOLD" && phase != "CLOSE" && phase != "LIFT" &&
-         phase != "PLACE" && phase != "RELEASE") ||
-        already_holding != (phase != "PREGRASP"))
+    if ((phase != "PREGRASP" && phase != "TRACKING_TRIAL" && phase != "WRIST_ALIGN" && phase != "HOLD" &&
+         phase != "CLOSE" && phase != "LIFT" && phase != "PLACE" && phase != "RELEASE" && phase != "RETURN") ||
+        already_holding != (phase != "PREGRASP" && phase != "TRACKING_TRIAL"))
       throw std::runtime_error("phase and expected initial torque state mismatch");
     // The existing >=30mm pregrasp certificate excludes intended jaw/block
     // contact. MOCK coverage cannot authorize a physical contact policy.
     if (hardware && (phase == "CLOSE" || phase == "LIFT" || phase == "PLACE" || phase == "RELEASE"))
       throw std::runtime_error("contact phase hardware unavailable: physical contact-path policy and observer unverified");
-    if (hardware && args["--confirm"] != (phase == "HOLD" ?
-        "VISIBLE_LEFT_OBSERVED_HOLD" : "VISIBLE_LEFT_SENSOR_PREGRASP"))
+    if (hardware && args["--confirm"] != (phase == "HOLD" ? "VISIBLE_LEFT_OBSERVED_HOLD" :
+        phase == "TRACKING_TRIAL" ? "VISIBLE_LEFT_TRACKING_TRIAL" :
+        phase == "RETURN" ? "VISIBLE_LEFT_BOUNDED_RETURN" : "VISIBLE_LEFT_SENSOR_PREGRASP"))
       throw std::runtime_error("hardware confirmation does not authorize this phase");
+    if (phase == "RETURN") {
+      bind_return(plan, sha256(profile_raw), hardware, start, goal);
+      report["return_binding"] = {{"previous_phase", plan.at("previous_phase")},
+          {"previous_plan", plan.at("previous_plan")}, {"outbound_plan", plan.at("outbound_plan")}};
+    }
     ObservedBlockHold hold;
     std::set<std::string> observed_frame_history;
     std::function<bool(std::int64_t)> observe_hold;

@@ -185,7 +185,8 @@ def create_joint_position_intents(
 
 def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
                          *, now_s: float, goal_intent: ControlIntent | None = None,
-                         maximum_duration_s: float | None = None) -> dict:
+                         maximum_duration_s: float | None = None,
+                         prerequisite_records: Sequence[Path] = ()) -> dict:
     """Bind a checked current sensor candidate to the existing native executor.
 
     A wrist proposal uses this same boundary after FK/axis/path revalidation; its
@@ -201,7 +202,8 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     if candidate.get("offline_candidate_accepted") is not True:
         raise ValueError("current sensor candidate has not passed IK/path acceptance")
     return _bounded_motion_plan(candidate, profile_path, now_s=now_s, goal_intent=goal_intent,
-                                maximum_duration_s=maximum_duration_s)
+                                maximum_duration_s=maximum_duration_s,
+                                prerequisite_records=prerequisite_records)
 
 
 def bounded_carry_plan(candidate: Mapping[str, Any], profile_path: Path,
@@ -259,7 +261,8 @@ def bounded_carry_plan(candidate: Mapping[str, Any], profile_path: Path,
 
 def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, now_s: float,
                          goal_intent: ControlIntent | None, maximum_duration_s: float | None,
-                         carry_phase: str | None = None) -> dict:
+                         carry_phase: str | None = None, phase_name: str | None = None,
+                         prerequisite_records: Sequence[Path] = ()) -> dict:
     """Shared source, mapping, metric and command checks; no device I/O."""
     if not math.isfinite(now_s):
         raise ValueError("finite audit time required")
@@ -330,22 +333,10 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
     if (goal_intent.kind != "arm_joint_position" or goal_intent.joint_names != names
             or not np.array_equal(goal_intent.joint_position_rad, goal[:6])):
         raise ValueError("intent endpoint differs from checked FK/IK/path candidate")
-    envelope = candidate.get("path_envelope", {})
-    # A tube result holds only for the velocity cap and command horizon it assumed;
-    # a faster profile lengthens the progress-limiter lead beyond the checked margin.
-    assumed = envelope.get("max_velocity_rad_s")
-    tolerance = envelope.get("tracking_tolerance_rad")
-    model_tube_ok = (envelope.get("model_tube_verified") is True and isinstance(assumed, list)
-        and len(assumed) == 6 and all(type(v) in (int, float) and math.isfinite(v) for v in assumed)
-        and np.all(velocities <= np.asarray(assumed, dtype=float))
-        and envelope.get("command_horizon_s") == NATIVE_COMMAND_HORIZON_S
-        and type(tolerance) in (int, float) and math.isfinite(tolerance) and 0 < tolerance <= .01
-        and type(envelope.get("minimum_clearance_m")) in (int, float)
-        and envelope["minimum_clearance_m"] >= .030)
-    # The model tube tightens the native runtime monitor, but only an envelope whose
-    # execution prerequisites were met beforehand may satisfy the hardware gate.
-    envelope_ok = (model_tube_ok and envelope.get("verified") is True
-                   and not envelope.get("execution_prerequisites_unmet"))
+    gate = _tracking_gate(candidate.get("path_envelope", {}), velocities, start[:6], goal[:6],
+                          prerequisite_records, now_s=now_s, measured_unix_s=min(timestamps[:2]),
+                          profile_sha256=hashlib.sha256(profile_raw).hexdigest())
+    sources.extend(gate["record_sources"])
     # Metric geometry can establish a target without direct depth. An explicit
     # current verdict takes precedence over legacy depth evidence, even if false.
     metric = block.get("metric_evidence", block.get("depth_evidence", {}))
@@ -362,7 +353,7 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
             or not math.isfinite(deadline) or not minimum_deadline <= deadline <= 60):
         raise ValueError("maximum duration must cover nominal motion, settling and phase HOLD budget; at most60s")
     return {"schema_version":"dapier.bounded-pregrasp-plan.v1",
-        "phase":carry_phase or ("WRIST_ALIGN" if goal_intent.source == "wrist_servo_adapter" else "PREGRASP"),
+        "phase":phase_name or carry_phase or ("WRIST_ALIGN" if goal_intent.source == "wrist_servo_adapter" else "PREGRASP"),
         "initial_torque_enabled":carry_phase is not None or goal_intent.source == "wrist_servo_adapter",
         "profile_sha256":hashlib.sha256(profile_raw).hexdigest(),
         "start_rad":start[:6].tolist(), "goal_rad":goal[:6].tolist(),
@@ -371,10 +362,168 @@ def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, no
         "position_error_m":position_error,"axis_error_rad":axis_error,
         "offline_candidate_accepted":True,"path_clear":True,"path_clearance_m":distance,
         "sensor_target_verified":metric.get("metric_target_verified") is True,
-        "path_tracking_tolerance_rad":float(tolerance) if model_tube_ok else .01,
-        "path_envelope_verified":envelope_ok,
-        "path_envelope_clearance_m":float(envelope["minimum_clearance_m"]) if envelope_ok else 0.,
-        "path_envelope_model_clearance_m":float(envelope["minimum_clearance_m"]) if model_tube_ok else None,
-        "path_envelope_unmet_prerequisites":list(envelope.get("execution_prerequisites_unmet",
-            ["no tracking envelope"])) if not envelope_ok else [],
+        **gate["plan_fields"],
         "source_evidence":sources,"task_success":False}
+
+
+TRIAL_CONDITION_KEYS = (
+    "jig_support_in_place_and_arm_resting_on_it_torque_off",
+    "gripper_empty_jaws_set_by_hand_as_recorded",
+    "workspace_clear_except_desk_jig_right_arm_and_recorded_block",
+    "right_arm_at_rest_torque_off",
+    "operator_b_hand_on_left_follower_power_switch",
+    "operator_a_beside_arm_outside_swept_volume")
+SUPERVISED_TRIAL_UNMET = "supervised trial field conditions not confirmed by an operator record"
+NO_OVERSHOOT_UNMET = ("servo monotonic/no-overshoot motion between feedback samples is not qualified "
+                      "by evidence acquired before this execution")
+
+
+def _record(path: Path) -> tuple[dict, dict]:
+    raw = Path(path).read_bytes()
+    return json.loads(raw), {"path": str(Path(path).resolve()), "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def _tracking_gate(envelope: Mapping[str, Any], velocities: np.ndarray, start: np.ndarray, goal: np.ndarray,
+                   records: Sequence[Path], *, now_s: float, measured_unix_s: float,
+                   profile_sha256: str) -> dict:
+    """Model tube -> monitor tolerance; execution prerequisite only via pre-acquired records."""
+    assumed = envelope.get("max_velocity_rad_s")
+    tolerance = envelope.get("tracking_tolerance_rad")
+    model_tube_ok = (envelope.get("model_tube_verified") is True and isinstance(assumed, list)
+        and len(assumed) == 6 and all(type(v) in (int, float) and math.isfinite(v) for v in assumed)
+        and np.all(velocities <= np.asarray(assumed, dtype=float))
+        and envelope.get("command_horizon_s") == NATIVE_COMMAND_HORIZON_S
+        and type(tolerance) in (int, float) and math.isfinite(tolerance) and 0 < tolerance <= .01
+        and type(envelope.get("minimum_clearance_m")) in (int, float)
+        and envelope["minimum_clearance_m"] >= .030)
+    segment_ok = ("segment_start_rad" in envelope
+        and np.allclose(envelope["segment_start_rad"], start, rtol=0, atol=1e-12)
+        and np.allclose(envelope["segment_goal_rad"], goal, rtol=0, atol=1e-12))
+    # The required item is re-derived from the certificate mode, so an edited envelope that
+    # simply omits it cannot pass; only a matching pre-acquired record removes it.
+    required = SUPERVISED_TRIAL_UNMET if envelope.get("excursion_allowance_rad", 0) else NO_OVERSHOOT_UNMET
+    unmet = list(dict.fromkeys([*envelope.get("execution_prerequisites_unmet", []), required]))
+    sources, accepted = [], []
+    for path in records:
+        record, source = _record(path)
+        kind = record.get("schema_version")
+        if kind == "dapier.supervised-trial-conditions.v1" and SUPERVISED_TRIAL_UNMET in unmet:
+            recorded = record.get("recorded_unix_s")
+            if (envelope.get("excursion_allowance_rad", 0) >= .05 and record.get("operator_confirmed") is True
+                    and set(record.get("conditions", {})) == set(TRIAL_CONDITION_KEYS)
+                    and all(v is True for v in record["conditions"].values())
+                    and type(recorded) in (int, float) and 0 <= now_s - recorded <= 900):
+                unmet.remove(SUPERVISED_TRIAL_UNMET); accepted.append(kind); sources.append(source)
+        elif kind == "dapier.tracking-qualification.v1" and NO_OVERSHOOT_UNMET in unmet:
+            covered = np.asarray(record.get("covered_joint_range_rad", []), dtype=float)
+            # Finite evidence qualifies only its own profile/speed/tolerance and posture range,
+            # and only when it was acquired before this execution's measured start.
+            if (record.get("pass") is True and record.get("hardware_execution") is True
+                    and record.get("profile_sha256") == profile_sha256
+                    and record.get("max_velocity_rad_s") == assumed
+                    and record.get("tracking_tolerance_rad") == tolerance
+                    and type(record.get("acquired_unix_s")) in (int, float)
+                    and record["acquired_unix_s"] < measured_unix_s and covered.shape == (6, 2)
+                    and np.all(np.minimum(start, goal) >= covered[:, 0])
+                    and np.all(np.maximum(start, goal) <= covered[:, 1])):
+                unmet.remove(NO_OVERSHOOT_UNMET); accepted.append(kind); sources.append(source)
+    envelope_ok = model_tube_ok and segment_ok and not unmet
+    return {"model_tube_ok": model_tube_ok, "envelope_ok": envelope_ok, "record_sources": sources,
+            "plan_fields": {
+                "path_tracking_tolerance_rad": float(tolerance) if model_tube_ok else .01,
+                "path_envelope_verified": envelope_ok,
+                "path_envelope_clearance_m": float(envelope["minimum_clearance_m"]) if envelope_ok else 0.,
+                "path_envelope_model_clearance_m": float(envelope["minimum_clearance_m"]) if model_tube_ok else None,
+                "path_envelope_unmet_prerequisites": [] if envelope_ok else
+                    (unmet or ["tracking envelope not bound to this segment"]),
+                "path_envelope_accepted_records": accepted,
+                "path_envelope_accepted_assumptions": list(envelope.get("accepted_assumptions", [])),
+                "path_excursion_allowance_rad": envelope.get("excursion_allowance_rad", 0.)}}
+
+
+def bounded_trial_plan(candidate: Mapping[str, Any], profile_path: Path, *, fraction: float,
+                       trial_envelope: Mapping[str, Any], prerequisite_records: Sequence[Path] = (),
+                       now_s: float, maximum_duration_s: float | None = None) -> dict:
+    """First `fraction` of a checked current PREGRASP line, as a supervised TRACKING_TRIAL.
+
+    Every PREGRASP input check still applies; only the goal is truncated on the same line
+    and the tube must be the allowance-based trial certificate for that truncated segment.
+    """
+    if type(fraction) not in (int, float) or not 0 < fraction <= 1:
+        raise ValueError("trial fraction must be in (0, 1]")
+    if trial_envelope.get("excursion_allowance_rad", 0) < .05:
+        raise ValueError("trial requires the supervised excursion-allowance certificate")
+    start = np.asarray(candidate["seed_posture"]["seed_q_rad"], dtype=float)
+    goal = np.asarray(candidate["solved_action_rad"], dtype=float)
+    truncated = dict(candidate)
+    truncated["solved_action_rad"] = (start + fraction * (goal - start)).tolist()
+    truncated["path_envelope"] = trial_envelope
+    if candidate.get("offline_candidate_accepted") is not True or candidate.get("candidate_mode") != "pregrasp_ik":
+        raise ValueError("trial reuses only an accepted non-contact pregrasp candidate")
+    plan = _bounded_motion_plan(truncated, profile_path, now_s=now_s, goal_intent=None,
+                                maximum_duration_s=maximum_duration_s, phase_name="TRACKING_TRIAL",
+                                prerequisite_records=prerequisite_records)
+    plan.update(trial_fraction=float(fraction), trial_source_goal_rad=goal[:6].tolist(),
+                scope="supervised tracking trial; not P4, not task success")
+    return plan
+
+
+def bounded_return_plan(previous_trace: Path, previous_plan: Path, outbound_plan: Path, profile_path: Path, *,
+                        goal_fraction: float, return_envelope: Mapping[str, Any],
+                        prerequisite_records: Sequence[Path] = (), now_s: float, now_monotonic_ns: int,
+                        maximum_duration_s: float) -> dict:
+    """RETURN from the measured held endpoint to a point on the checked outbound line.
+
+    goal_fraction 0 is the outbound's recorded torque-off support start; a positive value
+    is a waypoint on the same line. Native re-verifies every binding before any I/O.
+    """
+    trace_raw = Path(previous_trace).read_bytes()
+    result = json.loads(trace_raw.decode().splitlines()[-1])
+    steps = [json.loads(line) for line in trace_raw.decode().splitlines() if '"event":"step"' in line.replace(" ", "")]
+    outbound, outbound_source = _record(outbound_plan)
+    previous, previous_source = _record(previous_plan)
+    profile_raw = Path(profile_path).read_bytes()
+    profile_sha = hashlib.sha256(profile_raw).hexdigest()
+    if (result.get("event") != "result" or not str(result.get("phase", "")).endswith("_HOLDING_LAST_GOAL")
+            and not str(result.get("phase", "")).endswith("_REACHED_HOLDING")):
+        raise ValueError("RETURN requires a held previous phase result")
+    if (result.get("profile_sha256") != profile_sha or outbound.get("profile_sha256") != profile_sha
+            or result.get("plan_sha256") != previous_source["sha256"] or not steps):
+        raise ValueError("RETURN profile/plan/trace chain mismatch")
+    if type(goal_fraction) not in (int, float) or not 0 <= goal_fraction <= 1:
+        raise ValueError("RETURN goal must lie on the checked outbound segment")
+    a, b = np.asarray(outbound["start_rad"], dtype=float), np.asarray(outbound["goal_rad"], dtype=float)
+    start = np.asarray(result["final_measured_rad"], dtype=float)
+    goal = a + goal_fraction * (b - a)
+    profile = json.loads(profile_raw)
+    velocities = np.asarray([j["maximum_velocity_rad_s"] for j in profile["joints"]], dtype=float)
+    names = tuple(j["name"] for j in profile["joints"])
+    # The measured endpoint time comes from the trace's own monotonic clock (same boot).
+    measured_unix_s = now_s - (now_monotonic_ns - steps[-1]["time_ns"]) / 1e9
+    if not 0 <= now_s - measured_unix_s <= 60:
+        raise ValueError("RETURN measured endpoint is stale or future")
+    gate = _tracking_gate(return_envelope, velocities, start, goal, prerequisite_records, now_s=now_s,
+                          measured_unix_s=measured_unix_s, profile_sha256=profile_sha)
+    intent = arm_joint_position_intent(sequence=1, source="real_sensor_ik_adapter", joint_names=names,
+        joint_position_rad=tuple(goal), joint_max_velocity_rad_s=tuple(velocities), ttl_ns=250_000_000,
+        source_monotonic_ns=time.monotonic_ns())
+    validate_intent(intent)
+    duration = max(2.5, float(np.max(1.875*np.abs(goal-start)/velocities))*1.15) + 1
+    if (type(maximum_duration_s) not in (int, float) or not math.isfinite(maximum_duration_s)
+            or not duration <= maximum_duration_s <= 60):
+        raise ValueError("RETURN budget must cover nominal motion and be at most 60 s")
+    nominal = return_envelope.get("nominal_minimum_clearance_m")
+    previous_trace_source = {"path": str(Path(previous_trace).resolve()),
+                             "sha256": hashlib.sha256(trace_raw).hexdigest()}
+    return {"schema_version": "dapier.bounded-pregrasp-plan.v1", "phase": "RETURN",
+        "initial_torque_enabled": True, "profile_sha256": profile_sha,
+        "start_rad": start.tolist(), "goal_rad": goal.tolist(), "goal_intent": intent.as_dict(),
+        "maximum_duration_s": float(maximum_duration_s), "measured_state_unix_s": measured_unix_s,
+        "observation_unix_s": measured_unix_s, "return_goal_fraction": float(goal_fraction),
+        "offline_candidate_accepted": True, "sensor_target_verified": False,
+        "path_clear": type(nominal) in (int, float) and nominal >= .030,
+        "path_clearance_m": float(nominal) if type(nominal) in (int, float) else 0.,
+        **gate["plan_fields"], "previous_phase": previous_trace_source, "previous_plan": previous_source,
+        "outbound_plan": outbound_source,
+        "source_evidence": [previous_trace_source, previous_source, outbound_source, *gate["record_sources"]],
+        "task_success": False}

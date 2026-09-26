@@ -41,7 +41,9 @@ class FeetechPregraspTransport final : public MotorTransport {
         command_horizon_s_(command_horizon_s) {
     armed_ = already_holding;  // Expected state only; every read verifies register 40.
     const bool confirmed = confirmation == "VISIBLE_LEFT_SENSOR_PREGRASP" ||
-        (confirmation == "VISIBLE_LEFT_OBSERVED_HOLD" && already_holding && start_ == goal_);
+        (confirmation == "VISIBLE_LEFT_OBSERVED_HOLD" && already_holding && start_ == goal_) ||
+        (confirmation == "VISIBLE_LEFT_TRACKING_TRIAL" && !already_holding) ||
+        (confirmation == "VISIBLE_LEFT_BOUNDED_RETURN" && already_holding);
     if (!operator_present || !confirmed || !isatty(0) || !isatty(1))
       throw std::runtime_error("physical transport requires attended TTY and exact confirmation");
     if (calibration_.size() != 6) throw std::runtime_error("six calibrated follower joints required");

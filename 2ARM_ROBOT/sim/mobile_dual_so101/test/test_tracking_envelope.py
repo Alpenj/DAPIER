@@ -41,6 +41,7 @@ class TrackingEnvelopeTest(unittest.TestCase):
         self.assertFalse(report["verified"])
         self.assertTrue(report["execution_prerequisites_unmet"])
         self.assertGreaterEqual(report["minimum_clearance_m"], .030)
+        self.assertEqual(report["segment_goal_rad"], self.goal[:6].tolist())
         bottleneck = report["bottleneck"]
         self.assertEqual(bottleneck["pair"], report["minimum_clearance_pair"])
         self.assertTrue(0. <= bottleneck["path_fraction"] <= 1.)
@@ -80,11 +81,24 @@ class TrackingEnvelopeTest(unittest.TestCase):
     def test_refuses_moving_passive_arm_contact_phase_and_uncapped_velocity(self):
         moved = self.goal.copy()
         moved[6] += .01
-        cases = ((moved, {}), (self.goal, {"task_phase":"LIFT"}), (self.goal, {"max_velocity_rad_s":[.31]*6}))
+        cases = ((moved, {}), (self.goal, {"task_phase":"LIFT"}), (self.goal, {"max_velocity_rad_s":[.31]*6}),
+                 # An allowance below the supervised-trial minimum would look like a trial certificate.
+                 (self.goal, {"excursion_allowance_rad":.02}), (self.goal, {"excursion_allowance_rad":.2}))
         for goal, extra in cases:
             kwargs = {"reference_data":self.data, "max_velocity_rad_s":[.1]*6, **extra}
             with self.subTest(extra=extra), self.assertRaises(ValueError):
                 check_tracking_envelope(self.model, self.start, goal, **kwargs)
+
+
+    def test_trial_allowance_changes_the_prerequisite_not_the_monitor(self):
+        trial = check_tracking_envelope(self.model, self.start, self.start + .3*(self.goal-self.start),
+            reference_data=self.data, max_velocity_rad_s=[.15]*6, excursion_allowance_rad=.05)
+        self.assertFalse(trial["verified"])
+        self.assertEqual(trial["excursion_allowance_rad"], .05)
+        self.assertEqual(trial["execution_prerequisites_unmet"],
+                         ["supervised trial field conditions not confirmed by an operator record"])
+        self.assertIn("firmware speed-cap adherence unverified", trial["accepted_assumptions"][0])
+        self.assertLessEqual(trial.get("tracking_tolerance_rad", .004), .004)
 
 
 if __name__ == "__main__":

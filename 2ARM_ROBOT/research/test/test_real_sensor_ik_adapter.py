@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from dapier_research.control_intent import ControlIntent, load_contract
 from dapier_research.real_sensor_ik_adapter import (
     bounded_pregrasp_plan,
-    bounded_carry_plan,
+    bounded_carry_plan, bounded_trial_plan, bounded_return_plan,
+    NO_OVERSHOOT_UNMET, SUPERVISED_TRIAL_UNMET, TRIAL_CONDITION_KEYS,
     create_joint_position_intents,
     plan_pregrasp_staging_waypoints,
     transform_optical_point_to_arm,
@@ -83,19 +84,36 @@ class RealSensorIkAdapterTest(unittest.TestCase):
             # hardware envelope gate while an execution prerequisite is unmet.
             envelope = {"verified":False, "model_tube_verified":True, "tracking_tolerance_rad":.004,
                         "minimum_clearance_m":.0303, "max_velocity_rad_s":[.3]*6, "command_horizon_s":.05,
-                        "execution_prerequisites_unmet":["servo between-sample behaviour unqualified"]}
+                        "segment_start_rad":[0.]*6, "segment_goal_rad":[0.]*6,
+                        "execution_prerequisites_unmet":[NO_OVERSHOOT_UNMET]}
             model_only = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]), now_s=1000.)
             self.assertFalse(model_only["path_envelope_verified"])
             self.assertEqual((model_only["path_tracking_tolerance_rad"], model_only["path_envelope_clearance_m"],
                               model_only["path_envelope_model_clearance_m"]), (.004, 0., .0303))
-            self.assertEqual(model_only["path_envelope_unmet_prerequisites"], envelope["execution_prerequisites_unmet"])
-            forged = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, "verified":True}},
-                                           Path(profile["path"]), now_s=1000.)
-            self.assertFalse(forged["path_envelope_verified"])
-            met = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, "verified":True,
+            self.assertEqual(model_only["path_envelope_unmet_prerequisites"], [NO_OVERSHOOT_UNMET])
+            # An edited envelope that drops its unmet item or claims verified is still refused.
+            forged = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, "verified":True,
                 "execution_prerequisites_unmet":[]}}, Path(profile["path"]), now_s=1000.)
+            self.assertFalse(forged["path_envelope_verified"])
+            profile_sha = hashlib.sha256(Path(profile["path"]).read_bytes()).hexdigest()
+            qualification = {"schema_version":"dapier.tracking-qualification.v1", "pass":True,
+                "hardware_execution":True, "profile_sha256":profile_sha, "max_velocity_rad_s":[.3]*6,
+                "tracking_tolerance_rad":.004, "acquired_unix_s":999., "covered_joint_range_rad":[[-.1,.1]]*6}
+            met = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]),
+                now_s=1000., prerequisite_records=[Path(source("qualification.json", qualification)["path"])])
             self.assertTrue(met["path_envelope_verified"])
             self.assertEqual(met["path_envelope_clearance_m"], .0303)
+            for change in ({"acquired_unix_s":1000.5}, {"covered_joint_range_rad":[[.01,.1]]*6},
+                           {"hardware_execution":False}, {"tracking_tolerance_rad":.003}, {"pass":"true"},
+                           {"profile_sha256":"0"*64}):
+                with self.subTest(qualification=change):
+                    bad = Path(source(f"q-{len(change)}-{sorted(change)[0]}.json", {**qualification, **change})["path"])
+                    refused = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]),
+                                                    now_s=1000., prerequisite_records=[bad])
+                    self.assertFalse(refused["path_envelope_verified"])
+            unbound = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, "segment_goal_rad":[.1]+[0.]*5}},
+                Path(profile["path"]), now_s=1000., prerequisite_records=[Path(source("qualification.json", qualification)["path"])])
+            self.assertFalse(unbound["path_envelope_verified"])
             for change in ({"max_velocity_rad_s":[.1]*6}, {"command_horizon_s":.1}, {"model_tube_verified":"true"},
                            {"minimum_clearance_m":.029}, {"tracking_tolerance_rad":.02}, {"max_velocity_rad_s":None}):
                 with self.subTest(change=change):
@@ -103,6 +121,56 @@ class RealSensorIkAdapterTest(unittest.TestCase):
                                                     Path(profile["path"]), now_s=1000.)
                     self.assertFalse(refused["path_envelope_verified"])
                     self.assertEqual((refused["path_tracking_tolerance_rad"], refused["path_envelope_model_clearance_m"]), (.01, None))
+            # Supervised trial: same checked line truncated, allowance certificate + field record.
+            moving = {**copy.deepcopy(candidate), "candidate_mode":"pregrasp_ik"}
+            moving["solved_action_rad"][0] = .1
+            trial_env = {**envelope, "excursion_allowance_rad":.05, "segment_goal_rad":[.05]+[0.]*5,
+                         "execution_prerequisites_unmet":[SUPERVISED_TRIAL_UNMET]}
+            conditions = {"schema_version":"dapier.supervised-trial-conditions.v1", "operator_confirmed":True,
+                          "recorded_unix_s":990., "conditions":{key:True for key in TRIAL_CONDITION_KEYS}}
+            cond_path = Path(source("conditions.json", conditions)["path"])
+            trial = bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=trial_env,
+                                       prerequisite_records=[cond_path], now_s=1000.)
+            self.assertEqual((trial["phase"], trial["initial_torque_enabled"], trial["goal_rad"][0]),
+                             ("TRACKING_TRIAL", False, .05))
+            self.assertTrue(trial["path_envelope_verified"])
+            self.assertEqual(trial["path_envelope_accepted_records"], ["dapier.supervised-trial-conditions.v1"])
+            unconfirmed = bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=trial_env, now_s=1000.)
+            self.assertFalse(unconfirmed["path_envelope_verified"])
+            partial = {**conditions, "conditions":{**conditions["conditions"], TRIAL_CONDITION_KEYS[0]:False}}
+            refused = bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=trial_env,
+                prerequisite_records=[Path(source("partial.json", partial)["path"])], now_s=1000.)
+            self.assertFalse(refused["path_envelope_verified"])
+            with self.assertRaisesRegex(ValueError, "allowance"):
+                bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=envelope, now_s=1000.)
+            # RETURN: measured held endpoint -> recorded support start of the SHA-bound outbound plan.
+            outbound = root/"outbound.json"; outbound.write_text(json.dumps(trial))
+            trace = root/"trial-trace.jsonl"
+            trace.write_text("\n".join(json.dumps(e) for e in (
+                {"event":"step","time_ns":1_000_000_000},
+                {"event":"result","phase":"TRACKING_TRIAL_REACHED_HOLDING","motion_started":True,
+                 "hardware_execution":False,"profile_sha256":profile_sha,
+                 "plan_sha256":hashlib.sha256(outbound.read_bytes()).hexdigest(),
+                 "final_measured_rad":[.0502]+[0.]*5})))
+            ret_env = {**trial_env, "segment_start_rad":[.0502]+[0.]*5, "segment_goal_rad":[0.]*6,
+                       "nominal_minimum_clearance_m":.031}
+            ret = bounded_return_plan(trace, outbound, outbound, Path(profile["path"]), goal_fraction=0.,
+                return_envelope=ret_env, prerequisite_records=[cond_path], now_s=1000.,
+                now_monotonic_ns=3_000_000_000, maximum_duration_s=20.)
+            self.assertEqual((ret["phase"], ret["initial_torque_enabled"], ret["goal_rad"], ret["start_rad"][0]),
+                             ("RETURN", True, [0.]*6, .0502))
+            self.assertTrue(ret["path_envelope_verified"])
+            self.assertAlmostEqual(ret["measured_state_unix_s"], 998.)
+            for kwargs, reason in (({"goal_fraction":1.5}, "outbound segment"), ({"maximum_duration_s":61.}, "60 s"),
+                                   ({"now_monotonic_ns":70_000_000_000}, "stale")):
+                with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                    bounded_return_plan(trace, outbound, outbound, Path(profile["path"]), **{**dict(
+                        goal_fraction=0., return_envelope=ret_env, now_s=1000., now_monotonic_ns=3_000_000_000,
+                        maximum_duration_s=20.), **kwargs})
+            other = root/"other-plan.json"; other.write_text(json.dumps({**trial, "goal_rad":[.04]+[0.]*5}))
+            with self.assertRaisesRegex(ValueError, "chain mismatch"):
+                bounded_return_plan(trace, other, outbound, Path(profile["path"]), goal_fraction=0.,
+                    return_envelope=ret_env, now_s=1000., now_monotonic_ns=3_000_000_000, maximum_duration_s=20.)
             carry=copy.deepcopy(candidate)
             carry.update(candidate_mode="carry_endpoint_ik", planning_phase="LIFT", ik_converged=True,
                 offline_candidate_accepted=False, path_assessment={"safe":True,"checked_samples":3})
