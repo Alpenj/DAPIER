@@ -529,10 +529,14 @@ int main(int argc, char** argv) {
       monotonic_ns, [] { std::this_thread::sleep_for(std::chrono::milliseconds(50)); },
       [] { return interrupted != 0; }, [&](const StepTrace& trace) {
         if (!trace.sent.position_rad.empty()) report["motion_started"] = true;
-        write_line(output_fd, {{"event", "step"}, {"time_ns", trace.time_ns}, {"phase", trace.phase},
+        const bool post_stop = trace.phase.rfind("POST_STOP", 0) == 0;
+        write_line(output_fd, {{"event", post_stop ? "post_stop" : "step"}, {"time_ns", trace.time_ns},
+          {"read_ns", trace.time_ns}, {"send_ns", trace.send_ns}, {"phase", trace.phase},
           {"requested_rad", trace.requested_rad}, {"limited_rad", trace.limited_rad},
           {"sent_rad", trace.sent.position_rad}, {"sent_raw_ticks", trace.sent.raw_ticks},
-          {"measured_before_command_rad", trace.measured_rad}, {"reason", trace.reason}});
+          {"measured_before_command_rad", trace.measured_rad},
+          {"measured_raw_ticks", trace.measured_raw.empty() ? json(nullptr) : json(trace.measured_raw)},
+          {"reason", trace.reason}});
       }, path_tolerance, phase, observe_hold, observe_grasp, initial_grasp, observe_lift, initial_lift, observe_support, initial_support);
     report["event"] = "result"; report["phase"] = result.phase; report["reason"] = result.reason;
     report["phase_completed"] = result.reached;

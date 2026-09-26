@@ -46,13 +46,17 @@ struct MotorTransport {
   virtual MeasuredRobotState read() = 0;
   virtual void arm_at_measured_position() = 0;
   virtual SentPositions send(const std::vector<double>& position_rad) = 0;
+  // Raw ticks behind the last read(); empty when the transport has none (e.g. a mock).
+  virtual std::vector<int> last_measured_raw() const { return {}; }
 };
 
 struct StepTrace {
-  std::int64_t time_ns{};
+  std::int64_t time_ns{};  // monotonic time right after the measured read
   std::string phase, reason;
   std::vector<double> requested_rad, limited_rad, measured_rad;
   SentPositions sent;
+  std::int64_t send_ns{};  // monotonic time right after send() returned; 0 if nothing was sent
+  std::vector<int> measured_raw;
 };
 
 struct PregraspResult {
@@ -309,6 +313,28 @@ inline PregraspResult execute_pregrasp(
   bool arming_attempted = false;
   bool sent_any = false;
   bool holding_started = false;
+  // After the executor stops commanding (endpoint held or abort), read only, never send,
+  // for up to 20 cycles inside the approved deadline. Transport I/O refused after an
+  // operator cancel or the deadline is recorded as unavailable, not bypassed.
+  const auto observe_after_stop = [&](const std::string& why) {
+    for (int i = 0; i < 20; ++i) {
+      try {
+        if (cancelled() || now() - started_ns > maximum_duration_s * 1e9) {
+          record({now(), "POST_STOP_UNAVAILABLE", "cancel or deadline: no further I/O", {}, {}, {}, {}, 0, {}});
+          return;
+        }
+        const auto measured = transport.read();
+        StepTrace trace{now(), "POST_STOP_OBSERVE", why, {}, {},
+                        model.reorder(measured.joint_names, measured.joint_position_rad), {}, 0,
+                        transport.last_measured_raw()};
+        record(trace);
+      } catch (const std::exception& error) {
+        record({now(), "POST_STOP_UNAVAILABLE", error.what(), {}, {}, {}, {}, 0, {}});
+        return;
+      }
+      wait_cycle();
+    }
+  };
   ObservedGrasp grasp;
   ObservedBlockHold lifted_hold;
   ObservedSupport support;
@@ -435,7 +461,8 @@ inline PregraspResult execute_pregrasp(
       intent.joint_position_rad = limited.command;
       for (const auto& joint : model.joints()) intent.joint_max_velocity_rad_s.push_back(joint.max_velocity);
       const auto command = safety.evaluate(intent, measured, context, current_ns);
-      StepTrace trace{current_ns, phase+"_TRAVEL", command.reason, requested, limited.command, positions, {}};
+      StepTrace trace{current_ns, phase+"_TRAVEL", command.reason, requested, limited.command, positions, {}, 0,
+                      transport.last_measured_raw()};
       if (!command.dispatch_allowed || command.decision != dapier_safety_core::SafetyDecision::kDispatch) {
         trace.phase = "REJECTED";
         record(trace);
@@ -451,6 +478,7 @@ inline PregraspResult execute_pregrasp(
       }
       if (cancelled()) throw std::runtime_error("operator interruption before dispatch");
       trace.sent = transport.send(command.joint_position_rad);
+      trace.send_ns = now();
       sent_any = true;
       bool settled = !contact_stop.empty() || u == 1.;
       for (std::size_t i = 0; i < goal.size(); ++i)
@@ -531,6 +559,7 @@ inline PregraspResult execute_pregrasp(
         result.reached = true;
         result.phase = phase+"_REACHED_HOLDING";
         result.reason = "measured joint endpoint reached; TCP validation and task acceptance remain separate";
+        observe_after_stop("endpoint held");
         return result;
       }
       if (holding_started) throw std::runtime_error("joint endpoint lost during observed HOLD");
@@ -540,6 +569,7 @@ inline PregraspResult execute_pregrasp(
     result.phase = armed ? phase+"_ABORTED_HOLDING_LAST_GOAL" :
         arming_attempted ? "ARMING_INTERRUPTED_STATE_UNCERTAIN" : "PREFLIGHT_REJECTED";
     result.reason = error.what();
+    if (armed) observe_after_stop(std::string("stopped: ") + error.what());
     // Never torque-off an airborne arm as generic cleanup. The bounded last goal
     // remains active; a failed link requires the attending operator's intervention.
     return result;

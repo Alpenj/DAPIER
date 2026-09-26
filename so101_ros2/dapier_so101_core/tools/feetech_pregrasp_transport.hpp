@@ -207,6 +207,9 @@ class FeetechPregraspTransport final : public MotorTransport {
   std::vector<dapier_so101_core::CalibrationEntry> calibration_;
   std::vector<std::array<std::uint8_t, 40>> protection_;
   std::vector<int> last_raw_;
+ public:
+  std::vector<int> last_measured_raw() const override { return last_raw_; }
+ private:
   std::vector<int> maximum_speed_tick_s_;
   std::int64_t last_read_ns_{};
   bool armed_{false};
