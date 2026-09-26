@@ -197,6 +197,69 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
         raise ValueError("contact/carry candidate requires its own checked phase path")
     if candidate.get("offline_candidate_accepted") is not True:
         raise ValueError("current sensor candidate has not passed IK/path acceptance")
+    return _bounded_motion_plan(candidate, profile_path, now_s=now_s, goal_intent=goal_intent,
+                                maximum_duration_s=maximum_duration_s)
+
+
+def bounded_carry_plan(candidate: Mapping[str, Any], profile_path: Path,
+                       previous_phase_trace: Path, observation_binding_path: Path, *, now_s: float,
+                       goal_intent: ControlIntent | None = None,
+                       maximum_duration_s: float | None = None) -> dict:
+    """Compile a model-only carry candidate for the same native MOCK phase loop.
+
+    Native code verifies the preceding observed phase, measured start and each
+    fresh frame before dispatch. This adapter does not authorize physical contact.
+    """
+    phase = candidate.get("planning_phase")
+    carry = candidate.get("carry_planning", {})
+    if (candidate.get("candidate_mode") != "carry_endpoint_ik" or phase not in ("LIFT", "PLACE")
+            or carry.get("phase") != phase or candidate.get("ik_converged") is not True
+            or carry.get("model_path_checked") is not True or carry.get("model_path_safe") is not True
+            or carry.get("path_policy_scope") != "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"
+            or carry.get("contact_path_verified") is not False):
+        raise ValueError("checked SIM-only carry phase and explicit unverified physical contact required")
+    error = carry.get("object_center_goal_error_m")
+    if type(error) not in (int, float) or not math.isfinite(error) or not 0 <= error <= .0005:
+        raise ValueError("predicted carried object center misses its goal")
+    assessment = candidate.get("path_assessment", {})
+    if (assessment.get("safe") is not True or type(assessment.get("checked_samples")) is not int
+            or assessment["checked_samples"] < 2):
+        raise ValueError("sampled carried-object path evidence required")
+    if goal_intent is not None and goal_intent.source == "wrist_servo_adapter":
+        raise ValueError("wrist intent cannot stand in for a carry phase")
+    plan = _bounded_motion_plan(candidate, profile_path, now_s=now_s, goal_intent=goal_intent,
+                                maximum_duration_s=maximum_duration_s, carry_phase=phase)
+    reference = json.loads(Path(carry["reference"]["path"]).read_text())
+    if (reference.get("schema_version") != "dapier.sensor-carry-reference.v1"
+            or reference.get("phase") != phase or reference.get("frame") != "model_world"):
+        raise ValueError("carry phase differs from its pinned waypoint reference")
+    if plan["start_rad"][-1] != plan["goal_rad"][-1] or plan["start_rad"] == plan["goal_rad"]:
+        raise ValueError("carry requires a moving arm and fixed measured aperture")
+    binding_raw = observation_binding_path.read_bytes()
+    binding = json.loads(binding_raw)
+    for key in ("path", "run_id", "object_id", "calibration_revision", "producer_sha256", "boot_id"):
+        if not isinstance(binding.get(key), str) or not binding[key].strip():
+            raise ValueError("complete native observation binding required")
+    if phase == "PLACE" and (not isinstance(binding.get("support_id"), str) or not binding["support_id"].strip()):
+        raise ValueError("PLACE requires the approved support destination identity")
+    previous = {"path":str(previous_phase_trace.resolve(strict=True)),
+                "sha256":hashlib.sha256(previous_phase_trace.read_bytes()).hexdigest()}
+    plan["grasp_confirmation" if phase == "LIFT" else "previous_phase"] = previous
+    plan["hold_observation" if phase == "LIFT" else "support_observation"] = binding
+    plan["source_evidence"].extend((previous, {"path":str(observation_binding_path.resolve()),
+        "sha256":hashlib.sha256(binding_raw).hexdigest()}))
+    plan.update(offline_candidate_accepted=False, model_carry_candidate_verified=True,
+                physical_contact_path_verified=False, allowed_transport="mock",
+                contact_policy_scope=carry["path_policy_scope"])
+    return plan
+
+
+def _bounded_motion_plan(candidate: Mapping[str, Any], profile_path: Path, *, now_s: float,
+                         goal_intent: ControlIntent | None, maximum_duration_s: float | None,
+                         carry_phase: str | None = None) -> dict:
+    """Shared source, mapping, metric and command checks; no device I/O."""
+    if not math.isfinite(now_s):
+        raise ValueError("finite audit time required")
     if (candidate.get("scene_object") or {}).get("bound_to_path_reference") is not True:
         raise ValueError("observed object was not bound to the checked collision scene")
     start = np.asarray(candidate["seed_posture"]["seed_q_rad"], dtype=float)
@@ -208,6 +271,8 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     sources = [candidate["block_source"], candidate["model"], candidate["mapping"]["profile"]]
     if "staging_reference" in candidate:
         sources.append(candidate["staging_reference"])
+    if carry_phase is not None:
+        sources.append(candidate["carry_planning"]["reference"])
     if candidate.get("candidate_mode") == "wrist_feedback":
         wrist = candidate["wrist_source"]
         sources.extend((wrist, wrist["frame_source"]))
@@ -269,17 +334,18 @@ def bounded_pregrasp_plan(candidate: Mapping[str, Any], profile_path: Path,
     if not isinstance(metric, Mapping):
         raise ValueError("metric target evidence must be an object")
     duration = max(2.5, float(np.max(1.875*np.abs(goal[:6]-start[:6])/velocities))*1.15)
-    if duration+1 > 60:
+    minimum_deadline = duration + 1 + (3. if carry_phase == "LIFT" else 0.)
+    if minimum_deadline > 60:
         raise ValueError("bounded motion exceeds maximum duration")
     # Nominal interpolation time does not bound plant settling. A longer budget
     # must be explicit in the plan reviewed for approval, never an automatic retry.
-    deadline = duration+1 if maximum_duration_s is None else maximum_duration_s
+    deadline = minimum_deadline if maximum_duration_s is None else maximum_duration_s
     if (isinstance(deadline, bool) or not isinstance(deadline, (int, float))
-            or not math.isfinite(deadline) or not duration+1 <= deadline <= 60):
-        raise ValueError("maximum duration must cover nominal motion plus 1s and be at most 60s")
+            or not math.isfinite(deadline) or not minimum_deadline <= deadline <= 60):
+        raise ValueError("maximum duration must cover nominal motion, settling and phase HOLD budget; at most60s")
     return {"schema_version":"dapier.bounded-pregrasp-plan.v1",
-        "phase":"WRIST_ALIGN" if goal_intent.source == "wrist_servo_adapter" else "PREGRASP",
-        "initial_torque_enabled":goal_intent.source == "wrist_servo_adapter",
+        "phase":carry_phase or ("WRIST_ALIGN" if goal_intent.source == "wrist_servo_adapter" else "PREGRASP"),
+        "initial_torque_enabled":carry_phase is not None or goal_intent.source == "wrist_servo_adapter",
         "profile_sha256":hashlib.sha256(profile_raw).hexdigest(),
         "start_rad":start[:6].tolist(), "goal_rad":goal[:6].tolist(),
         "goal_intent":goal_intent.as_dict(), "maximum_duration_s":float(deadline),

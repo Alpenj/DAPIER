@@ -249,7 +249,15 @@ def check_native_feedback_endpoint(candidate, native_result):
     This is endpoint evidence only. It does not observe contact, lift, or HOLD.
     The passive right arm retains the plan's measured sample and is labelled as such.
     """
-    if native_result.get("reached_joint_endpoint") is not True:
+    reached = native_result.get("reached_joint_endpoint") is True
+    supported_stop = (candidate.get("candidate_mode") == "carry_endpoint_ik"
+        and candidate.get("planning_phase") == "PLACE"
+        and native_result.get("phase") == "SUPPORTED_PLACED_HOLDING"
+        and native_result.get("phase_completed") is True
+        and native_result.get("observed_support_verified") is True)
+    # Observed support stops descent before the requested joint endpoint. Keep
+    # its FK residual as a diagnostic; never relabel it as endpoint acceptance.
+    if not reached and not supported_stop:
         raise ValueError("native measured endpoint was not reached")
     model_path = Path(candidate["model"]["path"])
     if fingerprint(model_path)["sha256"] != candidate["model"]["sha256"]:
@@ -282,8 +290,10 @@ def check_native_feedback_endpoint(candidate, native_result):
     within = position_error <= .0005 and axis_error <= math.radians(2.)
     return {"tcp_world_m":site.xpos.tolist(),"target_world_m":target.tolist(),
         "position_error_m":position_error,"axis_error_rad":axis_error,
+        "reached_joint_endpoint":reached,
+        "model_supported_stop_verified":supported_stop and axis_error <= math.radians(2.),
         "kinematic_endpoint_within_tolerance":within,
-        "cartesian_endpoint_verified":within and candidate["mapping"].get("physically_verified") is True
+        "cartesian_endpoint_verified":reached and within and candidate["mapping"].get("physically_verified") is True
             and native_result.get("hardware_execution") is True,
         "passive_right_state":"plan readback, not a new native right-arm measurement",
         "hardware_execution":native_result.get("hardware_execution") is True,"task_success":False}

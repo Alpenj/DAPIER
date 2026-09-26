@@ -353,6 +353,46 @@ class SingleShotInputsTest(unittest.TestCase):
         self.assertFalse(result["cartesian_endpoint_verified"])
         self.assertFalse(result["task_success"])
 
+    def test_place_feedback_keeps_support_stop_distinct_from_endpoint(self):
+        from integration_scenes import task_env, portable_model_sha256
+        from mobile_dual_so101 import HUMANOID_HOME_ACTION, apply_control_as_pose
+        env = task_env("desk")
+        # Model-only FK fixture, not a replay command or a fresh hardware pose.
+        q = np.array(HUMANOID_HOME_ACTION)
+        q[5] = q[11] = 0.
+        q[3] += np.pi/2
+        apply_control_as_pose(env.model, env.data, q)
+        candidate = {"candidate_mode":"carry_endpoint_ik", "planning_phase":"PLACE",
+            "model":{**fingerprint(Path(os.environ["DAPIER_SO101_MJCF"])),
+                     "compiled_sha256":portable_model_sha256(env.model)},
+            "seed_posture":{"seed_q_rad":q.tolist()}, "mapping":{"physically_verified":False},
+            "kinematic_analysis":{"target_world_xyz_m":
+                (env.data.site("left_cube_grasp").xpos + [0.,0.,-.015]).tolist()}}
+        feedback = {"reached_joint_endpoint":False, "phase":"SUPPORTED_PLACED_HOLDING",
+                    "phase_completed":True, "observed_support_verified":True,
+                    "final_measured_rad":q[:6].tolist(), "hardware_execution":False}
+        result = check_native_feedback_endpoint(candidate, feedback)
+        self.assertAlmostEqual(result["position_error_m"], .015)
+        self.assertTrue(result["model_supported_stop_verified"], result)
+        self.assertFalse(result["reached_joint_endpoint"])
+        self.assertFalse(result["kinematic_endpoint_within_tolerance"])
+        self.assertFalse(result["cartesian_endpoint_verified"])
+        self.assertFalse(result["task_success"])
+        # Unknown/absent/false support and native refusals (stale, wrong support,
+        # replayed frame all end REJECTED) cannot waive the endpoint.
+        for key, value in (("observed_support_verified",None), ("observed_support_verified",False),
+                           ("observed_support_verified","true"), ("phase_completed",False),
+                           ("phase","PLACE_TRAVEL"), ("phase","REJECTED")):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError,"not reached"):
+                check_native_feedback_endpoint(candidate, {**feedback,key:value})
+        candidate["planning_phase"] = "LIFT"
+        with self.assertRaisesRegex(ValueError,"not reached"):
+            check_native_feedback_endpoint(candidate, feedback)
+        candidate["planning_phase"] = "PLACE"
+        q[3] -= np.pi/2  # Early support does not waive the down-axis requirement.
+        result = check_native_feedback_endpoint(candidate, {**feedback,"final_measured_rad":q[:6].tolist()})
+        self.assertFalse(result["model_supported_stop_verified"])
+
     def test_actual_readonly_writer_to_loader_without_hardware(self):
         from test_dual_so101_smoke import SMOKE, FakeBus, write_profile
         with tempfile.TemporaryDirectory() as directory:

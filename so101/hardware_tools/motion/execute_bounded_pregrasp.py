@@ -25,6 +25,10 @@ def main(argv=None):
     parser.add_argument("--native-executor", type=Path)
     parser.add_argument("--native-sha256")
     parser.add_argument("--transport", choices=("mock", "hardware"), default="mock")
+    parser.add_argument("--previous-phase-trace", type=Path,
+                        help="Completed native CLOSE/HOLD trace for model-only carry")
+    parser.add_argument("--object-observation-binding", type=Path,
+                        help="Existing native observation binding JSON for model-only carry")
     parser.add_argument("--maximum-duration-s", type=float,
                         help="Explicit candidate execution budget, up to 60s; part of the hardware approval plan")
     args = parser.parse_args(argv)
@@ -46,16 +50,27 @@ def main(argv=None):
         report["ik_source_sha256"] = hashlib.sha256(raw).hexdigest()
         ik = json.loads(raw)
         candidate = ik if ik.get("schema_version") == "dapier.offline-ik-candidate.v1" else None
+        carry_candidate = candidate is not None and candidate.get("candidate_mode") == "carry_endpoint_ik"
+        if args.previous_phase_trace is not None or args.object_observation_binding is not None or carry_candidate:
+            if (not carry_candidate or args.profile is None or args.previous_phase_trace is None
+                    or args.object_observation_binding is None or args.transport != "mock"):
+                raise ValueError("carry requires candidate/profile/prior phase/observation binding and MOCK transport")
         if args.maximum_duration_s is not None and (candidate is None or args.profile is None):
             raise ValueError("maximum duration requires a candidate and profile; cannot override a prepared plan")
         plan_path = args.ik_result
         if ik.get("schema_version") == "dapier.offline-ik-candidate.v1" and args.profile is not None:
             sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "2ARM_ROBOT/research/src"))
-            from dapier_research.real_sensor_ik_adapter import bounded_pregrasp_plan
+            from dapier_research.real_sensor_ik_adapter import bounded_pregrasp_plan, bounded_carry_plan
             from dapier_research.control_intent import intent_from_mapping
             intent = intent_from_mapping(ik["goal_intent"]) if "goal_intent" in ik else None
-            ik = bounded_pregrasp_plan(ik, args.profile, now_s=time.time(), goal_intent=intent,
-                                      maximum_duration_s=args.maximum_duration_s)
+            if carry_candidate:
+                ik = bounded_carry_plan(ik, args.profile, args.previous_phase_trace,
+                    args.object_observation_binding, now_s=time.time(), goal_intent=intent,
+                    maximum_duration_s=args.maximum_duration_s)
+            else:
+                ik = bounded_pregrasp_plan(ik, args.profile, now_s=time.time(), goal_intent=intent,
+                                          maximum_duration_s=args.maximum_duration_s)
+            ik["candidate_source"] = {"path":str(args.ik_result.resolve()), "sha256":report["ik_source_sha256"]}
             args.output.parent.mkdir(parents=True, exist_ok=True)
             plan_path = args.output.with_suffix(".plan.json")
             with plan_path.open("x") as stream:
@@ -81,12 +96,25 @@ def main(argv=None):
                 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "2ARM_ROBOT/sim/mobile_dual_so101"))
                 from evaluate_single_shot_ik import check_native_feedback_endpoint
                 native_result = json.loads(args.output.read_text().splitlines()[-1])
+                # A supported PLACE stop is accepted short of its joint endpoint, so
+                # its result must name this plan (prior phase/support binding) and profile.
+                if carry_candidate and (
+                        native_result.get("plan_sha256") != hashlib.sha256(plan_path.read_bytes()).hexdigest()
+                        or native_result.get("profile_sha256") != hashlib.sha256(args.profile.read_bytes()).hexdigest()):
+                    raise ValueError("native result is not bound to the dispatched carry plan/profile")
                 try:
                     endpoint = check_native_feedback_endpoint(candidate, native_result)
                 except (OSError, ValueError, KeyError, TypeError) as exc:
                     endpoint = {"cartesian_endpoint_verified":False,"task_success":False,"error":str(exc)}
                 with args.output.with_suffix(".endpoint.json").open("x") as stream:
                     json.dump(endpoint, stream, indent=2, allow_nan=False)
+                if carry_candidate and args.transport == "mock":
+                    # Only the model/native connection is accepted here. Physical
+                    # endpoint/contact acceptance remains false in the evidence.
+                    accepted = (endpoint.get("model_supported_stop_verified") if
+                        candidate["planning_phase"] == "PLACE" else
+                        endpoint.get("kinematic_endpoint_within_tolerance"))
+                    return 0 if accepted is True else 1
                 return 0 if endpoint.get("cartesian_endpoint_verified") is True else 1
             return exit_code
     except (OSError, ValueError, TypeError, AttributeError, KeyError) as exc:

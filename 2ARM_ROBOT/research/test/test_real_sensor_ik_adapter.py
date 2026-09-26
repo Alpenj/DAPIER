@@ -1,4 +1,5 @@
 import math
+import copy
 import hashlib
 import json
 import tempfile
@@ -13,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from dapier_research.control_intent import ControlIntent, load_contract
 from dapier_research.real_sensor_ik_adapter import (
     bounded_pregrasp_plan,
+    bounded_carry_plan,
     create_joint_position_intents,
     plan_pregrasp_staging_waypoints,
     transform_optical_point_to_arm,
@@ -77,6 +79,50 @@ class RealSensorIkAdapterTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "stale or future"):
                 bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1061.,
                                       maximum_duration_s=40.)
+            carry=copy.deepcopy(candidate)
+            carry.update(candidate_mode="carry_endpoint_ik", planning_phase="LIFT", ik_converged=True,
+                offline_candidate_accepted=False, path_assessment={"safe":True,"checked_samples":3})
+            carry["solved_action_rad"][0]=.05
+            ref=source("carry-reference.json", {"schema_version":"dapier.sensor-carry-reference.v1",
+                "frame":"model_world","phase":"LIFT","translation_z_m":.035})
+            carry["carry_planning"]={"phase":"LIFT","reference":ref,"model_path_checked":True,
+                "model_path_safe":True,"contact_path_verified":False,"object_center_goal_error_m":0.,
+                "path_policy_scope":"SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"}
+            prior=source("prior.jsonl", {"fixture":"MOCK; native verifies actual phase trace"})
+            binding=source("binding.json", {"path":prior["path"],"run_id":"MOCK-run","object_id":"MOCK-object",
+                "calibration_revision":"MOCK-cal","producer_sha256":"a"*64,"boot_id":"MOCK-boot","support_id":"MOCK-table"})
+            def carry_plan(value=carry, **kw):
+                return bounded_carry_plan(value, Path(profile["path"]), Path(prior["path"]),
+                    Path(binding["path"]), now_s=1000., **kw)
+            lifted=carry_plan()
+            self.assertEqual(lifted["phase"],"LIFT")
+            self.assertEqual(lifted["maximum_duration_s"],6.5)
+            self.assertEqual(lifted["allowed_transport"],"mock")
+            self.assertFalse(lifted["offline_candidate_accepted"])
+            self.assertFalse(lifted["physical_contact_path_verified"])
+            self.assertEqual(lifted["start_rad"][-1],lifted["goal_rad"][-1])
+            self.assertEqual(lifted["grasp_confirmation"],prior)
+            with self.assertRaisesRegex(ValueError,"maximum duration"):
+                carry_plan(maximum_duration_s=4.)
+            for section,key,value in (("carry_planning","model_path_safe",False),
+                ("carry_planning","object_center_goal_error_m",.001),
+                ("carry_planning","object_center_goal_error_m",float("nan")),
+                ("carry_planning","path_policy_scope","HW"),("path_assessment","checked_samples",0)):
+                invalid=copy.deepcopy(carry); invalid[section][key]=value
+                with self.subTest(key=key), self.assertRaises(ValueError):carry_plan(invalid)
+            invalid=copy.deepcopy(carry); invalid["solved_action_rad"][5]=.1
+            with self.assertRaisesRegex(ValueError,"aperture"):carry_plan(invalid)
+            carry["planning_phase"]=carry["carry_planning"]["phase"]="PLACE"
+            with self.assertRaisesRegex(ValueError,"pinned waypoint"):carry_plan()
+            carry["carry_planning"]["reference"]=source("carry-reference.json", {
+                "schema_version":"dapier.sensor-carry-reference.v1","frame":"model_world",
+                "phase":"PLACE","translation_z_m":-.035})
+            placed=carry_plan()
+            self.assertEqual(placed["phase"],"PLACE")
+            self.assertEqual(placed["previous_phase"],prior)
+            self.assertEqual(placed["maximum_duration_s"],3.5)
+            Path(carry["carry_planning"]["reference"]["path"]).write_text("changed")
+            with self.assertRaisesRegex(ValueError,"source changed"):carry_plan()
             candidate["block_source"] = source("block.json", {"rgb_timestamp_ns": 1_000_000_000_000,
                 "metric_evidence": None, "depth_evidence": {"metric_target_verified": True}})
             with self.assertRaisesRegex(ValueError, "metric target evidence"):

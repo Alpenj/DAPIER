@@ -25,8 +25,8 @@ def sha(path):
 
 
 def main(binary, directory, mode="pregrasp", case=None):
-    if mode not in ("pregrasp", "hold", "close", "lift", "support"):
-        raise ValueError("check mode must be pregrasp, hold, close, lift or support")
+    if mode not in ("pregrasp", "hold", "close", "lift", "support", "carry_adapter"):
+        raise ValueError("check mode must be pregrasp, hold, close, lift, support or carry_adapter")
     binary, directory = Path(binary).resolve(strict=True), Path(directory)
     directory.mkdir(mode=0o700)
     joints = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -54,11 +54,14 @@ def main(binary, directory, mode="pregrasp", case=None):
     if mode == "support":
         cases = ("close", "lift", "place", "release", "place_unknown", "place_unapproved",
                  "release_lost", "release_no_release", "release_wrong_support", "place_ancestor_frame")
+    if mode == "carry_adapter":
+        cases = ("close", "lift", "place", "release", "lift_bound_start_mismatch")
     if case is not None:
         if mode != "lift" or case not in cases[1:]:
             raise ValueError("single-case selection requires a LIFT case")
         cases = ("close", case)  # Preserve the real preceding native phase.
     for name in cases:
+        extra_cli = []
         hold_case = name.startswith("hold")
         close_case = name.startswith("close")
         lift_case = name.startswith("lift")
@@ -75,7 +78,9 @@ def main(binary, directory, mode="pregrasp", case=None):
             confirmed = grasp_events[-1]
             prior_sequence = [e["observation"]["sequence"] for e in grasp_events if e["event"]=="grasp_observation"][-1]
             assert confirmed["observed_grasp_verified"] and not confirmed["task_success"]
-            start = confirmed["final_measured_rad"]
+            start = list(confirmed["final_measured_rad"])
+            if name == "lift_bound_start_mismatch":
+                start[0] += .003
             goal = list(start); goal[0] += .06
             if name == "lift_changed_aperture":
                 goal[-1] -= .01
@@ -205,6 +210,37 @@ def main(binary, directory, mode="pregrasp", case=None):
                     support_observation=binding,
                     previous_phase={"path":str(previous_trace.resolve()), "sha256":sha(previous_trace)})
             plan.write_text(json.dumps(prepared))
+            if mode == "carry_adapter" and (lift_case or place_case):
+                # Explicit synthetic parser/dispatch fixture, not a real IK result.
+                def fingerprint(path):
+                    return {"path":str(path.resolve()),"sha256":sha(path)}
+                block=directory/f"{name}-MOCK-block.json"
+                block.write_text(json.dumps({"rgb_timestamp_ns":time.time_ns(),
+                    "metric_evidence":{"metric_target_verified":False}}))
+                reference=directory/f"{name}-reference.json"
+                reference.write_text(json.dumps({"schema_version":"dapier.sensor-carry-reference.v1",
+                    "frame":"model_world","phase":prepared["phase"],"translation_z_m":.035 if lift_case else -.035}))
+                binding_path=directory/f"{name}-binding.json"
+                binding_path.write_text(json.dumps(binding))
+                measured={**fingerprint(cal),"timestamp":datetime.now(timezone.utc).isoformat(),"calibration":fingerprint(cal)}
+                candidate={"schema_version":"dapier.offline-ik-candidate.v1",
+                    "fixture":"MOCK parser/dispatch contract, no actual IK/path evaluation",
+                    "candidate_mode":"carry_endpoint_ik","planning_phase":prepared["phase"],
+                    "offline_candidate_accepted":False,"ik_converged":True,
+                    "scene_object":{"bound_to_path_reference":True},
+                    "seed_posture":{"seed_q_rad":start+[0.,0.,0.,0.,0.,1.],"left":measured,"right":measured},
+                    "solved_action_rad":goal+[0.,0.,0.,0.,0.,1.],"goal_intent":intent.as_dict(),
+                    "position_error_m":0.,"tool_axis_error_rad_by_side":{"left":0.},
+                    "structured_clearance":{"safe":True,"minimum_clearance_m":.05},
+                    "path_assessment":{"safe":True,"checked_samples":2},
+                    "block_source":fingerprint(block),"model":{**fingerprint(profile),"gripper_ranges_rad":[[0.,2.],[0.,2.]]},
+                    "mapping":{"profile":fingerprint(profile),"physically_verified":False},
+                    "carry_planning":{"phase":prepared["phase"],"reference":fingerprint(reference),
+                        "model_path_checked":True,"model_path_safe":True,"contact_path_verified":False,
+                        "object_center_goal_error_m":0.,"path_policy_scope":"SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"}}
+                plan.write_text(json.dumps(candidate))
+                extra_cli=["--previous-phase-trace",str(grasp_trace if lift_case else previous_trace),
+                    "--object-observation-binding",str(binding_path),"--maximum-duration-s",str(prepared["maximum_duration_s"])]
         elif not stalled:
             # Synthetic, explicitly unverified sensor/IK audit exercises the same
             # source loader/plan builder as real inputs. It is not a SIM/HW IK pass.
@@ -235,13 +271,19 @@ def main(binary, directory, mode="pregrasp", case=None):
                 producer.start()
             completed = subprocess.run([sys.executable, str(launcher), "--ik-result", str(plan),
                 "--profile", str(profile), "--native-executor", str(binary), "--native-sha256", sha(binary),
-                "--transport", "mock", "--output", str(output)], capture_output=True, text=True, timeout=12 if lift_case else 8)
+                "--transport", "mock", "--output", str(output), *extra_cli], capture_output=True, text=True, timeout=12 if lift_case else 8)
         finally:
             stop.set()
             if producer is not None and producer.ident is not None:
                 producer.join(timeout=1.)
         events = [json.loads(line) for line in output.read_text().splitlines()]
         result = events[-1]
+        if mode == "carry_adapter" and (lift_case or place_case):
+            built=json.loads(output.with_suffix(".plan.json").read_text())
+            assert built["phase"] == ("LIFT" if lift_case else "PLACE")
+            assert built["allowed_transport"]=="mock" and built["model_carry_candidate_verified"]
+            assert not built["offline_candidate_accepted"] and not built["physical_contact_path_verified"]
+            assert built["candidate_source"]==fingerprint(plan)
         if support_case:
             passed = name in ("place", "release")
             steps = [e for e in events if e["event"]=="step" and e["sent_rad"]]
@@ -291,8 +333,9 @@ def main(binary, directory, mode="pregrasp", case=None):
                     "lift_supported":"unsupported lift", "lift_low":"unsupported lift",
                     "lift_wrong_grasp":"another task/source", "lift_changed_aperture":"keep measured grasp aperture",
                     "lift_old_grasp_frame":"reused a prior grasp frame"}
+                expected["lift_bound_start_mismatch"]="start differs from confirmed measured grasp state"
                 assert expected[name] in result["reason"], result
-                if name in ("lift_wrong_grasp", "lift_changed_aperture", "lift_old_grasp_frame"):
+                if name in ("lift_wrong_grasp", "lift_changed_aperture", "lift_old_grasp_frame", "lift_bound_start_mismatch"):
                     assert not steps
             results.append({"case":name,"phase":result["phase"],"reason":result["reason"],
                             "hold_verified":result.get("observed_hold_verified",False), "trace_sha256":sha(output)})
