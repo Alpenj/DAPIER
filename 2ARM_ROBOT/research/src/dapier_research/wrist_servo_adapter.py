@@ -46,8 +46,6 @@ def block_grasp_observation_from_wrist(document, *, run_id, object_id,
     them; the native grasp gate rejects null before dispatch. Capture time is
     preserved even when replaying old frames, never replaced with processing time.
     """
-    import cv2
-
     if (source_kind not in ("mock", "hardware") or type(sequence) is not int or sequence <= 0
             or any(not isinstance(v, str) or not v.strip()
                    for v in (run_id, object_id, calibration_revision))):
@@ -72,8 +70,11 @@ def block_grasp_observation_from_wrist(document, *, run_id, object_id,
         raise WristServoError("completed native wrist capture with original clock identity required")
     frame = {"path": capture["frame_path"], "sha256": capture["frame_sha256"]}
     raw = source_bytes(frame)
-    image = (np.load(io.BytesIO(raw), allow_pickle=False) if Path(frame["path"]).suffix == ".npy"
-             else cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR))
+    if Path(frame["path"]).suffix == ".npy":
+        image = np.load(io.BytesIO(raw), allow_pickle=False)
+    else:
+        import cv2  # only encoded frames need OpenCV; saved .npy frames stay numpy-only
+        image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
     if image is None or image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
         raise WristServoError("object source must be an HxWx3 uint8 image")
     feature = None
