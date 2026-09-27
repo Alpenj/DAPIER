@@ -35,6 +35,9 @@ BANNED_RESEARCH_TEXT = {
     "torque_enable",
     "write_register",
 }
+# Plan metadata read by the native executor (the expected start state), not a torque or
+# register operation. Exempt only as an exact dict-literal key; any other use still fails.
+RESEARCH_PLAN_METADATA_KEYS = {"initial_torque_enabled"}
 BANNED_CPP_TEXT = {
     "Python.h",
     "Py_Initialize",
@@ -83,6 +86,27 @@ def imported_roots(tree: ast.AST) -> set[str]:
     return roots
 
 
+def without_plan_metadata_keys(path: Path, text: str, tree: ast.AST) -> str:
+    """Remove exempt plan-metadata keys, failing if one appears outside a dict-literal key."""
+    dict_keys = {
+        id(key)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Dict)
+        for key in node.keys
+        if key is not None
+    }
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Constant)
+            and node.value in RESEARCH_PLAN_METADATA_KEYS
+            and id(node) not in dict_keys
+        ):
+            fail(f"{path}:{node.lineno} uses plan metadata {node.value!r} outside a dict key")
+    for key in RESEARCH_PLAN_METADATA_KEYS:
+        text = text.replace(f'"{key}"', "").replace(f"'{key}'", "")
+    return text
+
+
 def verify_python_research_layer() -> None:
     python_files = sorted(RESEARCH_SRC.rglob("*.py"))
     if not python_files:
@@ -96,7 +120,7 @@ def verify_python_research_layer() -> None:
         banned_imports = imported_roots(tree) & BANNED_RESEARCH_IMPORTS
         if banned_imports:
             fail(f"{path} imports hardware/ROS modules: {sorted(banned_imports)}")
-        lowered = text.lower()
+        lowered = without_plan_metadata_keys(path, text, tree).lower()
         for fragment in BANNED_RESEARCH_TEXT:
             if fragment.lower() in lowered:
                 fail(f"{path} contains prohibited direct hardware fragment: {fragment}")
