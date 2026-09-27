@@ -109,12 +109,20 @@ def build_scene(kind, *, grippers="both"):
 
 
 
-def task_env(kind="desk", *, grippers="both"):
+def task_env(kind="desk", *, grippers="both", table_top_z_m=None):
     """Bind approved geometry; never rebuild the old tower task."""
     if kind != "desk":
         raise ValueError("mobile has no target block/work surface; mobile-to-desk transform UNVERIFIED")
     from shoe_task import ShoeTaskConfig, ShoeTaskEnv
-    model = build_scene(kind, grippers=grippers).compile()
+    spec = build_scene(kind, grippers=grippers)
+    if table_top_z_m is not None:
+        if not np.isfinite(table_top_z_m):
+            raise ValueError("finite observed table height required")
+        # Compile the observed support into collision geometry; never move the
+        # sensor target to fit the nominal SIM table or mutate compiled BVHs.
+        table = spec.geom("table")
+        table.pos[2] = float(table_top_z_m) - table.size[2]
+    model = spec.compile()
     config = ShoeTaskConfig(
         scene_id="integration_desk", grippers=grippers, object_kind="block",
         shoe_position_m=tuple(model.body("red_block").pos),

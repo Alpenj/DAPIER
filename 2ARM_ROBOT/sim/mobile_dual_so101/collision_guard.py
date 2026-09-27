@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass
 import json
 from itertools import combinations
 import math
+from enum import Enum
 from pathlib import Path
 import sys
 from typing import Sequence
@@ -35,6 +36,11 @@ from mobile_dual_so101 import (  # noqa: E402
 
 
 DEFAULT_CLEARANCE_M = 0.030
+
+# Measurement horizon for the integration-task GENERAL clearance evaluator.
+# The hard acceptance requirement remains 30 mm.
+# 50 mm is diagnostic headroom, not a relaxed safety threshold.
+TASK_GENERAL_QUERY_CAP_M = 0.050
 DEFAULT_MAX_JOINT_STEP_RAD = math.radians(2.0)
 REQUIRED_ARM_COLLISION_GEOM_COUNTS = {
     "shoulder": 3,
@@ -71,6 +77,43 @@ REQUIRED_COMPACT_SUPPORT_COLLISION_GEOM_NAMES = (
     "compact_mount_plate",
     "compact_camera_mast",
 )
+
+
+class ClearanceStatus(str, Enum):
+    EXACT_SAFE = "EXACT_SAFE"
+    EXACT_FAIL = "EXACT_FAIL"
+    NATIVE_PENETRATION_FAIL = "NATIVE_PENETRATION_FAIL"
+    CLIPPED_SAFE = "CLIPPED_SAFE"
+    CERTIFIED_SAFE = "CERTIFIED_SAFE"
+    UNVERIFIABLE_FAIL = "UNVERIFIABLE_FAIL"
+    ENGINE_CONTRACT_FAILURE = "ENGINE_CONTRACT_FAILURE"
+
+
+@dataclass(frozen=True)
+class PairClearanceEvidence:
+    pair: tuple[int, int]
+    names: tuple[str, str]
+    status: ClearanceStatus
+    safe: bool
+
+    native_result_m: float
+    query_cap_m: float
+
+    exact_distance_m: float | None
+    certified_lower_bound_m: float | None
+    provable_clearance_m: float | None
+
+    certificate_source: str | None
+
+
+@dataclass(frozen=True)
+class ClearanceSetEvidence:
+    safe: bool
+    status: str
+    provable_clearance_m: float | None
+    closest_pair: tuple[int, int] | None
+    blocking: PairClearanceEvidence | None
+    pair_evidence: tuple[PairClearanceEvidence, ...]
 
 
 @dataclass(frozen=True)
@@ -457,6 +500,10 @@ def minimum_protected_clearance(
                 model, data, int(first), int(second))
             if box_box_certificate > 0.0:
                 distance = max(distance, box_box_certificate)
+        # Invalid engine output must dominate the minimum, including legacy/self-arm
+        # callers. Neither another pair nor a geometric certificate may hide it.
+        if not math.isfinite(narrowphase_distance) or narrowphase_distance > distance_cap_m:
+            distance = -math.inf
         if diagnostics is not None:
             diagnostics.append(dict(
                 pair=[int(first), int(second)], distance_cap_m=distance_cap_m,
@@ -484,6 +531,420 @@ def minimum_protected_clearance(
             best_distance = distance
             best_pair = (int(first), int(second))
     return best_distance, best_pair[0], best_pair[1]
+
+
+
+def _clearance_numerical_tolerance(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pair: tuple[int, int],
+) -> float:
+    """Scene-scale floating-point tolerance; never a clearance relaxation."""
+
+    positions = data.geom_xpos[
+        np.asarray(pair, dtype=int)
+    ]
+
+    magnitude = max(
+        1.0,
+        float(np.max(np.abs(positions))),
+    )
+
+    return float(
+        64 * np.finfo(float).eps * magnitude
+    )
+
+
+def evaluate_pair_clearance_evidence(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pair: tuple[int, int],
+    *,
+    required_clearance_m: float,
+    query_cap_m: float,
+) -> PairClearanceEvidence:
+    """Fail-closed GENERAL-clearance evidence for one geom pair.
+
+    This is intentionally separate from manipulation_pair_status().
+    Intended finger contact and its existing phase-dependent penetration
+    allowance are not classified here.
+    """
+
+    required = float(required_clearance_m)
+    query_cap = float(query_cap_m)
+
+    if not math.isfinite(required) or required <= 0.0:
+        raise ValueError(
+            "required_clearance_m must be finite and positive"
+        )
+
+    if not math.isfinite(query_cap) or query_cap <= required:
+        raise ValueError(
+            "query_cap_m must be finite and greater than required_clearance_m"
+        )
+
+    first = int(pair[0])
+    second = int(pair[1])
+
+    names = (
+        model.geom(first).name or f"geom_{first}",
+        model.geom(second).name or f"geom_{second}",
+    )
+
+    details: list[dict[str, object]] = []
+
+    # The old measurement helper remains untouched.
+    # Its diagnostics let us distinguish native, clipped, and
+    # certificate evidence.
+    minimum_protected_clearance(
+        model,
+        data,
+        [(first, second)],
+        distance_cap_m=query_cap,
+        diagnostics=details,
+    )
+
+    if len(details) != 1:
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.ENGINE_CONTRACT_FAILURE,
+            safe=False,
+            native_result_m=math.nan,
+            query_cap_m=query_cap,
+            exact_distance_m=None,
+            certified_lower_bound_m=None,
+            provable_clearance_m=None,
+            certificate_source=None,
+        )
+
+    row = details[0]
+
+    native = float(
+        row["native_signed_distance_m"]
+    )
+
+    tolerance = _clearance_numerical_tolerance(
+        model,
+        data,
+        (first, second),
+    )
+
+    if not math.isfinite(native) or native > query_cap:
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.ENGINE_CONTRACT_FAILURE,
+            safe=False,
+            native_result_m=native,
+            query_cap_m=query_cap,
+            exact_distance_m=None,
+            certified_lower_bound_m=None,
+            provable_clearance_m=None,
+            certificate_source=None,
+        )
+
+    certificates: list[tuple[str, float]] = []
+
+    sphere = row.get(
+        "bounding_sphere_lower_bound_m"
+    )
+
+    if sphere is not None:
+        sphere_value = float(sphere)
+
+        if (
+            math.isfinite(sphere_value)
+            and sphere_value > 0.0
+        ):
+            certificates.append(
+                (
+                    "BOUNDING_SPHERE",
+                    sphere_value,
+                )
+            )
+
+    for key, source in (
+        (
+            "certified_separation_lower_bound_m",
+            "MESH_AXIS_CERTIFICATE",
+        ),
+        (
+            "certified_mesh_box_separation_lower_bound_m",
+            "MESH_BOX_CERTIFICATE",
+        ),
+        (
+            "certified_box_box_separation_lower_bound_m",
+            "BOX_BOX_CERTIFICATE",
+        ),
+    ):
+        value = float(
+            row.get(key, 0.0)
+        )
+
+        if (
+            math.isfinite(value)
+            and value > 0.0
+        ):
+            certificates.append(
+                (
+                    source,
+                    value,
+                )
+            )
+
+    if certificates:
+        (
+            certificate_source,
+            certified_lower_bound,
+        ) = max(
+            certificates,
+            key=lambda item: item[1],
+        )
+    else:
+        certificate_source = None
+        certified_lower_bound = None
+
+    # --------------------------------------------------------
+    # Negative native result:
+    # GENERAL obstacle penetration = immediate fail.
+    #
+    # Certificates are NOT allowed to override this.
+    #
+    # Intended finger contact is handled elsewhere.
+    # --------------------------------------------------------
+
+    if native < -tolerance:
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.NATIVE_PENETRATION_FAIL,
+            safe=False,
+            native_result_m=native,
+            query_cap_m=query_cap,
+            exact_distance_m=native,
+            certified_lower_bound_m=certified_lower_bound,
+            provable_clearance_m=None,
+            certificate_source=certificate_source,
+        )
+
+    # --------------------------------------------------------
+    # Near-zero native:
+    # touching or known false-zero ambiguity.
+    #
+    # Require an independently proven lower bound.
+    # --------------------------------------------------------
+
+    if abs(native) <= tolerance:
+
+        if (
+            certified_lower_bound is not None
+            and certified_lower_bound >= required
+        ):
+            return PairClearanceEvidence(
+                pair=(first, second),
+                names=names,
+                status=ClearanceStatus.CERTIFIED_SAFE,
+                safe=True,
+                native_result_m=native,
+                query_cap_m=query_cap,
+                exact_distance_m=None,
+                certified_lower_bound_m=certified_lower_bound,
+                provable_clearance_m=certified_lower_bound,
+                certificate_source=certificate_source,
+            )
+
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.UNVERIFIABLE_FAIL,
+            safe=False,
+            native_result_m=native,
+            query_cap_m=query_cap,
+            exact_distance_m=None,
+            certified_lower_bound_m=certified_lower_bound,
+            provable_clearance_m=None,
+            certificate_source=certificate_source,
+        )
+
+    # --------------------------------------------------------
+    # distmax sentinel.
+    #
+    # This means the distance is at least query_cap.
+    # It is NOT an exact Euclidean distance measurement.
+    # --------------------------------------------------------
+
+    if native == query_cap:
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.CLIPPED_SAFE,
+            safe=True,
+            native_result_m=native,
+            query_cap_m=query_cap,
+            exact_distance_m=None,
+            certified_lower_bound_m=certified_lower_bound,
+            provable_clearance_m=query_cap,
+            certificate_source=certificate_source,
+        )
+
+    # --------------------------------------------------------
+    # Positive native strictly below cap:
+    # exact/native-distance branch.
+    #
+    # Certificates may diagnose inconsistency but may not
+    # replace or increase the native distance.
+    # --------------------------------------------------------
+
+    if (
+        certified_lower_bound is not None
+        and certified_lower_bound > native + tolerance
+    ):
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.ENGINE_CONTRACT_FAILURE,
+            safe=False,
+            native_result_m=native,
+            query_cap_m=query_cap,
+            exact_distance_m=native,
+            certified_lower_bound_m=certified_lower_bound,
+            provable_clearance_m=None,
+            certificate_source=certificate_source,
+        )
+
+    if native < required:
+        return PairClearanceEvidence(
+            pair=(first, second),
+            names=names,
+            status=ClearanceStatus.EXACT_FAIL,
+            safe=False,
+            native_result_m=native,
+            query_cap_m=query_cap,
+            exact_distance_m=native,
+            certified_lower_bound_m=certified_lower_bound,
+            provable_clearance_m=None,
+            certificate_source=certificate_source,
+        )
+
+    return PairClearanceEvidence(
+        pair=(first, second),
+        names=names,
+        status=ClearanceStatus.EXACT_SAFE,
+        safe=True,
+        native_result_m=native,
+        query_cap_m=query_cap,
+        exact_distance_m=native,
+        certified_lower_bound_m=certified_lower_bound,
+        provable_clearance_m=native,
+        certificate_source=certificate_source,
+    )
+
+
+def evaluate_clearance_set(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    pairs: Sequence[tuple[int, int]],
+    *,
+    required_clearance_m: float,
+    query_cap_m: float,
+) -> ClearanceSetEvidence:
+    """Fail-closed reduction over GENERAL clearance pairs."""
+
+    if not pairs:
+        raise ValueError(
+            "at least one general clearance pair is required"
+        )
+
+    evidence = tuple(
+        evaluate_pair_clearance_evidence(
+            model,
+            data,
+            pair,
+            required_clearance_m=required_clearance_m,
+            query_cap_m=query_cap_m,
+        )
+        for pair in pairs
+    )
+
+    failures = tuple(
+        row
+        for row in evidence
+        if not row.safe
+    )
+
+    if failures:
+        precedence = {
+            ClearanceStatus.NATIVE_PENETRATION_FAIL: 0,
+            ClearanceStatus.EXACT_FAIL: 1,
+            ClearanceStatus.ENGINE_CONTRACT_FAILURE: 2,
+            ClearanceStatus.UNVERIFIABLE_FAIL: 3,
+        }
+
+        blocking = min(
+            failures,
+            key=lambda row: precedence.get(
+                row.status,
+                99,
+            ),
+        )
+
+        return ClearanceSetEvidence(
+            safe=False,
+            status=blocking.status.value,
+            provable_clearance_m=None,
+            closest_pair=blocking.pair,
+            blocking=blocking,
+            pair_evidence=evidence,
+        )
+
+    provable = [
+        row
+        for row in evidence
+        if row.provable_clearance_m is not None
+    ]
+
+    if len(provable) != len(evidence):
+        return ClearanceSetEvidence(
+            safe=False,
+            status=ClearanceStatus.ENGINE_CONTRACT_FAILURE.value,
+            provable_clearance_m=None,
+            closest_pair=None,
+            blocking=None,
+            pair_evidence=evidence,
+        )
+
+    closest = min(
+        provable,
+        key=lambda row: float(
+            row.provable_clearance_m
+        ),
+    )
+
+    statuses = {
+        row.status
+        for row in evidence
+    }
+
+    if ClearanceStatus.CERTIFIED_SAFE in statuses:
+        aggregate_status = "PASS_CERTIFIED"
+
+    elif ClearanceStatus.CLIPPED_SAFE in statuses:
+        aggregate_status = "PASS_NATIVE_MIXED"
+
+    else:
+        aggregate_status = "PASS_NATIVE_EXACT"
+
+    return ClearanceSetEvidence(
+        safe=True,
+        status=aggregate_status,
+        provable_clearance_m=float(
+            closest.provable_clearance_m
+        ),
+        closest_pair=closest.pair,
+        blocking=None,
+        pair_evidence=evidence,
+    )
 
 
 NEAR_SUPPORT_SCOPE = "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"
@@ -623,19 +1084,191 @@ def manipulation_pair_status(model, data, phase):
     return rows
 
 
+def _clearance_evidence_numeric_value(evidence: ClearanceSetEvidence) -> float:
+    """Backward-compatible telemetry scalar; safety uses structured evidence."""
+
+    if evidence.provable_clearance_m is not None:
+        return float(evidence.provable_clearance_m)
+
+    blocking = evidence.blocking
+
+    if blocking is not None:
+        if (
+            blocking.exact_distance_m is not None
+            and math.isfinite(blocking.exact_distance_m)
+        ):
+            return float(blocking.exact_distance_m)
+
+        if (
+            blocking.certified_lower_bound_m is not None
+            and math.isfinite(blocking.certified_lower_bound_m)
+        ):
+            return float(blocking.certified_lower_bound_m)
+
+        if math.isfinite(blocking.native_result_m):
+            return float(blocking.native_result_m)
+
+    # Diagnostic compatibility only.
+    # This is never advertised as provable clearance.
+    return 0.0
+
+
+def _clearance_evidence_pair(
+    evidence: ClearanceSetEvidence,
+) -> tuple[int, int]:
+    if evidence.closest_pair is not None:
+        return evidence.closest_pair
+
+    if evidence.blocking is not None:
+        return evidence.blocking.pair
+
+    if evidence.pair_evidence:
+        return evidence.pair_evidence[0].pair
+
+    return (-1, -1)
+
+
 def task_clearance_status(model, data, phase, required=.03):
-    """Runtime counterpart of the segment gate, using measured geometry."""
-    rows = manipulation_pair_status(model,data,phase)
-    specialized = {tuple(r["pair"]) for r in rows}
-    structural = set(structural_near_support_pairs(model))
-    arms = (*_collision_geoms_for_arm(model,"left"), *_collision_geoms_for_arm(model,"right"))
-    target = model.geom("red_block_geom").id
-    table = model.geom("table").id
-    general = [(g,table) for g in arms if (g,table) not in specialized|structural]
-    general += [(g,target) for g in arms if (g,target) not in specialized]
-    gap,a,b = minimum_protected_clearance(model,data,general)
-    return dict(general_clearance_m=gap,closest_general_pair=[a,b],pairs=rows,
-                safe=bool(gap>=required and all(r["safe"] for r in rows)))
+    """Runtime task policy with structured GENERAL-clearance evidence."""
+
+    rows = manipulation_pair_status(
+        model,
+        data,
+        phase,
+    )
+
+    specialized = {
+        tuple(r["pair"])
+        for r in rows
+    }
+
+    structural = set(
+        structural_near_support_pairs(model)
+    )
+
+    arms = (
+        *_collision_geoms_for_arm(model, "left"),
+        *_collision_geoms_for_arm(model, "right"),
+    )
+
+    target = model.geom(
+        "red_block_geom"
+    ).id
+
+    table = model.geom(
+        "table"
+    ).id
+
+    general = [
+        (g, table)
+        for g in arms
+        if (g, table) not in specialized | structural
+    ]
+
+    general += [
+        (g, target)
+        for g in arms
+        if (g, target) not in specialized
+    ]
+
+    evidence = evaluate_clearance_set(
+        model,
+        data,
+        general,
+        required_clearance_m=float(required),
+        query_cap_m=TASK_GENERAL_QUERY_CAP_M,
+    )
+
+    gap = _clearance_evidence_numeric_value(
+        evidence
+    )
+
+    a, b = _clearance_evidence_pair(
+        evidence
+    )
+
+    return dict(
+        # Legacy-compatible telemetry float.
+        general_clearance_m=gap,
+
+        # Authoritative structured evidence.
+        general_provable_clearance_m=(
+            evidence.provable_clearance_m
+        ),
+
+        general_evidence_status=(
+            evidence.status
+        ),
+
+        general_clearance_is_provable=bool(
+            evidence.provable_clearance_m is not None
+        ),
+
+        closest_general_pair=[
+            a,
+            b,
+        ],
+
+        pairs=rows,
+
+        safe=bool(
+            evidence.safe
+            and all(
+                r["safe"]
+                for r in rows
+            )
+        ),
+    )
+
+
+def _carried_object_attachment(model, data, current):
+    """Planning hypothesis from the observed object pose and measured-start FK."""
+    block = _required_active_geom_id(model, "red_block_geom")
+    joint = model.joint("red_block_free").id
+    body = int(model.jnt_bodyid[joint])
+    address = int(model.jnt_qposadr[joint])
+    if (model.jnt_type[joint] != mujoco.mjtJoint.mjJNT_FREE or model.body_parentid[body] != 0
+            or model.geom_bodyid[block] != body or model.geom_type[block] != mujoco.mjtGeom.mjGEOM_BOX
+            or not np.allclose(model.geom_pos[block], 0., rtol=0, atol=1e-12)
+            or not np.allclose(model.geom_quat[block], [1.,0.,0.,0.], rtol=0, atol=1e-12)):
+        raise ValueError("carry requires the world-parented free cube with centered box geometry")
+    for geom in range(model.ngeom):
+        if geom == block or not (model.geom_contype[geom] or model.geom_conaffinity[geom]):
+            continue
+        ancestor = int(model.geom_bodyid[geom])
+        while ancestor and ancestor != body:
+            ancestor = int(model.body_parentid[ancestor])
+        if ancestor == body:
+            raise ValueError("carry supports one collision box only; additional payload geometry found")
+    pose = data.qpos[address:address+7]
+    if not np.isfinite(pose).all() or abs(np.linalg.norm(pose[3:])-1.) > 1e-6:
+        raise ValueError("carry reference object pose must be finite with a unit quaternion")
+    apply_control_as_pose(model, data, current, preserve_raw_pose=True)
+    tcp = data.site("left_cube_grasp")
+    rotation = tcp.xmat.reshape(3,3)
+    return (address, rotation.T @ (data.geom_xpos[block]-tcp.xpos),
+            rotation.T @ data.geom_xmat[block].reshape(3,3))
+
+
+def _apply_carried_object(model, data, attachment):
+    # Only a private kinematic preview changes; no live data or physical attachment.
+    address, offset, relative_rotation = attachment
+    tcp = data.site("left_cube_grasp")
+    rotation = tcp.xmat.reshape(3,3)
+    data.qpos[address:address+3] = tcp.xpos + rotation @ offset
+    quat = np.empty(4)
+    mujoco.mju_mat2Quat(quat, (rotation @ relative_rotation).ravel())
+    data.qpos[address+3:address+7] = quat
+    mujoco.mj_forward(model, data)
+
+
+def _carried_support_clearance(model, data, block, table):
+    """Conservative signed gap above the support box's infinite top plane."""
+    if model.geom_type[table] != mujoco.mjtGeom.mjGEOM_BOX:
+        raise ValueError("carry support must be the modeled box table")
+    normal = data.geom_xmat[table].reshape(3,3)[:,2]
+    extent = np.abs(data.geom_xmat[block].reshape(3,3).T @ normal) @ model.geom_size[block]
+    return float((data.geom_xpos[block]-data.geom_xpos[table]) @ normal - extent - model.geom_size[table,2])
 
 
 def check_bimanual_path(
@@ -648,6 +1281,8 @@ def check_bimanual_path(
     obstacle_geom_names: Sequence[str] = (),
     task_phase: str | None = None,
     reference_data: mujoco.MjData | None = None,
+    allow_sim_near_support: bool = True,
+    carried_object: bool = False,
 ) -> CollisionAssessment:
     """Reject a target if its interpolated path violates protected clearance."""
 
@@ -659,11 +1294,18 @@ def check_bimanual_path(
         raise ValueError("required_clearance_m must be finite and positive")
     if not math.isfinite(max_joint_step_rad) or max_joint_step_rad <= 0:
         raise ValueError("max_joint_step_rad must be finite and positive")
+    if type(allow_sim_near_support) is not bool:
+        raise ValueError("SIM near-support policy must be boolean")
+    if type(carried_object) is not bool or (carried_object and
+            (reference_data is None or task_phase not in ("LIFT", "PLACE"))):
+        raise ValueError("carry path requires observed reference data and explicit LIFT/PLACE")
 
     current = np.asarray(current_action, dtype=float)
     target = np.asarray(target_action, dtype=float)
     if not np.all(np.isfinite(current)) or not np.all(np.isfinite(target)):
         raise ValueError("all action values must be finite")
+    if carried_object and (current[5] != target[5] or not np.array_equal(current[6:], target[6:])):
+        raise ValueError("carry path must preserve measured aperture and passive right arm")
     max_delta = float(np.max(np.abs(target - current)))
     intervals = max(1, math.ceil(max_delta / max_joint_step_rad))
     pairs = list(protected_geom_pairs(model))
@@ -684,16 +1326,32 @@ def check_bimanual_path(
         *_same_arm_geom_pairs(model, _collision_geoms_for_arm(model, "right")),
     )
     same_arm_pair_set = set(same_arm_pairs)
-    structural_pairs = set(structural_near_support_pairs(model))
+    # Observed support geometry cannot inherit the nominal SIM-only exception.
+    # With the exception disabled these pairs stay in general clearance_pairs.
+    structural_pairs = set(structural_near_support_pairs(model)) if allow_sim_near_support else set()
     initial = mujoco.MjData(model)
     if reference_data is not None:
         initial.qpos[:] = reference_data.qpos
-    mujoco.mj_forward(model, initial)
-    task_rows = manipulation_pair_status(model, initial, task_phase)
+    if carried_object and not np.isfinite(initial.qpos).all():
+        raise ValueError("carry reference state must be finite")
+    if not carried_object:
+        mujoco.mj_forward(model, initial)
+    attachment = _carried_object_attachment(model, initial, current) if carried_object else None
+    # Reuse the existing SIM-only finger-contact rules; this is not HW policy.
+    policy_phase = "HOLD" if carried_object else task_phase
+    task_rows = manipulation_pair_status(model, initial, policy_phase)
     task_pairs = {tuple(row["pair"]) for row in task_rows}
     if task_phase is not None:
         target_id = model.geom("red_block_geom").id
         pairs.extend((g,target_id) for g in arm_geoms)
+    if carried_object:
+        support_id = _required_active_geom_id(model, "table")
+        # The payload needs obstacle coverage too, including objects not in the
+        # arm's structural pair list. Its own body and intended support are separate.
+        pairs.extend((target_id,g) for g in range(model.ngeom)
+                     if g not in arm_geoms and g != support_id
+                     and model.geom_bodyid[g] != model.geom_bodyid[target_id]
+                     and (model.geom_contype[g] or model.geom_conaffinity[g]))
 
     clearance_pairs = tuple(
         dict.fromkeys(pair for pair in pairs
@@ -709,7 +1367,16 @@ def check_bimanual_path(
         action = current + fraction * (target - current)
         # Interpolated measured poses must not be silently clamped to command limits.
         apply_control_as_pose(model, data, action, preserve_raw_pose=True)
-        task_rows = manipulation_pair_status(model,data,task_phase)
+        if attachment is not None:
+            _apply_carried_object(model, data, attachment)
+            gap = _carried_support_clearance(model, data, target_id, support_id)
+            if not math.isfinite(gap) or gap < 0:
+                return CollisionAssessment(safe=False,reason="carried object intersects support half-space",
+                    minimum_clearance_m=gap if math.isfinite(gap) else 0., required_clearance_m=0.,
+                    path_fraction=fraction,checked_samples=sample_index+1,
+                    first_body=_body_name_for_geom(model,target_id),second_body=_body_name_for_geom(model,support_id),
+                    first_geom_id=target_id,second_geom_id=support_id)
+        task_rows = manipulation_pair_status(model,data,policy_phase)
         failed_task = next((row for row in task_rows if not row["safe"]),None)
         if failed_task:
             a,b = failed_task["pair"]
@@ -718,7 +1385,7 @@ def check_bimanual_path(
                 path_fraction=fraction,checked_samples=sample_index+1,
                 first_body=_body_name_for_geom(model,a),second_body=_body_name_for_geom(model,b),
                 first_geom_id=a,second_geom_id=b)
-        structural = structural_near_support_status(model, data)
+        structural = structural_near_support_status(model, data) if allow_sim_near_support else []
         failed = next((row for row in structural if not row["safe"]), None)
         if failed:
             first, second = failed["pair"]
@@ -748,32 +1415,148 @@ def check_bimanual_path(
                 first_geom_id=self_first,
                 second_geom_id=self_second,
             )
-        distance, first, second = minimum_protected_clearance(
-            model,
-            data,
-            clearance_pairs,
-            distance_cap_m=required_clearance_m,
-        )
-        if distance < best[0]:
-            best = (distance, first, second, fraction)
-        if distance < required_clearance_m:
-            return CollisionAssessment(
-                safe=False,
-                reason="protected clearance violated; target rejected",
-                minimum_clearance_m=distance,
-                required_clearance_m=required_clearance_m,
-                path_fraction=fraction,
-                checked_samples=sample_index + 1,
-                first_body=_body_name_for_geom(model, first),
-                second_body=_body_name_for_geom(model, second),
-                first_geom_id=first,
-                second_geom_id=second,
+        # Structured evidence is enabled only for the audited
+        # integration-desk task-phase 30 mm general-clearance contract.
+        #
+        # IMPORTANT:
+        # Match the scene prefix directly. Do NOT encode a literal "\\x00"
+        # sentinel here; that can silently bypass this branch.
+        structured_general_clearance = (
+            task_phase is not None
+            and bytes(model.names).startswith(
+                b"desk_learning_OS30A_UNVERIFIED"
             )
+            and abs(
+                required_clearance_m - DEFAULT_CLEARANCE_M
+            )
+            <= (
+                64
+                * np.finfo(float).eps
+                * max(
+                    1.0,
+                    abs(required_clearance_m),
+                    abs(DEFAULT_CLEARANCE_M),
+                )
+            )
+        )
+
+        if structured_general_clearance:
+            general_evidence = evaluate_clearance_set(
+                model,
+                data,
+                clearance_pairs,
+                required_clearance_m=required_clearance_m,
+                query_cap_m=TASK_GENERAL_QUERY_CAP_M,
+            )
+
+            distance = _clearance_evidence_numeric_value(
+                general_evidence
+            )
+
+            first, second = _clearance_evidence_pair(
+                general_evidence
+            )
+
+            if distance < best[0]:
+                best = (
+                    distance,
+                    first,
+                    second,
+                    fraction,
+                )
+
+            if not general_evidence.safe:
+                return CollisionAssessment(
+                    safe=False,
+                    reason=(
+                        "structured general clearance rejected "
+                        f"({general_evidence.status})"
+                    ),
+                    minimum_clearance_m=distance,
+                    required_clearance_m=required_clearance_m,
+                    path_fraction=fraction,
+                    checked_samples=sample_index + 1,
+                    first_body=_body_name_for_geom(
+                        model,
+                        first,
+                    ),
+                    second_body=_body_name_for_geom(
+                        model,
+                        second,
+                    ),
+                    first_geom_id=first,
+                    second_geom_id=second,
+                )
+
+            if (
+                general_evidence.provable_clearance_m is None
+                or general_evidence.provable_clearance_m
+                < required_clearance_m
+            ):
+                return CollisionAssessment(
+                    safe=False,
+                    reason=(
+                        "structured general clearance invariant failed"
+                    ),
+                    minimum_clearance_m=distance,
+                    required_clearance_m=required_clearance_m,
+                    path_fraction=fraction,
+                    checked_samples=sample_index + 1,
+                    first_body=_body_name_for_geom(
+                        model,
+                        first,
+                    ),
+                    second_body=_body_name_for_geom(
+                        model,
+                        second,
+                    ),
+                    first_geom_id=first,
+                    second_geom_id=second,
+                )
+
+        else:
+            # Legacy behavior retained for non-audited modes,
+            # including existing 3 mm / 5 mm box-vision paths.
+            distance, first, second = minimum_protected_clearance(
+                model,
+                data,
+                clearance_pairs,
+                distance_cap_m=required_clearance_m,
+            )
+
+            if distance < best[0]:
+                best = (
+                    distance,
+                    first,
+                    second,
+                    fraction,
+                )
+
+            if distance < required_clearance_m:
+                return CollisionAssessment(
+                    safe=False,
+                    reason="protected clearance violated; target rejected",
+                    minimum_clearance_m=distance,
+                    required_clearance_m=required_clearance_m,
+                    path_fraction=fraction,
+                    checked_samples=sample_index + 1,
+                    first_body=_body_name_for_geom(
+                        model,
+                        first,
+                    ),
+                    second_body=_body_name_for_geom(
+                        model,
+                        second,
+                    ),
+                    first_geom_id=first,
+                    second_geom_id=second,
+                )
 
     distance, first, second, fraction = best
     return CollisionAssessment(
         safe=True,
-        reason="interpolated simulator path satisfies protected clearance",
+        reason=("sampled rigid-payload simulator path satisfies protected clearance; hardware unverified"
+                if carried_object else "interpolated simulator path satisfies protected clearance"),
         minimum_clearance_m=distance,
         required_clearance_m=required_clearance_m,
         path_fraction=fraction,
@@ -783,6 +1566,330 @@ def check_bimanual_path(
         first_geom_id=first,
         second_geom_id=second,
     )
+
+
+ENCODER_TICK_RAD = 2 * math.pi / 4096
+# 0.05 rad is >12x the 0.004 rad native monitor tolerance and >3x the 0.015 rad command lead.
+SUPERVISED_TRIAL_MIN_ALLOWANCE_RAD = 0.05
+NATIVE_COMMAND_HORIZON_S = 0.05  # dapier_safety_core SafetyControllerConfig default
+
+
+def _left_arm_deviation_gains(model: mujoco.MjModel, geom_id: int,
+                              excluded_joints: frozenset[int] = frozenset()) -> np.ndarray:
+    """Upper bound of geom surface displacement per rad of each left action joint.
+
+    Uses configuration-invariant chain lengths (anchor->body origins->geom->rbound),
+    so it holds anywhere in the tube. Jaw slides use their linear equality coupling.
+    """
+    left = {int(model.actuator_trnid[i, 0]): i for i in range(6)}
+    coupled = {}
+    for e in range(model.neq):
+        if model.eq_type[e] == mujoco.mjtEq.mjEQ_JOINT and int(model.eq_obj2id[e]) in left:
+            if np.any(model.eq_data[e][2:5] != 0):
+                raise ValueError("only linear jaw couplings are supported by the envelope bound")
+            coupled[int(model.eq_obj1id[e])] = (left[int(model.eq_obj2id[e])], abs(float(model.eq_data[e][1])))
+    gains = np.zeros(6)
+    body = int(model.geom_bodyid[geom_id])
+    length = float(np.linalg.norm(model.geom_pos[geom_id]) + model.geom_rbound[geom_id])
+    while body > 0:
+        for j in range(model.body_jntadr[body], model.body_jntadr[body] + model.body_jntnum[body]):
+            if j in excluded_joints:
+                continue
+            if j in left:
+                gains[left[j]] += length + float(np.linalg.norm(model.jnt_pos[j]))
+            elif j in coupled and model.jnt_type[j] == mujoco.mjtJoint.mjJNT_SLIDE:
+                gains[coupled[j][0]] += coupled[j][1]
+            elif _body_name_for_geom(model, geom_id).startswith("left_") and \
+                    mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body).startswith("left_"):
+                raise ValueError("unbounded left-arm joint in envelope chain")
+        length += float(np.linalg.norm(model.body_pos[body]))
+        body = int(model.body_parentid[body])
+    return gains
+
+
+def _ancestor_joints(model: mujoco.MjModel, geom_id: int) -> frozenset[int]:
+    out, body = set(), int(model.geom_bodyid[geom_id])
+    while body > 0:
+        out.update(range(model.body_jntadr[body], model.body_jntadr[body] + model.body_jntnum[body]))
+        body = int(model.body_parentid[body])
+    return frozenset(out)
+
+
+def _left_arm_chain(model: mujoco.MjModel, geom_id: int) -> list[tuple[int, int, float]]:
+    """(action index, joint id, slide coupling or 0 for hinge), distal -> proximal."""
+    left = {int(model.actuator_trnid[i, 0]): i for i in range(6)}
+    coupled = {int(model.eq_obj1id[e]): (left[int(model.eq_obj2id[e])], abs(float(model.eq_data[e][1])))
+               for e in range(model.neq)
+               if model.eq_type[e] == mujoco.mjtEq.mjEQ_JOINT and int(model.eq_obj2id[e]) in left}
+    chain, body = [], int(model.geom_bodyid[geom_id])
+    while body > 0:
+        for j in range(model.body_jntadr[body], model.body_jntadr[body] + model.body_jntnum[body]):
+            if j in left:
+                chain.append((left[j], j, 0.))
+            elif j in coupled and model.jnt_type[j] == mujoco.mjtJoint.mjJNT_SLIDE:
+                chain.append((coupled[j][0], j, coupled[j][1]))
+        body = int(model.body_parentid[body])
+    return chain
+
+
+def check_tracking_envelope(
+    model: mujoco.MjModel,
+    current_action: Sequence[float],
+    target_action: Sequence[float],
+    *,
+    reference_data: mujoco.MjData,
+    max_velocity_rad_s: Sequence[float],
+    task_phase: str = "pregrasp",
+    required_clearance_m: float = DEFAULT_CLEARANCE_M,
+    command_horizon_s: float = NATIVE_COMMAND_HORIZON_S,
+    max_joint_step_rad: float = math.radians(0.2),
+    maximum_tolerance_rad: float = 0.004,
+    minimum_tolerance_rad: float = ENCODER_TICK_RAD,
+    excursion_allowance_rad: float = 0.0,
+) -> dict[str, object]:
+    """Certify the native L-inf joint tube around a left-arm line path.
+
+    Native execution aborts when measured or commanded q leaves
+    |q - (start + s (goal-start))| <= tol. This bound covers every configuration
+    within tol of the line, the inter-sample gap, and the command lead of the
+    progress limiter (servo assumed monotonic toward its goal between feedback
+    samples; that dynamic property is field-unverified). The largest tol in
+    [minimum, maximum] keeping the same 30 mm pairs clear is returned as
+    model_tube_verified. The default maximum is a declared monitor tolerance
+    (0.004 rad, about 2.6 encoder ticks), not the largest passing value, so the
+    remaining clearance above 30 mm stays visible instead of being consumed.
+    ``verified`` (the execution prerequisite) stays False:
+    the servo assumption above has no evidence acquired before execution.
+    """
+    current = np.asarray(current_action, dtype=float)
+    target = np.asarray(target_action, dtype=float)
+    velocity = np.asarray(max_velocity_rad_s, dtype=float)
+    if (current.shape != (len(ACTION_NAMES),) or target.shape != current.shape
+            or velocity.shape != (6,) or not np.all(np.isfinite(current))
+            or not np.all(np.isfinite(target)) or not np.all(np.isfinite(velocity))
+            or np.any((velocity <= 0) | (velocity > .3))):
+        raise ValueError("finite 12-action path and six velocities in (0, 0.3] rad/s required")
+    if not np.array_equal(current[6:], target[6:]):
+        raise ValueError("tracking envelope covers a moving left arm with a passive right arm only")
+    if any(not model.actuator(i).name.startswith("left_") for i in range(6)):
+        raise ValueError("actions 0..5 must be the left-arm actuators")
+    if task_phase in MANIPULATION_PHASES or task_phase in ("LIFT", "PLACE"):
+        raise ValueError("contact/carry phases have no qualified tracking envelope")
+    if (not math.isfinite(excursion_allowance_rad) or not 0 <= excursion_allowance_rad <= 0.1
+            or (0 < excursion_allowance_rad < SUPERVISED_TRIAL_MIN_ALLOWANCE_RAD)):
+        raise ValueError("excursion allowance must be 0 or a supervised-trial value in [0.05, 0.1] rad")
+    if not 0 < minimum_tolerance_rad <= maximum_tolerance_rad <= 0.01 or command_horizon_s <= 0:
+        raise ValueError("invalid tolerance bounds or command horizon")
+    report = {"verified": False, "method": "sampled nominal clearance minus configuration-invariant "
+              "joint-lever bound over native L-inf tube + sample gap + progress-limiter lead",
+              "required_clearance_m": required_clearance_m, "max_velocity_rad_s": velocity.tolist(),
+              "command_horizon_s": command_horizon_s, "max_joint_step_rad": max_joint_step_rad,
+              "assumption": "servo moves monotonically toward its goal between feedback samples; "
+                            "hardware tracking is field-unverified", "hardware_execution": False,
+              # Binds the certificate to exactly this left-arm segment.
+              "segment_start_rad": current[:6].tolist(), "segment_goal_rad": target[:6].tolist()}
+    # Same nominal guard/contract as the checked path; observed support gets no SIM exception.
+    nominal = check_bimanual_path(model, current, target, required_clearance_m=required_clearance_m,
+        max_joint_step_rad=max_joint_step_rad, task_phase=task_phase,
+        reference_data=reference_data, allow_sim_near_support=False)
+    report["nominal_minimum_clearance_m"] = nominal.minimum_clearance_m
+    if not nominal.safe:
+        report["reason"] = f"nominal fine-step path rejected: {nominal.reason}"
+        return report
+    left = _collision_geoms_for_arm(model, "left")
+    right = _collision_geoms_for_arm(model, "right")
+    # Same pair sets as check_bimanual_path for a non-carry, obstacle-free phase.
+    same_left = tuple(_same_arm_geom_pairs(model, left))
+    same = set(same_left) | set(_same_arm_geom_pairs(model, right))
+    pairs = list(protected_geom_pairs(model))
+    if task_phase is not None:
+        target_id = model.geom("red_block_geom").id
+        pairs.extend((g, target_id) for g in (*left, *right))
+    left_set = set(left)
+    general = [p for p in dict.fromkeys(pairs) if p not in same and (p[0] in left_set or p[1] in left_set)]
+    gains = {g: _left_arm_deviation_gains(model, g) for g in left}
+    general_gain = {p: sum((gains[g] for g in p if g in gains), np.zeros(6)) for p in general}
+    self_gain = {}
+    for a, b in same_left:
+        common = _ancestor_joints(model, a) & _ancestor_joints(model, b)
+        self_gain[(a, b)] = (_left_arm_deviation_gains(model, a, common)
+                             + _left_arm_deviation_gains(model, b, common))
+    delta = target[:6] - current[:6]
+    intervals = max(1, math.ceil(float(np.max(np.abs(target - current))) / max_joint_step_rad))
+    moving = np.abs(delta) > 0
+    ratio = np.min(velocity[moving] * command_horizon_s / np.abs(delta[moving])) if moving.any() else 0.
+    # Progress-limiter lead plus half the sample gap; the tube tolerance is added per candidate.
+    base = np.abs(delta) * min(ratio, 1.) + np.abs(delta) / (2 * intervals)
+    # A supervised trial adds an explicit per-joint excursion allowance beyond the native
+    # tube, so its clearance does not rest on the unqualified no-overshoot behaviour.
+    base = base + excursion_allowance_rad
+    groups = [(p, g, required_clearance_m) for p, g in general_gain.items()]
+    groups += [(p, g, 0.) for p, g in self_gain.items()]
+    groups = [row for row in groups if float(np.sum(row[1])) > 0]
+    cap = required_clearance_m + max(float(np.sum(g)) for _, g, _ in groups) * (maximum_tolerance_rad + float(np.max(base))) + .01
+    fractions = np.arange(intervals + 1) / intervals
+    nominal_distance = np.empty((len(fractions), len(groups)))
+    data = mujoco.MjData(model)
+    data.qpos[:] = reference_data.qpos
+    def distance_at(action, pair):
+        apply_control_as_pose(model, data, action, preserve_raw_pose=True)
+        return minimum_protected_clearance(model, data, [pair], distance_cap_m=cap)[0]
+    left_joints = model.actuator_trnid[:6, 0].astype(int)
+    anchors = np.empty((len(fractions), 6, 3))
+    axes_world = np.empty((len(fractions), 6, 3))
+    geom_center = {g: np.empty((len(fractions), 3)) for g in left}
+    for k, fraction in enumerate(fractions):
+        apply_control_as_pose(model, data, current + fraction * (target - current), preserve_raw_pose=True)
+        anchors[k], axes_world[k] = data.xanchor[left_joints], data.xaxis[left_joints]
+        for g in left:
+            geom_center[g][k] = data.geom_xpos[g]
+        for i, (pair, _, _) in enumerate(groups):
+            nominal_distance[k, i] = minimum_protected_clearance(model, data, [pair], distance_cap_m=cap)[0]
+    chains = {g: _left_arm_chain(model, g) for g in left}
+    excluded = {}
+    for pair, _, floor in groups:
+        excluded[pair] = (_ancestor_joints(model, pair[0]) & _ancestor_joints(model, pair[1])
+                          if floor == 0 else frozenset())
+
+    def local_displacement(k, g, error, skip):
+        # Rigorous sweep bound at this sample: apply deviations distal -> proximal; each
+        # hinge moves points by <= angle x (axis distance at q_k + displacement so far).
+        total = 0.
+        for index, joint, coupling in chains[g]:
+            if joint in skip:
+                continue
+            if coupling:
+                total += coupling * error[index]
+                continue
+            offset = geom_center[g][k] - anchors[k, index]
+            radial = float(np.linalg.norm(offset - (offset @ axes_world[k, index]) * axes_world[k, index]))
+            total += error[index] * (radial + float(model.geom_rbound[g]) + total)
+        return total
+    refined: dict[tuple[int, int, float], float] = {}
+
+    def sweep_all(g, error, skip):
+        # local_displacement for every sample at once (no forward kinematics needed).
+        total = np.zeros(len(fractions))
+        for index, joint, coupling in chains[g]:
+            if joint in skip:
+                continue
+            if coupling:
+                total = total + coupling * error[index]
+                continue
+            offset = geom_center[g] - anchors[:, index]
+            axis = axes_world[:, index]
+            radial = np.linalg.norm(offset - np.sum(offset * axis, axis=1)[:, None] * axis, axis=1)
+            total = total + error[index] * (radial + float(model.geom_rbound[g]) + total)
+        return total
+
+    def cheap_bounds(i, error):
+        pair, gain, _ = groups[i]
+        lever = nominal_distance[:, i] - float(gain @ error)
+        sweep = nominal_distance[:, i] - sum(sweep_all(g, error, excluded[pair]) for g in pair if g in chains)
+        return np.maximum(lever, sweep)
+
+    def tube_bound(k, i, error):
+        pair, gain, _ = groups[i]
+        lipschitz = nominal_distance[k, i] - float(gain @ error)
+        local = nominal_distance[k, i] - sum(local_displacement(k, g, error, excluded[pair])
+                                             for g in pair if g in chains)
+        axes = np.flatnonzero(gain > 0)
+        if len(axes) > 2:
+            return max(lipschitz, local)
+        # <=2 relative joints: the pair distance depends on those joints only, so a
+        # dense grid over the tube cross-section replaces the global lever bound.
+        key = (k, i, float(error[axes].sum()))
+        if key not in refined:
+            points = 9
+            line = current + fractions[k] * (target - current)
+            offsets = [np.linspace(-error[a], error[a], points) for a in axes]
+            best = math.inf
+            for combo in np.array(np.meshgrid(*offsets)).reshape(len(axes), -1).T:
+                action = line.copy()
+                # Native aborts on measured q outside model limits, so the tube ends there.
+                action[axes] = np.clip(action[axes] + combo, *model.actuator_ctrlrange[axes].T)
+                best = min(best, distance_at(action, pair))
+            spacing = np.array([2 * error[a] / (points - 1) for a in axes])
+            refined[key] = best - float(gain[axes] @ (spacing / 2))
+        return max(lipschitz, local, refined[key])
+
+    def evaluate(tolerance):
+        """Per-pair minimum of a valid lower bound: lever/sweep everywhere, grid where both fail."""
+        error = base + tolerance
+        minima = []
+        for i, (_, _, floor) in enumerate(groups):
+            bound = cheap_bounds(i, error)
+            for k in np.flatnonzero(bound < floor + (1e-9 if floor == 0 else 0.)):
+                bound[k] = tube_bound(int(k), i, error)
+            k = int(np.argmin(bound))
+            minima.append((float(bound[k]), i, k))
+        general = sorted(row for row in minima if groups[row[1]][2] > 0)
+        own = sorted(row for row in minima if groups[row[1]][2] == 0)
+        report["all_pairs"] = [{"pair": [_body_name_for_geom(model, g) for g in groups[i][0]],
+            "geom_ids": [int(g) for g in groups[i][0]], "required_m": groups[i][2],
+            "nominal_minimum_m": float(np.min(nominal_distance[:, i])),
+            "tube_minimum_m": value, "tube_minimum_path_fraction": float(fractions[k])}
+            for value, i, k in sorted(minima)]
+        pick = lambda rows: (rows[0][0], groups[rows[0][1]][0], (rows[0][1], rows[0][2])) if rows else (math.inf, None, None)
+        return pick(general), pick(own), general
+
+    def bottleneck(where, tolerance, value):
+        i, k = where
+        pair, gain, _ = groups[i]
+        lead = np.abs(delta) * min(ratio, 1.)
+        gap = np.abs(delta) / (2 * intervals)
+        return {"pair": [_body_name_for_geom(model, g) for g in pair],
+                "geoms": [model.geom(g).name or str(g) for g in pair], "geom_ids": [int(g) for g in pair],
+                "path_fraction": float(fractions[k]), "sample_index": k,
+                "nominal_distance_m": float(nominal_distance[k, i]),
+                "clearance_bound_m": value,
+                # Chain-length lever terms (additive) and the tighter per-sample sweep bound.
+                "lever_terms_m": {"tracking_tolerance": float(gain @ np.full(6, tolerance)),
+                                  "command_lead": float(gain @ lead), "sample_gap": float(gain @ gap)},
+                "sweep_terms_m": {name: sum(local_displacement(k, g, part, excluded[pair]) for g in pair if g in chains)
+                                  for name, part in (("tracking_tolerance", np.full(6, tolerance)),
+                                                     ("command_lead", lead), ("sample_gap", gap),
+                                                     ("excursion_allowance", np.full(6, excursion_allowance_rad)),
+                                                     ("combined", base + tolerance))},
+                "grid_refinement_applicable": bool(np.count_nonzero(gain) <= 2),
+                "not_included": ["object pose (P2) error", "support/table plane error",
+                                 "TCP/jaw landmark and joint zero/sign mapping error",
+                                 "servo motion between feedback samples"]}
+
+    ladder = [t for t in (0.01, 0.008, 0.006, 0.005, 0.004, 0.003, 0.0025, 0.002, 0.0016)
+              if minimum_tolerance_rad <= t <= maximum_tolerance_rad]
+    names = lambda pair: [_body_name_for_geom(model, g) for g in pair] if pair else None
+    report.update(checked_samples=intervals + 1, tolerance_ladder_rad=ladder, refined_pair_samples=0,
+                  model_tube_verified=False,
+                  # Kinematic model result only. Real servo behaviour between feedback samples
+                  # has no prior qualification evidence, so this can never authorize execution.
+                  excursion_allowance_rad=excursion_allowance_rad,
+                  # Trial basis, stated rather than proven: native sets Goal_Speed to the cap and
+                  # rejects any read with |Present_Speed| above it, so between-sample excursion is
+                  # cap x 0.1 s watchdog (0.015 rad at 0.15 rad/s) if the firmware honours the cap.
+                  accepted_assumptions=[] if excursion_allowance_rad == 0 else [
+                      "supervised trial: servo excursion beyond the native tube stays within the "
+                      f"{excursion_allowance_rad} rad allowance (firmware speed-cap adherence unverified)"],
+                  execution_prerequisites_unmet=[
+                      "servo monotonic/no-overshoot motion between feedback samples is not qualified "
+                      "by evidence acquired before this execution"] if excursion_allowance_rad == 0 else [
+                      "supervised trial field conditions not confirmed by an operator record"])
+    for tolerance in ladder:
+        (env_general, general_pair, general_at), (env_self, self_pair, _), general_rows = evaluate(tolerance)
+        report.update(minimum_clearance_m=env_general, self_minimum_clearance_m=env_self,
+                      margin_above_required_m=env_general - required_clearance_m,
+                      minimum_clearance_pair=names(general_pair), self_minimum_pair=names(self_pair),
+                      last_checked_tolerance_rad=tolerance, refined_pair_samples=len(refined),
+                      bottleneck=bottleneck(general_at, tolerance, env_general) if general_at else None,
+                      lowest_general_pairs=[bottleneck((i, k), tolerance, value)
+                                            for value, i, k in general_rows[:5]])
+        if env_general >= required_clearance_m and env_self > 0:
+            report.update(model_tube_verified=True, tracking_tolerance_rad=tolerance,
+                          reason="model tube keeps protected clearance; execution prerequisites unmet")
+            return report
+    report["reason"] = ("no tolerance down to one encoder tick keeps the tube clearance; "
+                        "lower the velocity cap or re-plan, never relax 30 mm")
+    return report
 
 
 def main(argv: Sequence[str] | None = None) -> int:

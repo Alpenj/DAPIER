@@ -339,8 +339,22 @@ def solve_bimanual_position_ik(
                 residual_rows.append(tool_axis_weight_m * axis_residual)
         jacobian = np.vstack(jacobian_rows)
         residual = np.concatenate(residual_rows)
-        regularized = jacobian @ jacobian.T + damping**2 * np.eye(len(residual))
-        joint_delta = jacobian.T @ np.linalg.solve(regularized, residual)
+        # Clipping a saturated joint after DLS can strand the other joints:
+        # their step assumed motion that cannot happen. Re-solve without outward
+        # columns at a bound; reconsider every joint on the next iteration.
+        free = np.ones(len(actuator_ids), dtype=bool)
+        joint_delta = np.zeros(len(actuator_ids))
+        for _ in range(len(actuator_ids) + 1):
+            reduced = jacobian[:, free]
+            regularized = reduced @ reduced.T + damping**2 * np.eye(len(residual))
+            joint_delta[:] = 0.0
+            joint_delta[free] = reduced.T @ np.linalg.solve(regularized, residual)
+            at_lower = action[actuator_ids] <= selected_ranges[:, 0] + 1e-10
+            at_upper = action[actuator_ids] >= selected_ranges[:, 1] - 1e-10
+            blocked = free & ((at_lower & (joint_delta < 0)) | (at_upper & (joint_delta > 0)))
+            if not blocked.any():
+                break
+            free[blocked] = False
         action[actuator_ids] += np.clip(
             joint_delta, -max_joint_step_rad, max_joint_step_rad
         )

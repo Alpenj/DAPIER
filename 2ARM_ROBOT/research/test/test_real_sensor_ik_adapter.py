@@ -1,0 +1,361 @@
+import math
+import copy
+import hashlib
+import json
+import tempfile
+from pathlib import Path
+import sys
+import unittest
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from dapier_research.control_intent import ControlIntent, load_contract
+from dapier_research.real_sensor_ik_adapter import (
+    bounded_pregrasp_plan,
+    bounded_carry_plan, bounded_trial_plan, bounded_return_plan,
+    NO_OVERSHOOT_UNMET, SUPERVISED_TRIAL_UNMET, TRIAL_CONDITION_KEYS,
+    create_joint_position_intents,
+    plan_pregrasp_staging_waypoints,
+    transform_optical_point_to_arm,
+    validate_sensor_estimate_for_motion,
+)
+from dapier_research.vision_target import VisionTargetError, VisionTargetEstimate
+
+
+class RealSensorIkAdapterTest(unittest.TestCase):
+    def test_carry_cannot_be_relabelled_pregrasp_even_with_success_flag(self):
+        for extra in ({"candidate_mode":"carry_endpoint_ik"}, {"planning_phase":"LIFT"},
+                      {"planning_phase":"PLACE"}, {"planning_phase":"CLOSE"}):
+            with self.subTest(extra=extra), self.assertRaisesRegex(ValueError, "own checked phase path"):
+                bounded_pregrasp_plan({"offline_candidate_accepted":True, **extra}, Path("unused"), now_s=1000.)
+
+    def test_metric_geometry_verdict_reaches_plan_without_depth(self):
+        # Synthetic inputs exercise the real boundary, not physical acceptance.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def source(name, value):
+                path = root / name
+                path.write_text(json.dumps(value))
+                return {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+            names = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
+            profile = source("profile.json", {
+                "arm_signs": [1]*5, "arm_zero_offsets_deg": [0.]*5,
+                "gripper_rad_limits": [0., 2.],
+                "joints": [{"name": name, "sign": 1, "zero_offset_deg": 0.,
+                            "maximum_velocity_rad_s": .3} for name in names]})
+            measured = {**profile, "timestamp": "1970-01-01T00:16:40+00:00", "calibration": profile}
+            candidate = {"offline_candidate_accepted": True,
+                "scene_object": {"bound_to_path_reference": True},
+                "seed_posture": {"seed_q_rad": [0.]*12, "left": measured, "right": measured},
+                "solved_action_rad": [0.]*12, "mapping": {"profile": profile},
+                "model": {**profile, "gripper_ranges_rad": [[0., 2.]]},
+                "position_error_m": 0., "tool_axis_error_rad_by_side": {"left": 0.},
+                "structured_clearance": {"safe": True, "minimum_clearance_m": .05}}
+            cases = [({"metric_evidence": {"method": "known_cube_board_geometry", "metric_target_verified": True}}, True),
+                     ({"depth_evidence": {"metric_target_verified": True}}, True),
+                     ({"metric_evidence": {"metric_target_verified": False},
+                       "depth_evidence": {"metric_target_verified": True}}, False),
+                     ({"P2_PASS": True}, False),
+                     ({"metric_evidence": {"metric_target_verified": "true"}}, False)]
+            for evidence, expected in cases:
+                with self.subTest(evidence=evidence):
+                    candidate["block_source"] = source("block.json", {"rgb_timestamp_ns": 1_000_000_000_000, **evidence})
+                    plan = bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.)
+                    self.assertIs(plan["sensor_target_verified"], expected)
+                    self.assertFalse(plan["path_envelope_verified"])
+                    self.assertFalse(plan["task_success"])
+            self.assertEqual(plan["maximum_duration_s"], 3.5)
+            explicit = bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.,
+                                            maximum_duration_s=40.)
+            self.assertEqual(explicit["maximum_duration_s"], 40.)
+            self.assertFalse(explicit["sensor_target_verified"])
+            self.assertFalse(explicit["path_envelope_verified"])
+            self.assertEqual(explicit["goal_rad"], plan["goal_rad"])
+            for budget in (True, "40", 0., 3.49, 60.01, float("nan"), float("inf")):
+                with self.subTest(budget=budget), self.assertRaisesRegex(ValueError, "maximum duration"):
+                    bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.,
+                                          maximum_duration_s=budget)
+            with self.assertRaisesRegex(ValueError, "stale or future"):
+                bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1061.,
+                                      maximum_duration_s=40.)
+            # A model tube tightens the native monitor tolerance but never satisfies the
+            # hardware envelope gate while an execution prerequisite is unmet.
+            envelope = {"verified":False, "model_tube_verified":True, "tracking_tolerance_rad":.004,
+                        "minimum_clearance_m":.0303, "max_velocity_rad_s":[.3]*6, "command_horizon_s":.05,
+                        "segment_start_rad":[0.]*6, "segment_goal_rad":[0.]*6,
+                        "execution_prerequisites_unmet":[NO_OVERSHOOT_UNMET]}
+            model_only = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]), now_s=1000.)
+            self.assertFalse(model_only["path_envelope_verified"])
+            self.assertEqual((model_only["path_tracking_tolerance_rad"], model_only["path_envelope_clearance_m"],
+                              model_only["path_envelope_model_clearance_m"]), (.004, 0., .0303))
+            self.assertEqual(model_only["path_envelope_unmet_prerequisites"], [NO_OVERSHOOT_UNMET])
+            # An edited envelope that drops its unmet item or claims verified is still refused.
+            forged = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, "verified":True,
+                "execution_prerequisites_unmet":[]}}, Path(profile["path"]), now_s=1000.)
+            self.assertFalse(forged["path_envelope_verified"])
+            profile_sha = hashlib.sha256(Path(profile["path"]).read_bytes()).hexdigest()
+            qualification = {"schema_version":"dapier.tracking-qualification.v1", "pass":True,
+                "hardware_execution":True, "profile_sha256":profile_sha, "max_velocity_rad_s":[.3]*6,
+                "tracking_tolerance_rad":.004, "acquired_unix_s":999., "covered_joint_range_rad":[[-.1,.1]]*6}
+            met = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]),
+                now_s=1000., prerequisite_records=[Path(source("qualification.json", qualification)["path"])])
+            self.assertTrue(met["path_envelope_verified"])
+            self.assertEqual(met["path_envelope_clearance_m"], .0303)
+            for change in ({"acquired_unix_s":1000.5}, {"covered_joint_range_rad":[[.01,.1]]*6},
+                           {"hardware_execution":False}, {"tracking_tolerance_rad":.003}, {"pass":"true"},
+                           {"profile_sha256":"0"*64}):
+                with self.subTest(qualification=change):
+                    bad = Path(source(f"q-{len(change)}-{sorted(change)[0]}.json", {**qualification, **change})["path"])
+                    refused = bounded_pregrasp_plan({**candidate, "path_envelope":envelope}, Path(profile["path"]),
+                                                    now_s=1000., prerequisite_records=[bad])
+                    self.assertFalse(refused["path_envelope_verified"])
+            unbound = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, "segment_goal_rad":[.1]+[0.]*5}},
+                Path(profile["path"]), now_s=1000., prerequisite_records=[Path(source("qualification.json", qualification)["path"])])
+            self.assertFalse(unbound["path_envelope_verified"])
+            for change in ({"max_velocity_rad_s":[.1]*6}, {"command_horizon_s":.1}, {"model_tube_verified":"true"},
+                           {"minimum_clearance_m":.029}, {"tracking_tolerance_rad":.02}, {"max_velocity_rad_s":None}):
+                with self.subTest(change=change):
+                    refused = bounded_pregrasp_plan({**candidate, "path_envelope":{**envelope, **change}},
+                                                    Path(profile["path"]), now_s=1000.)
+                    self.assertFalse(refused["path_envelope_verified"])
+                    self.assertEqual((refused["path_tracking_tolerance_rad"], refused["path_envelope_model_clearance_m"]), (.01, None))
+            # Supervised trial: same checked line truncated, allowance certificate + field record.
+            moving = {**copy.deepcopy(candidate), "candidate_mode":"pregrasp_ik"}
+            moving["solved_action_rad"][0] = .1
+            trial_env = {**envelope, "excursion_allowance_rad":.05, "segment_goal_rad":[.05]+[0.]*5,
+                         "execution_prerequisites_unmet":[SUPERVISED_TRIAL_UNMET]}
+            conditions = {"schema_version":"dapier.supervised-trial-conditions.v1", "operator_confirmed":True,
+                          "recorded_unix_s":990., "conditions":{key:True for key in TRIAL_CONDITION_KEYS}}
+            cond_path = Path(source("conditions.json", conditions)["path"])
+            trial = bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=trial_env,
+                                       prerequisite_records=[cond_path], now_s=1000.)
+            self.assertEqual((trial["phase"], trial["initial_torque_enabled"], trial["goal_rad"][0]),
+                             ("TRACKING_TRIAL", False, .05))
+            self.assertTrue(trial["path_envelope_verified"])
+            self.assertEqual(trial["path_envelope_accepted_records"], ["dapier.supervised-trial-conditions.v1"])
+            unconfirmed = bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=trial_env, now_s=1000.)
+            self.assertFalse(unconfirmed["path_envelope_verified"])
+            partial = {**conditions, "conditions":{**conditions["conditions"], TRIAL_CONDITION_KEYS[0]:False}}
+            refused = bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=trial_env,
+                prerequisite_records=[Path(source("partial.json", partial)["path"])], now_s=1000.)
+            self.assertFalse(refused["path_envelope_verified"])
+            with self.assertRaisesRegex(ValueError, "allowance"):
+                bounded_trial_plan(moving, Path(profile["path"]), fraction=.5, trial_envelope=envelope, now_s=1000.)
+            # RETURN: measured held endpoint -> recorded support start of the SHA-bound outbound plan.
+            outbound = root/"outbound.json"; outbound.write_text(json.dumps(trial))
+            trace = root/"trial-trace.jsonl"
+            trace.write_text("\n".join(json.dumps(e) for e in (
+                {"event":"step","time_ns":1_000_000_000},
+                {"event":"result","phase":"TRACKING_TRIAL_REACHED_HOLDING","motion_started":True,
+                 "hardware_execution":False,"profile_sha256":profile_sha,
+                 "plan_sha256":hashlib.sha256(outbound.read_bytes()).hexdigest(),
+                 "final_measured_rad":[.0502]+[0.]*5})))
+            ret_env = {**trial_env, "segment_start_rad":[.0502]+[0.]*5, "segment_goal_rad":[0.]*6,
+                       "nominal_minimum_clearance_m":.031}
+            ret = bounded_return_plan(trace, outbound, outbound, Path(profile["path"]), goal_fraction=0.,
+                return_envelope=ret_env, prerequisite_records=[cond_path], now_s=1000.,
+                now_monotonic_ns=3_000_000_000, maximum_duration_s=20.)
+            self.assertEqual((ret["phase"], ret["initial_torque_enabled"], ret["goal_rad"], ret["start_rad"][0]),
+                             ("RETURN", True, [0.]*6, .0502))
+            self.assertTrue(ret["path_envelope_verified"])
+            self.assertAlmostEqual(ret["measured_state_unix_s"], 998.)
+            for kwargs, reason in (({"goal_fraction":1.5}, "outbound segment"), ({"maximum_duration_s":61.}, "60 s"),
+                                   ({"now_monotonic_ns":70_000_000_000}, "stale")):
+                with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                    bounded_return_plan(trace, outbound, outbound, Path(profile["path"]), **{**dict(
+                        goal_fraction=0., return_envelope=ret_env, now_s=1000., now_monotonic_ns=3_000_000_000,
+                        maximum_duration_s=20.), **kwargs})
+            other = root/"other-plan.json"; other.write_text(json.dumps({**trial, "goal_rad":[.04]+[0.]*5}))
+            with self.assertRaisesRegex(ValueError, "chain mismatch"):
+                bounded_return_plan(trace, other, outbound, Path(profile["path"]), goal_fraction=0.,
+                    return_envelope=ret_env, now_s=1000., now_monotonic_ns=3_000_000_000, maximum_duration_s=20.)
+            carry=copy.deepcopy(candidate)
+            carry.update(candidate_mode="carry_endpoint_ik", planning_phase="LIFT", ik_converged=True,
+                offline_candidate_accepted=False, path_assessment={"safe":True,"checked_samples":3})
+            carry["solved_action_rad"][0]=.05
+            ref=source("carry-reference.json", {"schema_version":"dapier.sensor-carry-reference.v1",
+                "frame":"model_world","phase":"LIFT","translation_z_m":.035})
+            carry["carry_planning"]={"phase":"LIFT","reference":ref,"model_path_checked":True,
+                "model_path_safe":True,"contact_path_verified":False,"object_center_goal_error_m":0.,
+                "path_policy_scope":"SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED"}
+            prior=source("prior.jsonl", {"fixture":"MOCK; native verifies actual phase trace"})
+            binding=source("binding.json", {"path":prior["path"],"run_id":"MOCK-run","object_id":"MOCK-object",
+                "calibration_revision":"MOCK-cal","producer_sha256":"a"*64,"boot_id":"MOCK-boot","support_id":"MOCK-table"})
+            def carry_plan(value=carry, **kw):
+                return bounded_carry_plan(value, Path(profile["path"]), Path(prior["path"]),
+                    Path(binding["path"]), now_s=1000., **kw)
+            lifted=carry_plan()
+            self.assertEqual(lifted["phase"],"LIFT")
+            self.assertEqual(lifted["maximum_duration_s"],6.5)
+            self.assertEqual(lifted["allowed_transport"],"mock")
+            self.assertFalse(lifted["offline_candidate_accepted"])
+            self.assertFalse(lifted["physical_contact_path_verified"])
+            self.assertEqual(lifted["start_rad"][-1],lifted["goal_rad"][-1])
+            self.assertEqual(lifted["grasp_confirmation"],prior)
+            with self.assertRaisesRegex(ValueError,"maximum duration"):
+                carry_plan(maximum_duration_s=4.)
+            for section,key,value in (("carry_planning","model_path_safe",False),
+                ("carry_planning","object_center_goal_error_m",.001),
+                ("carry_planning","object_center_goal_error_m",float("nan")),
+                ("carry_planning","path_policy_scope","HW"),("path_assessment","checked_samples",0)):
+                invalid=copy.deepcopy(carry); invalid[section][key]=value
+                with self.subTest(key=key), self.assertRaises(ValueError):carry_plan(invalid)
+            invalid=copy.deepcopy(carry); invalid["solved_action_rad"][5]=.1
+            with self.assertRaisesRegex(ValueError,"aperture"):carry_plan(invalid)
+            carry["planning_phase"]=carry["carry_planning"]["phase"]="PLACE"
+            with self.assertRaisesRegex(ValueError,"pinned waypoint"):carry_plan()
+            carry["carry_planning"]["reference"]=source("carry-reference.json", {
+                "schema_version":"dapier.sensor-carry-reference.v1","frame":"model_world",
+                "phase":"PLACE","translation_z_m":-.035})
+            placed=carry_plan()
+            self.assertEqual(placed["phase"],"PLACE")
+            self.assertEqual(placed["previous_phase"],prior)
+            self.assertEqual(placed["maximum_duration_s"],3.5)
+            Path(carry["carry_planning"]["reference"]["path"]).write_text("changed")
+            with self.assertRaisesRegex(ValueError,"source changed"):carry_plan()
+            candidate["block_source"] = source("block.json", {"rgb_timestamp_ns": 1_000_000_000_000,
+                "metric_evidence": None, "depth_evidence": {"metric_target_verified": True}})
+            with self.assertRaisesRegex(ValueError, "metric target evidence"):
+                bounded_pregrasp_plan(candidate, Path(profile["path"]), now_s=1000.)
+
+    def test_changed_wrist_frame_is_rejected_before_plan_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = Path(directory) / "source"
+            source_path.write_bytes(b"MOCK source")
+            source = {"path":str(source_path), "sha256":hashlib.sha256(source_path.read_bytes()).hexdigest()}
+            frame = Path(directory) / "frame"
+            frame.write_bytes(b"changed image")
+            measured = {**source, "timestamp":"1970-01-01T00:16:40+00:00", "calibration":source}
+            candidate = {"offline_candidate_accepted":True, "candidate_mode":"wrist_feedback",
+                "scene_object":{"bound_to_path_reference":True},
+                "seed_posture":{"seed_q_rad":[0.]*12, "left":measured, "right":measured},
+                "solved_action_rad":[0.]*12, "block_source":source, "model":source,
+                "mapping":{"profile":source},
+                "wrist_source":{**source, "frame_source":{"path":str(frame), "sha256":"0"*64}}}
+            with self.assertRaisesRegex(ValueError, "source changed"):
+                bounded_pregrasp_plan(candidate, Path("unused"), now_s=1000.)
+
+    def test_nominal_scene_candidate_cannot_reach_executor(self):
+        with self.assertRaisesRegex(ValueError, "observed object"):
+            bounded_pregrasp_plan({"offline_candidate_accepted": True}, Path("unused"), now_s=1000.)
+
+    def test_transform_optical_point_to_arm(self):
+        # Identity transform with translation (0.1, 0.2, 0.3)
+        T_arm_camera = np.eye(4)
+        T_arm_camera[:3, 3] = [0.1, 0.2, 0.3]
+
+        pt_optical = [0.05, -0.02, 0.50]
+        pt_arm = transform_optical_point_to_arm(pt_optical, T_arm_camera)
+
+        expected = np.array([0.15, 0.18, 0.80])
+        np.testing.assert_allclose(pt_arm, expected, atol=1e-6)
+
+    def test_transform_invalid_point_or_transform_fails_closed(self):
+        T_arm_camera = np.eye(4)
+        with self.assertRaises(VisionTargetError):
+            transform_optical_point_to_arm([np.nan, 0.0, 0.5], T_arm_camera)
+        with self.assertRaises(VisionTargetError):
+            transform_optical_point_to_arm([0.0, 0.0], T_arm_camera)
+        with self.assertRaises(VisionTargetError):
+            transform_optical_point_to_arm([0.0, 0.0, 0.5], np.ones((3, 3)))
+
+    def test_validate_sensor_estimate_for_motion(self):
+        now_ns = 1_000_000_000
+        valid_estimate = VisionTargetEstimate(
+            schema_version="dapier.vision-target.v1",
+            label="blue_cube",
+            detector="mock_detector",
+            source="mock_stream",
+            camera_frame="os30a_optical",
+            target_frame="left_arm_base",
+            timestamp_ns=now_ns - 50_000_000,  # 50ms old
+            position_optical_m=(0.02, 0.05, 0.40),
+            position_target_m=(0.10, 0.20, 0.30),
+            covariance_diagonal_m2=(1e-6, 1e-6, 1e-6),
+            median_depth_m=0.40,
+            detector_confidence=0.95,
+            depth_confidence=0.90,
+            confidence=0.92,
+            mask_pixels=250,
+            valid_depth_pixels=240,
+            inlier_pixels=230,
+        )
+        # Should pass with no exception
+        validate_sensor_estimate_for_motion(valid_estimate, now_monotonic_ns=now_ns)
+        for bounds in ({"minimum_confidence": float("nan")}, {"max_age_ns": 0},
+                       {"now_monotonic_ns": float("nan")}):
+            with self.subTest(bounds=bounds), self.assertRaises(VisionTargetError):
+                validate_sensor_estimate_for_motion(valid_estimate, **bounds)
+
+        # Stale target
+        with self.assertRaises(VisionTargetError) as cm:
+            validate_sensor_estimate_for_motion(
+                valid_estimate, now_monotonic_ns=now_ns + 5_000_000_000, max_age_ns=1_000_000_000
+            )
+        self.assertEqual(cm.exception.code, "stale_sensor_target")
+
+        # Low confidence target
+        low_conf = VisionTargetEstimate(
+            schema_version="dapier.vision-target.v1",
+            label="blue_cube",
+            detector="mock_detector",
+            source="mock_stream",
+            camera_frame="os30a_optical",
+            target_frame="left_arm_base",
+            timestamp_ns=now_ns,
+            position_optical_m=(0.02, 0.05, 0.40),
+            position_target_m=(0.10, 0.20, 0.30),
+            covariance_diagonal_m2=(1e-6, 1e-6, 1e-6),
+            median_depth_m=0.40,
+            detector_confidence=0.30,
+            depth_confidence=0.30,
+            confidence=0.30,
+            mask_pixels=50,
+            valid_depth_pixels=40,
+            inlier_pixels=30,
+        )
+        with self.assertRaises(VisionTargetError) as cm:
+            validate_sensor_estimate_for_motion(low_conf, now_monotonic_ns=now_ns, minimum_confidence=0.50)
+        self.assertEqual(cm.exception.code, "low_confidence")
+
+    def test_plan_pregrasp_staging_waypoints(self):
+        grasp = [0.25, 0.10, 0.02]
+        waypoints = plan_pregrasp_staging_waypoints(
+            grasp, pregrasp_offset_m=(0.0, 0.0, 0.05), stage_offset_m=(0.0, 0.07, 0.05)
+        )
+        np.testing.assert_allclose(waypoints["GRASP"], [0.25, 0.10, 0.02], atol=1e-6)
+        np.testing.assert_allclose(waypoints["PREGRASP_NEAR"], [0.25, 0.10, 0.07], atol=1e-6)
+        np.testing.assert_allclose(waypoints["SAFE_STAGE"], [0.25, 0.17, 0.12], atol=1e-6)
+        for offset in ((0., float("inf"), 0.), (0., 0.)):
+            with self.assertRaises(VisionTargetError):
+                plan_pregrasp_staging_waypoints(grasp, stage_offset_m=offset)
+
+    def test_create_joint_position_intents(self):
+        joints = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+        traj = [
+            [0.0, -1.57, 1.57, 0.0, 0.0, 0.0],
+            [0.05, -1.50, 1.50, -0.05, 0.0, 0.0],
+        ]
+        intents = create_joint_position_intents(
+            traj,
+            joints,
+            start_sequence=10,
+            start_monotonic_ns=1_000_000_000,
+            update_period_s=0.05,
+        )
+        self.assertEqual(len(intents), 2)
+        self.assertEqual(intents[0].schema_version, load_contract().schema_version)
+        self.assertEqual(intents[0].sequence, 10)
+        self.assertEqual(intents[0].kind, "arm_joint_position")
+        self.assertEqual(intents[0].joint_position_rad, tuple(traj[0]))
+        self.assertEqual(intents[1].sequence, 11)
+        self.assertEqual(intents[1].source_monotonic_ns, 1_050_000_000)
+        for period in (0., -1., float("nan"), float("inf"), 1e-12):
+            with self.subTest(period=period), self.assertRaises(ValueError):
+                create_joint_position_intents(traj, joints, update_period_s=period)
+
+
+if __name__ == "__main__":
+    unittest.main()

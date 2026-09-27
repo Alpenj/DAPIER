@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+driver_root=${FEETECH_DRIVER_SOURCE:-"$HOME/so101_ros2_ws/src/so101-ros-physical-ai/feetech_ros2_driver/feetech_driver"}
+output=${1:?usage: build_bounded_pregrasp OUTPUT_BINARY}
+g++ -std=c++20 -O0 -Wall -Wextra -fmax-errors=2 \
+  -I"$repo_root/dapier_so101_core/include" \
+  -I"$repo_root/dapier_safety_core/include" \
+  -I"$repo_root/dapier_localization_core/include" -I"$driver_root/include" \
+  "$repo_root/dapier_so101_core/tools/bounded_pregrasp_main.cpp" \
+  "$repo_root/dapier_so101_core/src/joint_model.cpp" \
+  "$repo_root/dapier_so101_core/src/realtime_control.cpp" \
+  "$repo_root/dapier_safety_core/src/safety_controller.cpp" \
+  "$driver_root/src/communication_protocol.cpp" "$driver_root/src/serial_port.cpp" \
+  -lyaml-cpp -lcrypto -lfmt -lspdlog -lserial -pthread -o "$output"

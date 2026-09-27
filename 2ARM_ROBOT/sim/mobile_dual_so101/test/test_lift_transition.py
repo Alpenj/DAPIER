@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import io
 import json
 from pathlib import Path
@@ -10,6 +11,146 @@ from lift_transition_diagnostic import run, next_close_diagnostic
 
 
 class LiftTransitionTest(unittest.TestCase):
+    def test_successful_relative_pose_is_not_contact_or_lift_equivalence(self):
+        e = json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())['successful_relative_pose_mapping']
+        b, c = e['bench'], e['continuous_lift']
+        np.testing.assert_allclose(np.array(b['T_block_housing_body']) @ b['T_housing_body_TCP'], b['T_block_TCP'], atol=1e-12)
+        self.assertFalse(e['live_success'])
+        self.assertEqual(e['formation_noslip'], {'bench': 5, 'arm': 0})
+        self.assertEqual(b['support_contact_count'], 0)
+        self.assertEqual(b['support_Fn_N'], 0)
+        self.assertLess(np.ptp([p['position_block_m'][2] for p in b['contacts']]), .00002)
+        actual_height = np.ptp([p['position_block_COM_m'][2] for p in e['confirm']['contacts']])
+        self.assertAlmostEqual(actual_height*1000, e['comparison']['arm_confirm_actual_contactheight_mm'], places=8)
+        self.assertGreater(actual_height, .025)
+        self.assertLess(e['comparison']['arm_confirm_carried_contactheight_mm'], .2)
+        self.assertTrue(e['comparison']['same_confirm_initial_state_bitexact'])
+        self.assertTrue(e['comparison']['same_original_target_exact'])
+        self.assertFalse(e['comparison']['endpoint_reached'])
+        self.assertFalse(e['comparison']['unsupported_HOLD_proven'])
+        start, end = np.array(c['ctrl_start']), np.array(c['original_target'])
+        for row in c['rows']:
+            u = row['step']*.002/c['trajectory_duration_s']
+            blend = 35*u**4-84*u**5+70*u**6-20*u**7
+            np.testing.assert_allclose(row['target_q'], start+(end-start)*blend, atol=1e-15, rtol=0)
+            self.assertTrue(row['policy_safe'])
+            self.assertFalse(any(row['warnings']))
+            for name, force in row['finger_force_N'].items():
+                pad = 'left_pgripper_pad_'+name[-1]
+                self.assertAlmostEqual(force, sum(p['normal_force_N'] for p in row['contacts'] if pad in p['names']), places=12)
+            self.assertLessEqual(max((p['penetration_m'] for p in row['contacts']), default=0.), .001)
+        loss = next(r['step'] for r in c['rows'] if min(r['finger_force_N'].values()) <= 0)
+        self.assertEqual(loss, 40)
+        separated = [r['step'] for r in c['rows'] if r['block_table_contact_count']==0 and r['block_table_normal_force_N']==0]
+        self.assertEqual(separated, [38, 39])
+        self.assertGreater(c['rows'][-1]['block_table_normal_force_N'], 0)
+
+    def test_arm_hold_retention_is_not_unsupported_grasp(self):
+        f = json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())
+        e = f['arm_coupling_diagnostic']
+        self.assertEqual(e['mode'], 'DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS')
+        self.assertEqual(e['lock_type'], 'SOFT_LOCK')
+        self.assertFalse(e['live_success'])
+        self.assertFalse(e['runtime_noslip_adopted'])
+        for key in ('initial_state_bitexact', 'donor_unchanged', 'no_reset_physics',
+                    'original_gripper_equalities_unchanged'):
+            self.assertTrue(e[key])
+        self.assertTrue(all(e['all_option_fields_exact'].values()))
+        for rows in e['cases'].values():
+            self.assertEqual([r['step'] for r in rows], [1, 25, 50])
+            for r in rows:
+                np.testing.assert_array_equal(r['target_q'], e['terminal_command'])
+                self.assertTrue(np.isfinite(r['raw_qpos']).all())
+                self.assertTrue(np.isfinite(r['raw_qvel']).all())
+                self.assertFalse(any(r['warnings']))
+                self.assertGreater(min(r['finger_force_N'].values()), 0)
+                self.assertGreater(r['block_table_contact_count'], 0)
+                self.assertGreater(r['block_table_normal_force_N'], .19)
+                force, torque = np.zeros(3), np.zeros(3)
+                for contact in r['contacts']:
+                    if not any('pgripper_pad' in n for n in contact['names']):
+                        continue
+                    sign = 1 if contact['names'][1] == 'red_block_geom' else -1
+                    frame = np.asarray(contact['contact_frame_world']).reshape(3, 3)
+                    wrench = np.asarray(contact['contact_frame_wrench'])
+                    f_world = sign * frame.T @ wrench[:3]
+                    force += f_world
+                    lever = np.asarray(contact['position_m']) - r['block_position_m']
+                    torque += np.cross(lever, f_world) + sign * frame.T @ wrench[3:]
+                np.testing.assert_allclose(force, r['load_evidence']['finger_force_world_N'], atol=1e-12, rtol=0)
+                np.testing.assert_allclose(torque, r['load_evidence']['finger_torque_about_com_world_Nm'], atol=1e-12, rtol=0)
+        arm = e['case_summaries']['terminal_hold']['initial']
+        bench = e['bench_selected'][-1]
+        for row in (arm, bench):
+            height = np.ptp([c['point_block_COM_m'][2] for c in row['contacts']])
+            self.assertAlmostEqual(height, row['height_difference_block_m'], places=12)
+        # Equal friction settings do not make different grasps an arm-only comparison.
+        self.assertGreater(arm['height_difference_block_m'], .03)
+        self.assertLess(bench['height_difference_block_m'], .00002)
+        self.assertEqual(bench['support_count'], 0)
+        self.assertEqual(bench['support_Fn_N'], 0)
+        np.testing.assert_allclose(bench['pad_force_world_N'], [0, 0, .1962], atol=1e-10, rtol=0)
+        self.assertLess(np.linalg.norm(bench['pad_torque_COM_world_Nm']), 1e-10)
+
+    def check_arm_noslip_evidence(self, e):
+        self.assertEqual(e['mode'], 'DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS')
+        self.assertEqual(e['option_delta'], {'noslip_iterations': [0, 5]})
+        self.assertTrue(e['donor_unchanged'])
+        self.assertFalse(e['endpoint_reached'])
+        rows = e['rows']
+        self.assertEqual(len(rows), 50)
+        self.assertEqual(e['extension_steps'], list(range(34, 51)))
+        start, end = np.asarray(e['terminal_command']), np.asarray(e['target'])
+        for i, row in enumerate(rows, 1):
+            self.assertEqual(row['step'], i)
+            t = i * .002 / e['trajectory_duration_s']
+            blend = 35*t**4 - 84*t**5 + 70*t**6 - 20*t**7
+            np.testing.assert_allclose(row['target_q'], start + (end-start)*blend,
+                                       atol=1e-15, rtol=0)
+            self.assertAlmostEqual(row['time_s'] - e['initial_full_state'][0], i*.002, places=11)
+            for index in (5, 11):
+                self.assertEqual(row['target_q'][index], start[index])
+            self.assertTrue(row['policy_safe'])
+            self.assertGreaterEqual(row['measured_clearance_m'], .03)
+            self.assertLessEqual(row['maximum_penetration_m'], .001)
+            self.assertFalse(any(row['warnings']))
+            for name, force in row['finger_force_N'].items():
+                pad = 'left_pgripper_pad_' + name[-1]
+                observed = sum(c['normal_force_N'] for c in row['contacts'] if pad in c['names'])
+                self.assertAlmostEqual(force, observed, places=12)
+            table = [c for c in row['contacts'] if 'table' in c['names']]
+            self.assertEqual(row['block_table_contact_count'], len(table))
+            self.assertAlmostEqual(row['block_table_normal_force_N'],
+                                   sum(c['normal_force_N'] for c in table), places=12)
+        first_loss = next(row['step'] for row in rows if min(row['finger_force_N'].values()) <= 0)
+        self.assertEqual(first_loss, e['first_blocker_step'])
+        self.assertEqual(first_loss, 33)
+        # A single separated sample is not sustained load-bearing lift evidence.
+        separated = [row['step'] for row in rows if row['block_table_contact_count'] == 0
+                     and row['block_table_normal_force_N'] == 0 and row['block_bottom_table_gap_m'] > 0]
+        self.assertEqual(separated, [32])
+        self.assertGreater(rows[32]['block_table_normal_force_N'], 0)
+        self.assertLess(rows[-1]['block_lift_m'], 0)
+
+    def test_arm_noslip_copy_does_not_establish_load_bearing(self):
+        fixture = json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())
+        evidence = fixture['arm_noslip_diagnostic']
+        self.check_arm_noslip_evidence(evidence)
+        for mutation in ('force', 'support', 'command', 'success', 'clearance'):
+            bad = copy.deepcopy(evidence)
+            if mutation == 'force':
+                bad['rows'][32]['finger_force_N']['jaw_1'] = .1
+            elif mutation == 'support':
+                bad['rows'][32]['block_table_contact_count'] = 0
+            elif mutation == 'command':
+                bad['rows'][0]['target_q'][5] -= .001
+            elif mutation == 'success':
+                bad['endpoint_reached'] = True
+            else:
+                bad['rows'][0]['measured_clearance_m'] = .029
+            with self.assertRaises(AssertionError):
+                self.check_arm_noslip_evidence(bad)
+
     def test_actual_failure_and_bounded_contact_diagnostics(self):
         fixture=json.loads((Path(__file__).parent/'fixtures/lift_transition.json').read_text())
         with contextlib.redirect_stdout(io.StringIO()):

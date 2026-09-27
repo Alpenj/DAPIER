@@ -1,0 +1,263 @@
+{
+  "mode": "DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS",
+  "live_task_success": false,
+  "hardware_execution": false,
+  "mujoco_version": "3.3.7",
+  "sources": {
+    "/tmp/dapier-lift15-refinement-20260920/ab.json": "aaadc8e073b68e545c3444f82caf2aab6e11275c168737d7b961dfcc6c86c6cd",
+    "/tmp/dapier-arm-noslip-20260918/original-model.mjb": "8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9",
+    "/tmp/dapier-controlled-audit-20260919/input-donor.json": "390c35c6afd98af256ec618762d8ad7fa2f676e2299ddbe8fbc58edf2c2eba31",
+    "/tmp/dapier-controlled-audit-20260919/input-source.json": "927d738558b449b15b689d30654f06673fa2eb956ed2019b5d6318ff105de84a",
+    "/home/dapier-jhj/DAPIER/.local-workspaces/pro/grasp-families-codex-20260918/2ARM_ROBOT/sim/mobile_dual_so101/airborne_hold_audit.py": "9ee017e9ad67c2c5f05b1e4f896046df45ebb61db4bd0ba22f008c3eb83398bf"
+  },
+  "checkpoint_state_sha256": "c1bdfbbf951bb659abf081487a01e150d1183a96ecca8070c08a4f2455eec2c9",
+  "classification": "A",
+  "runtime_adopted": false,
+  "required_world_bottom_m": 0.03,
+  "evidence": "VERIFIED BY COPIED PHYSICS; NOT LIVE TASK SUCCESS",
+  "checkpoint_time_s": 40.748000000003834,
+  "checkpoint_replayed_steps": 435,
+  "checkpoint_prior_trace_bitwise_match": true,
+  "inherited_hold_counter_s": 0.2420000000000002,
+  "cases": {
+    "0": {
+      "steps": 1500,
+      "failure": null,
+      "initial_state_exact": true,
+      "options": {
+        "ccd_iterations": 35,
+        "ccd_tolerance": 1e-06,
+        "cone": 1,
+        "density": 0.0,
+        "disableactuator": 0,
+        "disableflags": 0,
+        "enableflags": 0,
+        "gravity": [
+          0.0,
+          0.0,
+          -9.81
+        ],
+        "impratio": 1.0,
+        "integrator": 3,
+        "iterations": 100,
+        "jacobian": 2,
+        "ls_iterations": 50,
+        "ls_tolerance": 0.01,
+        "magnetic": [
+          0.0,
+          -0.5,
+          0.0
+        ],
+        "noslip_iterations": 0,
+        "noslip_tolerance": 1e-06,
+        "o_friction": [
+          1.0,
+          1.0,
+          0.005,
+          0.0001,
+          0.0001
+        ],
+        "o_margin": 0.0,
+        "o_solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "o_solref": [
+          0.02,
+          1.0
+        ],
+        "sdf_initpoints": 40,
+        "sdf_iterations": 10,
+        "solver": 2,
+        "timestep": 0.002,
+        "tolerance": 1e-10,
+        "viscosity": 0.0,
+        "wind": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "model_arrays_unchanged": true,
+      "only_noslip_changed": true,
+      "prior_hold_bitwise_match": true,
+      "copied_hold_pass": false,
+      "initial_bottom_m": 0.031680512130390574,
+      "final_bottom_m": 0.02862606395680029,
+      "minimum_bottom_m": 0.02862606395680029,
+      "bottom_displacement_m": -0.0030544481735902858,
+      "com_z_displacement_m": -0.0030685056680520573,
+      "final_vz_m_s": -0.000984277341965856,
+      "last_100ms_mean_vz_m_s": -0.0010244775812192886,
+      "final_forces_N": [
+        0.38832298883118677,
+        0.3934335069159422
+      ],
+      "minimum_forces_N": [
+        0.38730192400057684,
+        0.3815192044275375
+      ],
+      "maximum_forces_N": [
+        0.40348525083241826,
+        0.4022987473601369
+      ],
+      "max_total_normal_force_N": 0.8051794506339649,
+      "max_applied_normal_force_derivative_N_s": [
+        7.789389636625621,
+        10.389771466299685
+      ],
+      "final_applied_vertical_resultant_N": 0.19678887730988573,
+      "final_gate_vertical_resultant_N": 0.19557248481208783,
+      "max_elliptic_utilization": 0.6684633288052898,
+      "final_elliptic_utilization": 0.5511713185815751,
+      "max_penetration_m": 1.4664374842178636e-05,
+      "max_warning_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_saturation": false,
+      "table_always_absent": true,
+      "all_commands_identical": true,
+      "all_steps_lift_supported": false,
+      "final_hold_counter_s": 0.0,
+      "max_hold_counter_s": 1.8940000000000015,
+      "first_height_failure_elapsed_s": 1.6540000000020214,
+      "maximum_tcp_error_m": 0.0003353514671453624,
+      "final_jaw_opening_m": 0.03997549420104046,
+      "jaw_opening_range_m": 2.0461586951181499e-07,
+      "max_rotation_from_checkpoint_deg": 0.04300013577489279,
+      "force_acceleration_residual_max_N": 1.1188966420050406e-16,
+      "duration_s": 3.0,
+      "rows_sha256": "af2f3c799867835445db18504d526ae751a65d7a8b05fe9fef115cfaca777011"
+    },
+    "5": {
+      "steps": 1500,
+      "failure": null,
+      "initial_state_exact": true,
+      "options": {
+        "ccd_iterations": 35,
+        "ccd_tolerance": 1e-06,
+        "cone": 1,
+        "density": 0.0,
+        "disableactuator": 0,
+        "disableflags": 0,
+        "enableflags": 0,
+        "gravity": [
+          0.0,
+          0.0,
+          -9.81
+        ],
+        "impratio": 1.0,
+        "integrator": 3,
+        "iterations": 100,
+        "jacobian": 2,
+        "ls_iterations": 50,
+        "ls_tolerance": 0.01,
+        "magnetic": [
+          0.0,
+          -0.5,
+          0.0
+        ],
+        "noslip_iterations": 5,
+        "noslip_tolerance": 1e-06,
+        "o_friction": [
+          1.0,
+          1.0,
+          0.005,
+          0.0001,
+          0.0001
+        ],
+        "o_margin": 0.0,
+        "o_solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "o_solref": [
+          0.02,
+          1.0
+        ],
+        "sdf_initpoints": 40,
+        "sdf_iterations": 10,
+        "solver": 2,
+        "timestep": 0.002,
+        "tolerance": 1e-10,
+        "viscosity": 0.0,
+        "wind": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "model_arrays_unchanged": true,
+      "only_noslip_changed": true,
+      "prior_hold_bitwise_match": false,
+      "copied_hold_pass": true,
+      "initial_bottom_m": 0.031680512130390574,
+      "final_bottom_m": 0.031677527548128685,
+      "minimum_bottom_m": 0.031677527548128685,
+      "bottom_displacement_m": -2.984582261889024e-06,
+      "com_z_displacement_m": -2.4737601672306098e-06,
+      "final_vz_m_s": -1.1870402721478612e-06,
+      "last_100ms_mean_vz_m_s": -1.1869163184038142e-06,
+      "final_forces_N": [
+        0.4134279381787269,
+        0.40906035956298586
+      ],
+      "minimum_forces_N": [
+        0.4014799611041877,
+        0.3970965021386104
+      ],
+      "maximum_forces_N": [
+        0.4134279381787269,
+        0.40906035956298586
+      ],
+      "max_total_normal_force_N": 0.8224882977417127,
+      "max_applied_normal_force_derivative_N_s": [
+        6.6843642586022485,
+        2.2271082441813195
+      ],
+      "final_applied_vertical_resultant_N": 0.19619999994940776,
+      "final_gate_vertical_resultant_N": 0.19619999994939416,
+      "max_elliptic_utilization": 0.6960346853367287,
+      "final_elliptic_utilization": 0.6907165655883406,
+      "max_penetration_m": 1.7255718603825015e-05,
+      "max_warning_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_saturation": false,
+      "table_always_absent": true,
+      "all_commands_identical": true,
+      "all_steps_lift_supported": true,
+      "final_hold_counter_s": 3.2419999999998645,
+      "max_hold_counter_s": 3.2419999999998645,
+      "first_height_failure_elapsed_s": null,
+      "maximum_tcp_error_m": 0.000336669628787849,
+      "final_jaw_opening_m": 0.03997615268507478,
+      "jaw_opening_range_m": 5.78773847056957e-07,
+      "max_rotation_from_checkpoint_deg": 0.0047076496665247654,
+      "force_acceleration_residual_max_N": 1.1102187894604203e-16,
+      "duration_s": 3.0,
+      "rows_sha256": "b18e30ce217203f35fdfab04411196e9c994e6f0b2b54c91e2ae5304ad5e1b63"
+    }
+  },
+  "same_initial_full_state": true
+}

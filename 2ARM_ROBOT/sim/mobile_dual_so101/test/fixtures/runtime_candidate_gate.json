@@ -1,0 +1,100 @@
+{
+  "failure": {
+    "phase": "STAGING_DIAGNOSTIC",
+    "reason": "saved staging geometry changed: model_sha256"
+  },
+  "live_physics_steps": 100,
+  "copied_preflight_steps": 0,
+  "live_state_continuity_verified": true,
+  "configuration_unchanged": true,
+  "hold_duration_s": 0.0,
+  "options": {
+    "ccd_iterations": 35,
+    "ccd_tolerance": 1e-06,
+    "cone": 1,
+    "density": 0.0,
+    "disableactuator": 0,
+    "disableflags": 0,
+    "enableflags": 0,
+    "gravity": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "impratio": 100.0,
+    "integrator": 3,
+    "iterations": 100,
+    "jacobian": 2,
+    "ls_iterations": 50,
+    "ls_tolerance": 0.01,
+    "magnetic": [
+      0.0,
+      -0.5,
+      0.0
+    ],
+    "noslip_iterations": 0,
+    "noslip_tolerance": 1e-06,
+    "o_friction": [
+      1.0,
+      1.0,
+      0.005,
+      0.0001,
+      0.0001
+    ],
+    "o_margin": 0.0,
+    "o_solimp": [
+      0.9,
+      0.95,
+      0.001,
+      0.5,
+      2.0
+    ],
+    "o_solref": [
+      0.02,
+      1.0
+    ],
+    "sdf_initpoints": 40,
+    "sdf_iterations": 10,
+    "solver": 2,
+    "timestep": 0.002,
+    "tolerance": 1e-10,
+    "viscosity": 0.0,
+    "wind": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "scene_id": "integration_desk",
+  "home_pass": true,
+  "reset_pass": true,
+  "settle_pass": true,
+  "center_success": false,
+  "maximum_penetration_m": 1.9619999999997972e-05,
+  "warnings": 0,
+  "saturation_any": false,
+  "table_contact_min": 4,
+  "final_forces_N": [
+    0,
+    0
+  ],
+  "final_bottom_m": -2.022691563290102e-06,
+  "final_time_s": 0.20000000000000015,
+  "actuator_waypoint_gates": [],
+  "current_provenance": {
+    "model_sha256": "8f486c9a751ca3a52bd483873663c4678daecde5508161230393194bb9fa21f9",
+    "portable_model_sha256": "b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4",
+    "source_profile": "integration-desk-existing-local-source-v1"
+  },
+  "saved_provenance": {
+    "model_sha256": "ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368",
+    "portable_model_sha256": null,
+    "source_profile": null
+  },
+  "asset_differences": {
+    "so101_new_calib.xml": [
+      "78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703",
+      "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580"
+    ]
+  }
+}

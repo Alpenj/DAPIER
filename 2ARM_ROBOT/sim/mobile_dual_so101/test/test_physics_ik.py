@@ -35,6 +35,30 @@ from physics_ik import (
 
 
 class PhysicsIKTest(unittest.TestCase):
+    def test_blocked_joint_does_not_prevent_improving_reachable_coordinate(self):
+        # The diagonal slide cannot move +Y at its upper bound. The X slide
+        # must still reach target X, while IK correctly rejects unreachable Y.
+        links = []
+        for i in range(12):
+            kind, axis, limits = ("slide", "1 0 0", "-1 1") if i == 0 else (
+                ("slide", "1 .1 0", "-1 0") if i == 1 else ("hinge", "0 0 1", "-1 1"))
+            links.append(f'<body><joint name="j{i}" type="{kind}" axis="{axis}" '
+                         f'range="{limits}"/><inertial pos="0 0 0" mass=".1" diaginertia=".01 .01 .01"/>')
+            if i == 4:
+                links.append('<site name="left_gripperframe" pos="0 0 0"/>')
+        motors = ''.join(f'<position joint="j{i}" ctrlrange="{"-1 0" if i == 1 else "-1 1"}"/>'
+                         for i in range(12))
+        model = mujoco.MjModel.from_xml_string('<mujoco><compiler angle="radian"/>'
+            '<worldbody>' + ''.join(links) + '</body>' * 12 + '</worldbody><actuator>'
+            + motors + '</actuator></mujoco>')
+        start = np.zeros(12)
+        result = solve_bimanual_position_ik(model, start, {'left': [.01, .01, 0.]})
+        self.assertFalse(result.converged)
+        self.assertAlmostEqual(result.action_rad[0], .01, places=6)
+        self.assertEqual(result.action_rad[1], 0.)
+        self.assertAlmostEqual(result.residual_m_by_side['left'], .01, places=6)
+        np.testing.assert_array_equal(start, np.zeros(12))
+
     def test_iteration_observer_preserves_result(self):
         model, _ = build_model(arm_mount_height_m=TOWER_RECOMMENDED_ARM_MOUNT_HEIGHT_M, mount_layout="tower")
         data = mujoco.MjData(model)

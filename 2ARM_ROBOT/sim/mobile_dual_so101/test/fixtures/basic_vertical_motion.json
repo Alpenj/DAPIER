@@ -1,0 +1,210 @@
+{
+  "passed": true,
+  "scene_id": "integration_desk",
+  "hardware_execution": false,
+  "real_start_pose_verified": false,
+  "runtime_qpos_writes": 0,
+  "start_provenance": "SIM model_default RESET; NOT measured REAL pose",
+  "solver": {
+    "timestep": 0.002,
+    "noslip_iterations": 0
+  },
+  "frames": "metres/radians; desk world +Z up; base +Z parallel",
+  "phases": [
+    {
+      "phase": "UP_20MM",
+      "sim_time_s": 1.2280000000000009,
+      "tcp_xyz": [
+        0.3521452110967868,
+        0.1482701785290033,
+        0.2530108526759612
+      ],
+      "position_error_m": 0.0004009504172053891,
+      "approach_error_deg": 0.2511675242265281
+    },
+    {
+      "phase": "NONCONTACT_HOLD",
+      "sim_time_s": 1.7280000000000013,
+      "tcp_xyz": [
+        0.35214589524969586,
+        0.14827017374422427,
+        0.25301098580012776
+      ],
+      "position_error_m": 0.0004008757575610868,
+      "approach_error_deg": 0.2510623911686551
+    },
+    {
+      "phase": "RETURN",
+      "sim_time_s": 2.755999999999918,
+      "tcp_xyz": [
+        0.35211234863798063,
+        0.14827024634475017,
+        0.23341055639996905
+      ],
+      "position_error_m": 7.921510743669473e-07,
+      "approach_error_deg": 0.00010475353824676761
+    }
+  ],
+  "settle": {
+    "phase": "PREGRASP",
+    "physics_steps": 100,
+    "time_s": 0.20000000000000015,
+    "block_bottom_height_m": -2.022691563290102e-06,
+    "stable_steps": 76,
+    "velocity_threshold": 0.0001,
+    "arm_floor_clearance_m": 0.0724000062753883,
+    "arm_block_clearance_m": 0.16722850181441548,
+    "hardware_execution": false
+  },
+  "start_q": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028
+  ],
+  "target_q": [
+    1.0453483311346946e-05,
+    0.019499693853640192,
+    -0.16493163967886146,
+    0.140958755901539,
+    -0.005631630253853208,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028
+  ],
+  "return_q": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028
+  ],
+  "ik": {
+    "action_rad": [
+      1.0453483311346946e-05,
+      0.019499693853640192,
+      -0.16493163967886146,
+      0.140958755901539,
+      -0.005631630253853208,
+      2.2027999952529758,
+      1.0490879384259579e-09,
+      0.000567478777306485,
+      0.00047910179261564527,
+      0.00013322005499829032,
+      -4.0854783511284376e-07,
+      2.2027999952529758
+    ],
+    "converged": true,
+    "iterations": 5,
+    "residual_m_by_side": {
+      "left": 8.502466797700844e-05
+    },
+    "tool_axis_error_rad_by_side": {
+      "left": 0.005558597947286012
+    },
+    "planning_qpos_writes": 6,
+    "runtime_qpos_writes": 0,
+    "hardware_execution": false
+  },
+  "path": {
+    "safe": true,
+    "reason": "interpolated simulator path satisfies protected clearance",
+    "minimum_clearance_m": 0.03,
+    "required_clearance_m": 0.03,
+    "path_fraction": 0.0,
+    "checked_samples": 6,
+    "first_body": "left_shoulder",
+    "second_body": "world",
+    "first_geom_id": 9,
+    "second_geom_id": 0,
+    "published": false,
+    "control_authorized": false,
+    "hardware_dispatch_authorized": false,
+    "executed_action": false,
+    "hardware_execution": false
+  },
+  "left_delta_rad": [
+    1.0453483311346946e-05,
+    0.019499693853640192,
+    -0.16493163967886146,
+    0.140958755901539,
+    -0.005631630253853208
+  ],
+  "left_delta_deg": [
+    0.0005989404749506202,
+    1.117250159610775,
+    -9.449886861771185,
+    8.07634179857297,
+    -0.3226686453239772
+  ],
+  "start_xyz": [
+    0.3521115742506746,
+    0.1482702510762598,
+    0.2334103896509431
+  ],
+  "target_xyz": [
+    0.3521115742506746,
+    0.1482702510762598,
+    0.2534103896509431
+  ],
+  "duration_s": 1.026733575707186,
+  "hold_s": 0.5,
+  "planning_position_tolerance_m": 0.00015340361438738112,
+  "reserve_basis": "baseline observed FK-measured deviation; not a robustness bound",
+  "profile": "existing septic; MotionLimits unchanged",
+  "actuator_names": [
+    "left_shoulder_pan",
+    "left_shoulder_lift",
+    "left_elbow_flex",
+    "left_wrist_flex",
+    "left_wrist_roll",
+    "left_gripper",
+    "right_shoulder_pan",
+    "right_shoulder_lift",
+    "right_elbow_flex",
+    "right_wrist_flex",
+    "right_wrist_roll",
+    "right_gripper"
+  ],
+  "return_guard": {
+    "safe": true,
+    "reason": "interpolated simulator path satisfies protected clearance",
+    "minimum_clearance_m": 0.03,
+    "required_clearance_m": 0.03,
+    "path_fraction": 0.0,
+    "checked_samples": 6,
+    "first_body": "left_shoulder",
+    "second_body": "world",
+    "first_geom_id": 9,
+    "second_geom_id": 0,
+    "published": false,
+    "control_authorized": false,
+    "hardware_dispatch_authorized": false,
+    "executed_action": false,
+    "hardware_execution": false
+  },
+  "observed_min_general_clearance_m": 0.0724000062708938,
+  "observed_max_tracking_error_rad": 0.0010034090674385099,
+  "physics_steps": 1378,
+  "raw_sha256": "31c4e0c0f821906878fb6b45cce60602490257225c704d4b9df4e01fce807523",
+  "passed_scope": "SIM endpoint/path/joint/clearance/warning/tracking rehearsal; NOT full dynamics robustness or hardware validation"
+}
