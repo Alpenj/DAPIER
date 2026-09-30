@@ -1,0 +1,117 @@
+{
+  "record_id": "DAPIER-2026-09-30-static14-checkpoint-elbow-reference",
+  "analysis_dependency_commit": "cbe05158159b71fd9f837afccc7ec1778e7cc4fe",
+  "complete_public_reproduction_bundle": false,
+  "source_snapshots": [
+    {
+      "file": "analyze_alignment.py",
+      "executed_local_source_sha256": "2626dd4a389f52e5b21ea4ea35e04b487c626f033dce98d83bb49dd6b17f2c83",
+      "checkpoint_source_sha256": "d3cd438fec72181f7d6606d1e851b90e1fb447bc2dc725baa9ead654d153a7bf",
+      "path_parameter_edits_only": true,
+      "public_snapshot_execution": "syntax checked; 14 calculations reused, not rerun"
+    },
+    {
+      "file": "render_board_candidate.py",
+      "executed_local_source_sha256": "25302cb1aa51b9486498713e572c314e1861887dfe8dca38e3be46b69e38484f",
+      "checkpoint_source_sha256": "4aebeb3e4783d2721b379202a32bdd4428689958521ddb83666902362dcfea54",
+      "path_parameter_edits_only": true,
+      "public_snapshot_execution": "syntax checked; 14 calculations reused, not rerun"
+    }
+  ],
+  "excluded": [
+    "private payload/readbacks/calibration/profile/rectify/SDK parser/board geometry/mesh assets",
+    "local inherited and transitive WIP dependencies",
+    "dataset/weights",
+    "raw camera/serial identities"
+  ],
+  "direct_source_dependencies": [
+    {
+      "repo_path": "2ARM_ROBOT/sim/mobile_dual_so101/evaluate_single_shot_ik.py",
+      "sha256": "23d5666892d675dba3c5465cf261dbd14829802b3463d81c0fcdbc3af1f6b2ab",
+      "uploaded_this_checkpoint": false
+    },
+    {
+      "repo_path": "2ARM_ROBOT/sim/mobile_dual_so101/replay_recorded_episode.py",
+      "sha256": "60ad3afa8c5f0b26ed5d7966170247a77f42e19fe7486c72186ccd67c2fa8b2d",
+      "uploaded_this_checkpoint": false
+    },
+    {
+      "repo_path": "2ARM_ROBOT/sim/mobile_dual_so101/integration_scenes.py",
+      "sha256": "2c2e2f94d7cc75cb4286d3797577e1a3770685724d2f39ae9af7584c61e2f133",
+      "uploaded_this_checkpoint": false
+    },
+    {
+      "repo_path": "2ARM_ROBOT/research/src/dapier_research/camera_board_transform.py",
+      "sha256": "895175a6153499467a197b960627e8f382606753f5d7a8a5ac85ef894072e021",
+      "uploaded_this_checkpoint": false
+    }
+  ],
+  "model": {
+    "sha256": "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580",
+    "lower_body_fixed_rotation_deg": 90,
+    "geom_rotation_keeps_X": true,
+    "elbow_axis": "local Z"
+  },
+  "reference_edges": [
+    {
+      "mesh": "upper_arm_so101_v1.stl",
+      "mesh_sha256": "475056e03a17e71919b82fd88ab9a0b898ab50164f2a7943652a6b2941bb2d4f",
+      "ends_mesh_m": [
+        [
+          -0.063085,
+          0.0245,
+          0.02
+        ],
+        [
+          -0.030085,
+          0.0245,
+          0.02
+        ]
+      ],
+      "length_mm": 33.0,
+      "adjacent_face_normals": [
+        [
+          0.0,
+          0.9997619986534119,
+          0.02181600034236908
+        ],
+        [
+          -0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "geometry_validation": "actual straight exterior flat-to-fillet boundary, non-coplanar adjacent facets, mesh/body X"
+    },
+    {
+      "mesh": "under_arm_so101_v1.stl",
+      "mesh_sha256": "d01d1f2de365651dcad9d6669e94ff87ff7652b5bb2d10752a66a456a86dbc71",
+      "ends_mesh_m": [
+        [
+          -0.0258499,
+          -0.02,
+          0.021
+        ],
+        [
+          0.0152124,
+          -0.02,
+          0.021
+        ]
+      ],
+      "length_mm": 41.06229999999999,
+      "adjacent_face_normals": [
+        [
+          0.0,
+          0.9990479946136475,
+          0.04362000152468681
+        ],
+        [
+          -0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "geometry_validation": "actual straight exterior flat-to-fillet boundary, non-coplanar adjacent facets, mesh/body X"
+    }
+  ]
+}
