@@ -1,0 +1,179 @@
+{
+  "accuracy": 0.8506,
+  "weakest_recall_class": "cat",
+  "weakest_recall": 0.618,
+  "top_off_diagonal_confusions": [
+    {
+      "true": "cat",
+      "predicted": "dog",
+      "rate": 0.172,
+      "count": 172
+    },
+    {
+      "true": "dog",
+      "predicted": "cat",
+      "rate": 0.064,
+      "count": 64
+    },
+    {
+      "true": "cat",
+      "predicted": "frog",
+      "rate": 0.057,
+      "count": 57
+    },
+    {
+      "true": "bird",
+      "predicted": "frog",
+      "rate": 0.054,
+      "count": 54
+    },
+    {
+      "true": "bird",
+      "predicted": "deer",
+      "rate": 0.051,
+      "count": 51
+    }
+  ],
+  "diverse_confident_errors": [
+    {
+      "dataset_index": 2405,
+      "true": "cat",
+      "predicted": "frog",
+      "confidence": 0.999457061290741,
+      "top5": [
+        {
+          "class": "frog",
+          "probability": 0.999457061290741
+        },
+        {
+          "class": "cat",
+          "probability": 0.00018208556866738945
+        },
+        {
+          "class": "bird",
+          "probability": 0.00017743789067026228
+        },
+        {
+          "class": "deer",
+          "probability": 0.00011263225314905867
+        },
+        {
+          "class": "dog",
+          "probability": 6.22759253019467e-05
+        }
+      ]
+    },
+    {
+      "dataset_index": 7214,
+      "true": "cat",
+      "predicted": "dog",
+      "confidence": 0.9990897178649902,
+      "top5": [
+        {
+          "class": "dog",
+          "probability": 0.9990897178649902
+        },
+        {
+          "class": "cat",
+          "probability": 0.0009071625536307693
+        },
+        {
+          "class": "frog",
+          "probability": 1.2684390640060883e-06
+        },
+        {
+          "class": "bird",
+          "probability": 1.1799835419878946e-06
+        },
+        {
+          "class": "horse",
+          "probability": 5.744695954490453e-07
+        }
+      ]
+    },
+    {
+      "dataset_index": 2226,
+      "true": "bird",
+      "predicted": "frog",
+      "confidence": 0.9983660578727722,
+      "top5": [
+        {
+          "class": "frog",
+          "probability": 0.9983660578727722
+        },
+        {
+          "class": "bird",
+          "probability": 0.0014797018375247717
+        },
+        {
+          "class": "cat",
+          "probability": 0.00011272754636593163
+        },
+        {
+          "class": "deer",
+          "probability": 2.922021667473018e-05
+        },
+        {
+          "class": "dog",
+          "probability": 1.2119745406380389e-05
+        }
+      ]
+    },
+    {
+      "dataset_index": 4302,
+      "true": "bird",
+      "predicted": "dog",
+      "confidence": 0.9982123374938965,
+      "top5": [
+        {
+          "class": "dog",
+          "probability": 0.9982123374938965
+        },
+        {
+          "class": "cat",
+          "probability": 0.0012639607302844524
+        },
+        {
+          "class": "bird",
+          "probability": 0.00047697810805402696
+        },
+        {
+          "class": "frog",
+          "probability": 2.3291069737751968e-05
+        },
+        {
+          "class": "horse",
+          "probability": 1.474136115575675e-05
+        }
+      ]
+    },
+    {
+      "dataset_index": 1938,
+      "true": "ship",
+      "predicted": "plane",
+      "confidence": 0.9981886744499207,
+      "top5": [
+        {
+          "class": "plane",
+          "probability": 0.9981886744499207
+        },
+        {
+          "class": "ship",
+          "probability": 0.0013721482828259468
+        },
+        {
+          "class": "bird",
+          "probability": 0.00021818354434799403
+        },
+        {
+          "class": "deer",
+          "probability": 0.00020245702762622386
+        },
+        {
+          "class": "truck",
+          "probability": 1.763872933224775e-05
+        }
+      ]
+    }
+  ]
+}

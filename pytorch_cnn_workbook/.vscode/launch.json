@@ -1,0 +1,52 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "과제 1 - 증강 시각화",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/project1_augmentation.py",
+      "python": "${env:HOME}/miniconda3/envs/lerobot-vision/bin/python",
+      "env": { "PYTHONPATH": "" },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "과제 2 - 피처맵",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/project2_feature_maps.py",
+      "python": "${env:HOME}/miniconda3/envs/lerobot-vision/bin/python",
+      "env": { "PYTHONPATH": "" },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "과제 3 - 절제 실험 (30 epoch)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/project3_ablation.py",
+      "python": "${env:HOME}/miniconda3/envs/lerobot-vision/bin/python",
+      "env": { "PYTHONPATH": "" },
+      "args": ["--epochs", "30"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "과제 4 - TensorBoard 검증",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/project4_tensorboard.py",
+      "python": "${env:HOME}/miniconda3/envs/lerobot-vision/bin/python",
+      "env": { "PYTHONPATH": "" },
+      "args": ["--serve"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "과제 5 - 오류 분석",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/project5_error_analysis.py",
+      "python": "${env:HOME}/miniconda3/envs/lerobot-vision/bin/python",
+      "env": { "PYTHONPATH": "" },
+      "console": "integratedTerminal"
+    }
+  ]
+}
