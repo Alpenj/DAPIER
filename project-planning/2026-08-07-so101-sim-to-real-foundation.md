@@ -29,8 +29,6 @@
 
 SO-ARM100의 [Simulation/SO101](https://github.com/TheRobotStudio/SO-ARM100/tree/7629d2ad9853d10fb903093a33ef6114099d97e5/Simulation/SO101)에는 new/old calibration 각각의 URDF와 MJCF(`so101_new_calib.urdf/.xml`, `so101_old_calib.urdf/.xml`), `scene.xml`, `joints_properties.xml`, actuator 선언, mesh/part 자산이 있다. 다만 raw URDF/MuJoCo에는 LeRobot gripper 0–100 선형 매핑이 반영되지 않았다는 경고가 그대로 유효하다.
 
-Ouroboros Seed와 deterministic verifier는 작성 PC의 저장소 밖에 둔 controller artifact이며 교육용 노트북 인계에는 필요하지 않다. 이 GitHub 문서 자체가 실행 범위의 유일한 인계 자료다.
-
 2026-08-07 기준 확장 참고 자료인 [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground), [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), [TapNet](https://github.com/google-deepmind/tapnet), [Open X-Embodiment](https://github.com/google-deepmind/open_x_embodiment), [LeRobot](https://github.com/huggingface/lerobot)은 이 구현의 source pin이 아닌 **unpinned dated reference**다. 첫 CPU smoke의 필수 의존성으로 추가하지 않는다. Menagerie/자산은 개별 provenance·license를 재확인하고, Open X의 absolute/delta/velocity 행동은 배열 크기 변경으로 변환하지 않는다.
 
 ## 기존 기능과 핵심 공백
@@ -127,43 +125,13 @@ LeRobot은 LeRobot v3 dataset, policy, processor convention, calibration schema,
 
 포트폴리오 증거는 코드량이 아니라 pinned source, schema, 기록 provenance, deterministic Gate 결과, 실패/중단 기록이다.
 
-## 교육용 노트북 Codex CLI 실행 인계
+## 교육용 노트북 실행 조건
 
-아래 블록은 최초 문서 작성 시 남긴 **G0 전용 인계 기록**이다. 이후 사용자가 G1 sim-only 범위를 별도로 승인해 아래 실행 추가 기록까지 진행했으므로 현재 실행 명령으로 오해하지 않는다. DAPIER checkout root에서 시작하도록 작성했던 원문은 다음과 같다.
-
-```bash
-git status --short
-git fetch origin
-git switch docs/so101-sim-to-real-foundation
-git pull --ff-only origin docs/so101-sim-to-real-foundation
-export REPORT=project-planning/2026-08-07-so101-sim-to-real-foundation.md
-export RUN_ROOT="$HOME/dapier-runs/so101-foundation/$(date -u +%Y%m%dT%H%M%SZ)-g0"
-test -f "$REPORT" && sed -n '1,220p' "$REPORT"
-git rev-parse HEAD
-python3 --version
-uv --version || true
-lsb_release -a || cat /etc/os-release
-printenv ROS_DISTRO || true
-ros2 doctor --report || true
-codex --help
-test ! -e "$RUN_ROOT"
-mkdir -p "$RUN_ROOT"
-# dataset/video/log/benchmark는 모두 $RUN_ROOT 아래만 허용한다.
-# DAPIER 저장소 안에는 생성하지 않는다.
-
-# 제안 invocation: 위 help에서 현재 설치본의 `exec` 지원을 확인한 뒤 사용한다.
-codex exec --cd "$PWD" '
-Read only project-planning/2026-08-07-so101-sim-to-real-foundation.md as scope authority.
-이 문서를 먼저 읽고 재범위화하지 말라. G0만 구현·검증하고 G1 이상으로 진행하지 말라.
-설치 전에 OS, Python, uv, GPU/render, ROS2 유무와 pinned source 상태를 조사하라.
-생성 dataset/video/log/benchmark는 저장소 밖의 RUN_ROOT에만 기록하라.
-기존 PASS receipt를 재사용하지 말고 매 실행 새 manifest/nonce/receipt를 만들라.
-casino_dealer contract·코드·measured/commanded 의미를 변경하지 말라.
-serial 연결이나 물리 hardware movement 전에 멈추고 별도 승인을 요청하라.
-'
-```
-
-`codex --help`에서 현재 설치본의 invocation 문법이 다르면 prompt 내용과 범위를 바꾸지 말고 문법만 맞춘다. 환경 발견 전 설치하지 않으며, stale PASS를 복사하지 않는다. `$RUN_ROOT`는 DAPIER 밖이어야 하고 generated dataset/video/log/benchmark를 DAPIER 내부에 만들지 않는다. 설치, 녹화, 모델 다운로드, ROS2 결합, serial 접속 및 hardware movement는 발견 결과와 별도 승인 없이는 실행하지 않는다.
+먼저 Git revision, OS, Python, GPU/render와 ROS 2 환경을 확인한다. 검증 단계와
+실제 실행 명령은 [sim-first 실행 안내](../dapier_sim_first/README.md)를 따른다.
+기존 PASS 기록을 새 실행 결과로 재사용하지 않으며, 생성 dataset·video·log·benchmark는
+저장소 밖의 별도 실행 폴더에 보관한다. 설치, 녹화, 모델 다운로드, ROS 2 결합과
+실물 장치 접속은 해당 단계의 환경 확인과 별도 승인 없이 진행하지 않는다.
 
 ## 실행 상태와 증거 경계
 

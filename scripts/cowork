@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-GitHub branch handoff between ChatGPT Pro/Codex and local Codex.
+Manage isolated GitHub branches and local verification.
 
 Usage:
   scripts/cowork start <task-slug> [base-ref]
@@ -385,7 +385,7 @@ start_task() {
   local_sha="$(git -C "$worktree" rev-parse HEAD)"
   calculate_relation "$local_sha" "$task_remote_sha"
 
-  printf 'Ready for ChatGPT Pro/Codex handoff.\n'
+  printf 'Ready for branch handoff.\n'
   printf 'Start state: %s\n' "$start_state"
   printf 'Repository:  %s\n' "$(remote_url)"
   printf 'Branch:      %s\n' "$branch"

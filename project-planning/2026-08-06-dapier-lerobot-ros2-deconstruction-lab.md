@@ -53,7 +53,7 @@
 
 ## 조사 경계와 문제 맥락
 
-공유된 [ChatGPT 대화 링크](https://chatgpt.com/share/6a73e4f9-3ff4-83ee-b94c-bd95da4eb4eb)는 2026-08-06에 열었을 때 제목만 반환되고 본문은 제공되지 않았다. 따라서 본문은 기술 근거로 사용하지 않았고, 사용자가 제공한 작업지시서와 이번 보정 답변을 문제 맥락으로 사용했다. 기술 사실은 아래 공식 링크와 로컬 증거로 다시 확인했다.
+작업 목표와 확인한 로컬 환경을 문제 맥락으로 삼았다. 기술 사실은 아래 공식 링크와 로컬 증거로 확인했다.
 
 딥러닝 강의는 이미 종료되었다. 이 보고서의 선수조건은 backpropagation·CNN/Transformer·기본 PyTorch·이미테이션 러닝 개념을 수강한 상태다. 따라서 강의식 신경망 입문을 다시 설계하지 않고, 기존 학습 내용을 로봇 시스템의 측정·평가·통합 문제에 적용한다.
 
@@ -484,7 +484,7 @@ Gazebo는 [ROS2 integration 문서](https://gazebosim.org/docs/harmonic/ros2_int
 | [DROID platform](https://github.com/droid-dataset/droid) | teleop collection, hardware/data organization | collection contract |
 | [DROID policy learning](https://github.com/droid-dataset/droid_policy_learning) | RLDS loader/policy evaluation | loader reference; download 제외 |
 
-GPT Pro 답변의 aloha_sim은 공식 URL을 직접 다시 열어 확인했다. google-deepmind/aloha_sim은 현재 Public이며 main의 README가 ALOHA MuJoCo 환경과 robot learning/evaluation task collection을 설명하고, viewer.py·task_suite.py·run_eval.py·task tests와 `pip install -e .`/no-policy viewer/evaluation 명령을 공개한다. README의 “not an officially supported Google product”는 저장소가 공개 조직에 있다는 사실과 별개이며, Gemini Robotics inference는 Trusted Testers Only라고 명시된다. 따라서 환경·작업 registry·viewer·평가 코드는 참고 가능하지만 Gemini checkpoint/model 성능의 일반 재현으로 쓰지 않는다. 반면 rgb_stacking과 dm_robotics는 이번 공개 검색에서 현재 사용할 공식 경로와 상태를 독립 확인하지 못했으므로 core dependency로 사용하지 않는다.
+aloha_sim은 공식 URL을 직접 열어 확인했다. google-deepmind/aloha_sim은 현재 Public이며 main의 README가 ALOHA MuJoCo 환경과 robot learning/evaluation task collection을 설명하고, viewer.py·task_suite.py·run_eval.py·task tests와 `pip install -e .`/no-policy viewer/evaluation 명령을 공개한다. README의 “not an officially supported Google product”는 저장소가 공개 조직에 있다는 사실과 별개이며, Gemini Robotics inference는 Trusted Testers Only라고 명시된다. 따라서 환경·작업 registry·viewer·평가 코드는 참고 가능하지만 Gemini checkpoint/model 성능의 일반 재현으로 쓰지 않는다. 반면 rgb_stacking과 dm_robotics는 이번 공개 검색에서 현재 사용할 공식 경로와 상태를 독립 확인하지 못했으므로 core dependency로 사용하지 않는다.
 
 robomimic v0.5는 Diffusion Policy, action dictionaries/normalization, multi-dataset training, language-conditioned policy learning을 release note에서 명시한다. robosuite v1.5 계열은 MuJoCo 기반 modular framework, standardized tasks, controllers, teleoperation, multimodal sensors, demonstrations를 제공한다. 이들은 LeRobot을 대체하는 것이 아니라 policy/task/evaluation 비교를 위한 외부 기준이다.
 
@@ -602,7 +602,7 @@ LeRobot repository는 Apache-2.0이다. Open X-Embodiment repository는 software
 ## 구현 착수 전 확인 목록
 
 - [ ] 교육용 PC의 최종 Git root, branch, commit, worktree가 다시 확인되었는가?
-- [ ] 보호할 기존 변경 AGENTS.md, onshape/jdcobot100/*.xml와 LeRobot dirty source를 건드리지 않았는가?
+- [ ] 보호할 기존 로컬 설정, onshape/jdcobot100/*.xml와 LeRobot dirty source를 건드리지 않았는가?
 - [ ] target은 ROS2 Jazzy인가, Humble artifact도 지원할 것인가?
 - [ ] Python/torch/CUDA/GPU와 LeRobot v0.6.0 dependency가 호환되는가?
 - [ ] SO-101/jdCobot 실제 수량, camera, vacuum, calibration, operating rule, E-stop, 사용 승인이 있는가?
@@ -611,39 +611,7 @@ LeRobot repository는 Apache-2.0이다. Open X-Embodiment repository는 software
 - [ ] success evaluator가 policy와 독립이고 failure taxonomy가 정해졌는가?
 - [ ] simulation-only, dry-run, real-hardware evidence label이 분리되었는가?
 - [ ] LeRobot, DeepMind, external repo, model, dataset, asset license가 version/commit과 함께 확인되었는가?
-- [ ] Claude와 GPT Pro bounded review packet을 외부 전송해도 되는지 사용자가 승인했는가?
-- [ ] 외부 reviewer가 승인되지 않았다면 approval-needed를 결과에 남겼는가?
 - [ ] GitHub Alpenj/DAPIER에 push할 별도 승인과 공개 파일 검토가 있는가?
-
-## 독립 검수·실행 기록
-
-### Ouroboros bounded execution
-
-작업지시서의 실행 라우팅에 따라 ouroboros-orchestrator skill 지침을 읽고 probe/status를 수행한 뒤 저장소 밖 /tmp/ouroboros-seeds에 Seed를 만들었다. engine은 /home/dapier-jhj/.local/share/education-ai-skills/ouroboros, version 0.50.8.dev29+education.a41f0158, source commit a41f01585dee2482ff502518a00a26ddbf00a069, runtime은 Codex였다. Seed의 expected_artifacts는 이 보고서이고 verify_command는 heading·정확히 10개 idea·URL·Mermaid·package/contract/safety/test section을 검사한다.
-
-| 단계 | 결과 | 증거 |
-| --- | --- | --- |
-| Seed v2 validate | PASS | /tmp/ouroboros-seeds/dapier-lerobot-ros2-deconstruction-lab-v2.json |
-| Seed v3 validate | PASS | /tmp/ouroboros-seeds/dapier-lerobot-ros2-deconstruction-lab-v3.json |
-| bounded run 1 | FAIL / artifact 없음 | session orch_554f0894e206, execution exec_ede7b5b37119 |
-| bounded run 2 | FAIL / artifact 없음 | session orch_2c0227163905, execution exec_7d5135510eb5 |
-| internal result | success=false, 0 succeeded/1 failed, frugality proof: insufficient_data | 두 run 모두 parent worktree에 report를 materialize하지 않음 |
-| parent action | 두 bounded 실패 후 root가 조사 근거를 통합해 보고서 작성 | 내부 worktree를 main에 merge하지 않음 |
-
-Ouroboros 내부 worktree는 /home/dapier-jhj/.ouroboros/worktrees/DAPIER-lerobot-ros2-lab/orch_554f0894e206와 orch_2c0227163905였다. 두 run의 CLI/내부 QA만으로 완료 판정하지 않았고 root가 이 문서의 diff·artifact·deterministic verifier를 독립 재실행한다. Ouroboros가 성공했다고 숨기지 않으며 실패 후 direct root integration을 수행한 사실을 남긴다.
-
-### 독립 reviewer 계약
-
-Claude implementation review와 GPT Pro architect review는 작업지시서상 필수지만 이번 실행에서 사용자의 외부 전송 승인을 받지 않았다. 그러므로 reviewer 결과는 다음과 같이 기록한다.
-
-| lane | 결과 | 사유 |
-| --- | --- | --- |
-| Claude 구현 검수 | approval-needed | bounded packet 외부 전송 승인 없음 |
-| GPT Pro 아키텍트 검수 | approval-needed | bounded packet 외부 전송 승인 없음 |
-| 외부 URL 조사 | 완료 | 공개 URL 읽기 전용 조사; packet 전송 아님 |
-| root deterministic verification | 이 commit 직전에 재실행 | report structure·idea count·URL·contract·safety 검사 |
-
-외부 reviewer의 APPROVE를 받았다고 표현하지 않는다. 후속 별도 승인 시 packet에는 목표, Mermaid, 10개 요약, 출처, safety/test contract, scoped diff와 verifier 결과만 넣고 비밀·credential·개인정보·전체 저장소를 보내지 않는다.
 
 ## 출처
 

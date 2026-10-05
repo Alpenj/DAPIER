@@ -31,7 +31,7 @@
 
 ## 작업 권한과 경계
 
-- PR #40의 브랜치와 head는 Hermes 검토가 끝날 때까지 변경하지 않는다.
+- PR #40의 브랜치와 head는 검토가 끝날 때까지 변경하지 않는다.
 - 후속 코드는 이 worktree와 브랜치에서만 수정한다.
 - simulation entrypoint는 ROS, serial, motor SDK를 import하거나 장치를 열지 않는다.
 - 실제 motor, torque, EEPROM, publisher, read-only hardware snapshot은 별도 승인 없이 실행하지 않는다.

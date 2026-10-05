@@ -223,7 +223,7 @@ episode 단위로 나누며 같은 run의 frame이 train/validation에 동시에
 
 #### 09-02 · 공개·계약 정리
 
-1. PR #40을 Hermes 검토 대상으로 유지하고 merge하지 않는다.
+1. PR #40은 검토가 끝날 때까지 유지하고 merge하지 않는다.
 2. 카메라 5개 계약과 home-pose clearance 실패의 원인이 요구 변경인지 모델 오류인지 구분한다.
 3. 오른팔 lid open angle, lid hold duration, 허용/금지 collision pair를 로그로 남긴다.
 4. 결과를 10분 브리핑용으로 `현상 → 수치 → 원인 가설 → 다음 실험` 4줄로 정리한다.
