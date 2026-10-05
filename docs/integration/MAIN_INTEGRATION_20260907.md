@@ -59,7 +59,7 @@ CPU로 실행했다. 패키지를 설치하거나 기존 runtime·dataset·원�
 
 ## 작업물 보존 범위
 
-[REMOTE_REFS_20260907.json](REMOTE_REFS_20260907.json)에 후보 생성 전 원격 브랜치 50개의 이름과 full SHA를 기록했다.
+후보 생성 전 원격 브랜치 50개의 이름과 full SHA를 기록했다. 원본 ref 스냅샷은 로컬에 보관한다.
 이는 **ref 기록이며 Git 객체, LFS, 노트북 WIP, dataset 또는 runtime의 백업이 아니다.**
 브랜치 목록을 읽었다는 사실도 모든 브랜치 소스를 전수검토했다는 뜻이 아니다.
 

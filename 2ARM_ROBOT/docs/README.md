@@ -8,7 +8,6 @@ wrist RGB다. 장치명·역할·stable alias는 [`../config/hardware_roles.json
 
 - [`requirements-ledger.md`](requirements-ledger.md): 현재 확정·미확정 요구사항 원장
 - [`PHASE0_HANDOFF.md`](PHASE0_HANDOFF.md): Ubuntu ROS 2 PC 개발 인수인계
-- [`이동형_양팔_로봇_신발_정리_프로젝트_요구사항_원장.docx`](이동형_양팔_로봇_신발_정리_프로젝트_요구사항_원장.docx): 팀 공유용 Word 요구사항 원장
 - [`DYNA_SLIM_팀_의사결정_비교_메모.docx`](DYNA_SLIM_팀_의사결정_비교_메모.docx): 기존안과 선택안 B 비교 자료
 - [`DYNA_SLIM_적용_조사_참고자료.md`](DYNA_SLIM_적용_조사_참고자료.md): DYNA/SLIM 조사 참고자료이며 필수 채택 사양이 아님
 - [`GEN1.5_양팔_적용_조사_참고자료.md`](GEN1.5_양팔_적용_조사_참고자료.md): Generalist GEN-1.5 조사 원문 기반 참고자료

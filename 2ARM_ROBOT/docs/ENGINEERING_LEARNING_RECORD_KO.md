@@ -97,17 +97,9 @@ distance = calculate_distance()
 
 포트폴리오에서는 시행착오 전체를 나열하지 말고 `Problem → Evidence → Decision → Validation → Result → Lesson`으로 설명한다.
 
-## 7. 매 작업 턴 종료 시 GitHub·Notion 동기화
+## 7. 변경 검증과 기록
 
-여기서 **작업 턴**은 코드나 문서에 검증된 변경이 생겼거나, 재현 가능한 새 증거 또는 다음 blocker가 확정된 하나의 실질적인 Codex 작업 주기를 뜻한다.
-
-매 작업 턴이 끝날 때 다음 순서로 handoff한다.
-
-1. 기존 학습 기록에 `Problem → Evidence → Decision → Validation → Result → Lesson / Next`를 추가한다.
-2. 관련 회귀와 `git diff --check`를 실행하고, 실행하지 못한 검증은 이유와 함께 남긴다.
-3. 현재 writer가 만든 검증된 변경만 named branch에 commit·normal push한다. 다른 writer의 dirty 변경을 reset/clean/revert하거나 임의로 함께 커밋하지 않는다.
-4. `main`을 base로 PR을 열거나 기존 PR을 갱신한다. 해당 변경이 독립적으로 유효하고 회귀가 깨끗하면 전체 task가 아직 미완성이어도 **부분 진척을 명시한 채 main에 merge**한다. 실패 중이거나 안전 의미가 불명확한 코드, 반쯤 편집된 변경을 기록 의무 때문에 merge하지 않는다.
-5. merge 결과가 나오면 PR과 main SHA, 실제 도달 phase, 핵심 증거, 제한사항, 다음 blocker를 비공개 Notion DAPIER 기록에도 반영한다.
-6. Codex 환경에서 Notion 쓰기 권한이 없으면 업데이트했다고 주장하지 않는다. 대신 정확한 내용을 담은 `NOTION_SYNC_PAYLOAD`를 최종 보고에 포함해 ChatGPT 또는 사용자가 기존 Notion 기록에 반영할 수 있게 한다.
-
-최종 보고에는 반드시 GitHub 상태를 `merged to main` / `PR open` / `not safe to merge` 중 하나로, Notion 상태를 `updated` / `sync payload produced` 중 하나로 명시한다.
+관련 회귀와 `git diff --check`를 실행하고 실제 결과를 기록한다. 실행하지 못한 검증은 이유와 함께 남긴다.
+검증한 변경만 작업 브랜치에 커밋하며, 다른 사람의 미커밋 변경을 함께 넣거나 지우지 않는다.
+PR에는 기준 revision, 검증 결과, 남은 제한사항과 되돌리기 방법을 남긴다.
+비공개 학습 기록에는 같은 결과와 배운 점을 정리하되 원문 URL이나 개인정보를 공개 문서에 넣지 않는다.

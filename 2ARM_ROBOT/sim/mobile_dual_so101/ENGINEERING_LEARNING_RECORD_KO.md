@@ -2,6 +2,9 @@
 
 record_id: DAPIER-2026-09-16-pgripper-pregrasp-ik-decomposition
 
+재현 명령의 `$DAPIER_ROOT`는 DAPIER 저장소의 절대 경로다. 저장소 안에서
+`export DAPIER_ROOT="$(git rev-parse --show-toplevel)"`로 설정한 뒤 사용한다.
+
 ## Problem
 
 나는 integration_desk에서 HOME/RESET/SETTLE을 통과했지만 PREGRASP IK가 위치8.825mm/접근축4.827도 오차로 실패한 원인을 분리한다. 실제 PREGRASP motion은 실행하지 않았다.
@@ -9,8 +12,8 @@ record_id: DAPIER-2026-09-16-pgripper-pregrasp-ik-decomposition
 
 ## Evidence
 
-ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch: pro/dual-so101-codex-20260907; SHA534c4a6f25ab3eea6dd703526627e89dd9ba66d7; 기존 dirty 변경 보존.
+ACTIVE_WORKTREE: $DAPIER_ROOT
+SHA534c4a6f25ab3eea6dd703526627e89dd9ba66d7; 기존 dirty 변경 보존.
 동일 실제 SETTLE0.200s 상태를 격리된 진단 data로 복원했다. 원래 teacher physics viewer는 유지한다.
 모델 hash: ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
 
@@ -86,8 +89,8 @@ record_id: DAPIER-2026-09-16-tool-axis-jacobian-ab
 
 ## Evidence
 
-ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch pro/dual-so101-codex-20260907; SHA534c4a6f25ab3eea6dd703526627e89dd9ba66d7; dirty 보존.
+ACTIVE_WORKTREE: $DAPIER_ROOT
+SHA534c4a6f25ab3eea6dd703526627e89dd9ba66d7; dirty 보존.
 동일 stored settled0.200s, target,5seeds,damping0.02,axis weight0.05m,tolerance0.5mm/2deg,300iterations,모델 joint/control ranges.
 OLD Jw와 residual u×d는 pure spin omega=lambda*u에도 비용lambda²를 준다(u×d는 u에 수직). 따라서 single-axis가 허용해야 하는 roll을 불필요하게 억제한다.
 NEW J_axis=-skew(u)@Jw, residual=d-(u·d)u. pure spin의 axis differential은0이며 residual도 tangent plane에 있다. full orientation 목표는 추가하지 않았다.
@@ -123,21 +126,21 @@ viewer: KINEMATIC IK DIAGNOSTIC / NOT PHYSICS, N/B로 각 seed의 OLD raw_rotati
 
 ## Result
 
-NEW位置error7.966〜8.051mm、approach約4.280〜4.339degで既存基準未達。実行可能candidate0。
-NEW combined Jacobian rank5だが最小特異値約0.000879〜0.000923でOLDより小さい。軸方向だけの正しいtaskで残るconditioningとactive joint boundaryを区別する必要がある。
-実際のtask physicsは新たに進めていない。前回SETTLE100steps/0.200sPASS→PREGRASP IKfailure状態を維持。診断はisolated qpospreviewのみ。CenterSUCCESSなし。
-joint/command limits,tolerance,iterations,target block/table/mount geometry,clearance,success metricは変更なし。hardware/multi-seed teacher/ACTなし。
+NEW의 위치 오차는 7.966〜8.051mm, approach 오차는 약 4.280〜4.339deg로 기존 기준에 미달했다. 실행 가능한 후보는 0개다.
+NEW combined Jacobian은 rank5지만 최소 특이값이 약 0.000879〜0.000923으로 OLD보다 작다. 접근축만 제약하는 task에서도 남는 conditioning과 active joint boundary를 구분해야 한다.
+실제 task physics는 새로 진행하지 않았다. 이전 SETTLE100steps/0.200sPASS→PREGRASP IKfailure 상태를 유지했다. 진단은 격리된 qpos preview만 수행했으며 CenterSUCCESS는 없다.
+joint/command limits, tolerance, iterations, target block/table/mount geometry, clearance, success metric은 변경하지 않았다. hardware/multi-seed teacher/ACT는 실행하지 않았다.
 
 ## Lesson / Next
 
-私は不要なroll抑制を除く数学的修正と、目標poseが現行5DoF/関節範囲で実現できることを別の検証と扱う。
-今回のbounded searchは全局的infeasibilityの証明ではない。次は実際の5DoF kinematic boundary/current target constructionの検証が必要。iteration増加やtolerance緩和で成功扱いしない。
-PREGRASPのposition/approach/limits/pathすべてPASSのcandidateが得られるまで実際motionは送らない。
+불필요한 roll 억제를 제거하는 수학적 수정과 목표 pose가 현재 5DoF/관절 범위에서 가능한지 확인하는 검증은 구분한다.
+이번 bounded search는 전역 infeasibility의 증명이 아니다. 다음에는 실제 5DoF kinematic boundary와 현재 target construction을 검증해야 한다. iteration 증가나 tolerance 완화로 성공 처리하지 않는다.
+PREGRASP의 position/approach/limits/path가 모두 PASS인 후보를 얻기 전에는 실제 motion을 보내지 않는다.
 
 ## Viewer command
 
-DAPIER_SO101_MJCF=/home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml PYTHONPATH=/home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907/2ARM_ROBOT/sim/mobile_dual_so101:/home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907/2ARM_ROBOT/sim/mobile_dual_so101/test /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907/2ARM_ROBOT/sim/mobile_dual_so101/pregrasp_ik_diagnostic.py --source /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/teacher-measured-state-physics.json --output /tmp/tool-axis-ab-review.json --axis-ab --viewer
-既存outputは上書きしないため、再実行時は新しいfilenameを指定する。
+DAPIER_SO101_MJCF=/home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml PYTHONPATH=$DAPIER_ROOT/2ARM_ROBOT/sim/mobile_dual_so101:$DAPIER_ROOT/2ARM_ROBOT/sim/mobile_dual_so101/test /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python $DAPIER_ROOT/2ARM_ROBOT/sim/mobile_dual_so101/pregrasp_ik_diagnostic.py --source /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/teacher-measured-state-physics.json --output /tmp/tool-axis-ab-review.json --axis-ab --viewer
+기존 output을 덮어쓰지 않도록 재실행할 때는 새 filename을 지정한다.
 
 
 # Center block bounded tilt feasibility
@@ -150,8 +153,8 @@ record_id: DAPIER-2026-09-16-paired-pregrasp-grasp-tilt
 
 ## Evidence
 
-ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-SHA534c4a6f25ab3eea6dd703526627e89dd9ba66d7, branch pro/dual-so101-codex-20260907, dirty 보존.
+ACTIVE_WORKTREE: $DAPIER_ROOT
+SHA534c4a6f25ab3eea6dd703526627e89dd9ba66d7, dirty 보존.
 동일 SETTLE0.2s 상태/모델hash와 PGripper TCP. PREGRASP와 GRASP XYZ는 이전값을 고정했다. tilt에 따라 PREGRASP 위치를 이동하지 않았다. 따라서 검사한 접근은 두 고정점 사이 joint interpolation이며 tilted straight Cartesian ray가 아니다.
 corrected axis_direction,300iterations,0.5mm/2deg,closing15deg 그대로. roll 목표를 새로 넣지 않았다.
 Open pad compiled vertex envelope: axial=0.012508602194283317m, radial=0.03150617970312863m, block center height=0.01999797730843671m.
@@ -202,7 +205,7 @@ CenterSUCCESS없음;hardware/OS30A/multi-seedteacher/ACT없음.
 
 ## Viewer command
 
-DAPIER_SO101_MJCF=/home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml PYTHONPATH=/home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907/2ARM_ROBOT/sim/mobile_dual_so101:/home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907/2ARM_ROBOT/sim/mobile_dual_so101/test /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907/2ARM_ROBOT/sim/mobile_dual_so101/tilt_feasibility.py --source /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/teacher-measured-state-physics.json --output /tmp/center-tilt-review.json --viewer
+DAPIER_SO101_MJCF=/home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml PYTHONPATH=$DAPIER_ROOT/2ARM_ROBOT/sim/mobile_dual_so101:$DAPIER_ROOT/2ARM_ROBOT/sim/mobile_dual_so101/test /home/dapier-jhj/DAPIER/so101_imitation_learning/.venv/bin/python $DAPIER_ROOT/2ARM_ROBOT/sim/mobile_dual_so101/tilt_feasibility.py --source /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapier_sim2real_kit/local-validation/integration-task-20260916-aeg3vtmi/teacher-measured-state-physics.json --output /tmp/center-tilt-review.json --viewer
 
 
 ### 잔차 요약 (전역 최솟값 아님)
@@ -232,8 +235,7 @@ DAPIER_SO101_MJCF=/home/dapier-jhj/DAPIER/.local-workspaces/so101/lerobot/src/le
 일반 external-obstacle 30 mm 정책으로는 의도된 pad/support 및 gripper/target 근접을 표현할 수 없었다. 전역 threshold, 승인된 geometry, TCP, HOME, joint limits를 유지하면서 exact pair의 phase 의미를 분리했다.
 
 ## Evidence
-- ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-- branch: pro/dual-so101-codex-20260907
+- ACTIVE_WORKTREE: $DAPIER_ROOT
 - HEAD: 534c4a6f25ab3eea6dd703526627e89dd9ba66d7; dirty / 기존 미커밋 보존.
 - scene_id: integration_desk; model SHA256: ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
 - gripper: 좌우 NORMA PGripper, 기존 RGB camera stand. 모델/asset hash는 실행 JSON provenance에 기록.
@@ -319,8 +321,8 @@ bash /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapi
 나는 TCP-only REACH_HIGH가 정렬 전 block에 먼저 접근하는 문제를 geometry/ordering 문제로 분리했다. General 30 mm와 기존 manipulation policy는 그대로 유지했다.
 
 ## Evidence
-ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch: pro/dual-so101-codex-20260907
+ACTIVE_WORKTREE: $DAPIER_ROOT
+
 HEAD: 534c4a6f25ab3eea6dd703526627e89dd9ba66d7 (dirty / 기존 미커밋 보존)
 scene_id: integration_desk
 model SHA256: ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368
@@ -388,8 +390,8 @@ bash /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapi
 기존 9.629320 mm retreat는 kinematic path PASS지만 actuator tracking과 passive jaw motion 때문에 실제 ALIGN_HIGH에서 30 mm를 소진했다. 나는 general clearance나 joint tolerance를 낮추지 않고 실행 dynamics를 포함한 staging을 확인했다.
 
 ## Evidence
-ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch: pro/dual-so101-codex-20260907; SHA: 534c4a6f25ab3eea6dd703526627e89dd9ba66d7; dirty 기존 변경 보존.
+ACTIVE_WORKTREE: $DAPIER_ROOT
+SHA: 534c4a6f25ab3eea6dd703526627e89dd9ba66d7; dirty 기존 변경 보존.
 scene_id: integration_desk; MuJoCo 3.3.7; 양팔 NORMA PGripper + RGB camera stand.
 Model SHA256: ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368.
 모든 asset/source hash 및 joint mapping은 dynamic-single-viewer.json의 provenance에 기록했다.
@@ -442,7 +444,7 @@ bash /home/dapier-jhj/Downloads/DAPIER_DDS_MuJoCo_ACT_Sim2Real_Kit_20260915/dapi
 
 ## Lesson / Next
 기구학적 staging margin에 임의 상수를 더하는 대신 full-state dynamic preflight로 실행 가능한 후보를 검증할 수 있었다. 단, staging 통과가 이후 모든 phase의 유효성을 보장하지 않는다. 다음은 PREGRASP_NEAR 초기 gripper boundary transient와 command/measured/passive dynamics 분석이다. Tiny overshoot라는 이유만으로 tolerance를 넓히지 않는다.
-사용자가 사진(/tmp/codex-clipboard-N8fY3G.png)의 접힌 자세를 원하는 시작 자세로 제시했다. 우선 현재 HOME으로 파이프라인을 확인하고 나중에 변경하기로 했다. 현재 결과는 그 새 자세에 적용되지 않는다. 정확한 joint mapping/readback을 기반으로 별도 HOME 후보의 reset qpos/qvel/ctrl contract와 경로를 재검증해야 한다.
+사용자가 사진의 접힌 자세를 원하는 시작 자세로 제시했다. 우선 현재 HOME으로 파이프라인을 확인하고 나중에 변경하기로 했다. 현재 결과는 그 새 자세에 적용되지 않는다. 정확한 joint mapping/readback을 기반으로 별도 HOME 후보의 reset qpos/qvel/ctrl contract와 경로를 재검증해야 한다.
 SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED. 실제 hardware/OS30A/multi-seed teacher/ACT 실행 없음. RGB-D digital-twin alignment는 후속 read-only calibration 작업으로 유지한다.
 
 ## 변경 구분
@@ -456,8 +458,8 @@ KIT: local-validation 아래 JSON/log/Markdown. 머신 설정/보정 및 package
 PREGRASP_NEAR에서 left_gripper measured qpos가 joint upper를 1.48296e-8 rad 초과해 기존 SIM tolerance 1e-8 rad로 거부됐다. 나는 tolerance를 실패마다 키우지 않고 command 출처와 작업용 opening을 먼저 분리했다. 기존 거리 함수, 모델 배치, retreat 검색을 다시 시작하지 않았다.
 
 ## Evidence
-ACTIVE_WORKTREE: /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch: pro/dual-so101-codex-20260907; HEAD: 534c4a6f25ab3eea6dd703526627e89dd9ba66d7, dirty 보존.
+ACTIVE_WORKTREE: $DAPIER_ROOT
+HEAD: 534c4a6f25ab3eea6dd703526627e89dd9ba66d7, dirty 보존.
 scene_id: integration_desk. Model SHA256 ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368. MuJoCo 3.3.7, 양팔 NORMA PGripper. 정확한 source/asset hash는 task-open-live.json provenance.
 
 명령 추적: HOME은 pgripper.home_action의 2.2028 rad 완전 열림이다. position IK는 팔 5축을 풀며 비조작 gripper 채널을 seed에서 보존해 target 2.2028 rad를 전달했다. CenterBlockTeacher.move는 각 이동 시작에서 전체 measured actuator q를 trajectory start로 사용했다. 따라서 실패 시 2.2027999930692252 rad는 명시적인 새 open 목표가 아니라, 직전 measured 2.2027999930619915 rad에서 기존 upper target으로 septic 보간하던 command다. Mapping은 joint transmission / gear 1을 그대로 사용하며 양의 motor q가 opening 증가 방향이다.
@@ -525,8 +527,8 @@ Gripper command reference와 measured solver state는 다른 역할이다. Comma
 나는 PREGRASP_NEAR 0.8 s 종료의 measured approach 2.009502° 실패를 계획/실행 오차로 분리했다. Acceptance 2°, task-open reference, retreat, HOME, geometry, gains, timestep, trajectory timing을 우선 그대로 두었다. 기존 report와 fixture는 삭제하지 않았다.
 
 ## Evidence
-ACTIVE_WORKTREE /home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch pro/dual-so101-codex-20260907; HEAD 534c4a6f25ab3eea6dd703526627e89dd9ba66d7, dirty 보존.
+ACTIVE_WORKTREE $DAPIER_ROOT
+HEAD 534c4a6f25ab3eea6dd703526627e89dd9ba66d7, dirty 보존.
 scene_id integration_desk; MuJoCo 3.3.7; Model SHA256 ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368. Exact asset/source hash는 approach-reserve-live.json provenance에 기록했다.
 
 같은 desired world axis [0.1165806943, -0.0482893047, -0.9920065951]를 사용했다.
@@ -661,8 +663,8 @@ CENTER SUCCESS=false. 양쪽 contact 미성립, GRASP_CONFIRM/LIFT/HOLD 미실�
 ## Lesson / Next
 Measured state는 물리 상태와 안전 검사의 근거다. 이를 매 substage의 hold command로 복사하면 작은 지속 tracking bias가 목표 자체의 이동으로 누적된다. 이번에는 접촉 전 gripper-only 구간의 reference만 분리했고, 접촉 후 제어는 변경하지 않았다. 다음 단계는 한쪽 접촉 이후의 명시적 arm reference와 contact 응답을 따로 분해하는 것이다. 이번 결과를 양쪽 grasp나 lift 성공으로 기록하지 않는다.
 
-ACTIVE_WORKTREE=/home/dapier-jhj/DAPIER/.local-workspaces/pro/dual-so101-codex-20260907
-branch=pro/dual-so101-codex-20260907; SHA=534c4a6f25ab3eea6dd703526627e89dd9ba66d7; 기존 dirty 상태 보존.
+ACTIVE_WORKTREE=$DAPIER_ROOT
+SHA=534c4a6f25ab3eea6dd703526627e89dd9ba66d7; 기존 dirty 상태 보존.
 scene_id=integration_desk; model_sha256=ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368.
 Scope=SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED. Hardware/OS30A/multi-seed/ACT 미실행.
 기존 run-waypoint-viewer.sh로 동일 경로 재실행 가능하며, 현재 단일 viewer는 실제 14.948 s 정지 상태를 유지한다.
@@ -729,7 +731,7 @@ record_id: DAPIER-2026-09-17-lift-transition-ci
 
 나는 실제 GRASP_CONFIRM PASS 뒤 LIFT_5MM 첫 step에서 양 finger force가 0이 된
 17.474 s failure state를 보존하고, copied full-state 진단과 전체 CI 18건을 분리해 조사했다.
-ACTIVE_WORKTREE는 기존 pro/dual-so101-codex-20260907, 시작 HEAD ffa3f2ce다.
+기존 작업 폴더에서 시작했으며, 시작 HEAD는 ffa3f2ce다.
 별도 REAL_SCENE_GEOMETRY_AUDIT.md는 수정/추적하지 않았다.
 
 ### Evidence
@@ -918,7 +920,7 @@ record_id: DAPIER-2026-09-17-lift-stability-blas
 
 ### Problem
 
-나는 기존 GRASP_CONFIRM PASS / LIFT_5MM 첫 step FAIL 상태를 유지한 채 두 분석을 분리했다. A는 저장 full-state 접촉 chronology, B는 clean temporary worktree의 CI/local 환경 비교를 담당했다. Source 수정은 coordinator 한 명만 했다. 시작 HEAD는 acf47cf이며 기존 untracked REAL_SCENE_GEOMETRY_AUDIT.md는 제외했다.
+나는 기존 GRASP_CONFIRM PASS / LIFT_5MM 첫 step FAIL 상태를 유지한 채 두 분석을 분리했다. A는 저장 full-state 접촉 chronology, B는 clean temporary worktree의 CI/local 환경 비교를 담당했다. 시작 HEAD는 acf47cf이며 기존 untracked REAL_SCENE_GEOMETRY_AUDIT.md는 제외했다.
 
 ### Evidence
 
@@ -974,7 +976,7 @@ record_id: DAPIER-2026-09-17-grasp-load-evidence
 
 ### Evidence
 
-A/B/C를 read-only로 분담했다. 동시 작업자는 최대2명으로 A/B 뒤 C를 실행했고, coordinator만 소스를 수정했다. 동일 저장 B_confirm 및 continuous50-step 기록을 사용했다. 새 full-range sweep이나 retreat 검색은 하지 않았다.
+A/B/C 분석을 분리해 같은 저장 상태에서 순서대로 검증했다. 동일 저장 B_confirm 및 continuous50-step 기록을 사용했다. 새 full-range sweep이나 retreat 검색은 하지 않았다.
 
 - Geometry: block COM-local contact는 pad1(-19.999264,+12.013009,-15.459300)mm, pad2(+19.999259,-19.999879,+15.595676)mm다. World Z 높이차31.057826mm, unsigned normal–closing angle10.632049°/5.784915°다. 비슷한 정상력이 대칭 face pinch를 뜻하지 않는다. Pad2는 block x+/y− edge에 있고 compiled mesh bounding-box y 경계 inset0.127230µm/z0.115269mm다. 이는 tapered pad face의 실제 edge 최단거리가 아니다. 최초 소실은 여유가 더 큰 pad1이므로 pad2 edge 이탈을 단독 원인으로 확정하지 않았다.
 - Frame 정정: 과거(-19.825,+12.297,-15.461)mm 등의 값은 world COM lever arm이다. 엄밀한 block-local 좌표는 위 값이다. Closing axis는 TCP rotation column2=(.980517309,-.168651884,.100709227), block yaw−.818535°다.
@@ -1016,16 +1018,15 @@ record_id: DAPIER-2026-09-18-contact-placement
 
 나는 LIFT를 통과시키기 전에 31.058mm 높이 차이의 접촉을 실제 하중 지지가 가능한
 접촉 배치로 바꿀 수 있는지 확인했다. PR63 이후 main
-`1c646eac01f14011d01899c2a2f65175be6d2449`에서 별도
-`pro/grasp-placement-codex-20260918` writer worktree를 만들었다.
-기존 dual-so101-codex-20260907 worktree와 untracked
+`1c646eac01f14011d01899c2a2f65175be6d2449`에서
+별도 검증 작업 폴더를 만들었다.
+기존 작업 폴더와 untracked
 REAL_SCENE_GEOMETRY_AUDIT.md는 읽기 전용으로 보존했다.
 
 ### Evidence
 
 A는 정확한 접촉 면, B는 마찰 cone과 COM 토크 평형, C는 접촉 배치 후보를 분석했다.
-동시 worker 2개 한도로 A/B를 병렬 실행하고, A 완료 thread를 C에 재사용했다.
-Source writer는 coordinator 한 명이다. 모든 후보는
+모든 후보는
 **DIAGNOSTIC COPY / NOT LIVE TASK SUCCESS**다.
 
 - Pad1/2는 geom36/38, mesh17/19, body9/10(left PGripper jaw1/jaw2)의
@@ -1175,10 +1176,9 @@ record_id: DAPIER-2026-09-18-grasp-families
 현재 PGripper의 usable opposing faces에 COM 대칭 접촉을 만드는 family를 검사한다.
 
 최신 origin/main `7ff415a707e3ea2c4e5e34452a61dab9a9dafdfb`에서
-`pro/grasp-families-codex-20260918` writer worktree를 새로 만들었다.
+별도 검증 작업 폴더를 새로 만들었다.
 기존 dual-so101 및 grasp-placement worktree/evidence와 unrelated audit는 보존한다.
-Coordinator만 repository writer이며, 최대 두 worker의 read-only 분석을
-A geometry → B kinematics → C copied physics 순서로 승인해 연결한다.
+A geometry → B kinematics → C copied physics 순서로 분석을 연결한다.
 
 ### Evidence
 
@@ -1337,9 +1337,9 @@ record_id: DAPIER-2026-09-18-gripper-only-feasibility
 접촉점은 pad boundary이고, HOLD wrench 상한 5.157g < 20g였다.
 이번에는 arm-pose local search를 반복하지 않고 PGripper/40mm cube 자체의
 interior contact geometry와 필요한 힘, 실제 힘 유지 가능성을 분리했다.
-PR65의 기존 writer pro/grasp-families-codex-20260918 / source HEAD
+PR65의 기존 작업 폴더 / source HEAD
 cf2b550e4e4089a5da792257001984a9395af979를 이어 사용했다. 시작 status clean.
-Coordinator만 repository writer이며 A geometry/B wrench는 scratch-only로 분석했다.
+접촉 geometry와 wrench는 원본 상태를 바꾸지 않고 따로 분석했다.
 
 ### Evidence
 
@@ -1493,7 +1493,7 @@ milestone CI 주기 보존이며 main merge 허가가 아니다.
 이전50µm precompression은 정상 CLOSE 형성이나 안정 유지의 증거가 아니다.
 이번 범위는 GRIPPER-ONLY BENCH이며 arm IK/teacher를 실행하지 않는다.
 시작 HEAD fc3304785b96be864b2fab8bbe31ea90c8769147,
-writer pro/grasp-families-codex-20260918. 기존 failure worktree는 읽기 전용으로 보존했다.
+별도 작업 폴더에서 진행했다. 기존 failure worktree는 읽기 전용으로 보존했다.
 
 ### Evidence
 
@@ -1726,9 +1726,9 @@ Matrix SHA f14b0a9e7ed121ffe630fdcd1aaf97304cd2d222005708bdf60ec7ef68df8b8d.
 
 NoSlip5가 이미 형성된 동일 unsupported state의 slip을 줄인 뒤,
 정상 OPEN부터도 유효한 형성/철수를 거치는지(A), NoSlip 없이 impratio만으로
-slow slip을 줄이는지(B)를 분리했다. Coordinator 단일 writer,
-A/B scratch read-only-source 분석, 물리 실행은 A 다음 B 순서로 직렬화했다.
-ACTIVE_WORKTREE=grasp-families-codex-20260918, 시작 HEAD
+slow slip을 줄이는지(B)를 분리했다. A/B 분석은 원본 상태를 유지하고,
+물리 실행은 A 다음 B 순서로 직렬화했다.
+검증 시작 HEAD
 ea2e3f428da92dff9c240c9d90ef8cab3190f4e1 / clean.
 
 ### Evidence — VERIFIED BY PHYSICS
