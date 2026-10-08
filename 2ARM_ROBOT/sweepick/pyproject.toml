@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sweepick"
+version = "0.1.0"
+description = "Sweepick bimanual observation and manipulation source"
+requires-python = ">=3.10"
+dependencies = ["numpy", "mujoco==3.3.7"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["sweepick_pick01", "sweepick_full_chain", "sweepick_move_a", "sweepick_real_command", "sweepick_real_exec", "sweepick_trajectory", "sweepick_progress", "sweepick_grasp", "sweepick_gates", "sweepick_commission", "sweepick_kin", "sweepick_collision_cert", "sweepick_field", "sweepick_field_r6", "sweepick_sdk_top", "sweepick_view", "sweepick_local_loop", "sweepick_real_rig", "sweepick_episode", "sweepick_contact01", "sweepick_read03_capture", "sweepick_261008_receive_real_adapter", "sweepick_261008_receive_runtime", "sweepick_261008_receive_session", "sweepick_261008_receive_plan", "sweepick_261008_receive_entry", "sweepick_261008_full_episode", "sweepick_261008_concrete_bindings"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+sweepick = ["config/*.json", "**/README.md"]

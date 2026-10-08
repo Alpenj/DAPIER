@@ -1,10 +1,36 @@
-# TJJ | 이동형 양팔 로봇의 조작·학습·Sim-to-Real
+# sweepick | 이동형 양팔 로봇의 조작·학습·Sim-to-Real
 
-DAPIER 교육에서 진행하는 팀 프로젝트다. SO-101 양팔과 TurtleBot3 Waffle Pi를 연결해 물체를 인식하고 조작·운반하는 시스템을 개발한다. 장기적으로는 물체 정리와 청소를 이어 수행하는 가정용 서비스 로봇을 목표로 한다. 초기 박스·신발 과제는 개발 이력으로 보존하되, 프로젝트의 현재 범위를 신발 정리로만 한정하지 않는다.
+DAPIER 교육에서 진행하는 팀 프로젝트의 공식 제품명은 **sweepick**이다. SO-101 양팔과 TurtleBot3 Waffle Pi를 연결해 물체를 인식하고 조작·운반하는 시스템을 개발한다. 장기적으로는 물체 정리와 청소를 이어 수행하는 가정용 서비스 로봇을 목표로 한다. 초기 박스·신발 과제는 개발 이력으로 보존하되, 프로젝트의 현재 범위를 신발 정리로만 한정하지 않는다.
 
 **전형주 주 담당: 모방학습 · 시뮬레이션 · Sim-to-Real.** Visual SLAM의 설계·구현·코드 작업에도 협업 참여했다. 이동 모듈의 주 담당은 팀원 `shouttt1320`이다.
 
-[전체 포트폴리오](../README.md) · [실험과 문제 해결 기록](docs/RESEARCH_SUMMARY_KO.md) · [이동·도킹 협업 코드](https://github.com/shouttt1320/Dapier_project_visaul_slam)
+[전체 포트폴리오](../README.md) · [sweepick 제품 소스](sweepick/README.md) · [실험과 문제 해결 기록](docs/RESEARCH_SUMMARY_KO.md) · [이동·도킹 협업 코드](https://github.com/shouttt1320/Dapier_project_visaul_slam)
+
+## 현재 제품 코드와 실행 경계
+
+최신 native 소스는 [`sweepick/src/sweepick`](sweepick/src/sweepick/)에서 기능별로 찾을 수 있다. 기존 추적 파일에는 CI·ROS package/resource·문서를 포함해 `2ARM_ROBOT` 경로 참조가 약 160곳 있어 이번 정리에서는 상위 경로를 유지했다. 기존 ROS 2 package인 [`src/shoe_sorting_data`](src/shoe_sorting_data/), [`research`](research/), [`sim`](sim/)과 [`robotwin`](robotwin/)도 호환성과 연구 이력을 위해 제자리에 둔다.
+
+현재 통합 진입점의 모듈 명령은 다음과 같다.
+
+```bash
+PYTHONPATH=2ARM_ROBOT/sweepick/src \
+  python -m sweepick.integration.sweepick_manipulation_session --help
+```
+
+이 모듈의 실행 경로는 device writer를 통해 실제 `Goal_Position` write까지 이어질 수 있다. 위 명령은 parser 도움말만 확인하며, 실제 실행은 별도의 현장 승인과 장치별 필수 입력이 필요하다.
+
+| 기능 | 대표 경로 | 역할과 경계 |
+|---|---|---|
+| 관측 | [`perception`](sweepick/src/sweepick/perception/) | OS30A·손목 카메라와 물체 영역 관측. 센서 관측과 SIM truth를 구분한다. |
+| 조작 | [`sweepick_bimanual_handover.py`](sweepick/src/sweepick/manipulation/sweepick_bimanual_handover.py) | `FullEpisodeHandoff`를 감싸는 후단 연결부다. 물리 제어기를 새로 구현하지 않고 공통 실행기를 호출한다. |
+| 공통 제어 | [`sweepick_trajectory_executor.py`](sweepick/src/sweepick/control/sweepick_trajectory_executor.py) | 양팔이 공유하는 `run`·`grip` 실행 경로다. 좌우별 실행기 사본을 두지 않는다. |
+| 기록 | [`sweepick_episode_recorder.py`](sweepick/src/sweepick/recording/sweepick_episode_recorder.py) | 관측·명령·실제 feedback을 한 세션 기록으로 묶는다. 제어기 역할은 하지 않는다. |
+| 통합 | [`sweepick_manipulation_session.py`](sweepick/src/sweepick/integration/sweepick_manipulation_session.py) | 관측부터 후단 조작과 기록까지 연결하는 현재 entrypoint다. |
+| 학습 | [`learning/README.md`](sweepick/src/sweepick/learning/README.md) | 새 구현 없이 기존 학습·추론·SIM·legacy ACT 위치와 근거를 안내한다. |
+
+목표 흐름은 실제 관측 → 왼팔 집기 → 오른팔 수신과 하중 이전 → 왼손 해제 → 오른팔 배치 → STOW → 작업 영역 재관측이다. 이동·도킹은 외부 팀 모듈과의 통합 경계이며, 이 저장소의 양팔 조작 성공으로 대신 계산하지 않는다.
+
+이번 구조 정리는 native 소스를 공개 경로에 포함하고 역할을 찾기 쉽게 만든 변경이다. 구조 정리 자체는 REAL 승격이나 새 실물 검증이 아니다. run14는 센서 계획 기반 무보조 왼팔 집기·들기와 hold 관측 기록이며 자동 `placed_back` 완료는 확인되지 않았다. 전체 양팔 성공이나 ACT 성공 결과도 아직 제출되지 않았다. 오른쪽 REAL jaw profile, 독립 support 근거와 held-object pose는 계속 `MISSING`이며, 후보·SIM·합성 기록으로 채우지 않는다.
 
 ## 풀고 있는 문제
 
@@ -57,4 +83,4 @@ PR 상태 확인일은 2026-10-08이다. 연구 PR을 닫은 것과 `main`에 �
 
 외부 라이브러리와 자산은 각 폴더의 출처·라이선스를 따른다. 팀 이동 모듈의 전체 구현을 개인 단독 성과로 계산하지 않는다.
 
-문서 갱신: 2026-10-08. 런타임·물리 파라미터·보정값·테스트·의존성은 변경하지 않았다.
+구조·문서 정리: 2026-10-09. 활성 런타임·물리 파라미터·보정값은 변경하지 않았다. 새 소스 package의 경로·호환 import·설치 의존성과 무장치 검사는 제품 README에 구분했다.

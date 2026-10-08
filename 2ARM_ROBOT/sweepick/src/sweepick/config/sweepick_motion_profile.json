@@ -1,0 +1,12 @@
+{
+ "schema": "tjj.motion-profile.v1",
+ "what": "Parameters of the COMMANDED motion profile (how a move is interpolated / retimed). They shape the command and are the execution contract of the run: a final path that exceeds them, or runs at another period, is retimed by the generator or refused (profile_violation). They are NOT physical limits of the servo.",
+ "profile_velocity_rad_s": {"value": 0.15, "source": "existing field profile (2026-09-28): maximum_velocity_rad_s 0.15 per joint"},
+ "profile_acceleration_rad_s2": {"value": 1.5, "source": "existing project value: physics_ik.MotionLimits.max_acceleration_rad_s2"},
+ "profile_jerk_rad_s3": {"value": 8.0, "source": "existing project value: physics_ik.MotionLimits.max_jerk_rad_s3"},
+ "period_s": 0.02,
+ "device_registers_related_to_speed": {
+  "read": "2026-09-28, left arm, torque off (mapping-rest-02.json health): Acceleration 0, Goal_Velocity 0, Goal_Time 0, Maximum_Velocity_Limit 65, Maximum_Acceleration 254. Re-read on 2026-10-08 with motor power on, both arms, torque off (registers_1008_085754/DEVICE_REGISTERS.json): Maximum_Velocity_Limit 65, Maximum_Acceleration 254, Velocity_Unit_factor 50",
+  "units": "NOT verified. Until they are, no speed or acceleration number is called a physical limit of this servo"
+ }
+}

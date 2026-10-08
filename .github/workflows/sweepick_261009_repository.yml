@@ -1,0 +1,23 @@
+name: sweepick source paths
+on:
+  pull_request:
+    paths:
+      - '2ARM_ROBOT/sweepick/**'
+      - '2ARM_ROBOT/sim/mobile_dual_so101/tabletop_replay.json'
+      - '2ARM_ROBOT/sim/mobile_dual_so101/integration_desk_source.json'
+      - '.github/workflows/sweepick_261009_repository.yml'
+jobs:
+  device-free-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, existing repository pin
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6, existing repository pin
+        with:
+          python-version: '3.12'
+      - run: python -m pip install ./2ARM_ROBOT/sweepick pytest
+      - run: >-
+          python -m pytest -p no:cacheprovider -q
+          2ARM_ROBOT/sweepick/tests/test_sweepick_repository_paths.py
+          2ARM_ROBOT/sweepick/tests/test_sweepick_execution_gates.py
