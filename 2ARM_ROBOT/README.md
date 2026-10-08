@@ -1,245 +1,60 @@
-﻿# 2ARM_ROBOT — 이동형 양팔 신발 정리 로봇
+# TJJ | 이동형 양팔 로봇의 조작·학습·Sim-to-Real
 
-SO-101 두 팔과 TurtleBot3 Waffle Pi를 결합해 박스가 있는 위치까지 이동하고, 오른팔로
-박스를 열고 왼팔로 신발을 꺼낸 뒤 출발 위치로 운반·배치하는 DAPIER 팀 프로젝트다.
+DAPIER 교육에서 진행하는 팀 프로젝트다. SO-101 양팔과 TurtleBot3 Waffle Pi를 연결해 물체를 인식하고 조작·운반하는 시스템을 개발한다. 장기적으로는 물체 정리와 청소를 이어 수행하는 가정용 서비스 로봇을 목표로 한다. 초기 박스·신발 과제는 개발 이력으로 보존하되, 프로젝트의 현재 범위를 신발 정리로만 한정하지 않는다.
 
-현재 장비 정본은 [`config/hardware_roles.json`](config/hardware_roles.json)이다. H201은
-기둥 상단 작업공간 top-view RGB-D, Astra S는 TurtleBot3 전면 Visual SLAM RGB-D이며,
-좌우 SO-101에는 각각 RGB wrist camera가 있다. Raspberry Pi 4는 base·경량 I/O·안전 감시를,
-로컬 노트북은 perception·IL policy·LLM과 Visual SLAM 배치 비교를 담당한다. LLM은 Pi에서
-실행하지 않는다.
+**전형주 주 담당: 모방학습 · 시뮬레이션 · Sim-to-Real.** Visual SLAM의 설계·구현·코드 작업에도 협업 참여했다. 이동 모듈의 주 담당은 팀원 `shouttt1320`이다.
 
-> **2026-09-04 안전 상태:** 이 저장소의 physical motion과 camera streaming은
-> local safety integration이 끝날 때까지 비활성화한다. `dual_so101_smoke`는
-> `--move-deg 0` 읽기 전용만 남기고 torque를 켜지 않으며, Astra `poll`/`viewer`는
-> 항상 fail-closed한다. 과거 실측 기록은 현재 실행 허가나 안전 보장이 아니다.
+[전체 포트폴리오](../README.md) · [실험과 문제 해결 기록](docs/RESEARCH_SUMMARY_KO.md) · [이동·도킹 협업 코드](https://github.com/shouttt1320/Dapier_project_visaul_slam)
 
-MuJoCo 양팔·카메라·접촉 모델과 과거 ±3도 실측 로그 비교는 준비됐지만, 왼쪽 손가락 접촉은
-CPU에 따라 양측 또는 한쪽 경계에 있고 양측일 때도 법선이 직교해 협지가 아니다. 따라서
-박스-신발 전체 물리 성공은 아직 아니다. 과거 팔 로그도 사용자가 화면으로 확인한 commissioning은
-아니다. 다음 실물 시험 일정은 잡지 않았으며 위 local safety integration 완료 뒤 다시 판단한다.
+## 풀고 있는 문제
 
-## 현재 구성
+로봇이 물체에 닿았다는 사실만으로 들어 올릴 수 있는 것은 아니었다. 파지 이후의 압축량, 계획한 손끝 위치와 실행 후 위치의 차이, 시뮬레이션 접촉 설정에 따른 미끄러짐을 나누어 조사했다. 카메라가 본 위치를 관절 명령으로 옮기는 과정에서는 좌표계, 영점, 단위와 관측 시각도 함께 확인했다.
 
-```text
-2ARM_ROBOT/
-├── config/
-│   └── hardware_roles.json      # 현재 하드웨어 역할 정본(비밀값 제외)
-├── src/
-│   └── shoe_sorting_data/       # 초기 JDcobot Phase 0 계약; 데이터 유틸만 선택 재사용
-├── sim/
-│   ├── mobile_dual_so101/       # 현재 Waffle Pi + SO-101 양팔 MuJoCo 모델
-│   ├── jdcobot200_dual/         # legacy reference
-│   ├── turtlebot3_waffle_pi/    # 공식 Waffle Pi URDF/mesh와 MuJoCo 변환
-│   └── mobile_dual_arm/         # legacy JDcobot 조합 모델
-├── docs/                         # 요구사항, 팀 결정, 조사 참고자료
-├── scripts/
-│   ├── dual_so101_smoke          # 승인형 양팔 read-only 계측; motion 비활성
-│   ├── capture_usb_snapshot      # 승인형 read-only USB 전후 기록
-│   └── run_astra_openni2_color  # 전면 Astra S 정적 runtime 검사만 허용
-└── README.md
-```
+학습 쪽에서는 시연을 저장하는 것에서 끝내지 않고, 측정 상태와 전송 명령의 의미, 에피소드 경계, 전처리와 행동 묶음의 실행을 연결하는 데 집중한다. 모델의 학습 실행, 보류 데이터 예측과 폐루프 조작 성공은 별도로 평가한다.
 
-Phase 0에서 제공하는 기능:
+## 구성과 코드 위치
 
-- 좌·우 팔/그리퍼, base velocity, RGB/Depth timestamp episode 계약
-- seed로 재현 가능한 합성 golden episode
-- 합성 ROS 2 topic publisher와 approximate-time episode recorder
-- timestamp gap, camera drop/skew, stream shape, joint jump, checksum 검사
-- 조작 중 TurtleBot 측정/명령 속도 정지 interlock
-- 검수 상태 및 calibration/config version quality gate
-- SQLite 기반 train/validation, usable, success, shoe pair 질의
-- one-shot 신발 임베딩 exemplar의 `match/abstain` 계약
-- accepted episode 기반 typed skill exemplar 등록·호환 검색
-- object/session/span 기반 exemplar 평가 leakage audit
+| 영역 | 다루는 내용 | 코드·문서 |
+|---|---|---|
+| 양팔 모델 | SO-101 양팔, 기본형·PGripper 구성, 이동형·책상형 장면 | [MuJoCo 모델](sim/mobile_dual_so101/README.md), [기준 배치](sim/mobile_dual_so101/INTEGRATION_SCENES.md) |
+| 데이터 | 관절 순서·단위, 영상과 시각, 에피소드 품질과 출처 | [shoe_sorting_data](src/shoe_sorting_data/) |
+| 정책 | 행동 묶음, CVAE 학습·체크포인트·추론을 다루는 작은 native ACT 구현 | [dapier_native_act.py](src/shoe_sorting_data/shoe_sorting_data/dapier_native_act.py) |
+| 조작 검증 | 접촉·하중 지지·끝점 오차·미끄러짐을 분리한 비교 | [연구 기록과 고정 소스](docs/RESEARCH_SUMMARY_KO.md) |
+| 이동·도킹 | RTAB-Map RGB-D 매핑·localization, Nav2와 듀얼 ArUco 도킹 | [팀 이동 모듈](https://github.com/shouttt1320/Dapier_project_visaul_slam) |
+| 장치 실행 | 보정·명령 제한·피드백·정지 조건 | [공통 하드웨어 안전 절차](../docs/HARDWARE_SAFETY_KO.md) |
 
-실측 기반 전력·계산 보드 결정은 [전력·계산 보드 예산](docs/POWER_AND_COMPUTE_BUDGET.md),
-URDF/MuJoCo/Gazebo 자산과 sim-to-real 순서는
-[로봇 모델 자산 감사](docs/ROBOT_MODEL_ASSET_AUDIT.md)에 기록했다. WikiDocs 20199의
-JDcobot200 전용 URDF 생성·MJCF 변환·그리퍼 자료는
-[JDcobot200 URDF 가이드](docs/WIKIDOCS_20199_JDCOBOT200_URDF_GUIDE.md)에서 확인한다.
-최신 강사 레포의 실물 제어·합성 데이터·ACT를 비교한 내용과 양팔 적용 실습은
-[JDcobot200→SO-101 sim-to-real 검토](docs/JDCOBOT200_SIM2REAL_REVIEW_20260914.md)에 기록했다.
-비식별 실측 원본과 요약은 [hardware evidence](docs/evidence/HARDWARE_EVIDENCE.md)에서 확인할 수 있다.
+native ACT 코드와 LeRobot을 재사용한 다른 학습 실험은 같은 구현으로 취급하지 않는다. native 구현은 공식 ACT 체크포인트 호환을 주장하지 않는다.
 
-JDcobot200 원본 모델과 초기 ROS 2 패키지는 학습·회귀용 legacy 자료다. 현재 실물 명령 또는
-하드웨어 역할의 근거로 사용하지 않는다. 현재 12차원 action, 좌우 namespace, camera role,
-IK·접촉·충돌 검증은 [SO-101 이동형 양팔 모델](sim/mobile_dual_so101/README.md)을 기준으로 한다.
+### 장비 역할과 과거 설정
 
-ROBOTIS 공식 Waffle Pi 자산과 MuJoCo 변환은
-[Waffle Pi 기준 모델](sim/turtlebot3_waffle_pi/README.md)에 보존한다. 현재 조합 모델은
-`sim/mobile_dual_so101`이며 wheel-level 명령은 내부 base adapter에만 두고 공개 이동 계약은
-선속도·각속도와 docking goal을 사용한다.
+최근 조작 연구에서는 SO-101 양팔·PGripper, 작업공간용 OS30A RGB-D와 양손목 RGB를 다룬다. 이동 모듈의 Astra S는 Visual SLAM·도킹용 센서다. 두 RGB-D 센서의 역할을 섞지 않는다.
 
-## Ubuntu ROS 2 교육 PC에서 시작
+`main`의 [hardware_roles.json](config/hardware_roles.json)은 `effective_date=2026-09-03`이며 작업공간 카메라를 H201로 기록한 **당시 구성**이다. 일부 모델 README와 실습 절차도 그 배치를 설명한다. 이후 OS30A·PGripper 연구의 설명을 읽었다고 이 설정 파일이나 모든 실행기가 갱신된 것으로 해석하지 않는다. 실제 실행에는 해당 장치와 소스 revision의 설정·보정이 필요하다. 이 문서 갱신에서는 설정이나 런타임을 변경하지 않았다.
 
-현재 `main`을 받는 명령이다.
+## 공개 구현과 실험 결과의 구분
 
-```bash
-git clone https://github.com/Alpenj/DAPIER.git
-cd DAPIER/2ARM_ROBOT
-bash scripts/verify_ubuntu_ros2.sh
-set +u
-source install/setup.bash
-set -u
-```
+| 근거 | 확인한 범위 | 별도로 남은 것 |
+|---|---|---|
+| `main`과 병합된 [PR #64](https://github.com/Alpenj/DAPIER/pull/64)·[PR #65](https://github.com/Alpenj/DAPIER/pull/65) | 접촉·중력 wrench 분석, 그리퍼 단독 파지와 솔버 민감도 진단·회귀 기록 | 기본 실행기의 전체 조작 성공과 실물 성공 |
+| 2026-09-21 [후보 커밋 f6b61db](https://github.com/Alpenj/DAPIER/commit/f6b61dbc81273f6d775d96f7950461fac9113cbb), [PR #68](https://github.com/Alpenj/DAPIER/pull/68) | normal HOME→접근→CLOSE→LIFT→HOLD의 단일 연속 SIM. 18,203 step / 36.406 s, HOLD 3.000 s | 여러 초기조건의 신뢰도, ACT 정책 성공, 실물 성공. PR은 닫힘·미병합 |
+| [PR #69](https://github.com/Alpenj/DAPIER/pull/69) | 센서·손목 후보와 제한된 native 실행 경로, 지연·정지 MOCK 피드백 연결 기록 | 센서 기반 실물 조작 검증. PR은 닫힘·미병합 |
+| 2026-09-30 [후보 커밋 3720da1](https://github.com/Alpenj/DAPIER/commit/3720da1ee678793480035cbfa3db96a546c73671), [PR #70](https://github.com/Alpenj/DAPIER/pull/70) | 저장 관절값의 변환 비교와 팔꿈치 기준 측정 준비 | 실물 영점 채택·동적 검증. PR은 닫힘·미병합이며 독립 실행에 필요한 비공개 입력은 미포함 |
+| [이동 모듈 소스](https://github.com/shouttt1320/Dapier_project_visaul_slam/tree/3942b81a0d3131aeed6d97fad83c2a5b389ec18a) | RTAB-Map localization·Nav2·정밀 도킹을 구성한 코드 | 현재 장비에서의 재현, 양팔 통합 과제와 실제 전기적 충전 성공 |
 
-검증 스크립트는 ROS 2나 Python 패키지를 새로 설치하지 않는다. 현재 shell의
-ROS 환경을 사용하고, 아직 source되지 않았다면 `/opt/ros/jazzy`와
-`/opt/ros/humble`만 순서대로 확인한다. `build/`, `install/`, `log/`는 이
-폴더 안에 생성되며 Git에는 올라가지 않는다.
+PR 상태 확인일은 2026-10-08이다. 연구 PR을 닫은 것과 `main`에 병합한 것은 다르다. 위 후보 결과는 고정 커밋의 연구 이력으로 남기며, 저장소를 새로 받은 사람이 기본 실행만으로 같은 결과를 얻는다고 안내하지 않는다.
 
-필수 환경은 `python3`, `setuptools`, `ros2`, `colcon`이다. 하나라도 없으면
-스크립트가 설치를 시도하지 않고 누락 항목을 출력한 뒤 종료한다.
+## 다음 검증
 
-## 실물 장비를 연결했을 때 가장 먼저 할 일
+관측한 물체 위치, 측정 관절 상태와 실제 장비의 좌표 대응을 연결하고 제한된 접근·집기·들기·유지를 평가한다. 학습 정책은 같은 데이터 분할·전처리·성공 기준에서 기준 제어기와 비교한다. 이동과 조작의 결합에서는 도착·정지, 조작 결과와 후속 이동 조건을 확인한다.
 
-현재 저장소에는 과거 읽기 전용 관절 snapshot, 제한된 양팔 ±3도 로그와 바퀴 characterization이
-있다. 그러나 사용자가 화면으로 확인한 양팔 commissioning, 동시 4카메라 부하, 실제 신발
-episode는 없다. 따라서 현재 장비 역할은 `config/hardware_roles.json`에서 읽고, driver topic,
-캘리브레이션·안전 limit은 아래 읽기 전용 snapshot과 현장 측정 뒤 확정한다.
+정리·청소는 확장 목표다. 개별 모듈의 코드, 한 조건의 SIM 성공이나 장치 연결 기록을 전체 가정용 서비스 과제 완료로 쓰지 않는다.
 
-```bash
-cd ~/DAPIER/2ARM_ROBOT
-bash scripts/capture_ros2_hardware_snapshot.sh \
-  output/hardware_snapshots/first_connected \
-  --confirm VISIBLE_ROS2_SNAPSHOT_READONLY
-```
+## 실행 안내와 과거 실습
 
-이 스크립트는 node/topic/type, endpoint QoS, `JointState`, `CameraInfo`, base
-velocity/odometry의 첫 message를 저장한다. `Image`는 픽셀을 저장하지 않고
-header만 수집한다. 사용자가 현장에서 read-only graph 접근을 승인한 exact token이
-없거나 stdin/stdout이 interactive TTY가 아니면 ROS 2를 호출하지 않는다. 어떤 motion command도 publish하지 않으며 Git에서
-제외된 `output/` 아래 새 폴더만 허용하고 기존 경로는 덮어쓰지 않는다.
+현재 코드의 사용법은 해당 하위 모듈 README와 [안전 절차](../docs/HARDWARE_SAFETY_KO.md)를 먼저 확인한다. 개인 보정, 장치 식별자와 원시 영상·데이터는 공개하지 않는다. 문서의 예시 명령은 실물 실행 승인이 아니다.
 
-현재 장비 node가 하나도 실행되지 않았다면 exit 2와 `NO_CANDIDATE_TOPICS`를
-반환한다. snapshot을 확인한 뒤에만 mock topic mapping을 실제 이름으로 교체한다.
+초기 ROS 2 환경 점검, 합성 토픽 녹화, golden episode 생성과 장치 snapshot 절차는 [갱신 전 README의 고정본](https://github.com/Alpenj/DAPIER/blob/9b1138dbc462d293cbde62961d4d3534a71b2061/2ARM_ROBOT/README.md)에 보존했다. 그 문서의 신발·H201 구성과 실행 제한은 당시 소스의 안내다. 과거 실행 절차를 최신 장비 설정으로 대신하지 않는다.
 
-비공개 udev 규칙은 저장소의 고정 경로 `config/99-dapier-hardware.rules`에만 두며 이
-파일은 Git에서 제외된다. 설치기는 다른 입력 경로를 받지 않고, 파일 권한과 staging 전후
-digest가 같을 때만 현장 승인 아래 진행한다.
+외부 라이브러리와 자산은 각 폴더의 출처·라이선스를 따른다. 팀 이동 모듈의 전체 구현을 개인 단독 성과로 계산하지 않는다.
 
-사용자가 현장에 있고 read-only 확인을 승인한 뒤, 카메라 실행 전과 양팔 시험 후 USB 상태를
-각각 새 디렉터리에 기록한다. 결과는 Git에서 제외되는 `output/` 아래에만 생성된다.
-
-```bash
-2ARM_ROBOT/scripts/capture_usb_snapshot \
-  2ARM_ROBOT/output/usb_snapshots/before \
-  --confirm VISIBLE_USB_SNAPSHOT_READONLY
-
-2ARM_ROBOT/scripts/capture_usb_snapshot \
-  2ARM_ROBOT/output/usb_snapshots/after \
-  --confirm VISIBLE_USB_SNAPSHOT_READONLY
-
-diff -u 2ARM_ROBOT/output/usb_snapshots/{before,after}/lsusb-tree.txt
-diff -u 2ARM_ROBOT/output/usb_snapshots/{before,after}/kernel-usb-events.txt
-```
-
-이 도구는 USB/V4L2 목록과 reset·disconnect·timeout 관련 kernel event만 읽고 장치 stream이나
-serial port를 열지 않는다. 전체 snapshot 디렉터리는 그대로 Git에 올리지 않고 비식별 요약만
-commissioning 근거로 정리한다.
-
-수동 실행 시:
-
-```bash
-source /opt/ros/jazzy/setup.bash  # Humble 설치 PC는 humble로 변경
-cd ~/DAPIER/2ARM_ROBOT
-
-(cd src/shoe_sorting_data && python3 -m unittest discover -s test -v)
-colcon build --symlink-install --packages-select shoe_sorting_data
-set +u
-source install/setup.bash
-set -u
-ros2 run shoe_sorting_data shoe_episode --help
-```
-
-## 합성 ROS 2 데이터를 episode로 녹화하기
-
-실물 recorder와 RGB-D driver가 아직 완성되지 않았으므로 publisher가 양팔 state/action, base 측정/명령,
-RGB/Depth metadata 등 8개 topic을 20 Hz로 만든다. recorder는 같은 시점의
-topic을 묶어 기존 `samples.jsonl`과 `episode_manifest.json` 계약으로 저장한 뒤
-quality validator를 실행한다.
-
-아래 one-shot demo는 40 sample을 발행하고 녹화해 accepted 합성 episode 하나를
-만든다. 기존 파일을 보호하기 위해 `--output` 폴더가 비어 있지 않으면 중단한다.
-
-```bash
-cd ~/DAPIER/2ARM_ROBOT
-set +u
-source install/setup.bash
-set -u
-
-ros2 run shoe_sorting_data shoe_mock_demo \
-  --output output/mock_episodes/episode_000001 \
-  --samples 40
-```
-
-publisher와 recorder를 별도 terminal에서 실행할 수도 있다.
-
-```bash
-# terminal 1
-ros2 run shoe_sorting_data shoe_mock_publisher
-
-# terminal 2: 합성 결과를 quality gate까지 accepted로 검사
-ros2 run shoe_sorting_data shoe_mock_recorder \
-  --output output/mock_episodes/episode_000002 \
-  --samples 40 \
-  --accept
-```
-
-중간에 recorder를 멈추거나 timeout이 발생하면 가능한 경우 `aborted` outcome과
-failure reason을 manifest에 남기며 학습 usable 데이터로 승인하지 않는다.
-
-## 합성 episode 20개 만들기
-
-```bash
-cd ~/DAPIER/2ARM_ROBOT
-set +u
-source install/setup.bash
-set -u
-
-ros2 run shoe_sorting_data shoe_episode generate \
-  --root output/golden_episodes \
-  --count 20 \
-  --seed 100
-
-ros2 run shoe_sorting_data shoe_episode validate \
-  --manifest output/golden_episodes/episode_000001/episode_manifest.json
-
-ros2 run shoe_sorting_data shoe_episode index \
-  --root output/golden_episodes \
-  --db output/episode_manifest.sqlite3
-
-ros2 run shoe_sorting_data shoe_episode query \
-  --db output/episode_manifest.sqlite3 \
-  --usable true \
-  --split validation
-```
-
-`output/`은 생성 결과용이며 Git에서 제외된다.
-
-## 확정된 개발 방향
-
-- ACT 기준선을 먼저 완성한다.
-- 이동의 학습 정책(IL)과 근접 파지·경로 보정(IK)을 결합하되 둘 다 safety gate를 우회하지 않는다.
-- DYNA-lite 데이터 계약과 quality gate를 사용한다.
-- 4주차 이후 IDM/FDM/EMA 보조학습은 go/no-go ablation으로 판단한다.
-- LLM/VLM은 신발 짝, 목표 슬롯, 스킬과 실패 복구를 결정한다.
-- 관절 명령은 ACT 계열 정책과 별도 safety supervisor가 담당한다.
-- 이동과 조작을 분리하고 Nav2 도킹 후 base 정지를 확인해야 조작을 허용한다.
-
-GEN-1.5 조사에서는 짧은 physical prompt의 **형태만** 참고했다. 공개
-checkpoint/API가 없으므로 GEN-1.5 자체를 실행하지 않으며, local 구현은
-인식 exemplar와 검증된 skill metadata retrieval뿐이다. 상세 경계는
-[`docs/GEN15_ADOPTION.md`](docs/GEN15_ADOPTION.md)에 기록했다.
-
-상세 인수인계는 [`docs/PHASE0_HANDOFF.md`](docs/PHASE0_HANDOFF.md), 요구사항
-원장은 [`docs/requirements-ledger.md`](docs/requirements-ledger.md)를 본다.
-
-## 다음 작업
-
-1. MuJoCo에서 오른팔 뚜껑 접촉과 왼팔 양지 파지·friction-only lift gate 통과
-2. H201 top-view와 Astra front-SLAM의 실제 depth·CameraInfo·extrinsic 검증
-3. 좌우 wrist RGB를 포함한 4카메라 동시 FPS/drop/USB reset 측정
-4. connected-endpoint identity binding과 독립 device-side watchdog을 local safety integration에서 검증
-5. 실측 STS3215 내부 profile·velocity·load/current로 MuJoCo actuator 보정
+문서 갱신: 2026-10-08. 런타임·물리 파라미터·보정값·테스트·의존성은 변경하지 않았다.
