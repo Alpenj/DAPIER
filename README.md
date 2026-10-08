@@ -2,15 +2,15 @@
 
 DAPIER 국비교육에서 배운 내용을 코드와 실험으로 확인하고, 개인 기여를 정리한 포트폴리오 저장소다. 모방학습, 물리 시뮬레이션, Sim-to-Real을 중심으로 로봇의 관측·데이터·제어·평가를 연결하고 있다.
 
-대표 팀 프로젝트는 **TJJ — 이동형 양팔 로봇**이다. SO-101 양팔의 물체 조작과 TurtleBot3의 이동을 연결하고, 물체 정리에서 가정용 서비스 작업으로 확장하는 것을 목표로 한다. 초기 신발 정리 과제는 개발 이력으로 남겼으며, 현재 프로젝트를 그 과제 하나로 한정하지 않는다.
+대표 팀 프로젝트는 **sweepick — 이동형 양팔 로봇**이다. SO-101 양팔의 물체 조작과 TurtleBot3의 이동을 연결하고, 물체 정리에서 가정용 서비스 작업으로 확장하는 것을 목표로 한다. 초기 신발 정리 과제는 개발 이력으로 남겼으며, 현재 프로젝트를 그 과제 하나로 한정하지 않는다.
 
-[포트폴리오·이력서](https://julianjeonresume.netlify.app/) · [양팔 프로젝트](2ARM_ROBOT/README.md) · [문제 해결과 실험 근거](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md) · [학습 아카이브](https://github.com/Alpenj/physical-ai-lab)
+[포트폴리오·이력서](https://julianjeonresume.netlify.app/) · [sweepick 양팔 프로젝트](2ARM_ROBOT/README.md) · [제품 소스](2ARM_ROBOT/sweepick/README.md) · [문제 해결과 실험 근거](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md) · [학습 아카이브](https://github.com/Alpenj/physical-ai-lab)
 
 ## 먼저 볼 내용
 
 | 확인할 내용 | 코드와 문서 |
 |---|---|
-| 프로젝트 목표, 담당 범위, 구현과 검증 상태 | [TJJ / 2ARM_ROBOT](2ARM_ROBOT/README.md) |
+| 프로젝트 목표, 담당 범위, 구현과 검증 상태 | [sweepick / 2ARM_ROBOT](2ARM_ROBOT/README.md) |
 | 파지 실패·끝점 오차·미끄러짐을 조사한 과정 | [양팔 조작 연구 기록](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md) |
 | 양팔 모델, 접촉과 경로 검사 | [MuJoCo 모델](2ARM_ROBOT/sim/mobile_dual_so101/README.md) |
 | 에피소드·영상·행동 묶음 처리와 정책 코드 | [데이터·학습 패키지](2ARM_ROBOT/src/shoe_sorting_data/) |

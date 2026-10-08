@@ -9,6 +9,13 @@ casino_dealer/*.egg-info/
 **/robot.pkl
 **/*.part
 .local-workspaces/
+
+# sweepick packaging outputs and private field deployment inputs
+2ARM_ROBOT/sweepick/build/
+2ARM_ROBOT/sweepick/dist/
+2ARM_ROBOT/sweepick/src/*.egg-info/
+2ARM_ROBOT/sweepick/config/private/
+2ARM_ROBOT/sweepick/src/sweepick/config/private/
 2ARM_ROBOT/config/local/
 onshape/jdcobot100/assets/
 onshape/jdcobot100/jdcobot100.urdf

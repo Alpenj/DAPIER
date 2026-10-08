@@ -1,0 +1,1104 @@
+{
+  "github_base": {
+    "repository": "Alpenj/DAPIER",
+    "branch": "main",
+    "commit": "0238bbbcfa2346ce3c97e126e6e26f0467566c37"
+  },
+  "source": {
+    "kind": "fixed read-only current local owner source",
+    "frozen_date": "2026-10-09",
+    "owner_idle_confirmed": true,
+    "current_api": "run_session/build scope=full|observe, right_lift_m; existing finite run/grip executor",
+    "native_source_not_in_base_main": true
+  },
+  "version_comparison": [
+    {
+      "file": "sweepick_pick01.py",
+      "current_sha256": "5642de70135b4846101c502e882e2e221218ad33d9d8106d7151149286e58500",
+      "provided_snapshot_sha256": "8b51b07e2747695027d849563331bd576b5c3b71450650c826f563e05c364d26",
+      "earlier_candidate_sha256": "09dd76fde817081303e882bfbd5fbaed8e709ca9689652fbb63fe4161c193b76"
+    },
+    {
+      "file": "sweepick_full_chain.py",
+      "current_sha256": "a2e0487d81e586c0dc7550280807f11987dc3b181ba0e860d309f523dcfdea5e",
+      "provided_snapshot_sha256": "8f9c85039b58257e6486a02a8224e7473c922b58a4cda5812febb0413b4126de",
+      "earlier_candidate_sha256": "747aec979f216c927480429582efe3203d425a8f14bec829255e6d56b9539a9c"
+    },
+    {
+      "file": "sweepick_chain_fixture.py",
+      "current_sha256": "f3b2ff149b5a10c4be3c39488c31d9934e58279627c19b66246c4471228b6a9f",
+      "provided_snapshot_sha256": "fc62489e7956bc8fe8a9e7c5d16be0dc3839e57f15000df09441b7694ba8849b",
+      "earlier_candidate_sha256": "fc62489e7956bc8fe8a9e7c5d16be0dc3839e57f15000df09441b7694ba8849b"
+    },
+    {
+      "file": "sweepick_collision_cert.py",
+      "current_sha256": "1ad20372d2962cceadd5f62816d9db7c2bad1d2cd4f45ee1b8bd6c5e1c3f94b8",
+      "provided_snapshot_sha256": null,
+      "earlier_candidate_sha256": null
+    }
+  ],
+  "sources": [
+    {
+      "old_path": "field-tools/sweepick_pick01.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_manipulation_session.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "5642de70135b4846101c502e882e2e221218ad33d9d8106d7151149286e58500",
+      "entrypoint": "sweepick.integration.sweepick_manipulation_session",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "581d5f91db8b771f94cc9efd2fd3f31ccf3d4df4967048c8ebc3dad6a06b1f93"
+    },
+    {
+      "old_path": "field-tools/sweepick_full_chain.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/manipulation/sweepick_bimanual_handover.py",
+      "role": "manipulation",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "a2e0487d81e586c0dc7550280807f11987dc3b181ba0e860d309f523dcfdea5e",
+      "entrypoint": "sweepick.manipulation.sweepick_bimanual_handover",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "0b99b86f0e7acf76ed22cee34d6144331a5b3adeeaa899af0574c4b7e86da2bb"
+    },
+    {
+      "old_path": "field-tools/sweepick_move_a.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_trajectory_executor.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "ed13179a189d281a49260efdde82d95fb4326a42799fbc292b8aa506120827ba",
+      "entrypoint": "sweepick.control.sweepick_trajectory_executor",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "f7022fcfec38fd2f7c1abe2ec9224b0b100f3989d65815ece53df1e246938211"
+    },
+    {
+      "old_path": "field-tools/sweepick_real_command.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_joint_command_mapping.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "995765c14e6a4303c2b71b7e0ee836d1880608f4558b93bf9187a6aeac022408",
+      "entrypoint": "sweepick.control.sweepick_joint_command_mapping",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "995765c14e6a4303c2b71b7e0ee836d1880608f4558b93bf9187a6aeac022408"
+    },
+    {
+      "old_path": "field-tools/sweepick_real_exec.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_command_application.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "2c9d9f14199fd9276a6437ac07d01852c61e86401533ce83929eef8027b915c8",
+      "entrypoint": "sweepick.control.sweepick_command_application",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "d8c259beee33d12c79c46b9cef566384a1b4145d6760977d1af68d88a16f8420"
+    },
+    {
+      "old_path": "field-tools/sweepick_trajectory.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_trajectory_profile.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "4e9ba7ae2122fd5f3021067e7b677fa055bc87d87501ddbde0c6ce6d6288ede2",
+      "entrypoint": "sweepick.control.sweepick_trajectory_profile",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "d33979fdbee376aa635717f6b6db1a87b7fd9a30a21dca55a51370e3580151b4"
+    },
+    {
+      "old_path": "field-tools/sweepick_progress.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_motion_progress.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "b248eea611b6b477f6ac3597c6d21b192208b92dad31a7cb8fe60d91e1588223",
+      "entrypoint": "sweepick.control.sweepick_motion_progress",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "51d1213f83996fe9dbbef3ac5e37252750e2fe82f9ebdc1a773e9b2cd840d421"
+    },
+    {
+      "old_path": "field-tools/sweepick_grasp.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_gripper_contact_hold.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+      "entrypoint": "sweepick.control.sweepick_gripper_contact_hold",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "428723298d552ecb448bdfeb4eceed2481eb4f9a21b0e77c0e64dbbd2eae1973"
+    },
+    {
+      "old_path": "field-tools/sweepick_gates.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_execution_gates.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "e48b9a7284ac6e51d96f2f611f6e1e73d5277f55c08108cc700fb8c7282216a4",
+      "entrypoint": "sweepick.control.sweepick_execution_gates",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "b524b23e94b0044fceba4ad02a48bb466a3ba772a6990c169f8163ddefe7d38e"
+    },
+    {
+      "old_path": "field-tools/sweepick_commission.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_servo_access.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "83a78a7e20e584b74250de242ef36ba75d2df36f307b45ae7ffd4e8ef19b4504",
+      "entrypoint": "sweepick.control.sweepick_servo_access",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "3e46f2aa092d004b5e5170e79ff3c7d71cf5bddc1ef98c600ff46f996e088990"
+    },
+    {
+      "old_path": "field-tools/sweepick_kin.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_joint_kinematics.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "cda0df99d5362cbe6c2ad0174771da7926c10a929aa4a03b0154b7d68e5d7dd1",
+      "entrypoint": "sweepick.control.sweepick_joint_kinematics",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "cda0df99d5362cbe6c2ad0174771da7926c10a929aa4a03b0154b7d68e5d7dd1"
+    },
+    {
+      "old_path": "field-tools/sweepick_collision_cert.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_collision_preview.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "1ad20372d2962cceadd5f62816d9db7c2bad1d2cd4f45ee1b8bd6c5e1c3f94b8",
+      "entrypoint": "sweepick.control.sweepick_collision_preview",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "b5760cf5871aea9f73df56720eee0b9a94e3ec86d2583b3c4ecbe5b1a6ceb54b"
+    },
+    {
+      "old_path": "field-tools/sweepick_field.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/perception/sweepick_observation_capture.py",
+      "role": "perception",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "29fe262ab3f930684c067a11a8523e4c8997db930534f8eaa3ebbb285f8c3aa2",
+      "entrypoint": "sweepick.perception.sweepick_observation_capture",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "b26af5a0a660f8e3b6b77f2fdaf67f6bcbdc2c73e903d62a5d4ddf58d797b589"
+    },
+    {
+      "old_path": "field-tools/sweepick_field_r6.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/perception/sweepick_feedback_observation.py",
+      "role": "perception",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "1a86ec4240dba5ae7a9d95d662aacd31e1519c4436dea94be31e5d88958aed9b",
+      "entrypoint": "sweepick.perception.sweepick_feedback_observation",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "7391d08bf9a106974fad444c8b2181232c56f3c46adaf390dbc75e82bf13e168"
+    },
+    {
+      "old_path": "field-tools/sweepick_sdk_top.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/perception/sweepick_os30a_observation.py",
+      "role": "perception",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "d8c6d280825f17883069f74e992d65af3f14e1a57fbede265c6379a91dabd589",
+      "entrypoint": "sweepick.perception.sweepick_os30a_observation",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "d8c6d280825f17883069f74e992d65af3f14e1a57fbede265c6379a91dabd589"
+    },
+    {
+      "old_path": "field-tools/sweepick_view.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/perception/sweepick_observation_view.py",
+      "role": "perception",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "2ebb7097ce15960cede8cfa2e1ab7ecf64fc90a19e67730cf07cbb40b6195045",
+      "entrypoint": "sweepick.perception.sweepick_observation_view",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "5a7badd61acc80b9188fdc87983ab49cd475f87cef2a0d98b099d012d3ba9453"
+    },
+    {
+      "old_path": "field-tools/sweepick_local_loop.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_observation_session.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "fefe8b3be4513c85c9e5200e0e995d15b3bf767f25fa17b8e85f0258b1a3149f",
+      "entrypoint": "sweepick.integration.sweepick_observation_session",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "8918e58370fbc0ff9b06e0aa02c49bf9f10c51b0a4372b3e8c8b03a247d077c3"
+    },
+    {
+      "old_path": "field-tools/sweepick_real_rig.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_replay_rig.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "e2c04caf5a031c26d4e95c6e4da9bb15574155700f346b4dc831069d17c55ebf",
+      "entrypoint": "sweepick.integration.sweepick_replay_rig",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "c0e4dcef42695e7ed3f83feae1bf67508ac3dfc6df61f2030b688b35ef7acb0a"
+    },
+    {
+      "old_path": "field-tools/sweepick_episode.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/recording/sweepick_episode_recorder.py",
+      "role": "recording",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "80de9ad5d98184d0a6ba81d83c7995e2be151ae0b3a2799379768802dc974cac",
+      "entrypoint": "sweepick.recording.sweepick_episode_recorder",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "d809c384d886ec0feb26b29162b840445ad63d283b329bb9150d4d9ff4192c14"
+    },
+    {
+      "old_path": "field-tools/sweepick_contact01.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/control/sweepick_gripper_contact_inspection.py",
+      "role": "control",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "88b8ef05ff79fd6df6bb7b2f8e5f682df3d8f132fab6b3f01c69ead3cc688a7a",
+      "entrypoint": "sweepick.control.sweepick_gripper_contact_inspection",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "59f33026e4b3b8f5411bdc09521285e381e21ffdf6defcce3a680460dcc0c322"
+    },
+    {
+      "old_path": "field-tools/sweepick_read03_capture.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/perception/sweepick_wrist_capture.py",
+      "role": "perception",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "c7c1dde7370dc6ea49a7c4210f11a0222c9bba230b9360138dcfdbe0a07b7349",
+      "entrypoint": "sweepick.perception.sweepick_wrist_capture",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "21b53e39ebd081f7c58f4d5370fa7fc532d50911692d372e471b911e2b2ea0b5"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_receive_real_adapter.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_handoff_snapshot_adapter.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "873d1a0ce36249db4e320e2418702960bd1c080d22d82aeadb02ea1310204c4b",
+      "entrypoint": "sweepick.integration.sweepick_handoff_snapshot_adapter",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "873d1a0ce36249db4e320e2418702960bd1c080d22d82aeadb02ea1310204c4b"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_receive_runtime.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_receive_runtime.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "619c58fd0abbd71af7faa5539f3593f596c5629e82039d6921b2056296c18b1d",
+      "entrypoint": "sweepick.integration.sweepick_receive_runtime",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "e246346819f5d5f87350337959e103f5782d8a79ff01b3547e92d772fd7655ad"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_receive_session.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_receive_session.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "9e54fbd0b787760a1cdf324a4d152c2b67baa682b5477f8c23bb29dcd4519eab",
+      "entrypoint": "sweepick.integration.sweepick_receive_session",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "9e3d62d395f3f36816c3386089321e50d065255558ff80c5d9b4eb3fed1429c2"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_receive_plan.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/manipulation/sweepick_right_receive_planner.py",
+      "role": "manipulation",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "8c32fc4da741d82f822a7ecf384d6ab51aa4cb9d314fbe0bb4f7b3378c418b62",
+      "entrypoint": "sweepick.manipulation.sweepick_right_receive_planner",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "d2bccc3a1d6ddc7ada299422de869feed270b327ff4fee1135c9a6d916eacbe9"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_receive_entry.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/manipulation/sweepick_right_receive_dispatch.py",
+      "role": "manipulation",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "0554dd819120fd1465790cc81f8ba86a3a81733bd52349d64b8a615dc7ca4b21",
+      "entrypoint": "sweepick.manipulation.sweepick_right_receive_dispatch",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "7b1d7efe5ca2a108a90a4be306b37aa4fe1bdaaca309e81289c5c0ec421e681e"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_full_episode.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_manipulation_handoff.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "1fe355fcaf98f241e0e29a752d07be81bc0f7e847dab8631bd37db6e2d64641a",
+      "entrypoint": "sweepick.integration.sweepick_manipulation_handoff",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "240cc61fb6634929b2b78dedbe0ab0441737abc548458fc5ece842e8b678dc15"
+    },
+    {
+      "old_path": "field-tools/_codex_receive_pin_2303/sweepick_261008_concrete_bindings.py",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_controller_bindings.py",
+      "role": "integration",
+      "status": "canonical + same-module compatibility alias",
+      "source_revision": "cce120eab73d7335997761103b287fd689d2353f1f7b0be305fa921b5a4f906c",
+      "entrypoint": "sweepick.integration.sweepick_controller_bindings",
+      "changes": "import/resource/metadata prose only",
+      "new_sha256": "e728038606325f16053cccf8e2c35f3d319dc791375939f1b8d0955f2f01f973"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_commission.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/sweepick_261008_control_fake_bus.py",
+      "role": "existing synthetic fake-bus helper",
+      "status": "Fake/START/LO/HI/IN retained; archive test body preserved in original only",
+      "source_revision": "3984321f659ecb928b3c04074ce4b3bee3945981bee47c2beda942ada84036a2",
+      "entrypoint": "test_sweepick_servo_access",
+      "changes": "helper extraction only; no archived controller copied",
+      "new_sha256": "b91b64e325e254c475def38bf4368fd1b783a89d1031951afc55ed43e7385352"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_contact01.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_gripper_contact_inspection.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "36b730db2fe4afb971923de23a1a6bd86d7c195ac1f5a98ca8236c791aca13e0",
+      "entrypoint": "test_sweepick_gripper_contact_inspection",
+      "changes": "import/resource references only",
+      "new_sha256": "bdb41d87504a5f5d50d9442c4acb8b2409d920cd010fd3f21abd04512c1f5503"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_episode.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_episode_recorder.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "5981eac0fe077988ea2787fd43fb05aeab0d3fabcb2e89ea88ca0d4920bd4f4a",
+      "entrypoint": "test_sweepick_episode_recorder",
+      "changes": "import/resource references only",
+      "new_sha256": "e69775f5cb82d05962aad020b504dd6a8ed48ad752ba52ca617e4f3afd464f51"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_full_chain.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_bimanual_handover.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "98bb4642e9b0d900544e76ef2a0d224afc054801cec25c2959b7a16b44856495",
+      "entrypoint": "test_sweepick_bimanual_handover",
+      "changes": "import/resource references only",
+      "new_sha256": "85e6ac8c3cc047bd2b9c7d45737a6a72b844cf5e9cc792050c0666adfe3ce5f1"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_grip.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_gripper_execution.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "5d30bbf2bc61e3c96f5d4602d3be14e6fa38288ed7207c70cd9b62e223b9709e",
+      "entrypoint": "test_sweepick_gripper_execution",
+      "changes": "import/resource references only",
+      "new_sha256": "eb0c9f216b242770bd205d811315cb618fa5e662c501513c12e9e6377f6848d8"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_hard_gate_allowlist.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_execution_gates.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "c41c46b1f17ac0d8093870aaa30c6b84c5526db91757f27991a77761d30de445",
+      "entrypoint": "test_sweepick_execution_gates",
+      "changes": "import/resource references only",
+      "new_sha256": "b956936b8242ad7643cf74b7b4c521e432e5bcbb666a08e6de8ee781bebd5fcf"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_local_loop.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_observation_session.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "1a932cb1fc4fa3f675ba4152d54c6db9b6e2b3836841bcab063589e9fc67c975",
+      "entrypoint": "test_sweepick_observation_session",
+      "changes": "import/resource references only",
+      "new_sha256": "d4f3fc43d74c64e834f66a4db595aa6c03e5059d4729ee8ba791b4d9a84f3aa6"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_move_a.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_trajectory_executor.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "ec292631e2c9334156a82cc941d7af7250eec054c57dd3dfa21b32b6dc1c2b8f",
+      "entrypoint": "test_sweepick_trajectory_executor",
+      "changes": "import/resource references only",
+      "new_sha256": "56c10b07985736ce924ef00e71dbf895052e62afee593ecc7a6910b9b2ddf03a"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_no_discrimination_recovery.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_gripper_recovery.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "7e993f1ca4ed1c7e0e7819bccbd98267a291c983a19fd90ba0463c784cc4b6ff",
+      "entrypoint": "test_sweepick_gripper_recovery",
+      "changes": "import/resource references only",
+      "new_sha256": "fd89ac3fd42335fbd3b4a3f160e5c94543f3f06122680540aa7787dd1181f4ba"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_pick02_actual.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_manipulation_session.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "0c6854e9e0eaad5f968ac56dc17db7c3d8bdb30b58b0407eb0213e57adf1ebd6",
+      "entrypoint": "test_sweepick_manipulation_session",
+      "changes": "import/resource references only",
+      "new_sha256": "099b7d60a78918ffa2059053f021d3789af5c86e171f2e6f774f7cc377ca3010"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_r6_field.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_feedback_observation.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "61c420ec643c4d91c527450cf2d918177674b5e17ed307fc45aa8417a186576a",
+      "entrypoint": "test_sweepick_feedback_observation",
+      "changes": "import/resource references only",
+      "new_sha256": "fe202e4a2553bf68c0952f41520c366c4a0983b9b5d162db6e0a9825d8898596"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_real_command.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_joint_command_mapping.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "b26bf50c7ec06154b456628923061964927eed523de8659b0deb950910605d6d",
+      "entrypoint": "test_sweepick_joint_command_mapping",
+      "changes": "import/resource references only",
+      "new_sha256": "509797e16f99c49702aebeab64974fc89bb508b519e5822c04fc5fcf95ff6e83"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_real_exec.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_command_application.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "623c6ae182285106905aaadf77fc839c2b80e2c68c075c568c63a6e90c82a0f4",
+      "entrypoint": "test_sweepick_command_application",
+      "changes": "import/resource references only",
+      "new_sha256": "b76ccaab8541ec9d7ac83e668b0a9f9e4e939d074d8336def9ab1b9f0ad74e6f"
+    },
+    {
+      "old_path": "field-tools/test_sweepick_trajectory.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_trajectory_profile.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "6e7f954ffbb09532d154fe9bc672dc0e5fe584c2d7811573f6c381ede497a1ae",
+      "entrypoint": "test_sweepick_trajectory_profile",
+      "changes": "import/resource references only",
+      "new_sha256": "8a8c181f658830af4191dc49e4c219452c7231b95c65a36507336daa8ede6ca8"
+    },
+    {
+      "old_path": "field-tools/sweepick_chain_fixture.py",
+      "new_path": "2ARM_ROBOT/sweepick/tests/sweepick_261008_manipulation_chain_fixture.py",
+      "role": "test fixture",
+      "status": "test only",
+      "source_revision": "f3b2ff149b5a10c4be3c39488c31d9934e58279627c19b66246c4471228b6a9f",
+      "entrypoint": "sweepick_261008_manipulation_chain_fixture",
+      "changes": "import/resource references only",
+      "new_sha256": "e816d447fa8d1687c3b1ea04c04784caa8bcf93dd94f4e570d1be2d937cce5d8"
+    },
+    {
+      "old_path": "field-tools/sweepick_HARD_GATE_ALLOWLIST.json",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_HARD_GATE_ALLOWLIST.json",
+      "role": "profile/evidence/gate metadata",
+      "status": "byte-identical; existing measured/provisional scope retained",
+      "source_revision": "1f09c3ae199408d637c5ba64b9d620f3d81dfc5e4611594febd874bf49d8397d",
+      "entrypoint": "source_path",
+      "changes": "path only",
+      "new_sha256": "1f09c3ae199408d637c5ba64b9d620f3d81dfc5e4611594febd874bf49d8397d"
+    },
+    {
+      "old_path": "field-tools/sweepick_PROGRESS_EVIDENCE.json",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_PROGRESS_EVIDENCE.json",
+      "role": "profile/evidence/gate metadata",
+      "status": "byte-identical; existing measured/provisional scope retained",
+      "source_revision": "b222476c68806f946664ba103705a0e0eece7c20a0a3142425079032dbc20cbc",
+      "entrypoint": "source_path",
+      "changes": "path only",
+      "new_sha256": "b222476c68806f946664ba103705a0e0eece7c20a0a3142425079032dbc20cbc"
+    },
+    {
+      "old_path": "field-tools/sweepick_jaw_profile_left.json",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_jaw_profile_left.json",
+      "role": "profile/evidence/gate metadata",
+      "status": "byte-identical; existing measured/provisional scope retained",
+      "source_revision": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+      "entrypoint": "source_path",
+      "changes": "path only",
+      "new_sha256": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d"
+    },
+    {
+      "old_path": "field-tools/sweepick_motion_profile.json",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_motion_profile.json",
+      "role": "profile/evidence/gate metadata",
+      "status": "byte-identical; existing measured/provisional scope retained",
+      "source_revision": "f11c05c42016fbe455e08d9a5baf16fe671f47e56e03be722503f0007a0935d3",
+      "entrypoint": "source_path",
+      "changes": "path only",
+      "new_sha256": "f11c05c42016fbe455e08d9a5baf16fe671f47e56e03be722503f0007a0935d3"
+    },
+    {
+      "old_path": "field-tools/sweepick_progress_profile.json",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_progress_profile.json",
+      "role": "profile/evidence/gate metadata",
+      "status": "byte-identical; existing measured/provisional scope retained",
+      "source_revision": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+      "entrypoint": "source_path",
+      "changes": "path only",
+      "new_sha256": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
+    },
+    {
+      "old_path": "(new structural path support)",
+      "new_path": "2ARM_ROBOT/sweepick/src/sweepick/integration/sweepick_resource_paths.py",
+      "role": "source/resource path correspondence",
+      "status": "structure only",
+      "source_revision": "N/A",
+      "entrypoint": "sweepick_resource_paths",
+      "changes": "path correspondence and device-free verification",
+      "new_sha256": "96b8b3439cee5875aa18b20afd9aa34d55f34afd4d314e401c4be75ae14b2464"
+    },
+    {
+      "old_path": "(new structural path support)",
+      "new_path": "2ARM_ROBOT/sweepick/tests/test_sweepick_repository_paths.py",
+      "role": "structure/alias/resource/override test",
+      "status": "structure only",
+      "source_revision": "N/A",
+      "entrypoint": "test_sweepick_repository_paths",
+      "changes": "path correspondence and device-free verification",
+      "new_sha256": "71dd5bd138742acdb08d940f2c9f838eef7abbf57ed7cd25157ab07bc3c4126c"
+    }
+  ],
+  "independent_imports": {
+    "sweepick_pick01": "sweepick.integration.sweepick_manipulation_session",
+    "sweepick_full_chain": "sweepick.manipulation.sweepick_bimanual_handover",
+    "sweepick_move_a": "sweepick.control.sweepick_trajectory_executor",
+    "sweepick_real_command": "sweepick.control.sweepick_joint_command_mapping",
+    "sweepick_real_exec": "sweepick.control.sweepick_command_application",
+    "sweepick_trajectory": "sweepick.control.sweepick_trajectory_profile",
+    "sweepick_progress": "sweepick.control.sweepick_motion_progress",
+    "sweepick_grasp": "sweepick.control.sweepick_gripper_contact_hold",
+    "sweepick_gates": "sweepick.control.sweepick_execution_gates",
+    "sweepick_commission": "sweepick.control.sweepick_servo_access",
+    "sweepick_kin": "sweepick.control.sweepick_joint_kinematics",
+    "sweepick_collision_cert": "sweepick.control.sweepick_collision_preview",
+    "sweepick_field": "sweepick.perception.sweepick_observation_capture",
+    "sweepick_field_r6": "sweepick.perception.sweepick_feedback_observation",
+    "sweepick_sdk_top": "sweepick.perception.sweepick_os30a_observation",
+    "sweepick_real_rig": "sweepick.integration.sweepick_replay_rig",
+    "sweepick_episode": "sweepick.recording.sweepick_episode_recorder",
+    "sweepick_contact01": "sweepick.control.sweepick_gripper_contact_inspection",
+    "sweepick_read03_capture": "sweepick.perception.sweepick_wrist_capture",
+    "sweepick_261008_receive_real_adapter": "sweepick.integration.sweepick_handoff_snapshot_adapter",
+    "sweepick_261008_receive_runtime": "sweepick.integration.sweepick_receive_runtime",
+    "sweepick_261008_receive_plan": "sweepick.manipulation.sweepick_right_receive_planner",
+    "sweepick_261008_receive_entry": "sweepick.manipulation.sweepick_right_receive_dispatch",
+    "sweepick_261008_concrete_bindings": "sweepick.integration.sweepick_controller_bindings"
+  },
+  "public_assets": [
+    {
+      "path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_HARD_GATE_ALLOWLIST.json",
+      "bytes": 4053,
+      "sha256": "1f09c3ae199408d637c5ba64b9d620f3d81dfc5e4611594febd874bf49d8397d"
+    },
+    {
+      "path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_PROGRESS_EVIDENCE.json",
+      "bytes": 4688,
+      "sha256": "b222476c68806f946664ba103705a0e0eece7c20a0a3142425079032dbc20cbc"
+    },
+    {
+      "path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_jaw_profile_left.json",
+      "bytes": 2478,
+      "sha256": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d"
+    },
+    {
+      "path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_motion_profile.json",
+      "bytes": 1288,
+      "sha256": "f11c05c42016fbe455e08d9a5baf16fe671f47e56e03be722503f0007a0935d3"
+    },
+    {
+      "path": "2ARM_ROBOT/sweepick/src/sweepick/config/sweepick_progress_profile.json",
+      "bytes": 6143,
+      "sha256": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
+    },
+    {
+      "path": "2ARM_ROBOT/sim/mobile_dual_so101/tabletop_replay.json",
+      "bytes": 1591,
+      "sha256": "fc32538d65a0688480b4e6566d8c549911f3f7c12c5a256109b57fa8aea426b5"
+    },
+    {
+      "path": "2ARM_ROBOT/sim/mobile_dual_so101/integration_desk_source.json",
+      "bytes": 1486,
+      "sha256": "6ddcc1c0f42619a7f8167ff9c3ed82665d89a289950b007ec5921cc446352f0b"
+    }
+  ],
+  "unchanged_implementations": {
+    "sweepick.integration.sweepick_manipulation_session": {
+      "allowed": "144a652d1589d23fd1378f2ae19bbf6c3acfe091719441ff8f9eb16a9e534dc6",
+      "mapping": "4c0702810792908f6b9641a600e18202f36a34111874ebf2c3dfb805af0b9c99",
+      "model": "2aa2f0838a942e69525a5645e2cab2093b278e49f6f2b2bdfb4171d1885eb57b",
+      "world_from_camera": "849355c9bf3820898b8130de69474a0ee6d6ca9a528ea807a940d0dfbea3ec4e",
+      "robot_boxes": "fd336d8425e0a21f65611ade403697905817c40faccc2efb4dbbcd7a6c0776b3",
+      "inside": "edbf33404976e532fb2dd38f94946b1f47935c52b6b6422318a5b8ecbe9123f7",
+      "analyse": "015e3ad40eddf06ca7b440be3625fffecefe68b41af955a92a58634ae5bd9300",
+      "tool_axis": "67bb7afc721a23180b7b436e416559572bf305dd8e8e27225843ec29c18d895a",
+      "geom_vertices": "58bac2341d71af3e413273d1648f7c87f89b37107cef4d9b10a5d3db92e27bb6",
+      "pad_placement": "93f86f49cc2c859c28122d75886b6d3d2eab94e903c7e87d7568e2d5fafc5586",
+      "read_ticks": "b57995515dd6b33373b4a6498ea9bc546d5305869dc4d2692bac11a2a9d7bb2e",
+      "_read_ticks": "39a0d61c7d2c5c1f18daa52880299f06c890114dab3f9bd6b1341a9c7fa9aec7",
+      "top_frame": "76a3e0bbca4e7f22128e1ceb1a009e68bc459a1a9829a4b854c8adc7c975ec40",
+      "wrist_frame": "2568956cf5a8d2117ac6208e2c73b6b4d818ef97bdc95969896e569b721f8ee2",
+      "_wrist_frame_once": "25e8f4aa8ebdf4f44d566e02bc588d3af79d9ff5bf0ac2dfc1d7936efb2b67b7",
+      "wrist_features": "419e316ce7e7851c658209a6933d0fd750d5449cd025da9cc15a8ef0c58440fd",
+      "jaw_tips": "f6e383f161b205343151ed804723d1484b71a743d49725a9b9038b6173648fad",
+      "wrist_object": "4a011fc947e2a7ac852119375b095d8d76a5c27b85425d36ee21c8d39d16c12c",
+      "jaw_reference": "97767b86a9b86c1be30218193bd55d7a8b7b6bd81aed35db5432236a1d3c30cf",
+      "wrist_offset": "7f91085f8845311b960207eb95a0c53ff1b7abea6c9238fb8624176d7700da11",
+      "image_response_prior": "ea2555fde8fc4526f48893a33938e711e3ecbaacf7921efa5a3557ab952b0e12",
+      "overlay": "6f8ca7c76ed993f64cf3f62a7f88671246009a6532dc8a82fe99d5d7139efcb9",
+      "look": "66d72a2d484d1be5271af4811324f936c49f426a03e4bc88b75e85443b771a11",
+      "state_plan": "cd96e041e86c05f560ab47808456e8eef585d331b7f1cfdcf6e89107205e3e71",
+      "tool_minus_plan": "ffb2b59850325c7a8f55fcb139ef5b6c4b1209d0238cb93aaf6e9a6aad279352",
+      "support_region": "840152147109713c36ea64127745f64a6f52bdc75c899097e474e47a65103422",
+      "correction_headroom": "c9770bede26fc32cf377261bf86edc9944be0e0919decfdccb363d20abf6b8c8",
+      "stage_request": "c477ecede02ae44249d89428325bc04d4066354d9d6aeca4f697e5a1ded5b7c6",
+      "object_check": "9247e955e50c873a0ea33e239bef259b2323378965e06a496893d681f44f69bc",
+      "sweep_doc": "48dc621fd8b24847e7b5cc2bb1bfcad50300bebe3bd813e3dae4b3bf0b7fc0a5",
+      "judge": "f682972288f4c44586bfd234a2a48b0cbf172351d4538ba873fa7f112a07fded",
+      "jaw_during": "57b8fda78f03262c3f0769223acf34016efcc5aa5185325a3b099086b61c6d72",
+      "motion_monitor": "6601f99cc3a1d4d5ff9c2b5847ed69e745dfe950db0b9e8d9107cc9b6aab1fc3",
+      "read_now": "12c90bebdd5b8a47faebc7fd714006677aecabc05b82e19205a54b54109c84ad",
+      "state_object": "d0f44a0df6973a76b689266bed3b59dfd46af95868a3557654bb2864dfd2f04d",
+      "tool_offset": "001b3b41c362cccaf17217b5dc48ec3e099c87c6aad510f7ba8f2cacdfda21df",
+      "correct": "6536aeef5d5d457d4f26f2407f4036dd77afed09aaa2f3efddf0ee72a59f04db",
+      "snapshot": "62230d2ea37ba6fc7e5d6cb9e4ce150b58f83bb26618ade00492d49452e54055",
+      "wrist_cams": "41e57fb8a044eeb0256285094ad39863880f762fe18871fccfc890fe81d937e4",
+      "_rec": "6540d0528870869342cb3d6ba6f390a45faccd14ea2aaa525e1d620548abda3b",
+      "recorded_stage": "ba0961f152a58f03dac826ca5556a125a2d194b82683c7c26a82cc761e5285ee",
+      "put_back_evidence": "327be63dfc9d24d5176c4065ba2ce3b6cdd9160d0a238c665e6c927ae8c8dfae",
+      "session": "3c8941ab94dc24137119d0c498ace9e7f2cab48194ab2b6849ff4f89586f874a",
+      "main": "c768016750015d6eb7a6af51df3f6c5654c9a2a46e0cff6b50e1ae2ab8bc00e7"
+    },
+    "sweepick.manipulation.sweepick_bimanual_handover": {
+      "tool_pose": "bf6ee71379640232d1a6f17f0007819270ea361c53c1f4c96d1edd723aee1217",
+      "held_pose": "49772bb90728da755ec6081b525853e0d92463369719239d2427cb9e966eb78a",
+      "held_seen": "626a5267dd8ce918beccdc4a8e0f49e97115c8f7566c2349acd17ea4da85e8a3",
+      "scene_bindings": "6ab97b03304743a306dd4db2e21005d814599c384e804367cf22f6e0848d6250",
+      "field_refs": "e00f04e6c82bf93fbff0301d74853caa88f78512170b62917a038c2627f25bfb",
+      "ScopeDone": "a09c94fc2c0eac3040892700117a5e1b5004c180661e0a970c25c9eca842f388",
+      "Scoped": "b5d9d60e9daf7da67fd1dc2ed26c360e311d65911dd53cc11b813790979ace34",
+      "LoadTransfer": "ff614e4ae430be99174e9c67f28ba65d4537ac4ac6261e1b105938a6c1edd3e5",
+      "Release": "70016c3af4d6cffa605fbde5de6988a3d31bab84e59f752d65d04de1a675ab1a",
+      "Downstream": "a9b521838acee047c1a24bf57093f3fdf51d0bdd9f60195554043263db6661d4",
+      "Area": "85478592c0afdf2323044bf16fe4116b25c7e01b78bdbc41a0092f24a4326ef8",
+      "_plain": "04efd110b8b047587ea8b0cab11f10a8d9c98584d26dd3210b03c4a090cc1193",
+      "_mk": "d9244f0d038a99dc839c17ec323842f0dee548fe0ae0d4b55359d577912ddbc3",
+      "_prepare": "b87dc8ba762a8ad809b218e216dc113551827b8994959d556d6d1d63d2c1cc02",
+      "Owner.__init__": "608c35e88762284f3e0f3064aa6e628a60446371a3a68bb87020e0879e439e30",
+      "Owner.note": "5b95d861471a0562f43c51f109372c3b04ea345793bdc8b34aba0fc5cb316279",
+      "Owner.read_registers": "cd4eab92915742c839db78a5761b157391421c980c9ecd487f8728d018adf75b",
+      "Owner.recorder_frames": "b11d2dd012968a17a16183418d2f3f0a420a489a9a7ba4398c5de5f8e3601e06",
+      "Owner.raw": "5b71f1ebe4d64ffbebdfd083364492dc91a7dfb31d88744c2bbc7751acd988f2",
+      "Owner.observation": "cc069187bcb77e6d4ec3e122b3d4504e257eb3f9d20ce20c5894cd27e516f708",
+      "Owner.held_packet": "c7bf5b05f62ddc2e50087fe73b45ff53d2cb45e639e7b46cf9644d86d22cb28e",
+      "Owner.object_evidence": "7abdf8332fde22b00c80988a8845f81e060249ae3bd4177939133b6635a07a75",
+      "Owner.support": "6e91484383194f2f1ee47685be3bfb36816a11f954fd9c9d39e3d8883c5f09b4",
+      "Owner.left_away": "36efad0a21acb631ff8a78ea02d764594e836606a1c0a48933979503a4c78128",
+      "Owner.waypoint": "f7449296cc36bf4ef616d120e7e82280d51ac906d3193806e203dae4f4a22e6a",
+      "Owner.segment_check": "96664079b93d8c6ec1427647dc2a62eafff1c68263c54e79c39ffc0731297603",
+      "Owner.segment": "46c9ea3d5cdccc37fd3bcb6656b68421f044507188b0486c5f7cf6658a1353de",
+      "Owner._write_check": "49dd859ff8b59234d16c1bc5354ba5649c2b8b7d225c11ab48668a969ece5e0d",
+      "Owner._safe": "f02082aa7272004012ee64b1f1acbada1f83b7d30e3ca152970e158db18d14d2",
+      "Owner.go": "be8677ddfed2f85e117e9ce49c8d0672b3204e80a4344d8432448bbad0607009",
+      "Owner.result": "fa7b67fa808e0a7f53e1ba783e65b0e493f2eefd5423f99985dffe6fdf81fb4b",
+      "Owner.ack": "2b57731fa5972ac868ab4eeef7e2c4371b1ec06a7349499c47de3804b56c6260",
+      "Owner.apply_dispatch": "cb1810eb6babc0cf6ddb968d53fe0fb2a4853241aee41febbe481e299f349176",
+      "Owner.lift_m": "c81645d6996f6c938d7cbe7e8c771b2e65f94d85452f62444123a78200d2a0ca",
+      "Owner.observe_row": "a9856a1272a0fd1793c2df59ec1389ef60d4aa9e920278ce8c5e69b5d945f648",
+      "Owner.finish_observation": "170537c8d03c4c7cd20e570e08206368cf329ac278b0303aab0efe2d6323e865",
+      "Owner.insertion_ready": "218815aaf519c756b50687e49bac0b755fd80fcbf2aeee08b00809dfb5a63132",
+      "Owner.close_sweep_check": "19145b25f465ae63d6177bdb94fc2c903e46d21d1ffcd7eb519fa07a863fdafd",
+      "Owner.on_stop": "7d195c1c6c3e8f84b8f7f2c3f6a71edb8c9affb400abe32c440b3bad346932ea",
+      "Owner.wait_next_cycle": "dd98d8b3fa338829f7431cab31b4f02785ffb0b7d5ff8c693f2fd0672b225a62",
+      "Owner.take_right": "2b14815d33f9041cf3d8dd27b877759f8f8c091654c96e63975a4a8e20dee97f",
+      "Owner.abandon": "f1dfbe84c16c7423c3c5cadddc91eb70c732cb1b6f289e762fa2b85c21d4e694"
+    },
+    "sweepick.control.sweepick_trajectory_executor": {
+      "Stop": "3386c7aed08501bb2033e50b13aa96babd2e65e6782fbc53b5350729b003d8dc",
+      "parse_pairs": "e929beedef1bc610d21136523dd61f65afbd828aff50804d9c83b6e2a323982a",
+      "following_state": "47e8dc5cefaa3fd5af3398ab45e80bef04065eff4f77db97a25fb4c8213ee9ca",
+      "run": "a4430f4ef01876538b5ef359eee222f9d5e19fbc37917ca48d26e81ba3462e17",
+      "jaw_device": "4ba7806d3e4c7aa846a9570c5bf8b1beeb550f179ee929d6541306e9cf2afd0a",
+      "grip": "46fdbe65c3daad2f1c0302dc405b77d618136d5709902cc66203fae9ae95b39b",
+      "main": "cf1809dca626b57758228d4809c3deba2dbc9a88316d1b9ecb522ef23fab7edf"
+    },
+    "sweepick.control.sweepick_joint_command_mapping": {
+      "load_mapping": "0b73ddea7f958e369c31b12a0b257be1cc799b0af5ea1aca6e64ad1c50bd1830",
+      "tick_to_model": "39a0330b56b9feb33c06750282a44675ef20f707d33901a73d59155472f8468f",
+      "model_to_tick": "7af074672a9a5a4aa458a642cbd03790287b7f31bfae8aecf797f3c27ef20823",
+      "q12_to_ticks": "8e2ca338d733d856bee1a4446b8fea893538bbe4023ff467bfc01d1c5b8bc63e",
+      "ticks_to_q12": "42bc6df14540b58949dc03b8d0965c7810daa1f2656f68a50ae6a40396289fc7",
+      "check_command": "e69ff96e7faea53f1ed5a32f5f39387b373a54b765b10ff6a5bb253aa3bda1fb",
+      "dry_run_chunk": "ac1e476fbff67384601072f869db7daba052a02c5ad72a5e33c62328af79d0e9",
+      "classify_chunk": "56a3faf7b18c71dd104ce847c92017a75e6b8e2d7b85e19c1023396c595ab3dd",
+      "plan_arms_only": "2cbe19aa456ad0970b41a73d0e87518abef795d20086487dc663018593e29595"
+    },
+    "sweepick.control.sweepick_command_application": {
+      "NotConnected": "808cd6c6f666b79f7e509d2ffb25ef267296bd4fdcb9d8157b95ec93c6c4944f",
+      "Dispatch": "d5c3936a721ce7b651477d90ff692b192d86658d14ccd26d4f846d0d20c25d19",
+      "Applier": "3e580baf6d8da843a1c79424def4ad7a4983a29482a070455c9247fa31c5e233"
+    },
+    "sweepick.control.sweepick_trajectory_profile": {
+      "load_profile": "160c1a4805ccc528f59a71492b9826b7361fee9287259ae010d9c52b01c6b8bd",
+      "duration_for": "22e93a00ba0a8df03afe4e2a420c45506900fcef5044d8b0488bbe0c6fac704a",
+      "make": "567144f000391d1c7ecc799eeb69ffa03947a929902d59f8054f8f58aa00a8dd",
+      "peaks": "2c92b494ebf92f4a0c553c6a1f65f7bc99d357248c9b66566e06c2dc95dfbedb",
+      "identity": "5ce3d4d551ecb14da5472574b7b09391220a69a46f1048c47924221e23e2965f",
+      "validate": "37a8031c3829288f890d63a0e6365ca77da9c23c319918680cab82b8b1b5e872",
+      "retime_report": "6099e14ee9eb0a52c3498183d0bf62f92d0b663dc3cc9a9cc3fdbf3988dcba85"
+    },
+    "sweepick.control.sweepick_motion_progress": {
+      "load": "83c159ef17ea98f0744e9e63a84526408b54a99fb71452e0f5e61f00909d1c64",
+      "Joint": "fef7593bf3afd33a0347919634685de0e0b65d8bcaa24887b2d3cac8699b90e3",
+      "reached": "430b5627adef56b1e7bf80a588a6cef5271cb14b0ef9d70b1e05119da6c06256"
+    },
+    "sweepick.control.sweepick_gripper_contact_hold": {
+      "JawDevice": "754bee67f3f5834d576bdeab342f82d18d5a7ba1fe5c289756180b3ac86b4c1b",
+      "Jaw": "39d44ef86741b2cdfbe25bee227aad51c8da670753fabf010ac840eb039d35f0",
+      "fuse": "8a3d1a766e5144c6d6ed5c0f3ca6e54b54d76f0bccd0c917caa08023f2b2ce5a"
+    },
+    "sweepick.control.sweepick_execution_gates": {
+      "GateError": "beb037b1e4190d67d06a8b89099dc31be020bafe2d0aad109b910bf2e9194241",
+      "hard": "ddef2340064195b40133394eb391b789d3d6ac3c14c893a463d1d39e100fe55a",
+      "provisional": "36dee897447af51741f8dc0aab4c8aae389455bbeb007b32f6fa537e70ca5f99",
+      "contract": "87a5f41b6483cf4613ce1416de373dd4fc461e283c67d806a7bd7bc4f31903d1",
+      "diagnostic": "49562f6d9a6fc2ea3074f2ba45e7329f248cad29d57f44b5b91ea71489237d7c"
+    },
+    "sweepick.control.sweepick_servo_access": {
+      "Refuse": "1a30b3ddedbfb3478b4e61fdd022335ac10320c68ddc3dec90bb2e3832440706",
+      "real_bus": "b5df7881edd05ee5653537b80cfc89f13bfc3d760c3c147a6658586619520be9",
+      "port_owner": "b0d5ac74a4a1a91c74e69b2b7a48129bdaeba6e8ad939639f2e87bae1b0d6c69"
+    },
+    "sweepick.control.sweepick_joint_kinematics": {
+      "_jid": "241c07bc67454d5f7d76822da14a0131eae517cff119f4ad5e76e0a9d28cf2b4",
+      "set_arm_q": "cda2e9db5b04521e49acdd408a3252b9465a35ea5c626e5b222287370d1555c3",
+      "set_q12": "4900490876b0042a383ec22a16448648e9a7bd6f0c23f62bb1048668751c59c6"
+    },
+    "sweepick.control.sweepick_collision_preview": {
+      "main": "48e0a0936e491c6109efa661e46584c8a86de702164bd851b37debbf5b56b5c0"
+    },
+    "sweepick.perception.sweepick_observation_capture": {
+      "ReadOnlyViolation": "8809aa516ee70cbec79e826b0dd2aca2d01dfb72b4e3428d50abf32fc497af95",
+      "template": "f071caf8f0df2ae7c9c4e217142442fdcc2ddefa73b042d44547586798efda4a",
+      "decode_image": "a23bcebdb0db82efc24b60cae9b6bbf98273cf2f385c1c7507b053261aee72e7",
+      "colour_facts": "ba6d6942e0a5921db85f8703de81c461b0ed368a8b735dda76920a24bafc0137",
+      "depth_facts": "ba86c1afa2de3514f108d5e127a16403ba7610a727428b182459b9d67376aee5",
+      "rate": "9f0961bc8c9a3e41a4b72f136957b4647b7e1a0f2954a8110e607115bd829dd4",
+      "save_sample": "58a89c3d7acb357a1c4b8a8d19195b33953d3ccf8477a0f59ada39c58a53a2f1",
+      "capture_ros": "b795fbe7764892261a81536d38851d63a811cd9ebd596c5796a136103ddd901b",
+      "ReadOnlyBus": "fe15e6bf7ccf133e5a9a4df99cde021e54e0dc4f1f4c729f4db48292d4d2d666",
+      "read_arm": "abde3cefe4150cdcc5228fa96ac66f40f4592c35831c0d0ac457af3f1e50c31f",
+      "arms_lerobot": "a6f9d21bdc2b69cbcb7e267d0e85478529c20dfd0192578f9921b4f00874c5cb",
+      "to_rgb": "67dca26dd007ff89f2569167cb26909c2cab01f28b8631561387a1a828af0439",
+      "fit": "d4dbb9f7402e0efde8d2a4e9b0f2c35408570ce9db802a2eed7e42c82625c50d",
+      "q12_from": "6a2c3b199cbe4e8b271255abf31d7efdce65d5d72ab6fadf5c3d680d837ebc18",
+      "model_input": "ae17d607ed8c6d3fcf6e39aaa4ba2317d92eb0f49bf7031b3fabe9dea0ff6602",
+      "shadow": "cbac1084a2641f9994fc67de243f87afae6866fdb3cfa4175f30d3aadca272b8",
+      "fixture": "5b9daf30f1641b7bc56ff4a4f0cabf1a108d6b8c1b3bda4879f85c87a7dcd3b2",
+      "main": "8501e8d8f4f66454829f6b9cec684f50c7b9ecd3e776fa3a86c6105eaa411ebc"
+    },
+    "sweepick.perception.sweepick_feedback_observation": {
+      "template": "93eade42d9131c3117c94b76cb6a3b03da9a458d23f4e6a5700b881652d9b11d",
+      "sha_file": "42dce64862fba4a48e6fe2e4fd1fa7617ba5e5d85ef07ef9e4c92a087d5cbb56",
+      "content_sha": "8535f9ab956a6a16ed66647c91ba574e2debf0db8798431fd80b44f8728d4539",
+      "read_metadata": "370a837ac9ecb139643449825539a59bd1f27d72b1596845f3e28f84b721a213",
+      "calibration_snapshot": "e40ba86c56904808102afd468868b907d119a39c2923f911e9c6c6c6388a4935",
+      "load_calibration": "80d0cd73bd1b689e5c7e5827e74165d5d661ebe96a3acc8594b19cc08bc2da5d",
+      "driver_units": "c80f33c053dc242fc75c9986240cb3f9023ae6059960cc7179346a7231494955",
+      "read_feedback_series": "43dd0d834b6a54e3be01a76bc2d06eb336273fe0428f9555771de9a86d8bc2b4",
+      "feedback_document": "7b9312f6b9d7a8b639986ce6357e411158bc0a23421c45f9fff69be2a6ce224f",
+      "arms": "a0dbbc7d883686ae6a0ee2020ecc52852d3e5f8d9992320ea055000c17a92ad2",
+      "feedback_from_jointstate": "a3b11e33d9c16d0ebb4eb06fe2978f6cad8d04b7da04f1288aba3cbe1cc924ec",
+      "q12_at": "57e95350462c0b6f55d83f07101af4f1c8ca8e0eeff0a827782aceb2e585ac1e",
+      "device_reader": "89e498f782f0fa48984046f3373de1ae0b77c56605b06c643050d6c52ef2d94d",
+      "capture": "55ef17df1f9ff9520b0e1256fc0432c6526fd0537939d1d826ba302867ad4b0c",
+      "valid_K": "d2438f0fb5a130b252ffc3b4bf907a74b8c64b2da48488a0a489a642dcbfe663",
+      "stream_integrity": "dd19c8742fcb4d6b41f03455f5b57ff42d3f351e8a9315b0291c964978635491",
+      "arms_stationary": "8191ca7b66f2ca56119dc12d38ae50b5cdf4bc6bc6921bca0e0986c6ae578a9d",
+      "model_input": "e3625954c096c2af589901551812a3861b96c88723d69fbf4f7c1b54d7f32fad",
+      "shadow": "bcfc2fb6e86c90b355dd48d84ad4ccc7dcc90627767d39c8410713e9d3290399",
+      "main": "31e70c3a3c6a3fe371085a8aab90adfbbf65deaa1513f1367e4b975bbc82f07b"
+    },
+    "sweepick.perception.sweepick_os30a_observation": {
+      "RectLog": "3277f1558efa167db57e75f5586504aa9804443b58701ea53119523fe419ee1a",
+      "rectify_log": "96910502259d1a828a2217730f76d110148cc77993a1eb597bd347a1184e60fc",
+      "decode": "b3d06be341a997be9d568e622ae8dd6b19ccaa430a638310de500f43ecf501b4",
+      "roi_stats": "df6940c0638f6c84498a0dd0215d351ee0eccbc4eaa54124155a4b83f881d3d5",
+      "bind": "3d378ad0ac0dccf0f1b77245276ddf1047e279629316a6655eb30496473224a1"
+    },
+    "sweepick.perception.sweepick_observation_view": {
+      "newest": "fa88652f0fcc724cf10b4f6cba984fab1c879cf34b8a43ca4011d2f2935df619",
+      "state": "6d09a9e64059a00379db5f53a7a99237fef3339f1f0bd6b8fc78d1a3b0240330",
+      "H": "fac2241c128a175c4fd7b3880ee6063e0f6f7a219bcc834dc301dfd0ef528b28"
+    },
+    "sweepick.integration.sweepick_observation_session": {
+      "MirrorSensor": "a7c260fd3cbf7ff784ece06ecb1274a50c1ab458830c8e76d905c31c6b76eac6",
+      "Shim": "595e57c7acc5aa31a45efb940379862cf3efd8f1690da2e50c15e0ac6489c538",
+      "to_model": "383920e7f3f570c945a41e264efbf70518d768b63c68c7d92e5d0ddd6343f7ef",
+      "replay_observations": "d463e9547eefedfa756f1d44463587e087ad18e084b90e9a9de462e5c7111e8d",
+      "cadence_limit": "4d101581103412a04a25b6a7a06974ea56d5435d02ecdaaa41bdf58e00bc55f1",
+      "SourceUnavailable": "a4db7daa4ebc1c056072b21a1b75e42c53155aee7894caceaf908ee681d5f70f",
+      "SdkTop": "7f25e5a6d3805320ca040a448069a48329f5d72c6fc77dd743ad8794a8d232e1",
+      "WristCam": "90968fc9b7d6677c5e1045d24a8ef21a8635dcae0e10a4cf884bd207e504d45c",
+      "open_readonly_bus": "761f8ce2a3fd91ffbad115b94d8c1bf4ba0ba690b868fd9be7107507f4ac0922",
+      "LiveSource": "4eb1ea1ee88a6d086ec6cf292d92165875f865888db754b13cb9a290e0a9be9f",
+      "real_area": "eb6d27dbb68a4286e85f224d0d83236e5bdb51f7e73c5363fc5650c0a989f63d",
+      "load_runtime": "779dbc69d19046c5bada3e8d864c8abb55dc64f4f01db056d4421db8c02b985a",
+      "Owner": "d9e54c52df926a588ca62ea2ae2c00e7435b4480d89065f2f8eb9fbccdaf9e3f",
+      "owner_step": "d882f47987cd685ba1fc8248661527008d7191133c14128af779dd70ccdaad97",
+      "run_fixture": "ce5201edc79efe88a9c14b8b92832a156c2c01f5588aa3c022ab461d95bb4aa2",
+      "run_live": "721c84899a73688d0e20684e3018b221b60458c14fd4f31e4aa6c1c3b28a89f1",
+      "probe": "ec32c8182ed3930d62a6532222ea42987c98ed6c9c01442190df9a1e41d8b8af",
+      "main": "e2f06d21c3bcb7fa21f065d489a210a4ad94ea0e836d1b9db070149bf5c6b68f"
+    },
+    "sweepick.integration.sweepick_replay_rig": {
+      "MirrorSensor": "3cdf79c7139163ca84c80e09a5ecf3a09a4b8bffc1c0d746b24536f5344d11bb",
+      "Shim": "fc3191ec59197ea9249c931b6edfde04a90652c4c75518c671ea3dd043c0f94e",
+      "mirror": "a749596bedae5416ee9f0f6a64433df142b5873d917cb7cfb00f10b819da3cb4",
+      "main": "3e74e6631c05e949b041fed30cb3086d0f696bcc0ad0cd6f571ae76f3f9c4eb9"
+    },
+    "sweepick.recording.sweepick_episode_recorder": {
+      "Lent": "d55104bfc2e7edfc32d547f861a9b7ab9aeb3a146449328db88ca3d48eeb66dd",
+      "Episode": "2953b77a5f3acd3e76768b1dd0a80575e5eb2f585be3d78a0504f93dbad1832c",
+      "alignment": "caa0114f7c3413a3aa53109756f53a0944ad4c1612b837ddccaf38e0c2dc9b1c",
+      "_rows": "9056d2e48c6968d3ba2f4dd1d4008d17794ee5338dffe5f5082fe0db3b3e945d",
+      "real": "543de1dbbeed1f60c4564968466bb62ed8d264562687d35c6be4dc32309137af",
+      "release": "f57747ce1476e9e1c80c26feea58a6c09ca441474bce2fc1cee16d923a8f91a9",
+      "chain_record": "b3b9ea3da5b93f1e929182a8c40d9a5a2944ba417aa3a9cf297e7e6c61b79925"
+    },
+    "sweepick.control.sweepick_gripper_contact_inspection": {
+      "sha": "3d6744d313854ed7399df0b5e7098c44345b6c92ff94dd815f2e448dffc055d7",
+      "FrameRecorder": "ec9d8756c2a42750af4d360304e35a39dbc495ec2a0c34135ad31d5ed146656f",
+      "open_cameras": "8b1dda5d9fe08a9af258d5cc42ed6681732096ffffeb197ab9b357f653d142b2",
+      "feedback_summary": "70a764fd40e1ef4e35724ed9d6169ce6cd8a679fb9b6fa2f44aad978ce186e03",
+      "compare_with_baseline": "86a4e056a691f4a3bb20b823b6846a2400e9c8f90c655bec59d3737e705b7dd7",
+      "observation": "591def42153cc1c9b1d7f16824e209396ea6a7d8973d3a7d5dca8c90f7159472",
+      "annotate": "798af077cd807e892f162c8a34968ee23bbc249b85a4c0a967a6040610801a83",
+      "main": "0c870bca770fb55752d255a5fe3c0d32b42c34b025b8a9774102db15dac411c2"
+    },
+    "sweepick.perception.sweepick_wrist_capture": {
+      "board_pose": "22edbe9dd2c3f8bb9e96296cb366ad6f48519a4a73ef77c9f1451b4c014463ec",
+      "main": "45a16c9c6eebd36128486749eb9066f8b21d466b305abf991434073bebe8b05f"
+    },
+    "sweepick.integration.sweepick_handoff_snapshot_adapter": {
+      "array": "42a6cdafc6a5572f8eb9442dd51840ac42f650104c1e97391630d369aa00a764",
+      "transform": "87d54e8ca3d75a63429dcd52936a3154e6a95d1544ddcfad62a4532fe0527b6f",
+      "q_values": "92d5afd06170cfcf4013b03ec55fbb1392a82c217c9ac0f253f52a162af97cc6",
+      "adapt_snapshot": "0d780ed3f15f2b8b384f5230848d64c6875507e242ede5f8a0c82d3e260036ff",
+      "main": "214b1b9c3491a1aa1776ae13918fe6b2785c35038ec641b07c74fd0aa7627b8a"
+    },
+    "sweepick.integration.sweepick_receive_runtime": {},
+    "sweepick.integration.sweepick_receive_session": {
+      "OwnershipError": "9c8d335c681ed347c5ac9a8a472c5cc87ce4f61283827988e514d0714df1a003",
+      "_q12": "0e2f92cfc62eb535fef4d9a24fc7d60c820dadf1ebe89dcaba9c79f30850ba1d",
+      "_present": "ac2a7247ffeb6084df757c68772f833d900d718a7a97edd3c85f14c0b560a3ef",
+      "verified_right_profile": "29fefc544cbe5cd8f930815fbe4dbd44c3705f43e7c655643ff6a18ad16e9df9",
+      "ReceiveSession": "8e8d6e9dafca5835475c6957a1c4d60f97061c5dd9a1c937880a8aad632a6d5c",
+      "ReceiveManipulation": "698d646e9f308c75a319bb65618b64b2364cca1e66acb667ae2796ef9e2987f9"
+    },
+    "sweepick.manipulation.sweepick_right_receive_planner": {
+      "runtime": "b30d61aefcfa8d7050380c0373a089b92117fdd1019ec40925beba70faa3e5b6",
+      "build_planning_scene": "dcf68cc783760340d1bf4bf5291702782a342a13428bd38246f10aab3985e6c2",
+      "gear": "0c04cf4919ab5e5430b0a88a14a856220bc0a96b6ca5b67328c38f4ca6b6ea8e",
+      "plan_receive": "376d5b20a70e837c796eab182542c3089e9becc57e1e066e27b6c23689b0f726"
+    },
+    "sweepick.manipulation.sweepick_right_receive_dispatch": {
+      "owner_observation": "ccd18226db96b1a024f5de7dd6547772af835f6f1ccb130d24e79608040c0948",
+      "ReceiveCorrector": "472475ef9b8b460574665b021b56cb72886f8e8edd95842aeef2a805d5bd7765",
+      "apply_actual_observation": "1931e61ea335045b1e886d0669b89619b2e3059dd97a93cd104ee2065fd83e5c",
+      "make_session": "e3df9ce5dd09d1162f3990ef10de43a0eb696ffea6c1a7474e58eef484deffb8",
+      "prepare_receive": "a8927cc86c70bc17acf14fa65eeb640459bd1e955c0a5763d75f628f61622103",
+      "receive_references_ready": "6a931b0f8496e64b8aa5dbf7ae18b538e09a2b5be907b75c14cb9f20f4b20f6d"
+    },
+    "sweepick.integration.sweepick_manipulation_handoff": {
+      "FullEpisodeHandoff": "31ea212664a02729437ee3706a7f0ce41510453579d545cda8f3b71367a59657"
+    },
+    "sweepick.integration.sweepick_controller_bindings": {
+      "not_ready": "8fde83212213395a94131e537d1b4228b2d359b749f7040db710023e8a8c26ad",
+      "classify_held_estimate": "ccbc977d9d3549e1960eb1585679f5fc483209cb6b720ac1c412cc27801c21d2",
+      "insertion_alignment_ready": "608dfa854d1da2176348acb0daed5b71ab5f4d9d57e84f6571d3536c4ee01142",
+      "_current_registers": "bd4852876f74e2895e10f5a258bb3ed107a24e23563a8e82e7f6094f69474cc5",
+      "observed_owner_ack": "7bc5086844c7bdedd31ad95f44095836d1ab5cdfd18ab5da07e6377d521e0387",
+      "observed_motion_result": "3c02ceafff55bbc117a50cd5afe41bd7e05ed05b91bafb232ab19f0b2b22c43f",
+      "ExistingCertificate": "a7db0fdfa68bd9237bdd3a3a01f72d94a6f0609a71890e2dc688c95e8ea57d33",
+      "ExistingPlanReferences": "b45ba8acf095eecbac3b905b2866d63d08546c31555321b0c2c15cce04a1b647",
+      "ExistingDownstream": "dc616d779e4ad2b6b1924affcd250b8a72524c88f55251a5780a7a19e2df5c04",
+      "ConcreteBindings": "e6800c454d5d87ebbb78dcbdaf74efe9f624ffe60cad6eac13d6e6cbab85a804",
+      "bind_full_episode": "c943097eec0a53ba13078cd9442f55e1b18a3a341cbcf4bca7ebdc0cfbe62626"
+    }
+  },
+  "resource_loader_changes": {
+    "sweepick_pick01": [
+      "plan_pick",
+      "observe",
+      "certify",
+      "stage",
+      "run_session"
+    ],
+    "sweepick_full_chain": [
+      "codex",
+      "build",
+      "Owner.gear: selected receive planner reference, no conversion change"
+    ],
+    "sweepick_contact01": [
+      "session"
+    ],
+    "sweepick_261008_receive_runtime": [
+      "configure_runtime",
+      "field_module"
+    ]
+  },
+  "external_runtime": {
+    "status": "external fixed source; not replaced by main SIM",
+    "root_contract": "FACTORY_ROOT and existing tjj-runtime/v1 deployment boundary",
+    "required_modules": [
+      "tjj_task_manager",
+      "tjj_mvp_r2",
+      "tjj_mvp_r3",
+      "tjj_perception",
+      "sim_data_factory.teacher",
+      "sim_data_factory.student_eval",
+      "integration_scenes",
+      "physics_ik",
+      "collision_guard",
+      "dapier_act_policy"
+    ],
+    "main_is_not_compatible_substitute": true,
+    "omitted_assets": [
+      "compiled scene",
+      "SO-101 upstream MJCF/mesh deployment",
+      "policy checkpoints/normalization",
+      "raw episodes/frames",
+      "SDK binaries",
+      "private mapping/calibration/field references"
+    ],
+    "source_comparison": {
+      "integration_scenes.py": {
+        "runtime_sha256": "2c2e2f94d7cc75cb4286d3797577e1a3770685724d2f39ae9af7584c61e2f133",
+        "base_main_sha256": "1db3fddaa7e819fec507056723b1360e6b6842381080a23e69f391f4e21f6b38",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "physics_ik.py": {
+        "runtime_sha256": "ce91d2781094d3de7d6dd5c5560ac579ade4b78cc6d225724b6ace98deb7be45",
+        "base_main_sha256": "03bd370ca9c73a46e6d0615a62fb1c394dc0d9fe7fbedf5f44e2b2d94a7c7864",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "collision_guard.py": {
+        "runtime_sha256": "47979c8471b34238614a55a18e02fcb562ecd151539726c55d0850fa32d95728",
+        "base_main_sha256": "eb8bee72afb286bc53d82c516fd5f46a1465abc9395eb14360a6edf174eafe48",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "dapier_act_policy.py": {
+        "runtime_sha256": "7c2a92e27d763017e377bd87b267b5776a89fa0e9accb69a80a4c20ab6ea524a",
+        "base_main_sha256": "d0f12ce7b04c3333a9f072f22324069cb7506889083bc920a556067014818422",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "pgripper_learning.py": {
+        "runtime_sha256": "0c7c321e9216a62c054d87cc1a37076024b2767c8f668d43706b828bbe878e35",
+        "base_main_sha256": "bc2db3422dff15830e99d64f312f0dd90deb666b4e16371f299c52b75aa4bb7f",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "tabletop_replay.json": {
+        "runtime_sha256": "fc32538d65a0688480b4e6566d8c549911f3f7c12c5a256109b57fa8aea426b5",
+        "base_main_sha256": "fc32538d65a0688480b4e6566d8c549911f3f7c12c5a256109b57fa8aea426b5",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "integration_desk_source.json": {
+        "runtime_sha256": "6ddcc1c0f42619a7f8167ff9c3ed82665d89a289950b007ec5921cc446352f0b",
+        "base_main_sha256": "6ddcc1c0f42619a7f8167ff9c3ed82665d89a289950b007ec5921cc446352f0b",
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "sim_data_factory/teacher.py": {
+        "runtime_sha256": "3a841fa99531193bfc2fa71ecbab9b05c9991bf954ca0ed9f1d546ffcf760f67",
+        "base_main_sha256": null,
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "sim_data_factory/core.py": {
+        "runtime_sha256": "263048c6eb2a3e73d5f30b9130cf560fc2ac4c70398305e8e26799a23bcebf44",
+        "base_main_sha256": null,
+        "selected": "external fixed runtime; public scene assets retained"
+      },
+      "sim_data_factory/task_success.py": {
+        "runtime_sha256": "e28c9520bc9b3fc9f506394e76b8f0d8ab6b6dfa26dadaeda0121dd141e6a71f",
+        "base_main_sha256": null,
+        "selected": "external fixed runtime; public scene assets retained"
+      }
+    }
+  },
+  "real_execution_ready": false,
+  "motor_commands_sent": 0,
+  "tests": {
+    "baseline": "34 passed, 5 deselected",
+    "after_move": "34 passed, 5 deselected",
+    "excluded": [
+      "completed owner/STOP counterexamples",
+      "archive-only source-symbol test"
+    ],
+    "not_run": [
+      "stored SIM successful runs",
+      "run14 replay",
+      "left C trace replay",
+      "full-chain physical execution",
+      "ACT training/shadow inference",
+      "runtime-dependent full collection without private inputs"
+    ],
+    "structure": "5 passed (path/alias/assets/frozen bodies/explicit planner override)",
+    "installed_package": "13 passed",
+    "compatibility": "24 independent alias pairs + 3 supported-runtime alias pairs; 1 script-only viewer not imported",
+    "cli_help": "3 canonical + 3 compatibility help entrypoints exit 0",
+    "initial_import_issue": "viewer is script-only, starts HTTP server on import; classified explicitly without changing it",
+    "review_fixes": [
+      "MuJoCo 3.3.7 declared for clean imports, existing project pin reused",
+      "explicit RECEIVE override gear uses same selected planner",
+      "packaging metadata build outputs ignored"
+    ],
+    "clean_installed_ci": "14 passed, 0 skipped; fresh Python 3.12 venv, only declared package dependencies + pytest",
+    "independent_review": "dependency/override/build-output findings fixed; CLI and clean install verified by root",
+    "hardware": "NOT_RUN, motor_commands_sent=0"
+  },
+  "deferred_paths": [
+    {
+      "old_path": "2ARM_ROBOT",
+      "new_path": "sweepick",
+      "reason": "ROS package/resource/CI boundaries; approximately 160 references; existing package identity retained"
+    },
+    {
+      "old_path": "2ARM_ROBOT/src/shoe_sorting_data",
+      "new_path": "unchanged",
+      "reason": "ROS and legacy package identity"
+    },
+    {
+      "old_path": "2ARM_ROBOT/sim/mobile_dual_so101",
+      "new_path": "unchanged",
+      "reason": "SIM/vendor/model boundary, not native runtime revision"
+    }
+  ],
+  "script_only_modules": {
+    "sweepick_view": "existing script reads argv and starts a local HTTP viewer on import; use CLI with SESSION_DIR, not import/help"
+  },
+  "work6_comparison": {
+    "concrete_bindings": {
+      "local_owner_pin_sha256": "cce120eab73d7335997761103b287fd689d2353f1f7b0be305fa921b5a4f906c",
+      "work6_independent_sha256": "e43485c80071947906f82b08002ccefaac4bd6a2b071c0c368213781dd741c9a",
+      "same": false,
+      "chosen": "current local owner pin; no server overwrite"
+    },
+    "full_episode": {
+      "local_owner_pin_sha256": "1fe355fcaf98f241e0e29a752d07be81bc0f7e847dab8631bd37db6e2d64641a",
+      "work6_independent_sha256": "14dc6fdb4b2b4eb8081d46461f922ac9f063eff82e3b7b2959065e57470a760a",
+      "same": false,
+      "chosen": "current local owner pin; no server overwrite"
+    },
+    "receive_entry": {
+      "local_owner_pin_sha256": "0554dd819120fd1465790cc81f8ba86a3a81733bd52349d64b8a615dc7ca4b21",
+      "work6_independent_sha256": "0554dd819120fd1465790cc81f8ba86a3a81733bd52349d64b8a615dc7ca4b21",
+      "same": true,
+      "chosen": "current local owner pin; no server overwrite"
+    },
+    "receive_plan": {
+      "local_owner_pin_sha256": "8c32fc4da741d82f822a7ecf384d6ab51aa4cb9d314fbe0bb4f7b3378c418b62",
+      "work6_independent_sha256": "8c32fc4da741d82f822a7ecf384d6ab51aa4cb9d314fbe0bb4f7b3378c418b62",
+      "same": true,
+      "chosen": "current local owner pin; no server overwrite"
+    },
+    "receive_real_adapter": {
+      "local_owner_pin_sha256": "873d1a0ce36249db4e320e2418702960bd1c080d22d82aeadb02ea1310204c4b",
+      "work6_independent_sha256": "873d1a0ce36249db4e320e2418702960bd1c080d22d82aeadb02ea1310204c4b",
+      "same": true,
+      "chosen": "current local owner pin; no server overwrite"
+    },
+    "receive_runtime": {
+      "local_owner_pin_sha256": "619c58fd0abbd71af7faa5539f3593f596c5629e82039d6921b2056296c18b1d",
+      "work6_independent_sha256": "619c58fd0abbd71af7faa5539f3593f596c5629e82039d6921b2056296c18b1d",
+      "same": true,
+      "chosen": "current local owner pin; no server overwrite"
+    },
+    "receive_session": {
+      "local_owner_pin_sha256": "9e54fbd0b787760a1cdf324a4d152c2b67baa682b5477f8c23bb29dcd4519eab",
+      "work6_independent_sha256": "9e54fbd0b787760a1cdf324a4d152c2b67baa682b5477f8c23bb29dcd4519eab",
+      "same": true,
+      "chosen": "current local owner pin; no server overwrite"
+    }
+  },
+  "local_agent_guidance": "base main has no AGENTS.md; naming guidance added to excluded local AGENTS.md and public product README"
+}

@@ -1,0 +1,16 @@
+{
+ "schema": "tjj.jaw-profile.v1",
+ "name": "REAL_LEFT_PGRIPPER_PROVISIONAL",
+ "what": "Device profile of the LEFT gripper for sweepick_grasp.Jaw (the existing close / contact / hold primitive). It is about the gripper, not about an object: no opening of any object is in it. PROVISIONAL: one gripper, the selected slow profile, empty jaws (C) and one 40 mm block (PICK01).",
+ "units": "ticks of the gripper servo; converted to the primitive's opening scale with the calibrated range of the device",
+ "residual_floor_ticks": {"value": 17, "basis": "contact onset = the residual (measured - command) rises this far above the residual at the start of the same closing stroke, twice in a row. Free closing with empty jaws: residual 5 .. 11 (C, 2026-10-08) and up to 13 (free part of PICK01 close 1); 17 is the largest lead at which a free joint of this robot was seen standing (sweepick_progress_profile.json). The same value separates 'loaded' from 'relaxed' at rest: empty jaws rest 6 .. 7 ticks from the command"},
+ "preload_residual_ticks": {"value": 24, "basis": "the squeeze after the onset ends when the residual at rest reaches this: the floor plus the largest no-load residual at rest (7), so that a held object keeps the residual clear of the floor. In PICK01 the block was lifted and carried with the jaws only held at the contact position; no larger value is known to be needed"},
+ "creep_step_ticks": {"value": 1, "basis": "encoder resolution: one tick per squeeze increment"},
+ "creep_period_s": {"value": 0.1, "basis": "the existing primitive's period (residual read at rest in between)"},
+ "close_rate": {"value": "profile_velocity_rad_s of sweepick_motion_profile.json", "basis": "the selected execution profile; the executor also limits the change of the rate by the profile acceleration"},
+ "end_stop_ticks_above_closed": {"value": 17, "basis": "the command does not go closer to the calibrated closed end than the contact floor, so the jaws' own end is not pushed"},
+ "rest_step_ticks": {"value": 0.2, "basis": "below one fifth of a tick per cycle the command counts as at rest"},
+ "max_feedback_age_s": {"value": 0.1, "basis": "five control periods; same as the existing primitive"},
+ "confirm_s": {"value": 0.2, "basis": "same as the existing primitive"},
+ "not_in_here": ["no opening per object", "no Load / Current threshold (raw units unverified; they are recorded next to the state)", "the 125-tick lead and load 500 of PICK01 close 1 are not targets"]
+}

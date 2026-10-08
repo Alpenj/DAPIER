@@ -1,0 +1,56 @@
+{
+ "schema": "tjj.gate-allowlist.v2",
+ "rule": "Every refusal / stop in the real execution path names a gate from this file. The file records, per gate, what it rests on, where it applies and what happens. It does not forbid numbers: a monitored quantity with a stated basis and scope may stop a run. What stays forbidden is listed under 'forbidden'.",
+ "hard": {
+  "command_malformed": "non-finite or malformed command / trajectory sample",
+  "servo_range": "goal outside the servo's own Min / Max_Position_Limit (EEPROM, read from the device)",
+  "device_calibration_mismatch": "the device's Min / Max_Position_Limit differ from the calibration snapshot in use",
+  "bus_lost": "a bus read or write failed (the driver's own packet timeout) or the port could not be opened",
+  "servo_fault": "the servo's Status register is non-zero (its own fault / protection report); at rest it read 0 on all 12 motors",
+  "operator_stop": "stop requested by the operator (stop file / interrupt)",
+  "stale_position": "a write would be based on a Present_Position that was not read in the same cycle",
+  "port_owned": "the port is held by another process",
+  "torque_state": "the arm is not in the torque state the mode requires (another controller may own it); left as it is",
+  "collision_verified_frame": "contact on the commanded path in a VERIFIED coordinate system (not reachable while the joint mapping is a candidate)"
+ },
+ "provisional": {
+  "model_joint_range_candidate": "goal outside the joint range of the assembled dual model, through the CANDIDATE mapping (verified=false). Applies to model-dependent paths (ACT / HYBRID, model-derived targets), not to device-level commissioning",
+  "collision_candidate_frame": "contact on the commanded (nominal) path in the SIM scene through the CANDIDATE mapping. Applies to model-dependent paths only",
+  "owner_not_connected": "the command owner needs something the real arm does not have yet (REAL gripper profile)",
+  "certificate_binding": "a collision result that belongs to another trajectory / mapping (structural identity, no number)",
+  "input_not_usable": "read-only observation rules of the loop: a camera stream that missed more than one of its own measured frame intervals, a wrist frame that fails the stationary integrity rule. They refuse an OBSERVATION; they never gate a motor write by themselves"
+ },
+ "diagnostic": [
+  "tracking_error",
+  "following_state",
+  "distance_to_range_end",
+  "profile_peaks",
+  "collision_tube",
+  "start_spread",
+  "present_current",
+  "present_load",
+  "raw_target_step",
+  "frame_age",
+  "pairing_skew",
+  "torque_on_drift",
+  "model_range_candidate",
+  "progress_state"
+ ],
+ "recovery": [
+  "SETTLE_CYCLES",
+  "STEADY_TICKS",
+  "RELEASE_TRIES"
+ ],
+ "contract": {
+  "profile_violation": "the final trajectory exceeds the SELECTED motion profile (sweepick_motion_profile.json). The profile is the execution contract of the run, not a rating of the servo; a trajectory that breaks it is retimed by the generator or refused",
+  "no_progress": "sweepick_progress_profile.json: a commanded joint did not advance for longer than twice the longest normal start delay (first the command waits, then this). Basis: 13 traces of this robot; scope in that file. Reaction: stop pushing, hand over to the stop handling",
+  "target_not_reached": "after the command ended the measured position is not within the settled error seen on this robot (sweepick_progress_profile.json) or is still changing. Reaction: not reported as reached / returned; torque is not released on that ground",
+  "measurement_invalid": "the actual position of a commanded channel is missing or non-finite, or was not read in this cycle",
+  "status_unavailable": "the Status register is required for fault monitoring and could not be read; a missing status is not a status of 0"
+ },
+ "forbidden": [
+  "an arbitrary cap on the total travel (ticks or degrees), under any name",
+  "a normal opening hard-coded per object width",
+  "re-using the removed 30-tick / 2-tick / 50 % gates under another name"
+ ]
+}
