@@ -25,6 +25,31 @@
 - 앞으로 A / B / Console 수정본은 이 브랜치의 하위 `native/`, `console/`, `tests/`, `docs/`로 나누되 로컬 실행본과 공개용 사본의 SHA/차이를 `SOURCE_INDEX.json` 등에 구분한다.
 - 이 **공개** 브랜치에 raw Calibration/EEPROM, 장치 ID, 승인 비밀, 전체 REAL 영상, 대용량 세션, 모델 바이너리 및 절대 로컬 private path를 커밋하지 않는다. 승인·Owner·STOP/회수 경로를 변경하지 않는다.
 
+## 후속 READ-ONLY 조회 결과 — 2026-10-15
+
+이전 진단의 SDK import 문제(`from scservo_sdk import sms_sts`)를 수정하고, 설치된 `scservo_sdk`의 `PortHandler`/`PacketHandler(0)`으로 LEFT ID6을 직접 읽었다. 사용자가 전달한 원시 출력은 아래와 같다.
+
+| 항목 | 원시값 | 해석 |
+|---|---:|---|
+| `ping()` model | 777 | 기존 장착 STS3215 모델 코드와 일치 |
+| `ping()` comm | 0 | 정상 통신 |
+| `ping()` error | `0x00` | 응답 오류 비트 없음 |
+| `Servo_Status` (65) | 0 | 조회 시점의 과부하/상태 플래그 없음 |
+| `Present_Position` (56) | 3497 ticks | 저장된 software Calibration 상한 3431보다 66 ticks 개방된 실제 위치; 사용자 수동 개방 가능성과 부합 |
+| `Present_Load` (60) | 0 | Torque OFF 상태의 부하 피드백 |
+| `Present_Voltage` (62) | 124 | STS3215 계열 환산 12.4 V (0.1 V/LSB) |
+| `Present_Temperature` (63) | 37 | 37 °C |
+| `Present_Current` (69) | 0 | Torque OFF 상태의 전류 피드백 |
+| `Torque_Enable` (40) | 0 | 해당 ID6 조회 시점 토크 비활성 |
+
+`port.closePort()`로 종료됐으며 조회 코드는 **Ping 및 READ만 포함**했고 Goal/Torque/EEPROM Write를 호출하지 않았다.
+
+**판정: `ID6_RESPONSIVE_STATUS_CLEAR_TORQUE_OFF_AT_READ`.** 직전 오류 시점의 `0x20` 기록은 유효하며 이번 정상 응답으로 과거 오류가 사라지는 것은 아니다. 다만 이 시점에서는 ID6의 영구 고장/상시 무응답/지속 과부하라는 가설을 지지하지 않는다. 상태가 해제된 물리적 계기(부하 해소, 전원 재투입, 프로토콜의 status handling 등)와 이전 `safe_shutdown=UNKNOWN`은 해결되지 않았다. LEFT Arm 나머지 5축의 현재 Torque/OFF, 전체 HOME, 로봇 회수는 이번 단일 ID6 READ로 확인할 수 없다.
+
+재현을 위한 새 실물 CLOSE/Grip test, EEPROM 초기화, 과부하 보호값 완화, Torque 강제 ON은 이 결과로 승인되지 않는다. 기존 단계별 운영·현장 승인 하에서만 후속 실험을 계획한다.
+
+참고: STS3215 레지스터 주소/전압 환산 https://github.com/hybotix/STS3215-Tutorial/blob/main/REGISTER_REFERENCE.md
+
 ## 문서 근거
 
 - 프로젝트: 2026-10-15 제출 Run 원본 `owner.log`, `FAILURE_PACKET`, `AI_REVIEW`, `INSPECTION`.
