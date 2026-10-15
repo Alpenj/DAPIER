@@ -1,0 +1,47 @@
+{
+  "privacy": "anonymized technical summary; original frames, feedback, camera parameters, timestamps and machine paths remain private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "Y_REFERENCE_UNOBSERVED",
+  "stored_pregrasp_samples": 4,
+  "stored_B17_held_samples": 10,
+  "REAL_observed_image_axes": [
+    "u"
+  ],
+  "REAL_control_dimension_ceiling": 1,
+  "REAL_validated_Jacobian_dimension": 0,
+  "pregrasp_object_features_visible": 4,
+  "pregrasp_X_reference_observed": 4,
+  "Y_reference_observed": 0,
+  "held_stage_pregrasp_reference_inherited": false,
+  "held_stage_task_error_axes": [],
+  "feature_definitions": {
+    "u": "A_WIDEST_ROW_OBJECT_MIDPOINT_X",
+    "v": "VISIBLE_COMPONENT_CENTROID_Y"
+  },
+  "component_centroid_is_complete_object_centre": false,
+  "visibility_outputs": [
+    "visible colour component and contour",
+    "frame clipping",
+    "current Jaw tip X visibility",
+    "unchanged A recorded-burst stability diagnostic",
+    "hidden surface/physical edge identity remains unobserved"
+  ],
+  "camera_state_binding": [
+    "qualified observation identity",
+    "canonical q12 SHA",
+    "left image identity and file SHA",
+    "current image-array SHA, shape and dtype",
+    "explicit source kind"
+  ],
+  "time_contract": "B17 normal asynchronous receipt/exposure/measurement distinctions retained; no new time cutoff",
+  "view_roles": {
+    "top": "object/worktable spatial context only",
+    "left_wrist": "left proximity alignment",
+    "right_wrist": "retained as a separate input; no verified left control contribution"
+  },
+  "missing_evidence": [
+    "Y_REFERENCE_UNOBSERVED",
+    "REAL_JACOBIAN_UNIDENTIFIED"
+  ]
+}

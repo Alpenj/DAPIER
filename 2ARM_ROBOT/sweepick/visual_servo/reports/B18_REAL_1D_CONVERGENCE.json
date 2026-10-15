@@ -1,0 +1,100 @@
+{
+  "privacy": "anonymized technical summary; original frames, feedback, camera parameters, timestamps and machine paths remain private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "OBSERVED_LOCAL_X_ERROR_REDUCTION",
+  "pairs": [
+    {
+      "id": "paired_run_A",
+      "commanded_tool_move_mm": 6.372822702866487,
+      "actual_model_FK_projected_tool_move_mm": 4.620834054825066,
+      "actual_tool_rotation_deg": 1.8793085119156123,
+      "before_image_error_px": -20.77540201134475,
+      "after_image_error_px": -0.5631971111283554,
+      "absolute_error_reduction_fraction": 0.9728911570124702,
+      "error_sign_before": -1.0,
+      "error_sign_after": -1.0,
+      "raw_object_centre_change_px": 19.0,
+      "raw_object_centre_response_px_per_mm": 4.11181180162924,
+      "normalized_error_response_px_per_mm": 4.374146455034638,
+      "target_shift_mm": -0.28418513968398795,
+      "scale_mm_per_px": [
+        0.24539877300613497,
+        0.23121387283236994
+      ],
+      "comparability": "SEPARATE_LOCAL_RESPONSE_WITH_HEIGHT_CAMERA_SCALE_AND_TARGET_CHANGE",
+      "physical_object_stationarity_verified": false,
+      "same_object_evidence": "same recorded session and red-development-object appearance; not independent physical identity",
+      "observed_motion_directions": 1,
+      "constant_context_REAL_Jacobian_identified": false,
+      "status": "OBSERVED_LOCAL_X_ERROR_REDUCTION",
+      "full_task_success": false,
+      "real_convergence": "REAL_CONVERGENCE_UNVERIFIED",
+      "source_clock_note": "host receipt and joint snapshots only; native exposure/servo measurement mapping unknown",
+      "encoded_burst_centre_variability_px": [
+        0.0,
+        0.2886751345948129
+      ],
+      "variability_role": "three encoded saved frames; not a sensor noise bound or independent calibration residual",
+      "JPEG_replay_minus_recorded_centre_px": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "paired_run_B",
+      "commanded_tool_move_mm": 7.544444295043435,
+      "actual_model_FK_projected_tool_move_mm": 5.077903280301203,
+      "actual_tool_rotation_deg": 1.7929980931294605,
+      "before_image_error_px": -24.5948884018416,
+      "after_image_error_px": -4.245442393441813,
+      "absolute_error_reduction_fraction": 0.8273851735337037,
+      "error_sign_before": -1.0,
+      "error_sign_after": -1.0,
+      "raw_object_centre_change_px": 20.0,
+      "raw_object_centre_response_px_per_mm": 3.938633505995741,
+      "normalized_error_response_px_per_mm": 4.007450493856735,
+      "target_shift_mm": -0.07709081416983829,
+      "scale_mm_per_px": [
+        0.24539877300613497,
+        0.23391812865497075
+      ],
+      "comparability": "SEPARATE_LOCAL_RESPONSE_WITH_HEIGHT_CAMERA_SCALE_AND_TARGET_CHANGE",
+      "physical_object_stationarity_verified": false,
+      "same_object_evidence": "same recorded session and red-development-object appearance; not independent physical identity",
+      "observed_motion_directions": 1,
+      "constant_context_REAL_Jacobian_identified": false,
+      "status": "OBSERVED_LOCAL_X_ERROR_REDUCTION",
+      "full_task_success": false,
+      "real_convergence": "REAL_CONVERGENCE_UNVERIFIED",
+      "source_clock_note": "host receipt and joint snapshots only; native exposure/servo measurement mapping unknown",
+      "encoded_burst_centre_variability_px": [
+        0.0,
+        0.0
+      ],
+      "variability_role": "three encoded saved frames; not a sensor noise bound or independent calibration residual",
+      "JPEG_replay_minus_recorded_centre_px": [
+        -0.5,
+        -0.5
+      ]
+    }
+  ],
+  "paired_observations": 2,
+  "constant_context_2D_pairs": 0,
+  "real_convergence": "REAL_CONVERGENCE_UNVERIFIED",
+  "scope": "recorded one-step local X error reduction, not independent constant-target/2D convergence or complete task success",
+  "excluded_contexts": [
+    "other-height/stage transitions are not pooled",
+    "yaw-only record has no independent translational excitation and lacks a matched saved-image pair"
+  ],
+  "provenance_checks": {
+    "same_run_frame_identifiers": true,
+    "saved_image_SHA_verified": true,
+    "actual_q12_to_recorded_ticks_verified": true,
+    "actual_q12_candidate_FK_matches_saved_tool_positions": true,
+    "frame_joint_receipts_bracketed_within_same_host_clock": true,
+    "interpolation_used": false,
+    "servo_sampling_time_known": false,
+    "native_exposure_mapping_known": false
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "privacy": "anonymized technical summary; original frames, feedback, camera parameters, timestamps and machine paths remain private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "PASS",
+  "B17_tests_retained": 29,
+  "B18_tests_run": 30,
+  "total_required_tests_run": 59,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "model_cases": [
+    {
+      "source": "MODEL_ONLY",
+      "status": "SIM_OR_MODEL_CONVERGED",
+      "direction": 0,
+      "sign": -1,
+      "image_error_norm_px": [
+        3.0188549153618944,
+        0.0706674519069257
+      ],
+      "test_target_px": 0.2,
+      "criterion_role": "virtual-model test acceptance only; no REAL task or safety threshold",
+      "iteration_budget": 8,
+      "real_convergence": "REAL_CONVERGENCE_UNVERIFIED"
+    },
+    {
+      "source": "MODEL_ONLY",
+      "status": "SIM_OR_MODEL_CONVERGED",
+      "direction": 0,
+      "sign": 1,
+      "image_error_norm_px": [
+        3.0115450728265616,
+        0.0807511802558496
+      ],
+      "test_target_px": 0.2,
+      "criterion_role": "virtual-model test acceptance only; no REAL task or safety threshold",
+      "iteration_budget": 8,
+      "real_convergence": "REAL_CONVERGENCE_UNVERIFIED"
+    },
+    {
+      "source": "MODEL_ONLY",
+      "status": "SIM_OR_MODEL_CONVERGED",
+      "direction": 1,
+      "sign": -1,
+      "image_error_norm_px": [
+        2.751496777902433,
+        0.1312051288066482
+      ],
+      "test_target_px": 0.2,
+      "criterion_role": "virtual-model test acceptance only; no REAL task or safety threshold",
+      "iteration_budget": 8,
+      "real_convergence": "REAL_CONVERGENCE_UNVERIFIED"
+    },
+    {
+      "source": "MODEL_ONLY",
+      "status": "SIM_OR_MODEL_CONVERGED",
+      "direction": 1,
+      "sign": 1,
+      "image_error_norm_px": [
+        2.7829564137063594,
+        0.1763005199013084
+      ],
+      "test_target_px": 0.2,
+      "criterion_role": "virtual-model test acceptance only; no REAL task or safety threshold",
+      "iteration_budget": 8,
+      "real_convergence": "REAL_CONVERGENCE_UNVERIFIED"
+    }
+  ],
+  "model_IK_calls": 32,
+  "model_path_checks": {
+    "count": 32,
+    "statuses": {
+      "CLEAR": 32
+    },
+    "existing_A_planner_parameters_unchanged": true,
+    "detailed_checks": "retained in private full report"
+  },
+  "model_loop": "new virtual projection -> feature error -> proposal -> existing A pure IK and collision -> updated model q -> new projection",
+  "covered_cases": [
+    "positive/negative image X and Y",
+    "rank one and rank two",
+    "singular and ill-conditioned matrices",
+    "missing object and Jaw reference",
+    "camera/state/image/source mismatch",
+    "same-byte reshaped image",
+    "opposite actual image response",
+    "no new image",
+    "invalid external Jacobian basis",
+    "non-finite feature error and response",
+    "TEST/MODEL cannot become REAL",
+    "B17 saved held images without inherited task targets"
+  ],
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "input_source_changes": [],
+  "independent_review": {
+    "status": "CORRECTED_AND_VERIFIED",
+    "findings": 4,
+    "followup_shape_case": true,
+    "reviewer_changed_files": false,
+    "original_four_counterexamples_rejected": true,
+    "final_shape_counterexample_test": "test_changed_frame_cannot_reuse_extracted_features/image_shape"
+  },
+  "CPU_environment": {
+    "python": "3.12.3",
+    "numpy": "2.2.6",
+    "opencv": "4.13.0",
+    "mujoco": "3.3.7"
+  },
+  "REAL_convergence": "REAL_CONVERGENCE_UNVERIFIED",
+  "physical_limits_added": 0,
+  "damping_role": "caller numerical regularization only; no travel clipping",
+  "A_control_or_console_changed": false,
+  "ACT_weights_or_norm_changed": false
+}

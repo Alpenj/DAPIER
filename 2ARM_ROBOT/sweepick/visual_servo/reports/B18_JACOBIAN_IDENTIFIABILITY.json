@@ -1,0 +1,62 @@
+{
+  "privacy": "anonymized technical summary; original frames, feedback, camera parameters, timestamps and machine paths remain private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "REAL_2D_JACOBIAN_UNIDENTIFIED",
+  "REAL": {
+    "status": "INSUFFICIENT_PAIRED_OBSERVATIONS",
+    "candidate_pair_count": 2,
+    "valid_pair_count": 0,
+    "independent_motion_directions": 0,
+    "diagnostic_input_rank": 1,
+    "context_comparable": false,
+    "measurement_noise_px": null,
+    "noise_status": "not estimated without repeated independent measurements",
+    "physical_match_verified": false
+  },
+  "observed_commanded_axis_count": 1,
+  "REAL_validated_Jacobian_dimension": 0,
+  "REAL_Jacobian": null,
+  "REAL_rank": null,
+  "REAL_condition_number": null,
+  "reason": "height, camera pose, scale and target change; no independent second direction or task Y reference",
+  "MODEL_ONLY_JACOBIAN": {
+    "matrix_px_per_mm": [
+      [
+        -1.0232612092082345,
+        -0.14547813866806752
+      ],
+      [
+        0.08521807045293218,
+        0.9602387366902088
+      ]
+    ],
+    "feature_axes": [
+      "u",
+      "v"
+    ],
+    "feature_definitions": {
+      "u": "MODEL_PROJECTED_FIXED_POINT_U",
+      "v": "MODEL_PROJECTED_FIXED_POINT_V"
+    },
+    "diagnostics": {
+      "rank": 2,
+      "singular_values": [
+        1.1117823964430633,
+        0.8726327091234157
+      ],
+      "condition_number": 1.2740553784190376,
+      "condition_number_status": "FINITE",
+      "numerical_rank_rule": "NumPy float64 SVD machine-precision rule; not a sensor/noise or safety limit",
+      "relative_roundoff_amplification": 2.8289712315366646e-16
+    },
+    "source": "MODEL_ONLY_JACOBIAN",
+    "validated": false,
+    "physical_match_verified": false,
+    "REAL_calibration": false
+  },
+  "model_vs_REAL_X_response_sign": "opposite in these saved contexts; no transfer or fusion",
+  "differentiation_probe_role": "numerical model perturbation only; no physical motion or move cap",
+  "residual_interpretation": "model finite-difference least squares residual has zero residual degrees of freedom; it is not measured sensor accuracy",
+  "measurement_noise": "saved JPEG burst variability reported separately; no sensor noise threshold inferred"
+}

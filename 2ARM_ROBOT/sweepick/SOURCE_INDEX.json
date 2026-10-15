@@ -1,6 +1,6 @@
 {
   "schema": "sweepick.public-source.v1",
-  "snapshot_at": "2026-10-15T13:03:10.590581+09:00",
+  "snapshot_at": "2026-10-15T14:26:42.373672+09:00",
   "purpose": "current source review; not a portable hardware deployment",
   "transformations": [
     "personal home path replaced by /home/robot",
@@ -9,7 +9,8 @@
     "support sensor whitespace-only lines normalized",
     "review handoff filename normalized",
     "B17 public reports retain anonymized technical findings; private recording values, source paths, model binaries and calibration are excluded",
-    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately"
+    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately",
+    "B18 technical summaries exclude original images, q12/ticks, camera parameters, machine paths and recording timestamps; REAL and MODEL evidence remain distinct"
   ],
   "files": [
     {
@@ -1670,6 +1671,136 @@
       "source_sha256": "07d9003359d554c799ea275fe82c6fc54b5ce0056bbd515a75fab601020dc622",
       "public_sha256": "07d9003359d554c799ea275fe82c6fc54b5ce0056bbd515a75fab601020dc622",
       "bytes": 5270,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/B18_A_INTEGRATION_CONTRACT.md",
+      "source_group": "B18",
+      "source_name": "B18_A_INTEGRATION_CONTRACT.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "f4ff22188701a4aff908ec1e5ec0fdd738156a7551422f31b9acfba2a1a8cfb3",
+      "public_sha256": "f4ff22188701a4aff908ec1e5ec0fdd738156a7551422f31b9acfba2a1a8cfb3",
+      "bytes": 10481,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/README.md",
+      "source_group": "B18",
+      "source_name": "README.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "0b99b087894b893841fcf652e0a9c6cebd6ac1aa5d493950df913817b5dcff66",
+      "public_sha256": "0b99b087894b893841fcf652e0a9c6cebd6ac1aa5d493950df913817b5dcff66",
+      "bytes": 3919,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/__init__.py",
+      "source_group": "B18",
+      "source_name": "__init__.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "75785d7c71343cca1f392c29ae98cf3b9fca4603c5eb19fef0994f6e467f5174",
+      "public_sha256": "75785d7c71343cca1f392c29ae98cf3b9fca4603c5eb19fef0994f6e467f5174",
+      "bytes": 80,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/features.py",
+      "source_group": "B18",
+      "source_name": "features.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "42a58bf5503daf5830979512752e677c3ab792fab5cd586511879c83d9b5e373",
+      "public_sha256": "42a58bf5503daf5830979512752e677c3ab792fab5cd586511879c83d9b5e373",
+      "bytes": 8706,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/image_jacobian.py",
+      "source_group": "B18",
+      "source_name": "image_jacobian.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "3ad653a4706c9dbb1e02cebd355618ef8866c8cac879529576d01ef3cf3a04e3",
+      "public_sha256": "3ad653a4706c9dbb1e02cebd355618ef8866c8cac879529576d01ef3cf3a04e3",
+      "bytes": 6483,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/offline_model.py",
+      "source_group": "B18",
+      "source_name": "offline_model.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "8216a9f8d4e36502cfff01f063f98a9771814939c266abfded1b9a4a31144846",
+      "public_sha256": "8216a9f8d4e36502cfff01f063f98a9771814939c266abfded1b9a4a31144846",
+      "bytes": 4700,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/B18_2D_FEATURE_EVIDENCE.json",
+      "source_group": "B18",
+      "source_name": "reports/B18_2D_FEATURE_EVIDENCE.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "472229e3534f1a98b15ab50302fa1256f9d0f89404119e7606de4299cb9e3892",
+      "public_sha256": "b58e3203cb98d32b1abb4bd068a30a34ce407603b120bfdce4534e7bec682a14",
+      "bytes": 1675,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B18_JACOBIAN_IDENTIFIABILITY.json",
+      "source_group": "B18",
+      "source_name": "reports/B18_JACOBIAN_IDENTIFIABILITY.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "5edb4d4febc48da8576f592bf399cee5b4629c45c7bc083aeca0e8fcc596a52c",
+      "public_sha256": "2fccf17a36c8d31c09c2c8dfafd8ebacf978b67f21208367b2b4a22612f5f8b7",
+      "bytes": 2264,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B18_OFFLINE_SERVO_REGRESSION.json",
+      "source_group": "B18",
+      "source_name": "reports/B18_OFFLINE_SERVO_REGRESSION.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "8362bc91bbe8db78ba8e02e58ca501ef2d4ac6d9f0811d4faf3c827c3f7586c1",
+      "public_sha256": "777c643c4daaeacdf9cf91f555e0fe3b6d5289180c7bc4e9c6e857f2aafcc944",
+      "bytes": 3891,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B18_REAL_1D_CONVERGENCE.json",
+      "source_group": "B18",
+      "source_name": "reports/B18_REAL_1D_CONVERGENCE.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "c82bf63ea346ae147737f1ab9bf0cf5b3c5990ad1dddf67ee160318198bd42f8",
+      "public_sha256": "16130cd0cf1e998ff408fcf545c11b8c7cf696f109571b136af9878d4291b3da",
+      "bytes": 4452,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/run_b18.py",
+      "source_group": "B18",
+      "source_name": "run_b18.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "26f64da5c0cbce24bc150906ef29bde0c9e6005c1df9f421ecaafa872d75b908",
+      "public_sha256": "26f64da5c0cbce24bc150906ef29bde0c9e6005c1df9f421ecaafa872d75b908",
+      "bytes": 20167,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/servo_proposal.py",
+      "source_group": "B18",
+      "source_name": "servo_proposal.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "8524e7cb242cfc9f9817ccec8b097f8c947df5f661e18f00ec64bf60b482eb0a",
+      "public_sha256": "8524e7cb242cfc9f9817ccec8b097f8c947df5f661e18f00ec64bf60b482eb0a",
+      "bytes": 8587,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/test_visual_servo.py",
+      "source_group": "B18",
+      "source_name": "test_visual_servo.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "ef8fbad4d49bae047d88b6619a98d6b999aad99779ddf4e81a99e074316bc4df",
+      "public_sha256": "ef8fbad4d49bae047d88b6619a98d6b999aad99779ddf4e81a99e074316bc4df",
+      "bytes": 17727,
       "public_copy_changed": false
     }
   ]
