@@ -108,7 +108,11 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
     if terminal.get('error'):
         error_candidates.append({**terminal['error'], 'time_s': (terminal.get('failed_stage') or {}).get('t_host_s'),
                                  'source': terminal.get('move_file') or 'review/lifetime.jsonl'})
-    if ended and (ended.get('error') or ended.get('exit_code') not in (0, None)):
+    limited = (job.get('execution_scope') == 'LEFT_START_TO_LIFT')
+    limited_doc = load(root / 'LIMITED_SCOPE_TERMINAL.json', []) if limited and (root / 'LIMITED_SCOPE_TERMINAL.json').exists() else None
+    # Console-17: a limited session's exit 3 is its terminal class (recorded in LIMITED_SCOPE_TERMINAL.json), not an executor error
+    limited_exit = bool(limited_doc and ended and not ended.get('error') and ended.get('exit_code') in (0, 3))
+    if ended and not limited_exit and (ended.get('error') or ended.get('exit_code') not in (0, None)):
         error_candidates.append({'gate': 'EXECUTOR_ERROR', 'detail': ended.get('error') or f"exit {ended.get('exit_code')}",
                                  'source': 'review/lifetime.jsonl'})
     if job.get('error'):
@@ -118,6 +122,9 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
         state = 'FAULT'
     if attempted and not owner_alive and not off_confirmed:
         state = 'FAULT'
+    limited_kind = (limited_doc or {}).get('terminal')
+    if limited and attempted and not owner_alive and not error and limited_kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN'):
+        state = 'LIMITED_HOLDING'                                      # holding at the lift: neither success/HOME nor a fault record
     if not attempted:
         state = 'PREPARED'
     completed = [row for row in events if row.get('kind') == 'stage_record']
@@ -193,7 +200,8 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
               'outcome': outcome, 'scope': approval.get('scope', UNKNOWN), 'source_session': job.get('source_session'),
               'execution_scope': job.get('execution_scope', 'FULL_CHAIN_RECEIVE_CONTACT'),
               'session_out': str(root), 'first_error': error, 'normal_return_confirmed': off_confirmed and error is None,
-              'safe_shutdown': 'RECORDED_BOTH_ARMS_OFF' if off_confirmed and error is None else UNKNOWN,
+              'safe_shutdown': 'RECORDED_BOTH_ARMS_OFF' if off_confirmed and error is None else 'NOT_PERFORMED' if limited_kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN') else UNKNOWN,
+              'limited_terminal': None if not limited else (limited_doc or {'terminal': UNKNOWN, 'missing': 'LIMITED_SCOPE_TERMINAL.json'}),
               'recording': {'status': data_status, 'files': len(originals), 'bytes': sum(row['bytes'] for row in originals),
                             'camera_frames': frames, 'missing': sorted(set(missing)), 'errors': errors,
                             'coverage': coverage.get('status', UNKNOWN)},
@@ -240,7 +248,7 @@ def _failure_frames(root, at):
                 metadata[('top_depth', relative)] = row
     selected = {}
     for camera in CAMERAS:
-        candidates = [(t, f) for key, t, f in rows if key == camera and finite(t)]
+        candidates = [(t, f) for key, t, f in rows if key == camera and finite(t)] if finite(at) else []
         before = max(((t, f) for t, f in candidates if t <= at), default=None)
         after = min(((t, f) for t, f in candidates if t > at), default=None)
         selected[camera] = {
@@ -265,8 +273,24 @@ def save_failure_packet(directory, record, evidence):
     failure_at = stage.get('t_host_s')
     if not finite(failure_at):
         failure_at = next((row.get('time_s') for row in (record.get('first_error'),) if isinstance(row, dict) and finite(row.get('time_s'))), None)
+    feed_early = load(root / 'CURRENT_FEEDBACK.json', [])
+    feed_error = feed_early.get('first_error') if isinstance(feed_early, dict) and isinstance(feed_early.get('first_error'), dict) else None
+    if not finite(failure_at) and feed_error and finite(feed_error.get('time_s')):
+        failure_at = feed_error['time_s']                             # the recorded first servo/bus error of the owner feed
     if not finite(failure_at):
-        failure_at = max((row['t_host_s'] for row in lines(root / 'episode/events.jsonl', []) if finite(row.get('t_host_s'))), default=0)
+        failure_at = None                                             # Console-17: no time is invented (it was the last event, or 0)
+    lifecycle_end = evidence.get('lifecycle_end') or {}
+    try:
+        end_wall = datetime.fromisoformat(lifecycle_end['timestamp']).timestamp() if isinstance(lifecycle_end.get('timestamp'), str) else None
+    except ValueError:
+        end_wall = None
+    failure_sequence = [item for item in (
+        {'kind': 'FIRST_SERVO_OR_BUS_ERROR', 'gate': feed_error.get('gate'), 'detail': feed_error.get('detail'), 'time_s': feed_error.get('time_s'),
+         'source': 'session/CURRENT_FEEDBACK.json first_error'} if feed_error else None,
+        {'kind': 'FAILED_STAGE', 'stage': stage.get('stage'), 'time_s': stage.get('t_host_s'), 'source': 'terminal failed_stage'} if stage else None,
+        {'kind': 'HANDSHAKE_FAILURE' if 'motor check failed' in str(lifecycle_end.get('error')) else 'FINAL_EXCEPTION',
+         'detail': lifecycle_end.get('error'), 'time_s': end_wall, 'time_basis': 'review/lifetime.jsonl owner_end timestamp (UTC wall clock of the launcher record)',
+         'exit_code': lifecycle_end.get('exit_code'), 'source': 'review/lifetime.jsonl owner_end'} if lifecycle_end.get('error') else None) if item]
     move_relative = terminal.get('move_file')
     move_path = (root / move_relative).resolve() if isinstance(move_relative, str) else None
     if move_path is not None and (not move_path.is_relative_to(root) or not move_path.is_file()):
@@ -314,7 +338,8 @@ def save_failure_packet(directory, record, evidence):
                 'sdk_wire_packet_attempts': 0 if no_api_calls else UNKNOWN}
     packet = {'schema': 'sweepick.failure-packet.v1', 'run_id': directory.name, 'run_outcome': record.get('outcome', UNKNOWN),
               'dataset': record.get('dataset'), 'act_approved': False,
-              'failure_time_s': failure_at, 'terminal': terminal, 'first_error': record.get('first_error'),
+              'failure_time_s': failure_at, 'failure_time_status': 'RECORDED' if failure_at is not None else 'UNKNOWN_NOT_RECORDED',
+              'failure_sequence': failure_sequence, 'terminal': terminal, 'first_error': record.get('first_error'),
               'failed_stage': stage,
               'stage_record': _bounded_json(stage_path) if stage_path and stage_path.is_file() else {'status': 'UNKNOWN', 'reason': 'stage record unavailable'},
               'failed_move': _bounded_json(move_path) if move_path else {'status': 'UNKNOWN', 'reason': 'move file unavailable'},

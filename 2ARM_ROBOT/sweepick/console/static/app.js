@@ -9,7 +9,7 @@ const CAMERA_ORDER = [
 const STAGE_ORDER = ['PICK', 'LIFT', 'CARRY', 'PREGRASP', 'OBSERVE'];
 const CATEGORY_LABEL = { success: '성공', failure: '실패', partial: '부분성공' };
 const OWNER_ACTIVE_STATES = ['STARTING', 'RUNNING', 'STOP_REQUESTED'];
-const OWNER_TERMINAL_STATES = ['ENDED', 'FAULT'];
+const OWNER_TERMINAL_STATES = ['ENDED', 'FAULT', 'LIMITED_HOLDING'];
 const state = {
   sessions: [], session: null, snapshot: null, plan: null, prepareSource: undefined, category: 'all',
   runs: [], runBucket: 'all', runsBusy: false, runsRefreshPending: false, lastTerminalKey: null,
@@ -170,7 +170,7 @@ function renderControl() {
   $('cameraModeLabel').textContent = state.liveMode ? terminal ? `${control.state} OWNER RECORD` : connected ? 'LIVE OWNER STREAMS' : 'OWNER FEED · CONNECTION UNKNOWN' : 'ARCHIVED CAMERA STREAMS';
   $('cameraModeKey').textContent = state.liveMode ? terminal ? `${control.state} · 마지막 owner 파일 기록 · 자동 갱신 없음` : connected ? 'LIVE = 기존 owner file feed' : '연결 상태 UNKNOWN · 이전 표시 보존' : 'REPLAY_FRESH = 보관 프레임';
   $('executionState').textContent = display(control?.state);
-  $('executionState').className = `badge ${control?.state === 'FAULT' || control?.state === 'BLOCKED' ? 'danger' : control?.state === 'RUNNING' ? 'success' : 'neutral'}`;
+  $('executionState').className = `badge ${control?.state === 'FAULT' || control?.state === 'BLOCKED' || control?.state === 'LIMITED_HOLDING' ? 'danger' : control?.state === 'RUNNING' ? 'success' : 'neutral'}`;
   $('executionScope').textContent = display(active?.scope ?? control?.scope);
   $('activeJob').textContent = active ? `${display(active.id)} · ${sourceLabel(active.source_session)}` : '없음';
   $('activePhase').textContent = active ? `${display(active.state)} · ${display(active.phase)} · ${display(active.session_out)}` : '—';
@@ -187,7 +187,7 @@ function renderControl() {
     || state.recoveryJobId !== active?.id || !$('recoveryPower').checked || !$('recoveryWorkspace').checked;
   $('prepareControl').disabled = !connected || control?.can_prepare !== true || !state.plan
     || state.prepareSource === undefined || state.controlBusy;
-  $('rerunRecovery').hidden = control?.state !== 'FAULT';
+  $('rerunRecovery').hidden = !['FAULT', 'LIMITED_HOLDING'].includes(control?.state);
   $('rerunBlockReason').textContent = control?.can_confirm_recovery === true
     ? '이전 실패 작업의 수동 복구 확인이 없어 새 준비가 막혀 있습니다. 아래에서 팔·물체 지지 후 전원 차단과 배치 복원 처리를 확인하십시오. 이미 사용한 START 승인은 재사용할 수 없습니다.'
     : control?.can_prepare === true
@@ -202,8 +202,12 @@ function renderControl() {
   $('fieldReady').disabled = !connected || !active || active.state !== 'PREPARED' || control?.can_start !== true || state.controlBusy;
   if (active?.consumed === true) $('fieldReady').checked = true;
   $('startControl').disabled = $('fieldReady').disabled || !$('fieldReady').checked;
-  $('startControl').textContent = control?.state === 'FAULT' ? 'FULL_CHAIN 중단됨 · 새 실행 차단'
-    : active?.consumed ? 'FULL_CHAIN 이번 세션 START 이미 전달됨' : 'FULL_CHAIN 현장 승인 후 실물 START';
+  const scopeName = active?.execution_scope === 'LEFT_START_TO_LIFT' ? 'LEFT_START_TO_LIFT' : 'FULL_CHAIN';
+  $('startControl').textContent = control?.state === 'LIMITED_HOLDING' ? 'LEFT_START_TO_LIFT 보유 종료 · 수동 복구 전 새 실행 차단'
+    : control?.state === 'FAULT' ? `${scopeName} 중단됨 · 새 실행 차단`
+    : active?.consumed ? `${scopeName} 이번 세션 START 이미 전달됨` : `${scopeName} 현장 승인 후 실물 START`;
+  $('limitedTerminal').hidden = active?.execution_scope !== 'LEFT_START_TO_LIFT';
+  $('limitedTerminal').textContent = limitedTerminalText(active);
   $('fieldApprovalInfo').textContent = active?.consumed
     ? `이 작업의 승인은 이미 사용됐습니다. 현재 ${display(control.state)} · 중복 승인/START는 비활성입니다.`
     : !connected ? '제어 연결 확인 전에는 승인할 수 없습니다.'
@@ -212,6 +216,16 @@ function renderControl() {
   renderPendingView(active?.pending_view);
   if (state.liveMode && state.snapshot?.mode === 'LIVE') renderCameras(state.snapshot.cameras, 'LIVE');
   window.fieldPanel?.update(state.control, state.snapshot, state.liveSnapshotError);
+}
+
+function limitedTerminalText(active) {
+  const doc = active?.limited_terminal;
+  if (!doc) return 'LEFT_START_TO_LIFT 종료 기록 없음 · 종료 전이거나 UNKNOWN';
+  const actual = doc.last_actual || {};
+  const torque = actual.torque && typeof actual.torque === 'object' ? Object.entries(actual.torque).map(([k, v]) => `${k}=${v}`).join(' ') : 'UNKNOWN';
+  return [`LIMITED_SCOPE_TERMINAL ${display(doc.terminal)}`, `마지막 stage ${display(doc.last_stage?.name)} · ${display(doc.last_stage?.controller_result)}`,
+    `Torque(마지막 실행기 읽기) ${torque}`, `정상 HOME ${display(doc.normal_home)} · Torque OFF 확인 ${display(doc.torque_off_confirmed)} · safe shutdown ${display(doc.safe_shutdown)}`,
+    `운영자 회수 필요 ${display(doc.operator_required)} · 다음 실행 자동 허용 ${display(doc.next_run_allowed)} · 프로세스 종료는 모터 정지/OFF 증거가 아님`].join(' · ');
 }
 
 function renderPlanApproval() {
@@ -898,7 +912,7 @@ function listItems(target, items) {
   (items || []).forEach((value) => { const item = document.createElement('li'); item.textContent = display(value); target.append(item); });
 }
 
-async function openRerunPlan(sourceSession = state.session?.id) {
+async function openRerunPlan(sourceSession = state.session?.id, scope = 'FULL_CHAIN_RECEIVE_CONTACT') {
   if (sourceSession !== null && !sourceSession) return;
   const planUrl = sourceSession === null
     ? '/api/control/plan'
@@ -910,8 +924,12 @@ async function openRerunPlan(sourceSession = state.session?.id) {
   state.planController = new AbortController();
   state.plan = null;
   state.prepareSource = sourceSession;
-  $('rerunTitle').textContent = sourceSession === null ? 'FULL_CHAIN 다음 실물 세션 준비' : 'FULL_CHAIN 저장 세션 기반 재실행 준비';
-  $('prepareDescription').textContent = sourceSession === null
+  state.prepareScope = scope;
+  const limited = scope === 'LEFT_START_TO_LIFT';
+  $('rerunTitle').textContent = limited ? 'LEFT_START_TO_LIFT 제한 실물 세션 준비' : sourceSession === null ? 'FULL_CHAIN 다음 실물 세션 준비' : 'FULL_CHAIN 저장 세션 기반 재실행 준비';
+  $('prepareDescription').textContent = limited
+    ? 'LEFT_START_TO_LIFT · 현재 입력으로 새 출력과 이 범위 전용 승인·Manifest만 준비합니다. LIFT 뒤 왼팔은 Torque ON으로 남고 자동 HOME/OFF는 없습니다.'
+    : sourceSession === null
     ? 'FULL_CHAIN_RECEIVE_CONTACT · 저장 기록과 독립된 현재 입력으로 새 출력 디렉터리와 실행 작업만 준비합니다.'
     : `FULL_CHAIN_RECEIVE_CONTACT · 저장 세션 ${sourceSession}을 원본으로 새 출력 디렉터리와 실행 작업만 준비합니다.`;
   dialog.showModal();
@@ -985,7 +1003,7 @@ async function runControlAction(path, body, failureLabel) {
 
 async function prepareControl() {
   if (!state.plan || state.prepareSource === undefined || state.control?.execution_connected !== true || state.control.can_prepare !== true) return;
-  await runControlAction('/api/control/prepare', { source_session: state.prepareSource }, '실물 세션 준비 실패');
+  await runControlAction('/api/control/prepare', { source_session: state.prepareSource, execution_scope: state.prepareScope || 'FULL_CHAIN_RECEIVE_CONTACT' }, '실물 세션 준비 실패');
 }
 
 async function startControl() {
@@ -993,6 +1011,7 @@ async function startControl() {
   if (!active || state.control?.execution_connected !== true || state.control.can_start !== true || !$('fieldReady').checked) return;
   await runControlAction('/api/control/start', {
     job_id: active.id, field_ready: true, mounts_unchanged: true, supervised: true,
+    execution_scope: active.execution_scope || 'FULL_CHAIN_RECEIVE_CONTACT',
   }, '실물 START 실패');
   if (state.control?.active?.id === active.id && state.control.active.consumed && liveViewAvailable()) {
     if ($('rerunDialog').open) $('rerunDialog').close();
@@ -1109,7 +1128,7 @@ $('rerunDialog').addEventListener('close', () => {
   state.prepareSource = undefined;
 });
 
-window.fieldPanel?.setOnPrepare(() => openRerunPlan(null));
+window.fieldPanel?.setOnPrepare((scope) => openRerunPlan(null, scope || 'FULL_CHAIN_RECEIVE_CONTACT'));
 
 window.inspectionPanel?.setReplaySelector((run) => {
   const session = state.sessions.find((item) => item.id === run?.replay_session_id);

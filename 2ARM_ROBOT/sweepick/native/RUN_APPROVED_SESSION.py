@@ -18,6 +18,11 @@ TMUX_SESSION = os.environ.get('SWEEPICK_MANAGED_SESSION', 'sweepick_right_receiv
 os.environ['SWEEPICK_RECEIVE_DIR'] = str(HERE / 'pin')
 sys.path[:0] = [str(REV), str(REV.parent)]
 
+FULL_CHAIN = 'FULL_CHAIN_RECEIVE_CONTACT'
+LEFT_TO_LIFT = 'LEFT_START_TO_LIFT'
+# Console-17: the limited scope has its own approval scope and manifest scope; a full-chain approval never opens it.
+LIMITED_APPROVAL_SCOPE = 'LEFT_START_TO_LIFT'
+
 _LIFETIME = None
 _OUT = None
 _PHASE = 'not_started'
@@ -111,6 +116,40 @@ def authorize_observation_plan(owner, proposed, raw, candidate):
         owner.sleep(float(cadence))
 
 
+def execution_scope(approval):
+    """The approved execution scope. A missing field is the existing full chain; anything else must match exactly."""
+    scope = approval.get('execution_scope', FULL_CHAIN)
+    if scope not in (FULL_CHAIN, LEFT_TO_LIFT):
+        raise RuntimeError(f'unsupported execution_scope {scope!r}; no device/SDK/motor is opened')
+    return scope
+
+
+def validate_limited_launch(approval, plan):
+    """LEFT_START_TO_LIFT: its own approval scope and manifest scope. The RIGHT RECEIVE observation/contact plan contract is
+    not a precondition of this scope; the session's own LEFT observation, grasp and collision checks are unchanged."""
+    out = Path(plan['session_out'])
+    if approval.get('scope') != LIMITED_APPROVAL_SCOPE or approval.get('session_out') != str(out):
+        raise RuntimeError('LEFT_START_TO_LIFT approval does not match this scope/session output')
+    if approval.get('right_arm_commands_permitted') is not False or approval.get('automatic_return_after_lift') is not False:
+        raise RuntimeError('LEFT_START_TO_LIFT approval must state right_arm_commands_permitted=false and automatic_return_after_lift=false')
+    if out.exists():
+        raise RuntimeError(f'session output already exists; preserve the ended attempt: {out}')
+    if Path(str(out) + '.STOP').exists():
+        raise RuntimeError(f'existing session STOP latch requires an explicit new-session recovery decision: {out}.STOP')
+    if approval.get('prepared_manifest_sha256') != hashlib.sha256(MANIFEST.read_bytes()).hexdigest():
+        raise RuntimeError('LEFT_START_TO_LIFT approval is bound to a different prepared source manifest')
+    manifest = json.loads(MANIFEST.read_text())
+    if manifest.get('scope') != LIMITED_APPROVAL_SCOPE or manifest.get('execution_scope') != LEFT_TO_LIFT:
+        raise RuntimeError('prepared source manifest is not a LEFT_START_TO_LIFT manifest')
+    for name, digest in manifest['files'].items():
+        if hashlib.sha256(Path(name).read_bytes()).hexdigest() != digest:
+            raise RuntimeError(f'prepared source/profile/plan changed before launch: {name}')
+    for required in (Path(__file__).resolve(), REV / 'sweepick_pick01.py', REV / 'sweepick_move_a.py'):
+        if str(required) not in manifest['files']:
+            raise RuntimeError(f'LEFT_START_TO_LIFT manifest does not bind {required.name}')
+    return approval, plan, out, manifest
+
+
 def validate_launch():
     """Validate the one-session approval and frozen inputs without importing device owners."""
     approval = json.loads(APPROVAL.read_text())
@@ -121,6 +160,8 @@ def validate_launch():
     plan = json.loads(PLAN.read_text())
     if os.environ.get('SWEEPICK_SESSION_OUT'):
         plan['session_out'] = os.environ['SWEEPICK_SESSION_OUT']
+    if execution_scope(approval) == LEFT_TO_LIFT:
+        return validate_limited_launch(approval, plan)
     if plan.get('observation_only') is not True or plan.get('observation_candidate_policy') != 'ADOPTED_RECEIVER_INNER_PAD_VIEW':
         raise RuntimeError('noncontact-only plan scope is not bound')
     out = Path(plan['session_out'])
@@ -216,6 +257,7 @@ def main():
         print('NOT STARTED: physical owner requires the dedicated managed tmux session', file=sys.stderr)
         return 2
     approval, plan, out, manifest = validate_launch()
+    scope = execution_scope(approval)
     out.mkdir(parents=True, exist_ok=False)  # atomic claim: an ended or concurrent attempt is never reused
     (out / 'review').mkdir()
     _OUT = out
@@ -228,16 +270,17 @@ def main():
         # The resident readers prepend the shared tools path; bind the selected owner before that import.
         fc, p1 = preload_sources(out)
         stop_checkpoint()
-        from inner_pad_face_contract import prepare_face_geometry
-        model_started = time.perf_counter(); face_model = p1.model()
-        model_s = time.perf_counter() - model_started; geometry_started = time.perf_counter()
-        fc.PREPARED_FACE_GEOMETRY = prepare_face_geometry(face_model, model_source_path=p1.SCENE,
-            source_model_path=plan["face_geometry_source_xml"], calibration_paths=[p1.CAND, p1.CAL, p1.ASM],
-            config_paths=[PLAN, MANIFEST, Path(p1.__file__), Path(fc.__file__),
-                          *sorted(REV.glob("*profile*.json")), *[REV / n for n in
-                          ("inner_pad_face_contract.py", "current_rgbd_faces.py", "sweepick_261010_observed_robot_mask.py")]],
-            config_values=[plan.get("top_camera_reference"), plan.get("planner_options")])
-        fc.PREPARED_FACE_GEOMETRY_TIMINGS = dict(model_prepare_s=model_s, cad_prepare_s=time.perf_counter() - geometry_started)
+        if scope == FULL_CHAIN:                                     # RIGHT RECEIVE face geometry belongs to the full chain only
+            from inner_pad_face_contract import prepare_face_geometry
+            model_started = time.perf_counter(); face_model = p1.model()
+            model_s = time.perf_counter() - model_started; geometry_started = time.perf_counter()
+            fc.PREPARED_FACE_GEOMETRY = prepare_face_geometry(face_model, model_source_path=p1.SCENE,
+                source_model_path=plan["face_geometry_source_xml"], calibration_paths=[p1.CAND, p1.CAL, p1.ASM],
+                config_paths=[PLAN, MANIFEST, Path(p1.__file__), Path(fc.__file__),
+                              *sorted(REV.glob("*profile*.json")), *[REV / n for n in
+                              ("inner_pad_face_contract.py", "current_rgbd_faces.py", "sweepick_261010_observed_robot_mask.py")]],
+                config_values=[plan.get("top_camera_reference"), plan.get("planner_options")])
+            fc.PREPARED_FACE_GEOMETRY_TIMINGS = dict(model_prepare_s=model_s, cad_prepare_s=time.perf_counter() - geometry_started)
         stop_checkpoint()
         from sweepick_episode import Episode
         from sweepick_local_loop import WristCam, SdkTop
@@ -269,7 +312,7 @@ def main():
                     stop_checkpoint()
                 top = SdkTop(out / f'episode/sdk_{int(time.time())}', 30 * 60 * 20); opened.append(top)
                 stop_checkpoint()
-                ep = Episode(out, wrists=wrists, top=top, open_arm=open_readonly_bus, mode='RECEIVE_CONTACT', arm_feedback=True,
+                ep = Episode(out, wrists=wrists, top=top, open_arm=open_readonly_bus, mode='RECEIVE_CONTACT' if scope == FULL_CHAIN else LEFT_TO_LIFT, arm_feedback=True,
                              identifiers=dict(prepared_manifest=manifest, wrist_route_basis=plan['wrist_route_basis']))
                 ep.owned = opened
                 if _STOP_SIGNAL is not None:
@@ -310,9 +353,14 @@ def main():
         stop_checkpoint()
         lifecycle('phase_end', phase='preparation', status='ready')
         set_phase('session')
+        lifecycle('execution_scope', scope=scope)
         try:
-            code = p1.run_session(out, execute=True, record=True, full_chain=True, scope='RECEIVE_CONTACT',
-                                  contact_plan=plan, episode_fn=episode)
+            if scope == LEFT_TO_LIFT:
+                fc.build = original_build                           # no hand-over owner is built in this scope
+                code = p1.run_session(out, execute=True, record=True, full_chain=False, limit=p1.LEFT_TO_LIFT, episode_fn=episode)
+            else:
+                code = p1.run_session(out, execute=True, record=True, full_chain=True, scope='RECEIVE_CONTACT',
+                                      contact_plan=plan, episode_fn=episode)
         finally:
             ring.flush()
         if _STOP_SIGNAL is not None and code == 0:

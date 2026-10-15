@@ -1,0 +1,45 @@
+{
+ "schema": "sweepick.console17-a-gripper-regression.v1",
+ "device_access": false,
+ "real_motor_writes": 0,
+ "real_torque_writes": 0,
+ "source": "Console-17 native working copy (sweepick_move_a.py 5dd5d760…, sweepick_grasp.py e7ee0f4c… unchanged; sweepick_pick01.py and RUN_APPROVED_SESSION.py changed)",
+ "existing_154": {
+  "commands": [
+   "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q revision/test_gripper_initial_range.py revision/test_a16_close_binding.py review/a17_20261015/test_a17_first_goal.py revision/test_sweepick_hard_gate_allowlist.py revision/test_postwrite_order.py",
+   "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q revision/test_sweepick_grip.py -k \"not test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage\""
+  ],
+  "before_change": {
+   "passed": 154,
+   "failed": 0
+  },
+  "after_change": {
+   "passed": 154,
+   "failed": 0
+  }
+ },
+ "required_conditions": {
+  "gripper_start_3344_3431_3497_3501": "test_gripper_initial_range.py (64-condition matrix), test_a16_close_binding.py, test_a17_first_goal.py",
+  "torque_off_on": "test_gripper_initial_range.py parametrize powered",
+  "first_3431_goal_ack_vs_following": "test_unconfirmed_initial_move_sends_no_closing_goals_or_contact_claim, test_initial_goal_overshoot_*",
+  "initial_motion_delay": "test_first_closing_motion_delay_is_not_contact_even_for_in_range_seed (delays 0/0.12/0.32/0.40 s)",
+  "no_empty_gripper_phantom_contact": "test_empty_jaws_do_not_report_contact_during_range_entry",
+  "initial_goal_application_failure": "test_initial_goal_application_failure_never_continues_close",
+  "overload_0x20_injection": "NEW test_console17_limited_session.py::test_overload_0x20_during_close_ends_as_a_fault_without_lift (not in the existing 154)",
+  "grip_unavailable_then_no_lift": "NEW test_console17_limited_session.py::test_grip_unavailable_is_not_contact_and_forbids_lift",
+  "stopped_state_recorded_then_no_stage": "NEW test_console17_limited_session.py::test_stopped_state_recorded_forbids_any_further_stage",
+  "stop_never_resends_out_of_range_actual": "test_stop_during_initial_move_never_sends_out_of_range_actual_as_goal"
+ },
+ "trim_keyerror_provisional": {
+  "test": "test_sweepick_grip.py::test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage",
+  "still_fails": true,
+  "classification": "FIXTURE_OMISSION_NOT_EXECUTOR_DEFECT",
+  "evidence": "sweepick_move_a.run() at level=model refuses a trim when other_arm_read is None (ValueError 'fresh other-arm actual reader is required') and records check_error without a 'provisional' key; the legacy test indexes t['provisional']. Production stage() always supplies other_arm_read (current_right_ticks through EPISODE.lease('right'), or an explicit injected reader).",
+  "verification": [
+   "NEW test_console17_trim_other_arm.py::test_model_trim_with_a_fresh_other_arm_reader_is_validated_like_its_stage (same checks + fresh reader: CONTACT not applied, CLEAR applied to 1877)",
+   "NEW test_console17_trim_other_arm.py::test_model_trim_without_an_other_arm_reader_is_cancelled_without_a_write"
+  ],
+  "legacy_test_changed": false,
+  "trim_rewrite": "NOT_DONE (no executor defect reproduced)"
+ }
+}

@@ -40,7 +40,39 @@ ANALYSIS_REVIEWS = {
             'directory': BASE / 'review/console16_20261015',
             'files': ('CONSOLE16_LIMITED_RUN_CONTRACT.md', 'CONSOLE16_EXISTING_BACKEND_AUDIT.md',
                       'CONSOLE16_FAKE_RUN_VALIDATION.json', 'CONSOLE16_TEST_REPORT.json', 'CONSOLE16_BACKEND_HANDOFF.md')},
+    # Console-17: B-16 goal shadow results, read-only. Three result groups are kept apart; nothing here is executable.
+    'B16': {'title': 'B-16 · Goal Shadow (A 기존 목표 / ACT FK 진단 / B 목표 제안)',
+            'directory': Path('/home/robot/sweepick-sim-client/sweepick_261015_B16_GOAL_SHADOW'),
+            'files': ('B16_GOAL_INTERFACE.md', 'B16_REAL_GOAL_PREVIEW_REPORT.json', 'B16_ACT_FK_DIAGNOSTICS.json',
+                      'B16_GOAL_DATASET_READINESS.json', 'B16_GOAL_PROPOSAL_SCHEMA.json', 'B16_TEST_REPORT.json', 'FINAL_VERIFICATION.json'),
+            'validation': 'FINAL_VERIFICATION.json', 'kind': 'SHADOW_ANALYSIS_NO_PHYSICAL_RUN',
+            'source_run_id': '20261014_155824_d4017e', 'reference_run_id': None, 'summary': 'b16'},
 }
+
+
+def b16_summary(base):
+    """The three B-16 result groups as the report states them. MODEL_PREVIEW_ONLY is not executability; NEEDS_OBSERVATION
+    is missing geometry, not a failed run. Only fields of the stored report are shown."""
+    try:
+        report = read_json(base / 'B16_REAL_GOAL_PREVIEW_REPORT.json')
+    except (OSError, ValueError) as exc:
+        return {'status': 'UNKNOWN', 'error': f'{type(exc).__name__}: {exc}'}
+    existing, act, proposal = (report.get(k) or {} for k in ('A_EXISTING_GOAL', 'ACT_DERIVED_DIAGNOSTIC', 'B_GOAL_PROPOSAL'))
+    needs = [c for c in report.get('failure_cases') or [] if c.get('status') == 'NEEDS_OBSERVATION']
+    return {'report_status': report.get('status'), 'motor_commands_sent': report.get('motor_commands_sent'),
+            'groups': [
+                {'id': 'A_EXISTING_GOAL', 'label': '기존 A 계획 목표', 'status': existing.get('status'),
+                 'executable': existing.get('executable'), 'physical_success': existing.get('physical_success'),
+                 'source_run_id': existing.get('source_run_id'), 'targets': len(existing.get('targets') or []),
+                 'meaning': 'MODEL_PREVIEW_ONLY는 모델 미리보기이며 실물 실행 가능성을 뜻하지 않음'},
+                {'id': 'ACT_DERIVED_DIAGNOSTIC', 'label': 'ACT 관절 출력의 FK 진단', 'samples': act.get('samples'),
+                 'usable_goals_generated': act.get('usable_goals_generated'), 'collision_result': act.get('collision_result'),
+                 'meaning': 'ACT는 목표 예측기가 아님 · 진단 전용'},
+                {'id': 'B_GOAL_PROPOSAL', 'label': '관측 근거 목표 제안', 'samples': len(proposal.get('samples') or []),
+                 'targets_generated': proposal.get('targets_generated'),
+                 'needs_observation': len(needs),
+                 'needs_observation_cases': [{'run_id': c.get('run_id'), 'observation_id': c.get('observation_id'), 'missing': c.get('missing')} for c in needs],
+                 'meaning': 'NEEDS_OBSERVATION은 실패한 실행이 아니라 목표를 정의할 기하정보가 부족한 관측'}]}
 
 
 @app.middleware('http')
@@ -96,7 +128,7 @@ def analyses():
     for key, item in ANALYSIS_REVIEWS.items():
         base = item['directory']
         try:
-            validation = read_json(base / 'VALIDATION.json')
+            validation = read_json(base / item.get('validation', 'VALIDATION.json'))
         except (OSError, ValueError):
             validation = {}
         files = []
@@ -106,9 +138,11 @@ def analyses():
             files.append({'name': name, 'available': exists,
                           **(file_evidence(path, base) if exists else {}),
                           'url': f'/api/analyses/{key}/files/{name}' if exists else None})
-        reviews.append({'id': key, 'title': item['title'], 'kind': 'SOFTWARE_REVIEW_NO_PHYSICAL_RUN',
-                        'source_run_id': '20261015_092942_a4628c', 'reference_run_id': '20261014_155824_d4017e',
+        reviews.append({'id': key, 'title': item['title'], 'kind': item.get('kind', 'SOFTWARE_REVIEW_NO_PHYSICAL_RUN'),
+                        'source_run_id': item.get('source_run_id', '20261015_092942_a4628c'),
+                        'reference_run_id': item.get('reference_run_id', '20261014_155824_d4017e'),
                         'verification': validation or 'UNKNOWN', 'files': files,
+                        **({'summary': b16_summary(base)} if item.get('summary') == 'b16' else {}),
                         'physical_reproduction': 'NOT_EXECUTED_FOR_THIS_REVIEW', 'device_access': False})
     return {'analyses': reviews}
 

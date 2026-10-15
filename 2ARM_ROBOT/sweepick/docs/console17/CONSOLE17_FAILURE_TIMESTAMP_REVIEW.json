@@ -1,0 +1,183 @@
+{
+ "schema": "sweepick.console17-failure-timestamp-review.v1",
+ "run_id": "20261015_112218_f0d866",
+ "device_access": false,
+ "original_logs_changed": false,
+ "method": "the run folder was copied to a scratch folder; the derived review/packet/inspection files were rebuilt there with the Console-16 code (before) and the Console-17 code (after)",
+ "recorded_first_error": {
+  "time_s": 1792031028.225814,
+  "source": "session/CURRENT_FEEDBACK.json first_error",
+  "detail": "Present_Position: RuntimeError: servo response error: ID=6 error=0x20 [RxPacketError] Overload error!"
+ },
+ "root_cause": "replay.ReplaySession.index_faults() gave the lifetime owner_end exception (no failed-stage host time) time_s=0 via stage.get('t_host_s', 0); 0 was then 'earlier' than the real servo error, replaced record.first_error in save_review(), and the failure packet/inspection used 0 as the reference time, so the session's first frames were exported as 'after the failure'",
+ "fix": [
+  "replay.index_faults: an error without a recorded host time keeps time_s=None (time_basis=NOT_RECORDED_FOR_THIS_ERROR), is kept in untimed_errors and is never ordered as the first error",
+  "records.save_failure_packet: failure time = failed-stage time, else the timed first error, else CURRENT_FEEDBACK first_error time, else None (UNKNOWN_NOT_RECORDED). The former fallbacks (0 / last event) are removed; nothing is interpolated",
+  "records.save_failure_packet: failure_sequence lists the first servo/bus error, the failed stage and the owner_end exception separately, each with its own recorded clock"
+ ],
+ "before": {
+  "first_error": {
+   "gate": "EXECUTOR_ERROR",
+   "time_s": 0,
+   "source": "review/lifetime.jsonl"
+  },
+  "failure_time_s": 0,
+  "failure_time_status": null,
+  "failure_sequence": null,
+  "frames": {
+   "top_rgb": {
+    "before": [
+     null,
+     null,
+     "UNKNOWN"
+    ],
+    "after": [
+     1792030959.5327272,
+     "episode/top/top_000001.jpg",
+     1
+    ]
+   },
+   "top_depth": {
+    "before": [
+     null,
+     null,
+     "UNKNOWN"
+    ],
+    "after": [
+     1792030959.654507,
+     "episode/top/depth_000005.png",
+     5
+    ]
+   },
+   "left_wrist": {
+    "before": [
+     null,
+     null,
+     "UNKNOWN"
+    ],
+    "after": [
+     1792030946.9083216,
+     "episode/left_wrist/left_wrist_000001.jpg",
+     1
+    ]
+   },
+   "right_wrist": {
+    "before": [
+     null,
+     null,
+     "UNKNOWN"
+    ],
+    "after": [
+     1792030946.9852514,
+     "episode/right_wrist/right_wrist_000001.jpg",
+     1
+    ]
+   }
+  },
+  "inspection_reference_time_s": 0,
+  "inspection_window": {
+   "start_s": -3,
+   "end_s": 3,
+   "event_count": 0,
+   "motor_sample_count": 0,
+   "motor_before_count": 0,
+   "motor_after_count": 0,
+   "nearest_prior_feedback_age_s": {
+    "left": "UNKNOWN",
+    "right": "UNKNOWN"
+   },
+   "selection_basis": "failure/reference ±3s export only; exact raw samples, no interpolation"
+  }
+ },
+ "after": {
+  "first_error": {
+   "gate": "BUS_LOST",
+   "time_s": 1792031028.225814,
+   "source": null
+  },
+  "failure_time_s": 1792031028.225814,
+  "failure_time_status": "RECORDED",
+  "failure_sequence": [
+   {
+    "kind": "FIRST_SERVO_OR_BUS_ERROR",
+    "gate": "BUS_LOST",
+    "detail": "Present_Position: RuntimeError: servo response error: ID=6 error=0x20 [RxPacketError] Overload error!",
+    "time_s": 1792031028.225814,
+    "source": "session/CURRENT_FEEDBACK.json first_error"
+   },
+   {
+    "kind": "HANDSHAKE_FAILURE",
+    "detail": "RuntimeError: FeetechMotorsBus motor check failed on port '/dev/dapier/left_arm':\n\nMissing motor IDs:\n  - 6 (expected model: 777)\n\nFull expected motor list (id: model_number):\n{1: 777, 2: 777, 3: 777, 4: 777, 5: 777, 6: 777}\n\nFull found motor list (id: model_number):\n{1: 777, 2: 777, 3: 777, 4: 777, 5: 777}",
+    "time_s": 1792031045.741204,
+    "time_basis": "review/lifetime.jsonl owner_end timestamp (UTC wall clock of the launcher record)",
+    "exit_code": 1,
+    "source": "review/lifetime.jsonl owner_end"
+   }
+  ],
+  "frames": {
+   "top_rgb": {
+    "before": [
+     1792031028.2180586,
+     "episode/top/top_002050.jpg",
+     2050
+    ],
+    "after": [
+     1792031028.253967,
+     "episode/top/top_002051.jpg",
+     2051
+    ]
+   },
+   "top_depth": {
+    "before": [
+     1792031028.2180586,
+     "episode/top/depth_002050.png",
+     2050
+    ],
+    "after": [
+     1792031028.3841755,
+     "episode/top/depth_002055.png",
+     2055
+    ]
+   },
+   "left_wrist": {
+    "before": [
+     1792031028.2209425,
+     "episode/left_wrist/left_wrist_002421.jpg",
+     2421
+    ],
+    "after": [
+     1792031028.252976,
+     "episode/left_wrist/left_wrist_002422.jpg",
+     2422
+    ]
+   },
+   "right_wrist": {
+    "before": [
+     1792031028.2256773,
+     "episode/right_wrist/right_wrist_002409.jpg",
+     2409
+    ],
+    "after": [
+     1792031028.261008,
+     "episode/right_wrist/right_wrist_002410.jpg",
+     2410
+    ]
+   }
+  },
+  "inspection_reference_time_s": 1792031028.225814,
+  "inspection_window": {
+   "start_s": 1792031025.225814,
+   "end_s": 1792031031.225814,
+   "event_count": 6,
+   "motor_sample_count": 10,
+   "motor_before_count": 8,
+   "motor_after_count": 2,
+   "nearest_prior_feedback_age_s": {
+    "left": 0.1718733310699463,
+    "right": 0.1379992961883545
+   },
+   "selection_basis": "failure/reference ±3s export only; exact raw samples, no interpolation"
+  }
+ },
+ "sequence_note": "In this run the follow-up handshake failure (ID6 missing in the motor check) IS the final exception recorded at owner_end; it is shown once with the launcher's UTC timestamp, separate from the first servo error."
+}

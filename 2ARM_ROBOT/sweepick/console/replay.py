@@ -223,6 +223,7 @@ class ReplaySession:
         self.stages, self.decisions, self.bookmarks = [], [], []
         self.packet_writes = []
         self.fault = None
+        self.untimed_errors = []                                       # Console-17: recorded errors without a host time; never ordered as "first"
         self.index_frames()
         self.index_feedback()
         self.index_stages()
@@ -261,7 +262,7 @@ class ReplaySession:
             self.scope = 'PICK/LIFT/CARRY/오른팔 접근 완료 · 수신면 관측은 카메라 오류로 미완료'
         else:
             self.scope = '새 실물 세션 · 단계별 완료와 최초 오류는 원본 기록 기준'
-            self.category = 'failure' if self.fault else 'partial'
+            self.category = 'failure' if self.fault or self.untimed_errors else 'partial'
         if not self.ep.get('data_quality', {}).get('complete_three_view_coverage', False):
             self.warnings.append('원본의 연속 3-view coverage는 INCOMPLETE입니다. 영상이 있는 구간에서도 누락 구간을 정상 연속 수집으로 표시하지 않습니다.')
 
@@ -403,9 +404,15 @@ class ReplaySession:
         if terminal.get('error'):
             error = dict(terminal['error'])
             stage = terminal.get('failed_stage') or {}
-            error.update(time_s=stage.get('t_host_s', 0), source=terminal.get('move_file') or 'review/lifetime.jsonl',
+            # Console-17: a final exception with no failed-stage host time keeps time_s=None. It was given 0 before, which
+            # made it "earlier" than the real servo error and moved the failure frames to the session start.
+            when = stage.get('t_host_s')
+            error.update(time_s=when if finite(when) else None, source=terminal.get('move_file') or 'review/lifetime.jsonl',
                          level=error.get('level', UNKNOWN))
-            if not self.fault or error['time_s'] < self.fault['time_s']:
+            if not finite(error['time_s']):
+                error['time_basis'] = 'NOT_RECORDED_FOR_THIS_ERROR'
+                self.untimed_errors.append(error)
+            elif not self.fault or error['time_s'] < self.fault['time_s']:
                 self.fault = error
         packets = self.load('review/BUS_PACKET_CURRENT_PID.json')
         if isinstance(packets, list):

@@ -25,20 +25,24 @@
       "source_group": "console",
       "source_name": "app.py",
       "component": "CONSOLE",
-      "source_sha256": "1969a2c72326741a59ae3353dbf9f529af0114563672362cde94ac0d218dc1c2",
-      "public_sha256": "e7ad051eb8fa31afe482cb172415a51097afba076f5f98fcab040881d2f95dd9",
-      "bytes": 14890,
-      "public_copy_changed": true
+      "source_sha256": "c5cff84c118d521b81fb9ecd3df144fee4db3cbd16bc4bd28c00cb7bf853a2f1",
+      "public_sha256": "2a353027088d744212a235a18eb24942341d5c661c92654b6f43207bd907d83e",
+      "bytes": 18019,
+      "public_copy_changed": true,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "1969a2c72326741a59ae3353dbf9f529af0114563672362cde94ac0d218dc1c2"
     },
     {
       "file": "console/control.py",
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b",
-      "public_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b",
-      "bytes": 34491,
-      "public_copy_changed": false
+      "source_sha256": "efe3378bef3dca409a557a6237af92c02a9bebcd6b7d1109cabf4878d72684c1",
+      "public_sha256": "efe3378bef3dca409a557a6237af92c02a9bebcd6b7d1109cabf4878d72684c1",
+      "bytes": 39828,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b"
     },
     {
       "file": "console/inspection.py",
@@ -75,20 +79,24 @@
       "source_group": "console",
       "source_name": "records.py",
       "component": "CONSOLE",
-      "source_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0",
-      "public_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0",
-      "bytes": 27004,
-      "public_copy_changed": false
+      "source_sha256": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da",
+      "public_sha256": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da",
+      "bytes": 29724,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0"
     },
     {
       "file": "console/replay.py",
       "source_group": "console",
       "source_name": "replay.py",
       "component": "CONSOLE",
-      "source_sha256": "95ea406faecaebe4823278996720a4a06287b5d0118f48b853eff920d03b47a4",
-      "public_sha256": "c22e731cba70a93975614773b8f86461124e0245197619097f916a92fb88dda4",
-      "bytes": 43883,
-      "public_copy_changed": true
+      "source_sha256": "d0e2cb426e0330dc9f016a8341dc68c656411f830532c1a1bd032cb040fbe5b0",
+      "public_sha256": "844b5b54d9088e3bfb7aadbba4085adf6aee3d46452f41b9fb807f04601f1b4d",
+      "bytes": 44496,
+      "public_copy_changed": true,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "95ea406faecaebe4823278996720a4a06287b5d0118f48b853eff920d03b47a4"
     },
     {
       "file": "console/requirements.txt",
@@ -115,30 +123,36 @@
       "source_group": "console",
       "source_name": "app.js",
       "component": "CONSOLE",
-      "source_sha256": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5",
-      "public_sha256": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5",
-      "bytes": 59040,
-      "public_copy_changed": false
+      "source_sha256": "9e5137a7d8586a99ed3a6f895c5d6b8f96611680234e8e18f3732341736dfb3f",
+      "public_sha256": "9e5137a7d8586a99ed3a6f895c5d6b8f96611680234e8e18f3732341736dfb3f",
+      "bytes": 61018,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5"
     },
     {
       "file": "console/static/field.js",
       "source_group": "console",
       "source_name": "field.js",
       "component": "CONSOLE",
-      "source_sha256": "5ab37164bd5250af9c6813e713077405efb2d66a9772e7f915718d870a580e9e",
-      "public_sha256": "5ab37164bd5250af9c6813e713077405efb2d66a9772e7f915718d870a580e9e",
-      "bytes": 14653,
-      "public_copy_changed": false
+      "source_sha256": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1",
+      "public_sha256": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1",
+      "bytes": 15040,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "5ab37164bd5250af9c6813e713077405efb2d66a9772e7f915718d870a580e9e"
     },
     {
       "file": "console/static/index.html",
       "source_group": "console",
       "source_name": "index.html",
       "component": "CONSOLE",
-      "source_sha256": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee",
-      "public_sha256": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee",
-      "bytes": 31228,
-      "public_copy_changed": false
+      "source_sha256": "8508bc6c1a43d5583f7badec180d9269c49508ed14b7ea9cc9977fb5f2098bbe",
+      "public_sha256": "8508bc6c1a43d5583f7badec180d9269c49508ed14b7ea9cc9977fb5f2098bbe",
+      "bytes": 31289,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee"
     },
     {
       "file": "console/static/instructor.html",
@@ -155,10 +169,12 @@
       "source_group": "console",
       "source_name": "review.js",
       "component": "CONSOLE",
-      "source_sha256": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3",
-      "public_sha256": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3",
-      "bytes": 23695,
-      "public_copy_changed": false
+      "source_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253",
+      "public_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253",
+      "bytes": 24245,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3"
     },
     {
       "file": "console/static/style.css",
@@ -395,10 +411,12 @@
       "source_group": "launcher",
       "source_name": "RUN_APPROVED_SESSION.py",
       "component": "A_CONTROL",
-      "source_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f",
-      "public_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f",
-      "bytes": 17530,
-      "public_copy_changed": false
+      "source_sha256": "59a33f1abbdb43445f93c5aded1b38405d03224a33137a034c9d54bfa6568e8e",
+      "public_sha256": "59a33f1abbdb43445f93c5aded1b38405d03224a33137a034c9d54bfa6568e8e",
+      "bytes": 20892,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f"
     },
     {
       "file": "native/confirmed_wrist_routes.py",
@@ -755,10 +773,12 @@
       "source_group": "native_revision",
       "source_name": "sweepick_pick01.py",
       "component": "A_CONTROL",
-      "source_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
-      "public_sha256": "12186a231f7719acd4b9f2c833828b104940efb1390062683cccec391459a23d",
-      "bytes": 138191,
-      "public_copy_changed": true
+      "source_sha256": "51936b43be64123bd6a328b708476b70c49b351d46321b44533bb95405df24d9",
+      "public_sha256": "627155863842d992fd4f077e7ef34a8d3571974bde805520be69f8bcd64533e8",
+      "bytes": 146319,
+      "public_copy_changed": true,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
     },
     {
       "file": "native/revision/sweepick_progress.py",
@@ -1549,6 +1569,150 @@
       "public_sha256": "ea977b1fb8974d20a8e5c40d237bcf6065b52c153c0eed13197c93c438b1a5bf",
       "bytes": 5598,
       "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_console17_limited_session.py",
+      "source_group": "console17_new_test",
+      "source_name": "test_console17_limited_session.py",
+      "component": "A_NATIVE",
+      "source_sha256": "4d5600265c44da79bae040ed2dfc798d9d42d5a60b955d2d99646e6fc6194f79",
+      "public_sha256": "4d5600265c44da79bae040ed2dfc798d9d42d5a60b955d2d99646e6fc6194f79",
+      "bytes": 14745,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": null
+    },
+    {
+      "file": "native/revision/test_console17_trim_other_arm.py",
+      "source_group": "console17_new_test",
+      "source_name": "test_console17_trim_other_arm.py",
+      "component": "A_NATIVE",
+      "source_sha256": "81b3fb0aa921c098ff76f2562490f35b7be239e6b68a618eacac569041a62b9b",
+      "public_sha256": "81b3fb0aa921c098ff76f2562490f35b7be239e6b68a618eacac569041a62b9b",
+      "bytes": 2579,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": null
+    },
+    {
+      "file": "native/tests/test_console17_launch_scope.py",
+      "source_group": "console17_new_test",
+      "source_name": "test_console17_launch_scope.py",
+      "component": "A_NATIVE",
+      "source_sha256": "f508ecfeb073129e467233a68b08be40449f5fd729089f1c01eba594e085b9f3",
+      "public_sha256": "f508ecfeb073129e467233a68b08be40449f5fd729089f1c01eba594e085b9f3",
+      "bytes": 7294,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": null
+    },
+    {
+      "file": "console/test_console17.py",
+      "source_group": "console17_new_test",
+      "source_name": "test_console17.py",
+      "component": "CONSOLE",
+      "source_sha256": "ed45b37b5c6464b3bde81becdaea4098a7f41ba8c524d7befe6fe75d5f689bb3",
+      "public_sha256": "ed45b37b5c6464b3bde81becdaea4098a7f41ba8c524d7befe6fe75d5f689bb3",
+      "bytes": 15730,
+      "public_copy_changed": false,
+      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": null
+    },
+    {
+      "file": "docs/console17/CONSOLE17_A_GRIPPER_REGRESSION.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_A_GRIPPER_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "c325037ebd299e7e3641e7447901f3d6922a6e7ded77a79fb46369158330c1cf",
+      "public_sha256": "c325037ebd299e7e3641e7447901f3d6922a6e7ded77a79fb46369158330c1cf",
+      "bytes": 3195,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_DASHBOARD_REGRESSION.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_DASHBOARD_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "3a3619830810fbe72725953777cef258ae76bab0e80d39349e5d2538ac603b42",
+      "public_sha256": "3a3619830810fbe72725953777cef258ae76bab0e80d39349e5d2538ac603b42",
+      "bytes": 2575,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_FAILURE_TIMESTAMP_REVIEW.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_FAILURE_TIMESTAMP_REVIEW.json",
+      "component": "DOCS",
+      "source_sha256": "8b248853e270de8201c061d13f129324b9b24667e275882ed94006026e09ffab",
+      "public_sha256": "8b248853e270de8201c061d13f129324b9b24667e275882ed94006026e09ffab",
+      "bytes": 5602,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_FIELD_READINESS.md",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_FIELD_READINESS.md",
+      "component": "DOCS",
+      "source_sha256": "dc882f038ecaa700126b0e43a6c4d0f4996beeb63056d0837c68253b214be66f",
+      "public_sha256": "dc882f038ecaa700126b0e43a6c4d0f4996beeb63056d0837c68253b214be66f",
+      "bytes": 3566,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_LIMITED_FAKE_RUN.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_LIMITED_FAKE_RUN.json",
+      "component": "DOCS",
+      "source_sha256": "b1d9c83579fcf53df9cda0a365b38ee1374b6a529eeb038edef8cb985150dafa",
+      "public_sha256": "b1d9c83579fcf53df9cda0a365b38ee1374b6a529eeb038edef8cb985150dafa",
+      "bytes": 20411,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_NATIVE_SCOPE_DESIGN.md",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_NATIVE_SCOPE_DESIGN.md",
+      "component": "DOCS",
+      "source_sha256": "9aa52fdc5c8e530e3e57eda2c5d743ebce01f0bbb16586bac4256bccc4e67aea",
+      "public_sha256": "9aa52fdc5c8e530e3e57eda2c5d743ebce01f0bbb16586bac4256bccc4e67aea",
+      "bytes": 6706,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_OWNER_TERMINATION.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_OWNER_TERMINATION.json",
+      "component": "DOCS",
+      "source_sha256": "4af171ca18c15cb7de719a494bd508a1024933255086370bc00f723613c90774",
+      "public_sha256": "4af171ca18c15cb7de719a494bd508a1024933255086370bc00f723613c90774",
+      "bytes": 5932,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/SOURCE_SHA256.json",
+      "source_group": "console17_docs",
+      "source_name": "SOURCE_SHA256.json",
+      "component": "DOCS",
+      "source_sha256": "36e28e517b4b2ef845ea3d6fcf2def64bbc3f9cd2f6e4099804699f7fc8c855e",
+      "public_sha256": "36e28e517b4b2ef845ea3d6fcf2def64bbc3f9cd2f6e4099804699f7fc8c855e",
+      "bytes": 6035,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/console17_browser_qa.mjs",
+      "source_group": "console17_docs",
+      "source_name": "console17_browser_qa.mjs",
+      "component": "DOCS",
+      "source_sha256": "c17e8b476a20d5740789f9d89c409c2f213b7eaee8e438aa8650ebb562ee40df",
+      "public_sha256": "c17e8b476a20d5740789f9d89c409c2f213b7eaee8e438aa8650ebb562ee40df",
+      "bytes": 9625,
+      "public_copy_changed": false
     }
-  ]
+  ],
+  "console17": {
+    "branch": "pro/sweepick-console17-20261015",
+    "base_commit": "1b39c0eaed68d6efdb820c96e5ae979b6398fbf4",
+    "active_runtime_replaced": false,
+    "source_sha": "docs/console17/SOURCE_SHA256.json"
+  }
 }

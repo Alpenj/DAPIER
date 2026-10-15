@@ -22,6 +22,28 @@ SCOPE = 'Fresh LEFT PICK/LIFT/CARRY/RIGHT PREGRASP → 비접촉 관측 → 조�
 MANAGED = 'sweepick_console_field'
 FULL_CHAIN = 'FULL_CHAIN_RECEIVE_CONTACT'
 LEFT_TO_LIFT = 'LEFT_START_TO_LIFT'
+# Console-17: the native files that must carry the limited-scope contract before the console offers it. Read as text; never imported.
+LIMITED_BACKEND_MARKERS = {'RUN_APPROVED_SESSION.py': ("def validate_limited_launch(", "LIMITED_APPROVAL_SCOPE = 'LEFT_START_TO_LIFT'"),
+                           'revision/sweepick_pick01.py': ('LEFT_TO_LIFT = "LEFT_START_TO_LIFT"', 'def write_limited_terminal(', 'def limited_lift_end(')}
+LIMITED_BOUND_SOURCES = ('RUN_APPROVED_SESSION.py', 'confirmed_wrist_routes.py', 'revision/sweepick_pick01.py', 'revision/sweepick_move_a.py',
+                         'revision/sweepick_grasp.py', 'revision/sweepick_episode.py', 'revision/sweepick_full_chain.py',
+                         'revision/sweepick_jaw_profile_left.json', 'revision/sweepick_progress_profile.json', 'revision/console_feedback.py')
+LIMITED_TERMINALS = ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN', 'LEFT_CLOSE_UNAVAILABLE', 'LEFT_LIFT_FAILED',
+                     'OPERATOR_STOPPED', 'BUS_OR_SERVO_FAULT', 'ENDED_BEFORE_LIFT', 'NOT_STARTED')
+
+
+def limited_backend():
+    """(supported, reason) for LEFT_START_TO_LIFT in the CURRENT native files. Static text check only."""
+    missing = []
+    for name, markers in LIMITED_BACKEND_MARKERS.items():
+        try:
+            text = (A / name).read_text(errors='replace')
+        except OSError:
+            missing.append(f'{name}: not readable')
+            continue
+        missing.extend(f'{name}: {marker}' for marker in markers if marker not in text)
+    return (not missing, 'native LEFT_START_TO_LIFT boundary/terminal contract present' if not missing
+            else 'native 실행본에 Console-17 제한 종료 계약이 없음: ' + '; '.join(missing))
 
 
 class ControlError(Exception):
@@ -103,6 +125,13 @@ class Controller:
         if job:
             terminal = terminal_evidence(job['session_out'])
             job['terminal'] = terminal
+            limited = None
+            if job.get('execution_scope') == LEFT_TO_LIFT:
+                try:
+                    limited = read_json(Path(job['session_out']) / 'LIMITED_SCOPE_TERMINAL.json') or None
+                except (OSError, ValueError):
+                    limited = {'terminal': 'UNKNOWN', 'error': 'LIMITED_SCOPE_TERMINAL.json unreadable'}
+                job['limited_terminal'] = limited
             terminal_error = terminal.get('error')
             terminal_time = (terminal.get('failed_stage') or {}).get('t_host_s')
             existing_time = (job.get('first_error') or {}).get('time_s') if isinstance(job.get('first_error'), dict) else None
@@ -129,7 +158,14 @@ class Controller:
                     lines = log.read_text(errors='replace').splitlines()
                     if lines:
                         job['error'] = lines[-1]
-                if not alive and (job.get('first_error') or job.get('error') or feed.get('first_error') or not self.off_confirmed(job)):
+                if not alive and job.get('execution_scope') == LEFT_TO_LIFT:
+                    # Console-17: the native terminal decides the class; holding is never HOME/OFF and never allows the next run by itself
+                    kind = (limited or {}).get('terminal')
+                    job['state'] = 'LIMITED_HOLDING' if kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN') else 'FAULT'
+                    reason = (f"LEFT_START_TO_LIFT 종료 {kind or 'UNKNOWN(종료 기록 없음)'} · 정상 HOME/OFF 아님 · 물체·팔 지지 후 수동 복구 확인 필요"
+                              + (f" · {(job.get('first_error') or {}).get('detail')}" if isinstance(job.get('first_error'), dict) and job['first_error'].get('detail') else ''))
+                    job['block_reason'] = reason
+                elif not alive and (job.get('first_error') or job.get('error') or feed.get('first_error') or not self.off_confirmed(job)):
                     job['state'] = 'FAULT'
                     reason = (job.get('first_error') or {}).get('detail') or job.get('error') or (feed.get('first_error') or {}).get('detail') or '종료 토크 상태가 확인되지 않음 · 기존 현장 복구 필요'
                     job['block_reason'] = reason
@@ -160,14 +196,14 @@ class Controller:
                     job['pending_view_state'] = 'UNKNOWN · 요청 파일 수신 중'
         if alive and not ours:
             state, reason = 'BLOCKED', '기존 managed owner가 존재함'
-        recovery = self.recovery_confirmation(job) if job and state == 'FAULT' else None
+        recovery = self.recovery_confirmation(job) if job and state in ('FAULT', 'LIMITED_HOLDING') else None
         if job:
             job['operator_recovery'] = recovery
         if recovery:
             reason = (reason or '원래 실패 기록 보존') + ' · 수동 복구 처리 확인됨; 새 준비와 이번 현장 승인 후 fresh 상태로 재검사'
         return {'csrf_token': self.csrf_token, 'execution_connected': True, 'state': state, 'scope': SCOPE, 'owner_alive': ours,
-                'active': job, 'can_prepare': not alive and (state != 'FAULT' or recovery is not None),
-                'can_confirm_recovery': not alive and state == 'FAULT' and recovery is None,
+                'active': job, 'can_prepare': not alive and (state not in ('FAULT', 'LIMITED_HOLDING') or recovery is not None),
+                'can_confirm_recovery': not alive and state in ('FAULT', 'LIMITED_HOLDING') and recovery is None,
                 'can_start': not alive and state == 'PREPARED', 'can_stop': bool(ours and state != 'STOP_REQUESTED' and not job.get('stop_sent')),
                 'block_reason': reason}
 
@@ -264,7 +300,10 @@ class Controller:
     @staticmethod
     def require_execution_scope(execution_scope):
         if execution_scope == LEFT_TO_LIFT:
-            raise ControlError('BACKEND_CHANGE_REQUIRED: existing launcher has no LEFT_START_TO_LIFT termination/owner contract')
+            supported, reason = limited_backend()
+            if not supported:
+                raise ControlError('BACKEND_CHANGE_REQUIRED: ' + reason)
+            return execution_scope
         if execution_scope != FULL_CHAIN:
             raise ControlError('지원되지 않는 execution_scope')
         return execution_scope
@@ -282,6 +321,7 @@ class Controller:
             sources.append({'file': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else 'UNKNOWN',
                             'bytes': path.stat().st_size if path.is_file() else None})
         launcher_available = (A / 'RUN_APPROVED_SESSION.py').is_file()
+        limited_ok, limited_reason = limited_backend()
         return {'schema': 'sweepick.operation-contract.v1', 'checked_at': datetime.now().astimezone().isoformat(),
             'scopes': [
                 {'id': FULL_CHAIN, 'label': '기존 Full-chain 실행', 'supported': launcher_available,
@@ -292,13 +332,16 @@ class Controller:
                  'excluded_stages': ['승인 없는 추가 관측 이동', 'RIGHT INSERT/CLOSE', '하중 이전/LEFT RELEASE/ACT'],
                  'reason': '기존 launcher의 full_chain=True, scope=RECEIVE_CONTACT 및 현재 비접촉 승인 범위를 유지합니다.',
                  'termination': '기존 정상 회수 또는 기존 중단·운영자 복구 계약'},
-                {'id': LEFT_TO_LIFT, 'label': '왼팔 START → CLOSE → LIFT 제한 후보', 'supported': False,
-                 'backend_status': 'BACKEND_CHANGE_REQUIRED', 'can_prepare': False,
-                 'included_stages': ['현재 관측/계획', 'START/PREGRASP', 'ALIGN', 'DESCEND', 'CLOSE', 'LIFT'],
+                {'id': LEFT_TO_LIFT, 'label': '왼팔 START → CLOSE → LIFT 제한 실행', 'supported': limited_ok,
+                 'backend_status': 'SUPPORTED_CONSOLE17_LIMITED_BACKEND' if limited_ok else 'BACKEND_CHANGE_REQUIRED',
+                 'can_prepare': limited_ok and status['can_prepare'] and occupancy == {},
+                 'included_stages': ['현재 관측/계획', 'START/PREGRASP', 'ALIGN', 'DESCEND_A/DESCEND', 'CLOSE', 'ready_to_lift 판정', 'LIFT',
+                                     'held_after_lift 판정', 'LIMITED_SCOPE_TERMINAL'],
                  'excluded_stages': ['CARRY', 'RIGHT PREGRASP/INSERT/CLOSE', '하중 이전', 'LEFT RELEASE',
-                                     '자동 LOWER/OPEN/HOME/Torque OFF', 'ACT'],
-                 'reason': '현재 launcher와 native session에 LIFT 한정 종료·연속 Owner/recorder·물체 보유 종료 계약이 없습니다.',
-                 'termination': '미지원: LIFT HOLDING은 정상 HOME/RELEASE/safe shutdown이 아닙니다.'}],
+                                     'LIFT 이후 자동 LOWER/OPEN/HOME/Torque OFF', 'ACT'],
+                 'reason': limited_reason + ' · 기존 Full-chain 승인은 사용할 수 없고 이 범위의 새 승인·Manifest가 필요합니다.',
+                 'termination': ('LIFT 뒤 LIMITED_SCOPE_TERMINAL.json 기록 후 owner 종료. 왼팔은 LIFT Goal로 Torque ON 유지 · 정상 HOME/RELEASE/safe shutdown 아님 · '
+                                 '다음 실행은 수동 복구 확인 전 차단. LIFT 전 기존 거부/복귀 조건은 그대로.')}],
             'owner': {'state': status['state'], 'owner_alive': status['owner_alive'],
                       'active_run_id': (status['active'] or {}).get('id'), 'device_occupancy': occupancy,
                       'device_query_error': query_error}, 'sources': sources,
@@ -327,8 +370,13 @@ class Controller:
             manifest = read_json(A / 'PREPARED_SOURCE_MANIFEST.json')
             files = [Path(name) for name in manifest['files']]
             files.append(A / 'revision/console_feedback.py')
-            prepared = {'scope': 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION', 'files': {
-                str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}}
+            limited = execution_scope == LEFT_TO_LIFT
+            if limited:                                                  # this scope binds the current launcher/executors explicitly
+                files.extend(A / name for name in LIMITED_BOUND_SOURCES)
+            prepared = {'scope': LEFT_TO_LIFT if limited else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION', 'files': {
+                str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in dict.fromkeys(files)}}
+            if limited:
+                prepared['execution_scope'] = LEFT_TO_LIFT
             try:
                 atomic_json(directory / 'MANIFEST.json', prepared)
                 console = Path(__file__).resolve().parent
@@ -338,7 +386,13 @@ class Controller:
                 atomic_json(directory / 'SOURCE_SNAPSHOT.json', {'files': snapshot})
             except (OSError, ValueError) as exc:
                 raise ControlError(f'실행본 저장 준비 실패; START하지 않음: {exc}') from exc
-            approval = read_json(A / 'NONCONTACT_START_APPROVAL.json')
+            if limited:                                                  # never derived from the full-chain approval
+                approval = {'scope': LEFT_TO_LIFT, 'permission_detail': 'One supervised fresh LEFT START/PREGRASP/ALIGN/DESCEND/CLOSE/LIFT. '
+                            'Ends after held_after_lift with the left arm still powered. No CARRY, no RIGHT arm command, no automatic return after LIFT. No automatic next session.',
+                            'right_arm_commands_permitted': False, 'automatic_return_after_lift': False, 'permission_to_open_devices': False,
+                            'unchanged_wrist_mount_and_routes': False, 'policy_training_allowed': False}
+            else:
+                approval = read_json(A / 'NONCONTACT_START_APPROVAL.json')
             approval.update(approved=False, permission_to_execute=False, field_ready=False, session_out=str(out),
                             execution_scope=execution_scope,
                             prepared_manifest_sha256=hashlib.sha256((directory / 'MANIFEST.json').read_bytes()).hexdigest(),
@@ -517,7 +571,9 @@ class Controller:
             raise ControlError('배치/지지·감독·장치 결합에 대한 현장 승인 필요')
         with self.locked():
             job = self.selected(job_id)
-            self.require_execution_scope(job.get('execution_scope', FULL_CHAIN))
+            scope = self.require_execution_scope(job.get('execution_scope', FULL_CHAIN))
+            if execution_scope is not None and execution_scope != scope:
+                raise ControlError('요청 실행 범위가 준비된 작업의 범위와 다름')
             if job['consumed'] or not self.status()['can_start']:
                 raise ControlError('승인이 소비되었거나 owner/종료 상태 때문에 START 불가')
             owners = self.owners()
@@ -525,6 +581,10 @@ class Controller:
                 raise ControlError('장치 owner가 이미 존재함: ' + str(owners))
             directory = Path(job['session_out']).parent
             approval = read_json(directory / 'APPROVAL.json')
+            expected = LEFT_TO_LIFT if scope == LEFT_TO_LIFT else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION'
+            manifest_scope = (read_json(directory / 'MANIFEST.json') or {}).get('scope')
+            if approval.get('scope') != expected or approval.get('execution_scope', FULL_CHAIN) != scope or manifest_scope != expected:
+                raise ControlError('준비된 승인/Manifest 범위가 실행 범위와 다름; START하지 않음')
             approval.update(approved=True, field_ready=True, permission_to_execute=True, permission_to_open_devices=True,
                             unchanged_wrist_mount_and_routes=True, timestamp=datetime.now().astimezone().isoformat(),
                             field_confirmation='operator START click: setup/routes/support/supervision confirmed')

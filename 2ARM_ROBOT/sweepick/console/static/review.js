@@ -372,6 +372,13 @@
           button.textContent = file.name; button.disabled = !file.available;
           button.addEventListener('click', () => openAnalysisFile(review, file)); files.append(button);
         }
+        for (const group of review.summary?.groups || []) {
+          const row = document.createElement('p'); row.className = 'analysis-group';
+          const facts = Object.entries(group).filter(([k, v]) => !['id', 'label', 'meaning', 'needs_observation_cases'].includes(k) && (v === null || typeof v !== 'object'))
+            .map(([k, v]) => `${k}=${v === null || v === undefined ? 'UNKNOWN' : v}`).join(' · ');
+          row.textContent = `${group.id} · ${group.label} · ${facts} · ${group.meaning}`;
+          card.append(row);
+        }
         card.append(files); catalog.append(card);
       }
     } catch (error) {

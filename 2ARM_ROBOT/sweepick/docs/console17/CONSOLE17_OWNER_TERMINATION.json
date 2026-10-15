@@ -1,0 +1,136 @@
+{
+ "schema": "sweepick.console17-owner-termination.v1",
+ "device_access": false,
+ "compared": [
+  {
+   "option": "SUPERVISED_RESIDENT_OWNER",
+   "meaning": "the launcher keeps the Owner, recorder and port lease after LIFT and waits for an operator decision",
+   "compatibility": "NOT_CHOSEN: run_session() closes the recorder in its finally block and the launcher ends after run_session returns; the baseline session has no resident wait/continuation API outside the full-chain Owner. It would need a new continuation/STOP/lease interface (handoff item 4, second option)",
+   "existing_parallel": "the full-chain FullEpisodeHandoff resident Owner (not used by this scope)"
+  },
+  {
+   "option": "RECORD_HOLD_AND_END_PROCESS",
+   "meaning": "write an explicit holding terminal after held_after_lift, close the recorder, end the process",
+   "compatibility": "CHOSEN: the baseline session already ends on *_HOLDING_NEEDS_A_PERSON results this way (e.g. STOPPED_IN_LIFT_HOLDING_NEEDS_A_PERSON); the change is one boundary after held_after_lift plus LIMITED_SCOPE_TERMINAL.json after the recorder release",
+   "console": "Controller.status() maps a held terminal to LIMITED_HOLDING; can_prepare stays false until the existing MANUAL_RECOVERY_CONFIRMATION"
+  }
+ ],
+ "chosen": "RECORD_HOLD_AND_END_PROCESS",
+ "process_exit_is_not": [
+  "a motor stop",
+  "Torque_Enable=0",
+  "RETURNED_RELEASED",
+  "safe_shutdown",
+  "torque_off_confirmed"
+ ],
+ "preserved_fields": {
+  "last_actual_joint_positions": "last_actual.ticks (the LIFT stage executor's own end read, move.json end)",
+  "last_goal_and_ack_readback": "last_actual.goal_register + last_goal_ack.move_files -> run*/move.json last_acknowledged_goal / last_goal_write_attempt / read_after_loss",
+  "torque_status_moving_last_check": "last_actual.torque/status/moving; time = last_stage.recorded_at_host_s (the stage record time; the executor end read is the last bus read before release)",
+  "object_hold_evidence": "hold_evidence (existing held_after_lift observation: gate/ok/why/label; not a force or slip measurement)",
+  "owner_and_port_release": "owner.recorder.released / readers_closed from sweepick_episode.release(); executor buses close per stage",
+  "normal_home": "normal_home=false after LIFT (true only when an existing pre-lift way back ended RETURNED_RELEASED with torque read 0)",
+  "operator_recovery_required": "operator_required=true, next_run_allowed=false"
+ },
+ "status_words_kept_apart": {
+  "HOLDING": "executor result: powered and holding",
+  "RETURNED_RELEASED": "existing return + release confirmed by readback",
+  "safe_shutdown": "NOT_PERFORMED in this scope after LIFT",
+  "torque_off_confirmed": "false; never inferred from process exit",
+  "GRIP_UNAVAILABLE_HOLDING": "not a contact; LIFT is not allowed (LEFT_CLOSE_UNAVAILABLE)",
+  "STOPPED_STATE_RECORDED": "a recorded stop, not a confirmed physical stop; no further stage"
+ },
+ "fake_sample_terminal_record": {
+  "schema": "sweepick.limited-scope-terminal.v1",
+  "scope": "LEFT_START_TO_LIFT",
+  "terminal": "LEFT_LIFT_HELD_CONFIRMED",
+  "session_result": "LEFT_LIFT_HELD_CONFIRMED_HOLDING_NEEDS_A_PERSON",
+  "ended_by_exception": false,
+  "stop_latch_present": false,
+  "last_stage": {
+   "name": "lift",
+   "controller_result": "HOLDING",
+   "exit_code": 0,
+   "stopped_by": null,
+   "recorded_at_host_s": 1792037582.248044
+  },
+  "last_actual": {
+   "ticks": {
+    "shoulder_pan": 2381.0,
+    "shoulder_lift": 2248.0,
+    "elbow_flex": 1916.0,
+    "wrist_flex": 3069.0,
+    "wrist_roll": 2364.0,
+    "gripper": 3075.0
+   },
+   "goal_register": {
+    "shoulder_pan": 2381.0,
+    "shoulder_lift": 2248.0,
+    "elbow_flex": 1916.0,
+    "wrist_flex": 3069.0,
+    "wrist_roll": 2364.0,
+    "gripper": 3047.0
+   },
+   "torque": {
+    "shoulder_pan": 1.0,
+    "shoulder_lift": 1.0,
+    "elbow_flex": 1.0,
+    "wrist_flex": 1.0,
+    "wrist_roll": 1.0,
+    "gripper": 1.0
+   },
+   "status": {
+    "shoulder_pan": 0.0,
+    "shoulder_lift": 0.0,
+    "elbow_flex": 0.0,
+    "wrist_flex": 0.0,
+    "wrist_roll": 0.0,
+    "gripper": 0.0
+   },
+   "moving": {
+    "shoulder_pan": 0.0,
+    "shoulder_lift": 0.0,
+    "elbow_flex": 0.0,
+    "wrist_flex": 0.0,
+    "wrist_roll": 0.0,
+    "gripper": 0.0
+   },
+   "source": "lift stage executor end read (move.json end)",
+   "read_error": null
+  },
+  "last_goal_ack": {
+   "note": "per-write ACK/readback is in the stage's run*/move.json (last_acknowledged_goal, last_goal_write_attempt, read_after_loss)",
+   "move_files": [
+    "lift/run1/move.json"
+   ]
+  },
+  "hold_evidence": {
+   "gate": "held_after_lift",
+   "ok": true,
+   "why": "wrist image: the block at the same place and size between the jaw tips before and after the lift; jaws loaded through the lift and the hold (port owner's rows); top depth: the place where the block stood is validly observed and clear",
+   "label": "HELD_CONFIRMED",
+   "basis": "the existing held_after_lift observation; not a force/slip measurement"
+  },
+  "held_after_lift": true,
+  "stages_after_lift_commanded": [],
+  "owner": {
+   "process": "this launcher process (single owner); it ends after this file",
+   "recorder": {
+    "released": true,
+    "session_id": "fake-episode",
+    "readers_closed": {},
+    "task_outcome": "PARTIAL_OR_DIAGNOSTIC: LEFT_LIFT_HELD_CONFIRMED_HOLDING_NEEDS_A_PERSON"
+   },
+   "port_lease": "released with the recorder; executor buses are closed per stage"
+  },
+  "left_returned_released": false,
+  "normal_home": false,
+  "torque_off_confirmed": false,
+  "safe_shutdown": "NOT_PERFORMED",
+  "motion_stop_confirmed": "UNKNOWN",
+  "operator_required": true,
+  "next_run_allowed": false,
+  "meaning": "process exit is not a motor stop or torque-off; HOLDING != RETURNED_RELEASED != safe_shutdown != torque_off_confirmed"
+ },
+ "sample_source": "test_console17_limited_session.py::test_run_session_writes_the_terminal_after_the_recorder_is_released (Fake bus; paths replaced by <session_out>)"
+}

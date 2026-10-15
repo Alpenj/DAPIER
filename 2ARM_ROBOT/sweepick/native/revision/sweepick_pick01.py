@@ -1248,7 +1248,55 @@ def put_back_evidence(state, scene):
     return ev
 
 
-def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None, second_stop=False, handoff_fn=None):
+LEFT_TO_LIFT = "LEFT_START_TO_LIFT"                                             # Console-17 limited execution scope: the same session up to held_after_lift, then nothing more
+
+
+def limited_lift_end(out, state, scene, evidence, held, trail):
+    """Console-17: the explicit boundary after held_after_lift. Nothing below this is commanded in LEFT_START_TO_LIFT: no
+    CARRY/hand-over, no lower/open/retreat/home, no Torque_Enable write. The left arm stays powered and holding as the lift
+    left it; the process ends after the recorder closes. Ending the process is NOT a motor stop or a torque-off."""
+    lift = (state.get("stages") or {}).get("lift") or {}
+    end = lift.get("end") or {}
+    arms = ((scene.get("arms") or {}).get("left") or {})
+    terminal = "LEFT_LIFT_HELD_CONFIRMED" if held else "LEFT_LIFT_HOLD_UNKNOWN"
+    return dict(result=f"{terminal}_HOLDING_NEEDS_A_PERSON", mode=LEFT_TO_LIFT, limited_terminal=terminal, held_after_lift=held,
+                boundary=dict(after="held_after_lift", next_stage_commanded=None, handoff_entered=False, put_back_entered=False,
+                              torque_writes_after_lift=0),
+                last_lift=dict(controller_result=lift.get("controller_result"), exit_code=lift.get("exit_code"), stopped_by=lift.get("stopped_by"),
+                               writes=lift.get("writes"), end=end, jaw_during=lift.get("jaw_during"), recorded_at_host_s=lift.get("t")),
+                last_look=dict(tag=scene.get("tag"), ok=scene.get("ok"), arms_left=arms, joint_reads=scene.get("joint_reads")),
+                hold_evidence=dict(gate="held_after_lift", ok=held, why=evidence.get("why"), label=evidence.get("label"),
+                                   basis="the existing held_after_lift observation; not a force/slip measurement"),
+                normal_home=False, torque_off_confirmed=False, safe_shutdown="NOT_PERFORMED",
+                operator_required=True, operator_action="support the object/arm; the left arm is still powered at its lift goal. Recover through the existing manual recovery confirmation",
+                trail=trail)
+
+
+def limited_terminal(r, state, stop_requested=False):
+    """Console-17: one terminal class for a LEFT_START_TO_LIFT session result, from the session's own result and the
+    stage records (controller results). Unknown is not promoted to success."""
+    res = (r or {}).get("result")
+    if (r or {}).get("limited_terminal"):
+        return r["limited_terminal"]
+    stages = (state or {}).get("stages") or {}
+    order = (state or {}).get("order") or list(stages)
+    last = stages.get(order[-1]) if order else None
+    for rec in [stages[n] for n in order if n in stages]:
+        cr, gate = rec.get("controller_result"), (rec.get("stopped_by") or {}).get("gate")
+        if cr in ("BUS_LOST", "FAULT_HOLDING", "FAULT_JOINTS_RELEASED", "EXECUTOR_EXCEPTION") or gate in ("bus_lost", "servo_fault"):
+            return "BUS_OR_SERVO_FAULT"
+    if r is None:
+        return "BUS_OR_SERVO_FAULT"                                           # ended by an exception: not known to be healthy
+    if stop_requested or any((rec.get("stopped_by") or {}).get("gate") == "operator_stop" for rec in stages.values()):
+        return "OPERATOR_STOPPED"
+    if (stages.get("close") or {}).get("controller_result") == "GRIP_UNAVAILABLE_HOLDING":
+        return "LEFT_CLOSE_UNAVAILABLE"
+    if "lift" in stages:
+        return "LEFT_LIFT_FAILED"
+    return "NOT_STARTED" if res in ("NOT_STARTED", "PLANNED") else "ENDED_BEFORE_LIFT"
+
+
+def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None, second_stop=False, handoff_fn=None, limit=None):
     """PICK02 in one go: observe -> pre-grasp -> visual alignment loop -> first part of the descent (pads above the block) ->
     visual alignment loop at close range -> last part of the descent -> placement check -> close (Jaw) -> lift -> lower ->
     open -> retreat -> home. The visual loop is STEPWISE (stop, look, correct through the existing planner and executor, look
@@ -1282,6 +1330,8 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
     if not st["ready"] or not execute:
         return dict(result="NOT_STARTED" if not st["ready"] else "PLANNED", trail=trail)
     S = lambda: json.loads((out / "STATE.json").read_text())
+    if limit not in (None, LEFT_TO_LIFT) or (limit and handoff_fn is not None):
+        raise ValueError(f"unsupported session limit {limit!r} (a limited session has no hand-over callback)")
     if handoff_fn is not None:
         # FULL-CHAIN mode: everything the hand-over needs is checked BEFORE the first motor command. A session whose right-arm
         # side is not ready is not started in this mode (the baseline mode is the one to run then).
@@ -1407,6 +1457,10 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
         note(step="snapshot", file="HANDOFF_SNAPSHOT.json", kind="SNAPSHOT_ONLY")
     except Exception as e:
         note(step="snapshot", error=f"{type(e).__name__}: {e}")
+    if limit == LEFT_TO_LIFT:
+        note(step="limited_scope_terminal", result="LEFT_LIFT_HELD_CONFIRMED" if held else "LEFT_LIFT_HOLD_UNKNOWN", gate="held_after_lift", ok=held,
+             why="LEFT_START_TO_LIFT ends here: no CARRY/hand-over, no automatic lower/open/retreat/home/OFF")
+        return limited_lift_end(out, S(), sc, ev, held, trail)
     if handoff_fn is not None and held:
         # FULL-CHAIN mode: the same process (this one) keeps the left hold and hands the session to the callback. The callback
         # says what it commanded and who has the block. Only when it commanded NOTHING and the left hand still holds as lifted
@@ -1486,13 +1540,54 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
     return dict(result=scoped, **scope_note, held_after_lift=held, placed_back=placed, put_back_evidence=pb, human_assistance="none recorded by the tool; a person's report overrides this", trail=trail)
 
 
-def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None, handoff=None, session_kw=None, scope="full", right_lift_m=None, observation_plan=None, contact_plan=None):
+def write_limited_terminal(out, r, recorder=None):
+    """Console-17: LIMITED_SCOPE_TERMINAL.json, written after the recorder released its readers and polling. It records what
+    was read; process exit afterwards is not a motor stop and not a torque-off."""
+    out = Path(out)
+    try:
+        state = json.loads((out / "STATE.json").read_text())
+    except (OSError, ValueError):
+        state = {}
+    stop = Path(str(out) + ".STOP").exists()
+    terminal = limited_terminal(r, state, stop_requested=stop)
+    if r is not None:
+        r["limited_terminal"] = terminal
+    stages = state.get("stages") or {}
+    order = state.get("order") or []
+    last_name = order[-1] if order else None
+    last = stages.get(last_name) or {}
+    end = last.get("end") or {}
+    # only the existing pre-lift way back (home) can end released; read from that stage's own end registers, never inferred
+    released = bool(last.get("controller_result") == "RETURNED_RELEASED" and isinstance(end.get("torque"), dict) and end["torque"] and not any(end["torque"].values()))
+    doc = dict(schema="sweepick.limited-scope-terminal.v1", scope=LEFT_TO_LIFT, terminal=terminal, session_result=(r or {}).get("result"),
+               ended_by_exception=r is None, stop_latch_present=stop,
+               last_stage=dict(name=last_name, controller_result=last.get("controller_result"), exit_code=last.get("exit_code"), stopped_by=last.get("stopped_by"), recorded_at_host_s=last.get("t")),
+               last_actual=dict(ticks=end.get("ticks"), goal_register=end.get("goal_register"), torque=end.get("torque"), status=end.get("status"), moving=end.get("moving"),
+                                source=f"{last_name} stage executor end read (move.json end)", read_error=end.get("error")),
+               last_goal_ack=dict(note="per-write ACK/readback is in the stage's run*/move.json (last_acknowledged_goal, last_goal_write_attempt, read_after_loss)",
+                                  move_files=sorted(str(p.relative_to(out)) for p in (out / str(last_name)).glob("run*/move.json")) if last_name else []),
+               hold_evidence=(r or {}).get("hold_evidence"), held_after_lift=(r or {}).get("held_after_lift"),
+               stages_after_lift_commanded=[n for n in order[order.index("lift") + 1:]] if "lift" in order else [],
+               owner=dict(process="this launcher process (single owner); it ends after this file", recorder=recorder, port_lease="released with the recorder; executor buses are closed per stage"),
+               left_returned_released=released, normal_home=released, torque_off_confirmed=released, safe_shutdown="LEFT_HOME_RELEASED_BY_EXISTING_RETURN" if released else "NOT_PERFORMED",
+               motion_stop_confirmed="NO_MOTION_COMMANDED" if not order else "UNKNOWN",
+               operator_required=not released and bool(order), next_run_allowed=False,
+               meaning="process exit is not a motor stop or torque-off; HOLDING != RETURNED_RELEASED != safe_shutdown != torque_off_confirmed")
+    (out / "LIMITED_SCOPE_TERMINAL.json").write_text(json.dumps(doc, indent=1, default=str))
+    return doc
+
+
+def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None, handoff=None, session_kw=None, scope="full", right_lift_m=None, observation_plan=None, contact_plan=None, limit=None):
     """The session with its optional recorder and its optional full-chain callback, in this one process. The recorder is
     started before the first observation and closed after the last one; if it cannot start, a session that asked for it is
     not started (a record that silently is not there would be found out too late)."""
     global EPISODE
     out = Path(out); out.mkdir(parents=True, exist_ok=True); ep = None; observing = scope in ("observe", "SUPPORT_OBSERVATION"); approaching = scope in ("approach", "RECEIVE_APPROACH"); contacting = scope in ("contact", "RECEIVE_CONTACT")
     mode = ("SUPPORT_OBSERVATION" if observing else ("RECEIVE_APPROACH" if approaching else "RECEIVE_CONTACT" if contacting else "FULL_TASK")) if full_chain else "BASELINE_PICK_AND_PUT_BACK"
+    if limit is not None:                                                      # Console-17: a limited scope is its own mode; never combined with the full chain or a hand-over
+        if limit != LEFT_TO_LIFT or full_chain or handoff is not None or not record:
+            raise ValueError(f"limit {limit!r} needs full_chain=False, no hand-over and record=True")
+        mode = LEFT_TO_LIFT
     record = record or full_chain                                              # the full chain runs inside the one record of the session (its hand-over is bound to the recorder's id and lease)
     del RECORDING_ERRORS[:]
     if record:
@@ -1507,7 +1602,7 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
             import sweepick_full_chain
             handoff, _owner = sweepick_full_chain.build(out, ep, scope=scope, right_lift_m=right_lift_m, observation_plan=observation_plan, contact_plan=contact_plan)
             (out / "ACTIVE_SELECTION.json").write_text(json.dumps(sweepick_full_chain.selection(scope), indent=1))      # which native files and which pin THIS process loaded, with their hashes                 # the implementation's FullEpisodeHandoff with this process's owner (executor, readers, field records) injected
-        r = session(out, execute=execute, handoff_fn=handoff, **(session_kw or {}))
+        r = session(out, execute=execute, handoff_fn=handoff, **dict(session_kw or {}, **(dict(limit=limit) if limit else {})))
     finally:
         EPISODE = None
         if ep is not None:
@@ -1521,6 +1616,11 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
         finish_collision_diagnostics()
         if r is not None:
             r["recording_errors"] = list(RECORDING_ERRORS)                       # the record's quality, next to (not instead of) what the robot did
+        if limit is not None:
+            _rec(lambda: write_limited_terminal(out, r, recorder=None if ep is None else dict(released=True, session_id=doc.get("session_id"), readers_closed=doc.get("readers_closed"), task_outcome=doc.get("task_outcome"))), "limited terminal")
+    if limit is not None:
+        print(json.dumps(r, indent=1, default=str))
+        return 0 if (r or {}).get("limited_terminal") == "LEFT_LIFT_HELD_CONFIRMED" and not RECORDING_ERRORS else 3
     print(json.dumps(r, indent=1, default=str)); return 0 if r["result"] in ("PICKED_LIFTED_AND_PUT_BACK", "PLANNED", "FULL_CHAIN_DONE", "SUPPORT_OBSERVATION_DONE_PUT_BACK", "RECEIVE_APPROACH_DONE_PUT_BACK", "RECEIVE_CONTACT_DONE_PUT_BACK") else 3
 
 

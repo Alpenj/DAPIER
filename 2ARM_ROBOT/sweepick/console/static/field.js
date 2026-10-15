@@ -32,7 +32,7 @@
   }
 
   function prepareAllowed(scope) {
-    return scope?.id === FULL && scope.supported === true && scope.can_prepare === true
+    return (scope?.id === FULL || scope?.id === LIMITED) && scope.supported === true && scope.can_prepare === true
       && panelState.control?.execution_connected === true && panelState.control?.can_prepare === true;
   }
 
@@ -54,10 +54,11 @@
     const allowed = prepareAllowed(scope);
     const button = byId('fieldPrepare');
     button.disabled = !allowed;
-    button.textContent = limited ? '현재 제한 범위는 준비할 수 없음'
+    button.textContent = limited ? (allowed ? 'LEFT_START_TO_LIFT 제한 준비 흐름 열기' : supported ? 'LEFT_START_TO_LIFT 준비 조건 미충족' : '현재 제한 범위는 준비할 수 없음')
       : allowed ? 'FULL_CHAIN 기존 준비 흐름 열기' : 'FULL_CHAIN 준비 조건 미충족';
     byId('fieldScopeMessage').textContent = limited
-      ? `LEFT_START_TO_LIFT는 현재 backend가 지원하지 않아 실행·준비할 수 없습니다. ${scope?.reason || 'native 실행기는 fixed full-chain이며 LIFT/HOLDING 종료와 범위별 ownership 계약이 없습니다.'}`
+      ? (supported ? `LEFT_START_TO_LIFT는 이 범위 전용 승인·Manifest로만 준비합니다. LIFT 뒤 보유 상태로 종료하며 다음 실행은 수동 복구 확인 전까지 막힙니다. ${scope?.reason || ''}`
+        : `LEFT_START_TO_LIFT는 현재 backend가 지원하지 않아 실행·준비할 수 없습니다. ${scope?.reason || 'native 실행기는 fixed full-chain이며 LIFT/HOLDING 종료와 범위별 ownership 계약이 없습니다.'}`)
       : supported
         ? 'FULL_CHAIN_RECEIVE_CONTACT는 기존 backend와 기존 현장 승인 흐름만 사용합니다. 이 버튼은 START를 직접 보내지 않습니다.'
         : 'FULL_CHAIN_RECEIVE_CONTACT 지원 상태를 확인할 수 없어 준비를 열지 않습니다.';
@@ -243,7 +244,7 @@
   byId('fieldRefresh').addEventListener('click', refreshScopes);
   byId('fieldPrepare').addEventListener('click', () => {
     const scope = scopeById(byId('fieldScopeSelect').value);
-    if (prepareAllowed(scope)) panelState.onPrepare?.();
+    if (prepareAllowed(scope)) panelState.onPrepare?.(scope.id);
   });
   document.querySelectorAll('[data-field-target]').forEach((button) => {
     button.addEventListener('click', () => {

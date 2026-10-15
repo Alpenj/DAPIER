@@ -1,0 +1,785 @@
+{
+ "schema": "sweepick.console17-limited-fake-run.v1",
+ "device_access": false,
+ "real_motor_writes": 0,
+ "real_torque_writes": 0,
+ "result": "FAKE_NATIVE_PASS_PHYSICAL_NOT_TESTED",
+ "harness": "REAL sweepick_pick01.session()/stage()/plan_pick/correct and sweepick_move_a.run()/grip() on the PICK02 fake bus (test_sweepick_pick02_actual fixture); collision answers and wrist camera are fixture models; GRIP_UNAVAILABLE case replaces only the grip() result",
+ "tests_passed": 26,
+ "tests_failed": 0,
+ "tests": [
+  "test_console17_limited_session.py::test_held_lift_ends_at_the_boundary_with_no_further_write",
+  "test_console17_limited_session.py::test_baseline_without_the_limit_is_unchanged",
+  "test_console17_limited_session.py::test_lift_not_confirmed_is_hold_unknown_and_does_not_go_home",
+  "test_console17_limited_session.py::test_no_contact_close_keeps_the_existing_way_back_and_never_lifts",
+  "test_console17_limited_session.py::test_close_fault_ends_there_as_bus_or_servo_fault",
+  "test_console17_limited_session.py::test_grip_unavailable_is_not_contact_and_forbids_lift",
+  "test_console17_limited_session.py::test_operator_stop_during_lift_ends_without_another_stage",
+  "test_console17_limited_session.py::test_stop_before_lift_is_refused_without_a_write",
+  "test_console17_limited_session.py::test_a_limited_session_rejects_a_hand_over_or_full_chain",
+  "test_console17_limited_session.py::test_run_session_writes_the_terminal_after_the_recorder_is_released",
+  "test_console17_limited_session.py::test_run_session_failure_terminal_has_no_success_claim",
+  "test_console17_limited_session.py::test_overload_0x20_during_close_ends_as_a_fault_without_lift",
+  "test_console17_limited_session.py::test_stopped_state_recorded_forbids_any_further_stage",
+  "test_console17_trim_other_arm.py::test_model_trim_with_a_fresh_other_arm_reader_is_validated_like_its_stage",
+  "test_console17_trim_other_arm.py::test_model_trim_without_an_other_arm_reader_is_cancelled_without_a_write",
+  "test_console17_launch_scope.py::test_limited_approval_and_manifest_bind_together",
+  "test_console17_launch_scope.py::test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval0-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-approval does not match]",
+  "test_console17_launch_scope.py::test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval1-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a LEFT_START_TO_LIFT manifest]",
+  "test_console17_launch_scope.py::test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval2-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-automatic_return_after_lift=false]",
+  "test_console17_launch_scope.py::test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval3-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-right_arm_commands_permitted=false]",
+  "test_console17_launch_scope.py::test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval4-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-unsupported execution_scope]",
+  "test_console17_launch_scope.py::test_limited_manifest_must_bind_the_launcher_and_executors",
+  "test_console17_launch_scope.py::test_a_changed_source_after_preparation_stops_the_limited_launch",
+  "test_console17_launch_scope.py::test_full_chain_approval_without_execution_scope_keeps_the_existing_checks",
+  "test_console17_launch_scope.py::test_main_runs_the_limited_session_without_the_receive_preparation",
+  "test_console17_launch_scope.py::test_main_full_chain_call_is_unchanged"
+ ],
+ "cases": {
+  "held_after_lift": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close",
+    "lift"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 161,
+      "Torque_Enable": 1
+     }
+    },
+    "lift": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 375,
+      "Torque_Enable": 0
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "limited_scope_terminal",
+   "terminal_record": null
+  },
+  "hold_unknown": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close",
+    "lift"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 161,
+      "Torque_Enable": 1
+     }
+    },
+    "lift": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 375,
+      "Torque_Enable": 0
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "limited_scope_terminal",
+   "terminal_record": null
+  },
+  "no_contact_close": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close",
+    "open",
+    "retreat",
+    "home"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_NO_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 688,
+      "Torque_Enable": 1
+     }
+    },
+    "open": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 1276,
+      "Torque_Enable": 0
+     }
+    },
+    "retreat": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 328,
+      "Torque_Enable": 0
+     }
+    },
+    "home": {
+     "controller_result": "RETURNED_RELEASED",
+     "writes": {
+      "Goal_Position": 4126,
+      "Torque_Enable": 6
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "home",
+   "terminal_record": null
+  },
+  "close_fault": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "FAULT_HOLDING",
+     "writes": {
+      "Goal_Position": 3,
+      "Torque_Enable": 1
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "close",
+   "terminal_record": null
+  },
+  "grip_unavailable": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_UNAVAILABLE_HOLDING",
+     "writes": {
+      "Goal_Position": 0,
+      "Torque_Enable": 0
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "close",
+   "terminal_record": null
+  },
+  "stop_during_lift": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close",
+    "lift"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 161,
+      "Torque_Enable": 1
+     }
+    },
+    "lift": {
+     "controller_result": "STOPPED_HOLDING",
+     "writes": {
+      "Goal_Position": 12,
+      "Torque_Enable": 0
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "lift",
+   "terminal_record": null
+  },
+  "stop_before_lift": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 161,
+      "Torque_Enable": 1
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [
+    {
+     "stage": "lift",
+     "writes": {
+      "Goal_Position": 0,
+      "Torque_Enable": 0
+     }
+    }
+   ],
+   "last_trail_step": "lift",
+   "terminal_record": null
+  },
+  "run_session_held": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close",
+    "lift"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 161,
+      "Torque_Enable": 1
+     }
+    },
+    "lift": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 375,
+      "Torque_Enable": 0
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "limited_scope_terminal",
+   "terminal_record": {
+    "schema": "sweepick.limited-scope-terminal.v1",
+    "scope": "LEFT_START_TO_LIFT",
+    "terminal": "LEFT_LIFT_HELD_CONFIRMED",
+    "session_result": "LEFT_LIFT_HELD_CONFIRMED_HOLDING_NEEDS_A_PERSON",
+    "ended_by_exception": false,
+    "stop_latch_present": false,
+    "last_stage": {
+     "name": "lift",
+     "controller_result": "HOLDING",
+     "exit_code": 0,
+     "stopped_by": null,
+     "recorded_at_host_s": 1792037582.248044
+    },
+    "last_actual": {
+     "ticks": {
+      "shoulder_pan": 2381.0,
+      "shoulder_lift": 2248.0,
+      "elbow_flex": 1916.0,
+      "wrist_flex": 3069.0,
+      "wrist_roll": 2364.0,
+      "gripper": 3075.0
+     },
+     "goal_register": {
+      "shoulder_pan": 2381.0,
+      "shoulder_lift": 2248.0,
+      "elbow_flex": 1916.0,
+      "wrist_flex": 3069.0,
+      "wrist_roll": 2364.0,
+      "gripper": 3047.0
+     },
+     "torque": {
+      "shoulder_pan": 1.0,
+      "shoulder_lift": 1.0,
+      "elbow_flex": 1.0,
+      "wrist_flex": 1.0,
+      "wrist_roll": 1.0,
+      "gripper": 1.0
+     },
+     "status": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 0.0,
+      "elbow_flex": 0.0,
+      "wrist_flex": 0.0,
+      "wrist_roll": 0.0,
+      "gripper": 0.0
+     },
+     "moving": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 0.0,
+      "elbow_flex": 0.0,
+      "wrist_flex": 0.0,
+      "wrist_roll": 0.0,
+      "gripper": 0.0
+     },
+     "source": "lift stage executor end read (move.json end)",
+     "read_error": null
+    },
+    "last_goal_ack": {
+     "note": "per-write ACK/readback is in the stage's run*/move.json (last_acknowledged_goal, last_goal_write_attempt, read_after_loss)",
+     "move_files": [
+      "lift/run1/move.json"
+     ]
+    },
+    "hold_evidence": {
+     "gate": "held_after_lift",
+     "ok": true,
+     "why": "wrist image: the block at the same place and size between the jaw tips before and after the lift; jaws loaded through the lift and the hold (port owner's rows); top depth: the place where the block stood is validly observed and clear",
+     "label": "HELD_CONFIRMED",
+     "basis": "the existing held_after_lift observation; not a force/slip measurement"
+    },
+    "held_after_lift": true,
+    "stages_after_lift_commanded": [],
+    "owner": {
+     "process": "this launcher process (single owner); it ends after this file",
+     "recorder": {
+      "released": true,
+      "session_id": "fake-episode",
+      "readers_closed": {},
+      "task_outcome": "PARTIAL_OR_DIAGNOSTIC: LEFT_LIFT_HELD_CONFIRMED_HOLDING_NEEDS_A_PERSON"
+     },
+     "port_lease": "released with the recorder; executor buses are closed per stage"
+    },
+    "left_returned_released": false,
+    "normal_home": false,
+    "torque_off_confirmed": false,
+    "safe_shutdown": "NOT_PERFORMED",
+    "motion_stop_confirmed": "UNKNOWN",
+    "operator_required": true,
+    "next_run_allowed": false,
+    "meaning": "process exit is not a motor stop or torque-off; HOLDING != RETURNED_RELEASED != safe_shutdown != torque_off_confirmed"
+   }
+  },
+  "run_session_fault": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "FAULT_HOLDING",
+     "writes": {
+      "Goal_Position": 3,
+      "Torque_Enable": 1
+     }
+    }
+   },
+   "stages_after_lift": [],
+   "writes_after_lift": 0,
+   "refusals": [],
+   "last_trail_step": "close",
+   "terminal_record": {
+    "schema": "sweepick.limited-scope-terminal.v1",
+    "scope": "LEFT_START_TO_LIFT",
+    "terminal": "BUS_OR_SERVO_FAULT",
+    "session_result": "STOPPED_IN_CLOSE_HOLDING_NEEDS_A_PERSON",
+    "ended_by_exception": false,
+    "stop_latch_present": false,
+    "last_stage": {
+     "name": "close",
+     "controller_result": "FAULT_HOLDING",
+     "exit_code": 13,
+     "stopped_by": {
+      "gate": "servo_fault",
+      "level": "HARD",
+      "detail": "Status register non-zero: {'gripper': 32.0}"
+     },
+     "recorded_at_host_s": 1792037583.157774
+    },
+    "last_actual": {
+     "ticks": {
+      "shoulder_pan": 2381.0,
+      "shoulder_lift": 2339.0,
+      "elbow_flex": 2071.0,
+      "wrist_flex": 2852.0,
+      "wrist_roll": 2364.0,
+      "gripper": 3356.0
+     },
+     "goal_register": {
+      "shoulder_pan": 2381.0,
+      "shoulder_lift": 2339.0,
+      "elbow_flex": 2071.0,
+      "wrist_flex": 2852.0,
+      "wrist_roll": 2364.0,
+      "gripper": 3356.0
+     },
+     "torque": {
+      "shoulder_pan": 1.0,
+      "shoulder_lift": 1.0,
+      "elbow_flex": 1.0,
+      "wrist_flex": 1.0,
+      "wrist_roll": 1.0,
+      "gripper": 1.0
+     },
+     "status": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 0.0,
+      "elbow_flex": 0.0,
+      "wrist_flex": 0.0,
+      "wrist_roll": 0.0,
+      "gripper": 32.0
+     },
+     "moving": null,
+     "source": "close stage executor end read (move.json end)",
+     "read_error": null
+    },
+    "last_goal_ack": {
+     "note": "per-write ACK/readback is in the stage's run*/move.json (last_acknowledged_goal, last_goal_write_attempt, read_after_loss)",
+     "move_files": [
+      "close/run1/move.json"
+     ]
+    },
+    "hold_evidence": null,
+    "held_after_lift": null,
+    "stages_after_lift_commanded": [],
+    "owner": {
+     "process": "this launcher process (single owner); it ends after this file",
+     "recorder": {
+      "released": true,
+      "session_id": "fake-episode",
+      "readers_closed": {},
+      "task_outcome": "PARTIAL_OR_DIAGNOSTIC: STOPPED_IN_CLOSE_HOLDING_NEEDS_A_PERSON"
+     },
+     "port_lease": "released with the recorder; executor buses are closed per stage"
+    },
+    "left_returned_released": false,
+    "normal_home": false,
+    "torque_off_confirmed": false,
+    "safe_shutdown": "NOT_PERFORMED",
+    "motion_stop_confirmed": "UNKNOWN",
+    "operator_required": true,
+    "next_run_allowed": false,
+    "meaning": "process exit is not a motor stop or torque-off; HOLDING != RETURNED_RELEASED != safe_shutdown != torque_off_confirmed"
+   }
+  },
+  "baseline_full_put_back": {
+   "stage_order": [
+    "pregrasp",
+    "descend_a",
+    "descend",
+    "close",
+    "lift",
+    "lower",
+    "open",
+    "retreat",
+    "home"
+   ],
+   "stages": {
+    "pregrasp": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 3000,
+      "Torque_Enable": 5
+     }
+    },
+    "descend_a": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 108,
+      "Torque_Enable": 0
+     }
+    },
+    "descend": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 218,
+      "Torque_Enable": 0
+     }
+    },
+    "close": {
+     "controller_result": "GRIP_CONTACT_HOLDING",
+     "writes": {
+      "Goal_Position": 161,
+      "Torque_Enable": 1
+     }
+    },
+    "lift": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 375,
+      "Torque_Enable": 0
+     }
+    },
+    "lower": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 375,
+      "Torque_Enable": 0
+     }
+    },
+    "open": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 270,
+      "Torque_Enable": 0
+     }
+    },
+    "retreat": {
+     "controller_result": "HOLDING",
+     "writes": {
+      "Goal_Position": 328,
+      "Torque_Enable": 0
+     }
+    },
+    "home": {
+     "controller_result": "RETURNED_RELEASED",
+     "writes": {
+      "Goal_Position": 4126,
+      "Torque_Enable": 6
+     }
+    }
+   },
+   "stages_after_lift": [
+    "lower",
+    "open",
+    "retreat",
+    "home"
+   ],
+   "writes_after_lift": 5105,
+   "refusals": [],
+   "last_trail_step": "put_back_evidence",
+   "terminal_record": null
+  },
+  "overload_0x20_during_close": {
+   "stage_order_end": "close",
+   "close_controller_result": "BUS_LOST",
+   "lift_run": false,
+   "terminal": "BUS_OR_SERVO_FAULT",
+   "injection": "fake sync_read raises 'servo response error: ID=6 error=0x20 [RxPacketError] Overload error!' on the 25th read of CLOSE"
+  },
+  "stopped_state_recorded_close": {
+   "close_controller_result": "STOPPED_STATE_RECORDED",
+   "lift_run": false,
+   "later_stages_allowed": false,
+   "terminal": "ENDED_BEFORE_LIFT (no stopped_by gate in the stub)"
+  }
+ },
+ "contract": {
+  "normal_limited_run_writes_after_lift": 0,
+  "stages_after_lift_in_normal_limited_run": [],
+  "abnormal_runs_stages_after_lift": {
+   "hold_unknown": [],
+   "stop_during_lift": [],
+   "run_session_fault": []
+  },
+  "close_unavailable_or_fault_lift_run": {
+   "grip_unavailable": false,
+   "close_fault": false,
+   "no_contact_close": false
+  },
+  "baseline_without_limit_still_puts_back": [
+   "lower",
+   "open",
+   "retreat",
+   "home"
+  ]
+ }
+}

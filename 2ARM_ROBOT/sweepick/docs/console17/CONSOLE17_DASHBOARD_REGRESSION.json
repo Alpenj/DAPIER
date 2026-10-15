@@ -1,0 +1,66 @@
+{
+ "schema": "sweepick.console17-dashboard-regression.v1",
+ "device_access": false,
+ "real_control_posts": 0,
+ "unit_http": {
+  "command": ".venv/bin/python -m unittest test_control test_records test_inspection test_replay test_open_console test_a16 test_console16 test_console17",
+  "console16_baseline_on_unmodified_copy": {
+   "ran": 103,
+   "result": "OK"
+  },
+  "console17_copy": {
+   "ran": 117,
+   "result": "OK",
+   "new_console17": 14
+  }
+ },
+ "browser": {
+  "server": "console code copy on 127.0.0.1:8775 (unmodified copy on 8776); controller bound to a scratch copy of the runs folder; tmux new-session/send-keys refused by the server wrapper; the live console on 8765 was not touched",
+  "console16_browser_qa": {
+   "passed": 18,
+   "of": 18,
+   "expectation_changed": "analysis card count 3 -> 4 (B-16 registered)"
+  },
+  "console16_existing_regression": {
+   "passed": 15,
+   "of": 15,
+   "expectation_changed": "START body now carries execution_scope='FULL_CHAIN_RECEIVE_CONTACT'"
+  },
+  "console16_a16_regression": {
+   "passed": 0,
+   "of": 6,
+   "status": "PRE_EXISTING_FAILURE_REPRODUCED_ON_UNMODIFIED_CODE",
+   "detail": "first assertion: PICK status of 20261015_092942_a4628c is NOT_REACHED, expected REFUSED; identical with the Console-16 code on the same data, so the remaining 5 A16 checks did not run in either"
+  },
+  "unmodified_console16_browser_qa_on_8776": "did not complete in this environment (UI timeout waiting for the 20261014_155824_d4017e inspection); not used as a comparison",
+  "console17_browser_qa": {
+   "passed": 6,
+   "of": 6,
+   "checks": [
+    "limited_scope_prepare_enabled_only_when_backend_supported",
+    "limited_prepare_request_carries_its_scope (POST blocked)",
+    "limited_scope_disabled_when_backend_missing",
+    "limited_holding_terminal_shown_and_next_run_blocked",
+    "limited_holding_fits_viewport @420",
+    "limited_holding_fits_viewport @1366"
+   ],
+   "blocked_posts": [
+    {
+     "path": "/api/control/prepare",
+     "body": {
+      "source_session": null,
+      "execution_scope": "LEFT_START_TO_LIFT"
+     }
+    }
+   ],
+   "script": "console17_browser_qa.mjs"
+  },
+  "total_console16_browser_checks_passed": "33/39"
+ },
+ "dashboard_contract": {
+  "limited_prepare_enabled_only_with_native_contract": true,
+  "full_chain_approval_rejected_for_limited": true,
+  "limited_holding_blocks_next_run_until_manual_recovery": true,
+  "running_view": "existing field panel: current stage, last completed stage, joints actual/goal/ACK, torque, camera age, existing STOP; LIMITED_SCOPE_TERMINAL summary added"
+ }
+}
