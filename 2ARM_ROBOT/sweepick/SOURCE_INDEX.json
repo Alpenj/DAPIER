@@ -2196,9 +2196,9 @@
       "source_group": "wrist_udev_20261015",
       "source_name": "FIELD_START_READINESS.md",
       "component": "DOCS",
-      "source_sha256": "2b384f83a639411f5f1a073a0be4aac6c21e5d4eef634d1bbe19e9878066b6a4",
-      "public_sha256": "2b384f83a639411f5f1a073a0be4aac6c21e5d4eef634d1bbe19e9878066b6a4",
-      "bytes": 2327,
+      "source_sha256": "68d263cc71fb6091390198be1769b1e0f048c3628706fdcc67f85e831223daa9",
+      "public_sha256": "68d263cc71fb6091390198be1769b1e0f048c3628706fdcc67f85e831223daa9",
+      "bytes": 2899,
       "public_copy_changed": false,
       "source_location": "PRIVATE_WORK_RECORD"
     }
