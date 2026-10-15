@@ -4,7 +4,7 @@ record_id: `DAPIER-2026-10-15-sweepick-source-review`
 
 SO-101 양팔의 실제 관측·집기·오른팔 접근을 기존 실행기로 연결하고, 실패 원인과 종료 상태를 저장 기록으로 대조하고 있다. 이 폴더는 2026-10-15 현재 로컬 실행 소스를 읽기 위한 공개 사본이다. 저장소 밖에 흩어져 있던 콘솔, launcher, native executor, 선택된 receive 모듈과 프로젝트 support 코드를 한곳에 모았다.
 
-**검토 시작점: [코드 호출 지도](docs/CODE_MAP.md), [A-16 원인·수정](docs/A16_CLOSE_REVIEW.md), [A-17 검수](docs/a17/A17_CODE_AUDIT.md), [Console-16 계약](docs/console16/CONSOLE16_LIMITED_RUN_CONTRACT.md).**
+**검토 시작점: [코드 호출 지도](docs/CODE_MAP.md), [A-16 원인·수정](docs/A16_CLOSE_REVIEW.md), [A-17 검수](docs/a17/A17_CODE_AUDIT.md), [Console-16 계약](docs/console16/CONSOLE16_LIMITED_RUN_CONTRACT.md), [10/15 ID6 과부하 진단](docs/ID6_OVERLOAD_20261015.md).**
 
 | 확인할 내용 | 파일 |
 |---|---|
@@ -26,7 +26,8 @@ SO-101 양팔의 실제 관측·집기·오른팔 접근을 기존 실행기로 
 - `20261015_092942_a4628c`: CLOSE 인증의 wrist_flex 2837→2835 tick 불일치로 REFUSED됐다. 이 CLOSE의 Goal/Torque write는 0회였다.
 - A-16 수정: 같은 scene의 closing sweep을 한 번 재검사하고, 이후 fresh actual에 기존 1-tick 바인딩을 다시 적용한다. 정상 인증에는 재검사를 추가하지 않는다.
 - A-17 무장치 시험: gripper actual 3344에서는 최초 Goal 3344, actual 3501에서는 최초 Goal 3431을 보냈고 Fake Bus readback이 일치했다. 3501은 수동 개방으로 가능한 actual이며 고장 증거로 취급하지 않는다.
-- 수정본 실물 CLOSE/LIFT 재현은 아직 수행하지 않았다. 현재 웹 launcher는 `full_chain=True`, `scope='RECEIVE_CONTACT'`를 고정하므로 LIFT 한정 종료를 지원한다고 표시하지 않는다.
+- `20261015_112218_f0d866`: A-16/A-17 검수 이후 실물 LEFT CLOSE는 `GRIP_CONTACT_HOLDING`까지 진행했다. LIFT는 미도달이며, 직후 LEFT Gripper ID6에서 `0x20 Overload error` 및 handshake 시 ID6 누락이 기록돼 Run이 예외 종료됐다. 실제 물체 파지·모터 손상·정상 회수는 확인되지 않았다. [별도 진단 지침](docs/ID6_OVERLOAD_20261015.md) 참고.
+- 현재 웹 launcher는 `full_chain=True`, `scope='RECEIVE_CONTACT'`를 고정하므로 LIFT 한정 종료를 지원한다고 표시하지 않는다. 관련 후속 작업은 별도 검수 및 실물 승인 후 진행한다.
 - Console-16은 두 실행 범위를 구분하고 `LEFT_START_TO_LIFT`를 `BACKEND_CHANGE_REQUIRED`로 표시한다. 준비·START API도 이를 거부한다. 기존 Full-chain 실행 계약을 보존하며 제한 범위의 native 종료 기능은 추가하지 않았다. 기존 검수 패널에서 10월 14일 control frame의 267.946ms/reader 기준 64.082ms, 직전 8회 및 전체 115회 PASS 뒤 FAIL, 물체 이탈 UNKNOWN을 확인할 수 있다.
 
 ## 공개 사본과 실제 실행본
