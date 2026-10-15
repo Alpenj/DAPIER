@@ -7,6 +7,33 @@ from .features import observation_binding
 from .right_relative import RightRelativeServoProposal
 
 
+def left_hold_from_A_record(observation,native,record_sha256):
+    """Right-tool evaluation is separate from left hold and cross-view target identity."""
+    binding=observation_binding(observation,camera_key='right_wrist')
+    held=native.get('held_object') or {};grasp=held.get('grasp_evidence') or {}
+    lifted=grasp.get('held_after_lift') or {};vision=held.get('vision_evidence') or {}
+    camera=observation['views']['top'].get('recorded_camera') or {}
+    feedback=dict(feedback_stamp=native.get('feedback_stamp'),seq=native.get('seq'))
+    current=(held.get('source_kind')=='REAL' and held.get('pose_role')=='CURRENT_OBSERVATION'
+        and (held.get('transforms') or {}).get('tool')=='left_cube_grasp'
+        and lifted.get('label')=='HELD_CONFIRMED' and lifted.get('ok') is True
+        and lifted.get('wrist_same_place_as_before_the_lift') is True
+        and (lifted.get('jaw_during_lift') or {}).get('loaded_throughout') is True
+        and vision.get('observed') is True and vision.get('fresh') is True and vision.get('reader_valid') is True
+        and camera.get('fresh') is True and camera.get('reader_valid') is True
+        and all(camera.get(k) is not None and vision.get(k)==camera[k] for k in ('n','recv_monotonic_s'))
+        and all(feedback[k] is not None and held.get(k)==feedback[k] for k in feedback)
+        and (held.get('observation_diagnostic') or {}).get('feedback_identity')==feedback)
+    return dict(**binding,source_kind='REAL',source_sha256=record_sha256,
+        role='NATIVE_LEFT_HOLD_CONTEXT',held_by_left=True if current else None,
+        target_association_verified=None,target_association_status='UNVERIFIED_CROSS_VIEW_OBJECT_IDENTITY',
+        left_hold_status='SUPPORTED_BY_LIFT_AND_CURRENT_LEFT_TOOL_OBSERVATION' if current else 'UNKNOWN',
+        physical_6D_pose_verified=False,
+        native_left_powered_hold_context=bool((native.get('left') or {}).get('torque') and held),
+        recorded_native_held=copy.deepcopy(held),
+        recorded_right_tool_object_evidence=copy.deepcopy(native.get('object_evidence') or {}))
+
+
 def proposal_from_A_record(document,images_bgr,*,record_identity,record_sha256,image_sha256,
                            right_pad_reference=None,jacobian_evidence=None,a_source=None,
                            include_geometry=False):
@@ -40,12 +67,7 @@ def proposal_from_A_record(document,images_bgr,*,record_identity,record_sha256,i
         reference_times=dict(joint_state={s:copy.deepcopy(unknown) for s in ('left','right')},sensors=sensors,
             packet_receipt=dict(value=feedback.get('t_bus_monotonic'),unit='s',clock=clock)),
         model_assisted_relative_geometry=copy.deepcopy(native.get('model_assisted_relative_geometry')))
-    evidence=native.get('object_evidence') or {}
-    held=dict(**observation_binding(observation,camera_key='right_wrist'),source_kind='REAL',source_sha256=record_sha256,
-        held_by_left=True if evidence.get('evidence_valid') is True else None,
-        target_association_verified=evidence.get('evidence_valid') is True,
-        native_left_powered_hold_context=bool((native.get('left') or {}).get('torque') and native.get('held_object')),
-        recorded_native_held=copy.deepcopy(native.get('held_object')),recorded_object_evidence=copy.deepcopy(evidence))
+    held=left_hold_from_A_record(observation,native,record_sha256)
     result=RightRelativeServoProposal(q,observation,held,right_pad_reference,jacobian_evidence,
         a_source=a_source,include_geometry=include_geometry)
     result['A_record_provenance']=dict(record_sha256=record_sha256,image_sha256=copy.deepcopy(image_sha256),

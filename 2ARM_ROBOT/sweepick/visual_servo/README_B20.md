@@ -32,6 +32,16 @@ python -B tests/check_public_snapshot.py
 
 A Native·Console·calibration·ACT·main·통합 브랜치는 변경하지 않았다. 목표 영상/실제 방향 근거와 정확한 현장 실행 승인이 확보되기 전에는 실물 시험을 시작하지 않는다.
 
+## 기존 원본 재검수
+
+후속 재검수에서는 Episode 6개의 right JPEG 39,941장, Stage actual feedback과 이전 표식/보정 자료까지 조사했다. 원본 105장을 추출했고, 현재 left hold를 뒷받침하는 native 관측은 전체 26개 중 13개다. 오른 Tool의 `object_evidence.evidence_valid`를 left hold로 사용하던 어댑터 의미도 수정했다. 물리 target과 독립 X sign은 여전히 미확보이므로 REAL correction은 null이다. 기존 B20 실행 시험 31개와 새 의미 회귀 5개가 통과했다.
+
+- [전체 archive coverage와 회수 결과](B20_ARCHIVE_COVERAGE_AUDIT.md)
+- [왼팔 보유 binding 수정](reports/B20_LEFT_HOLD_BINDING_FIX.json)
+- [회수한 목표 영상 후보](reports/B20_RECOVERED_REFERENCE_CANDIDATES.json)
+- [회수한 X 응답과 제외 근거](reports/B20_RECOVERED_X_RESPONSE.json)
+- [기존 근거 이후 최소 현장 계약](B20_MINIMUM_FIELD_CAPTURE.md)
+
 동일 CPU·동일 영상 비교 결과(ms, 각 셀 p50 / p95):
 
 | 입력 | B19 전체 | 빠른 특징 | 빠른 특징+servo | 전체 A 어댑터 | 상세 geometry 포함 |

@@ -15,6 +15,7 @@ sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'goal_bridge'))
 from b16_goal_bridge import load_module,read_json,sha256,write_json
 from run_b17 import audit_side_effects
 from visual_servo.features import a_image_functions,observation_binding,vision_functions
+from visual_servo.a_shadow import left_hold_from_A_record
 from visual_servo.image_jacobian import estimate_jacobian
 from visual_servo.offline_model import AModelImageLoop
 from visual_servo.performance import benchmark,roi_object_feature,scalar_response_comparison
@@ -122,13 +123,9 @@ def main():
     real=[];proposals=[];documents=[];observations=[]
     for folder in sorted((session/'decision_observations').iterdir()):
         if not (folder/'OBSERVATION.json').is_file():continue
-        d,obs,path=saved_observation(folder,run,checked);binding=observation_binding(obs,camera_key='right_wrist')
-        original=d['observation'];object_evidence=original.get('object_evidence') or {}
-        held=dict(**binding,source_kind='REAL',source_sha256=checked[str(path)],
-            held_by_left=True if object_evidence.get('evidence_valid') is True else None,
-            native_left_powered_hold_context=bool((original.get('left') or {}).get('torque') and original.get('held_object')),
-            target_association_verified=object_evidence.get('evidence_valid') is True,
-            recorded_native_held=original.get('held_object'),recorded_object_evidence=object_evidence)
+        d,obs,path=saved_observation(folder,run,checked)
+        original=d['observation']
+        held=left_hold_from_A_record(obs,original,checked[str(path)])
         proposal=RightRelativeServoProposal(d['q12'],obs,held,{},None,a_source=a_source)
         surface=proposal['feature_evidence']['visible_approach_region']
         mapped=g.command.ticks_to_q12(g.mapping,d['actual_feedback']['ticks'])

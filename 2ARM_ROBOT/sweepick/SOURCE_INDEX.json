@@ -1,6 +1,6 @@
 {
   "schema": "sweepick.public-source.v1",
-  "snapshot_at": "2026-10-15T16:16:59.567539+09:00",
+  "snapshot_at": "2026-10-15T17:32:37.483442+09:00",
   "purpose": "current source review; not a portable hardware deployment",
   "transformations": [
     "personal home path replaced by /home/robot",
@@ -12,7 +12,8 @@
     "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately",
     "B18 technical summaries exclude original images, q12/ticks, camera parameters, machine paths and recording timestamps; REAL and MODEL evidence remain distinct",
     "B19 adds right-relative pure calculations and anonymized timing/accuracy reports; raw frames, feedback, optical parameters, device identities and original timestamps stay private",
-    "B20 anonymized reference/optical/feature/CPU findings exclude original images, feedback, optical parameters, device identity and recording timestamps"
+    "B20 anonymized reference/optical/feature/CPU findings exclude original images, feedback, optical parameters, device identity and recording timestamps",
+    "B20 archive recovery summaries omit original frames, actual q/ticks, calibration, device identities, machine paths and receipt timestamps; original evidence remains local"
   ],
   "files": [
     {
@@ -1837,12 +1838,12 @@
     },
     {
       "file": "visual_servo/run_b19.py",
-      "source_group": "B19",
+      "source_group": "B20_RECOVERY",
       "source_name": "run_b19.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "9b6480fa3d63a61796f276e31d185165d2a6907a32f676dbba4c1e25e0cd0856",
-      "public_sha256": "9b6480fa3d63a61796f276e31d185165d2a6907a32f676dbba4c1e25e0cd0856",
-      "bytes": 20459,
+      "source_sha256": "a7564d9d619a01d46b825fc022e76c362e9aa1feab6b02889dbb81861a11cccb",
+      "public_sha256": "a7564d9d619a01d46b825fc022e76c362e9aa1feab6b02889dbb81861a11cccb",
+      "bytes": 19987,
       "public_copy_changed": false
     },
     {
@@ -1927,12 +1928,12 @@
     },
     {
       "file": "visual_servo/a_shadow.py",
-      "source_group": "B20",
+      "source_group": "B20_RECOVERY",
       "source_name": "a_shadow.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "61a1463a5879bffa10ff3d85d96a22d8dea9e2017dd868a4409c48454e197017",
-      "public_sha256": "61a1463a5879bffa10ff3d85d96a22d8dea9e2017dd868a4409c48454e197017",
-      "bytes": 3967,
+      "source_sha256": "7c0754425fce0b66e14aff6f3d2a07812cd03a5d5d5392305d3f74ba1493ad9b",
+      "public_sha256": "7c0754425fce0b66e14aff6f3d2a07812cd03a5d5d5392305d3f74ba1493ad9b",
+      "bytes": 5546,
       "public_copy_changed": false
     },
     {
@@ -1957,12 +1958,12 @@
     },
     {
       "file": "visual_servo/README_B20.md",
-      "source_group": "B20",
+      "source_group": "B20_RECOVERY",
       "source_name": "README_B20.md",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "825737de316fa96bd9e43d3fea03012c2f357a6f8dcdd1c2ec36ad50cc03b280",
-      "public_sha256": "825737de316fa96bd9e43d3fea03012c2f357a6f8dcdd1c2ec36ad50cc03b280",
-      "bytes": 4500,
+      "source_sha256": "c10a9c887a3b117aaedaf08a35188b7ea27669ff565cf6cea9e69335974f9635",
+      "public_sha256": "c10a9c887a3b117aaedaf08a35188b7ea27669ff565cf6cea9e69335974f9635",
+      "bytes": 5445,
       "public_copy_changed": false
     },
     {
@@ -1987,13 +1988,13 @@
     },
     {
       "file": "visual_servo/B20_A_SHADOW_INTERFACE.md",
-      "source_group": "B20",
+      "source_group": "B20_RECOVERY",
       "source_name": "B20_A_SHADOW_INTERFACE.md",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "61c211a38efd953e488086d29a149f694371edeb04fb600127234ff646be97b0",
-      "public_sha256": "a6f381374ceda14c129c53c0bbbfd96c0e368386d444ee8b8ece3022d3ef4975",
-      "bytes": 3933,
-      "public_copy_changed": true
+      "source_sha256": "e541bceb465da04b85f03f501d090323130eaf3dfae19655f37449a95b20d9ad",
+      "public_sha256": "e541bceb465da04b85f03f501d090323130eaf3dfae19655f37449a95b20d9ad",
+      "bytes": 4550,
+      "public_copy_changed": false
     },
     {
       "file": "visual_servo/reports/B20_OPTICAL_HOLDOUT_AUDIT.json",
@@ -2023,6 +2024,66 @@
       "source_sha256": "0a19afd4ed94c37d4a48a71feab094eb0de6b0bc5c8cc4bbefd6e6f920eaa9ab",
       "public_sha256": "74b5c183a28919bf95b4d8d1309104a937ebbe5bad8ba436082e9facd11b8c80",
       "bytes": 20540,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/test_b20_recovery.py",
+      "source_group": "B20_RECOVERY",
+      "source_name": "test_b20_recovery.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "5fa1d8848773a8d573e306531cedbdb985acd6233122963e0b844652b6b5fa21",
+      "public_sha256": "5fa1d8848773a8d573e306531cedbdb985acd6233122963e0b844652b6b5fa21",
+      "bytes": 3887,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/B20_ARCHIVE_COVERAGE_AUDIT.md",
+      "source_group": "B20_RECOVERY",
+      "source_name": "B20_ARCHIVE_COVERAGE_AUDIT.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "df4fb3f80a32f349973752a48734612e238e14e266166055c34ac22e672d1233",
+      "public_sha256": "bb123e6c724fae9981716405818961449cfc725596fd041d9076111279ccaaf1",
+      "bytes": 8163,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/B20_MINIMUM_FIELD_CAPTURE.md",
+      "source_group": "B20_RECOVERY",
+      "source_name": "B20_MINIMUM_FIELD_CAPTURE.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "bc1429ed5a370d75c7909322478b13d7241689cf261a3e5400b8c5e1ab2fcf8a",
+      "public_sha256": "05239946c97a7c3b044ae00920752042fb92b46b41ef2cdf23b379da5ac55e8f",
+      "bytes": 5638,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B20_LEFT_HOLD_BINDING_FIX.json",
+      "source_group": "B20_RECOVERY",
+      "source_name": "B20_LEFT_HOLD_BINDING_FIX.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "a0bde490b8a9288ec1afdcf0b8843da5871bd047789571906e72dba860b40ba3",
+      "public_sha256": "72f6017bbedb6b005ef0e056b013aea5cb5d1cc0244a9345f959ce1a9efe1c39",
+      "bytes": 10219,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B20_RECOVERED_REFERENCE_CANDIDATES.json",
+      "source_group": "B20_RECOVERY",
+      "source_name": "B20_RECOVERED_REFERENCE_CANDIDATES.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "4d274e0638a74706fad6df2dd7c80471f98fb01ef830e67c9ca502042564cfc6",
+      "public_sha256": "cfc8ef05da6c0f6caa4cab0b662cb7979005a06ea42b2e388f59e6628a59164d",
+      "bytes": 77831,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B20_RECOVERED_X_RESPONSE.json",
+      "source_group": "B20_RECOVERY",
+      "source_name": "B20_RECOVERED_X_RESPONSE.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "f1bac56ac8028cacac5b5e3153e682b818096cc529097470c33255211e7e3f86",
+      "public_sha256": "ee0babb522dd6bf8a77ddbaa68799606d2a42de0f3973865254388fd595a015e",
+      "bytes": 22195,
       "public_copy_changed": true
     }
   ]

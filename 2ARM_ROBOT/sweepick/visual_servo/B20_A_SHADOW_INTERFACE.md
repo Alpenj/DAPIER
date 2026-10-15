@@ -22,7 +22,9 @@ proposal = proposal_from_A_record(
 
 카메라 pixel bytes·파일 SHA·image identity·실측 q의 SHA를 기존 B18/B19 binding에 묶는다. host camera receipt와 packet receipt는 기록된 시계를 유지한다. 관절별 측정 시각과 native exposure가 없으면 null/unknown이다. `fresh=true`는 과거 기록의 생산 당시 판정이며 현재 장치 freshness가 아니다.
 
-Native `object_evidence.evidence_valid=true`가 없으면 held target association을 만들지 않는다. left torque/held context는 별도로 남긴다. recovery의 extraction 미실행을 성공이나 object identity로 대체하지 않는다. `right_pad_reference`는 현재 observation·camera·actual feedback에 바인딩된 `CURRENT_OBSERVED_PAD`의 물리 대응과 같은 feature definition이 필요하다. B 방식의 기준 자세는 아직 미확보라 자동 변환/승격 기능을 추가하지 않았다.
+Native `object_evidence()`는 오른팔 Tool의 물체 존재 평가이며 `evidence_valid`는 평가 가능성을 뜻한다. 이를 left hold나 target identity로 사용하지 않는다. 공유 `left_hold_from_A_record()`는 기존 LIFT의 `HELD_CONFIRMED`/영상 동반 이동/jaw 측정과 현재 REAL left-tool/top-frame/feedback identity가 함께 맞을 때만 left hold를 지원한다. 과거 확인·torque·Search Prior·tracked estimate만 있으면 UNKNOWN이다. 이 결과도 right RGB의 같은 물체 identity나 물리 6D pose는 인증하지 않아 `target_association_verified=null`을 유지한다. recovery의 extraction 미실행을 성공으로 대체하지 않는다.
+
+`right_pad_reference`는 현재 observation·camera·actual feedback에 바인딩된 `CURRENT_OBSERVED_PAD`의 물리 대응과 같은 feature definition이 필요하다. 별도 기준 영상의 binding을 복사해 이 role을 만들지 않는다. 목표 영상 방식은 [최소 현장 계약](B20_MINIMUM_FIELD_CAPTURE.md)의 조건부 `FIELD_VERIFIED_TARGET_IMAGE` 계약으로 분리했으며, 아직 자동 변환/승격 기능은 없다.
 
 빠른 경로는 기존 red surface 함수로 centroid·잘림·상대 오차를 계산하고 `observed_face_graph`를 호출하지 않는다. `include_geometry=true`일 때만 graph를 별도 diagnostic으로 반환한다. graph 성공/실패는 현재 X 목표나 물리 Pad identity를 만들어 주지 않는다. source cache는 resolved path와 세 pure source의 SHA에 바인딩된다. 같은 경로의 파일이 바뀌어도 예전 함수를 재사용하지 않는다.
 

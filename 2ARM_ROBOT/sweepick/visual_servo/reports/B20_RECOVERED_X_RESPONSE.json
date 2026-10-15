@@ -1,0 +1,632 @@
+{
+  "status": "DIAGNOSTIC_RESPONSES_ONLY",
+  "valid_local_translation_pairs": 0,
+  "independent_sign_validation_count": 0,
+  "REAL_J_VALIDATED": false,
+  "REAL_Jacobian": null,
+  "new_motion_count": 0,
+  "responses": [
+    {
+      "pair": "response_01",
+      "archive": "archive_01",
+      "stage": "02_approach_right_approach_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -0.8579468881915062,
+        20.49790101443179
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": true,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        15.93947300805662,
+        15.695970669777514,
+        -11.528096836610214
+      ],
+      "candidate_FK_rotation_deg": 1.3069058939618485,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        24.963085518166448,
+        -0.08842239194721009,
+        -3.1880800819073807
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_02",
+      "archive": "archive_01",
+      "stage": "03_observe_0_0_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -25.867139745242227,
+        -13.516458297765894
+      ],
+      "before_frame_clipped": true,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -14.44605990573565,
+        -14.216626506491359,
+        2.2630044318992515
+      ],
+      "candidate_FK_rotation_deg": 1.2432635219975037,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -19.712167058747468,
+        0.28777501651487336,
+        -5.222064770938034
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_03",
+      "archive": "archive_01",
+      "stage": "04_observe_0_1_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        55.15856546577912,
+        23.532996079449333
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -1.245504560971375,
+        0.27907453827404755,
+        2.458259892672454
+      ],
+      "candidate_FK_rotation_deg": 51.165116242739636,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -1.5698154396883297,
+        1.0291966990678776,
+        2.0368209418550447
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_04",
+      "archive": "archive_01",
+      "stage": "05_contact_observation_back_001_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -60.84455349689321,
+        -20.331003980539577
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        0.8604167936363261,
+        -0.6440670660810346,
+        -3.7504752555909127
+      ],
+      "candidate_FK_rotation_deg": 50.81772774062347,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        1.5069754690379238,
+        -3.3180735482424137,
+        -1.3930602827420162
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_05",
+      "archive": "archive_01",
+      "stage": "06_contact_observation_back_000_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        13.195629558641471,
+        17.881545609591512
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": true,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        13.978111797964015,
+        13.749433108519387,
+        -3.7100942948724014
+      ],
+      "candidate_FK_rotation_deg": 0.7912087912188002,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        19.49880019652152,
+        -0.25456375930905484,
+        4.234537531709051
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_06",
+      "archive": "archive_01",
+      "stage": "07_contact_right_back_to_carry_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        11.274486941923342,
+        -19.805488048511762
+      ],
+      "before_frame_clipped": true,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -15.097329032897026,
+        -14.850340207277505,
+        14.272235004562594
+      ],
+      "candidate_FK_rotation_deg": 2.197802197803184,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -24.997814721404293,
+        0.09595053648418123,
+        5.2209858143640595
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_07",
+      "archive": "archive_01",
+      "stage": "08_contact_right_return_initial_right",
+      "raw_segmented_centroid_delta_uv_px": null,
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        101.58591924904042,
+        -91.99213551419832,
+        -35.42524836993771
+      ],
+      "candidate_FK_rotation_deg": 91.77927175404835,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        18.402775276257948,
+        -136.2846767164677,
+        -33.54139178129621
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_08",
+      "archive": "archive_02",
+      "stage": "02_approach_right_approach_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -2.359482836841295,
+        21.411213176410712
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": true,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        16.0618059782853,
+        15.816302300790037,
+        -11.953588513796298
+      ],
+      "candidate_FK_rotation_deg": 1.4736734538088592,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        25.26982493043728,
+        -0.07988437034607006,
+        -3.5291464383962854
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_09",
+      "archive": "archive_02",
+      "stage": "03_observe_0_0_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -14.514903048273212,
+        -20.200849563059535
+      ],
+      "before_frame_clipped": true,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -14.568392875964328,
+        -14.33695813750388,
+        2.6884961090853365
+      ],
+      "candidate_FK_rotation_deg": 1.0694956325806495,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -20.011032820649458,
+        0.28351083305567637,
+        -4.94900373933821
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_10",
+      "archive": "archive_02",
+      "stage": "04_observe_0_1_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        50.07932321501711,
+        16.698920674477478
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -1.2458196865353792,
+        0.2855453740991873,
+        2.46933672777494
+      ],
+      "candidate_FK_rotation_deg": 51.60467392940271,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -1.570020499904352,
+        1.0337008596872475,
+        2.048835007932247
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_11",
+      "archive": "archive_02",
+      "stage": "05_contact_observation_back_001_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -60.00316657330332,
+        -22.293377918423374
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        0.8607861186237104,
+        -0.6518253892104156,
+        -3.7637715865210253
+      ],
+      "candidate_FK_rotation_deg": 51.34514682304862,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        1.5062888335019942,
+        -3.345656324245138,
+        -1.3672905125258727
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_12",
+      "archive": "archive_02",
+      "stage": "06_contact_observation_back_000_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        20.299619113408667,
+        14.01026627655287
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": true,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        14.152281788248178,
+        13.920753717879036,
+        -4.343014242120191
+      ],
+      "candidate_FK_rotation_deg": 0.5274725274904629,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        19.97079983217397,
+        -0.24796593599650377,
+        3.74725280077386
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_13",
+      "archive": "archive_02",
+      "stage": "07_contact_right_back_to_carry_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        14.913329572577638,
+        -20.084478009957877
+      ],
+      "before_frame_clipped": true,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -15.292411478079304,
+        -15.042231148589893,
+        15.612082974090058
+      ],
+      "candidate_FK_rotation_deg": 2.5494505494524375,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -25.78614656709104,
+        0.08050237369217758,
+        6.23954053762775
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_14",
+      "archive": "archive_03",
+      "stage": "02_approach_right_approach_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -17.11295558493613,
+        27.498744617304368
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": true,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        16.108770264147697,
+        15.865955677048238,
+        -12.5905127515957
+      ],
+      "candidate_FK_rotation_deg": 1.5848546417454024,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        25.532733581904264,
+        -0.04999178519089199,
+        -4.221262485815553
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_15",
+      "archive": "archive_06",
+      "stage": "02_approach_right_approach_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -9.74274953840353,
+        22.181178450564914
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        15.663998211732395,
+        15.435316562115775,
+        -10.74409666656176
+      ],
+      "candidate_FK_rotation_deg": 1.1258218464683991,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        24.34647770879465,
+        -0.10708900265790827,
+        -2.5065924381476075
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_16",
+      "archive": "archive_06",
+      "stage": "03_observe_0_0_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        -17.54682764112586,
+        -15.614561024658428
+      ],
+      "before_frame_clipped": true,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -14.158947935560981,
+        -13.93075242817035,
+        1.8273241340936441
+      ],
+      "candidate_FK_rotation_deg": 1.5848572105603185,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -19.193845662809807,
+        0.25184107770538117,
+        -5.423435082284918
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_17",
+      "archive": "archive_06",
+      "stage": "06_contact_observation_back_000_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        7.695460240328771,
+        19.4100804556536
+      ],
+      "before_frame_clipped": false,
+      "after_frame_clipped": true,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        13.346028421894514,
+        13.12769047089491,
+        -4.5277685336614635
+      ],
+      "candidate_FK_rotation_deg": 0.7032967033058578,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        19.020767697285063,
+        -0.21602273107573502,
+        3.0194618755055007
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_18",
+      "archive": "archive_06",
+      "stage": "07_contact_right_back_to_carry_right",
+      "raw_segmented_centroid_delta_uv_px": [
+        9.520879811431598,
+        -17.631786165550437
+      ],
+      "before_frame_clipped": true,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        -14.935660018155994,
+        -14.691316060380503,
+        13.627950582342036
+      ],
+      "candidate_FK_rotation_deg": 1.8461538461565101,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        -24.5224736010867,
+        0.11668967301542885,
+        4.823320105789275
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    },
+    {
+      "pair": "response_19",
+      "archive": "archive_06",
+      "stage": "08_contact_right_return_initial_right",
+      "raw_segmented_centroid_delta_uv_px": null,
+      "before_frame_clipped": false,
+      "after_frame_clipped": false,
+      "actual_register_derived_candidate_FK_translation_world_mm": [
+        97.96583245355839,
+        -88.84122432640979,
+        -16.92303108317747
+      ],
+      "candidate_FK_rotation_deg": 93.08082843848238,
+      "candidate_FK_displacement_in_start_tool_axes_mm": [
+        11.781769192834048,
+        -131.86882137555577,
+        -15.756278522699182
+      ],
+      "physical_feature_identity_verified": false,
+      "pure_local_translation_verified": false,
+      "REAL_J_VALIDATED": false,
+      "REAL_Jacobian": null,
+      "exclusions": [
+        "no physically defined task reference",
+        "component centroid is not tracked physical feature identity",
+        "rotation/depth/perspective may be mixed",
+        "exposure-to-joint timing unknown",
+        "left-held stationarity not proven by a command or powered hold"
+      ]
+    }
+  ],
+  "interpretation": "actual movement and raw pixel response are retained; candidate mapping/FK is not physical truth and mixed rotation/depth/scene changes are not fit as a local translation Jacobian"
+}
