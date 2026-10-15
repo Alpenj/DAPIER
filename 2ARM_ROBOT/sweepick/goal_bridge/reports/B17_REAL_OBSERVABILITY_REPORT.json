@@ -1,0 +1,29 @@
+{
+  "status": "NEEDS_OBSERVATION",
+  "privacy": "aggregate technical findings only; no RGB/depth/q12/calibration/source path",
+  "stored_RGBD_bundles_replayed": 10,
+  "top_plane_partial": 5,
+  "top_extractor_missing": 5,
+  "left_wrist_2d_contour_available": 10,
+  "right_wrist_2d_contour_available": 6,
+  "complete_metric_object_centre_confirmed": 0,
+  "full_orientation_confirmed": 0,
+  "receiving_inner_pad_identity_confirmed": 0,
+  "feature_replay": "stored top fit point/edge counts and recorded pad support counts reproduced",
+  "stale_frame_difference": {
+    "count": 1,
+    "scope": "saved wrist RGB re-extraction differs from original live result; that saved frame is marked stale",
+    "new_current_measurement_claimed": false
+  },
+  "failure_categories": {
+    "NO_VISIBLE_EDGE": "no certified top exterior edge; does not deny visible wrist contours",
+    "OCCLUDED": "partial/occluded or frame-clipped observed region; hidden surface identity unresolved",
+    "CALIBRATION_UNKNOWN": "metric cross-camera and pad association unverified",
+    "TIME_ALIGNMENT_UNKNOWN": "native exposure/servo sampling relationship unverified",
+    "ALGORITHM_FAILED": "existing seeded RGB-D extraction cannot establish a coherent face; not proof of physical absence"
+  },
+  "missing_images_synthesized": 0,
+  "physical_success": false,
+  "executable": false,
+  "motor_write_authorized": false
+}

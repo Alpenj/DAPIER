@@ -1,13 +1,15 @@
 {
   "schema": "sweepick.public-source.v1",
-  "snapshot_at": "2026-10-15T12:31:52.541302+09:00",
+  "snapshot_at": "2026-10-15T13:03:10.590581+09:00",
   "purpose": "current source review; not a portable hardware deployment",
   "transformations": [
     "personal home path replaced by /home/robot",
     "authorship prose removed",
     "unique device identifiers redacted where present",
     "support sensor whitespace-only lines normalized",
-    "review handoff filename normalized"
+    "review handoff filename normalized",
+    "B17 public reports retain anonymized technical findings; private recording values, source paths, model binaries and calibration are excluded",
+    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately"
   ],
   "files": [
     {
@@ -1568,6 +1570,126 @@
       "source_sha256": "ea977b1fb8974d20a8e5c40d237bcf6065b52c153c0eed13197c93c438b1a5bf",
       "public_sha256": "ea977b1fb8974d20a8e5c40d237bcf6065b52c153c0eed13197c93c438b1a5bf",
       "bytes": 5598,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/B17_GOAL_PROPOSAL_SCHEMA.json",
+      "source_group": "B17",
+      "source_name": "B17_GOAL_PROPOSAL_SCHEMA.json",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "3c6346bb3fa5d630839040f888189abbc694405dcafaf59331bdbb0095e76346",
+      "public_sha256": "3c6346bb3fa5d630839040f888189abbc694405dcafaf59331bdbb0095e76346",
+      "bytes": 7317,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/README.md",
+      "source_group": "B17",
+      "source_name": "README.md",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "d01c19b7d4fdd1b9e66047ae98427b36db29d5bf8c266a94a906fcffdd517237",
+      "public_sha256": "d01c19b7d4fdd1b9e66047ae98427b36db29d5bf8c266a94a906fcffdd517237",
+      "bytes": 5201,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/b16_goal_bridge.py",
+      "source_group": "B17",
+      "source_name": "b16_goal_bridge.py",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "be6a0a01eec850aabc31b646da6b9d3ca0a2fc88a6c8c4649e5118a39f497cb3",
+      "public_sha256": "be6a0a01eec850aabc31b646da6b9d3ca0a2fc88a6c8c4649e5118a39f497cb3",
+      "bytes": 13882,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/reports/B17_DATASET_READINESS.md",
+      "source_group": "B17",
+      "source_name": "B17_DATASET_READINESS.md",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "1e209c21d28b6f084784a5708050f157065f208c2e72c2fa34553afc10c6ab09",
+      "public_sha256": "88a3b59223752625c13a1befd61be0263a024948777b40a617d0b35ee0ff83ff",
+      "bytes": 2225,
+      "public_copy_changed": true
+    },
+    {
+      "file": "goal_bridge/reports/B17_GOAL_BRIDGE_REGRESSION.json",
+      "source_group": "B17",
+      "source_name": "B17_GOAL_BRIDGE_REGRESSION.json",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "fa1464622bc8590ee050747b082c4b85b5d41035258759e63db176541d620e36",
+      "public_sha256": "76673676dedc2ea612dc0169e45e79e3cb9f56e5241873e8f55a9f85066a0db1",
+      "bytes": 1065,
+      "public_copy_changed": true
+    },
+    {
+      "file": "goal_bridge/reports/B17_REAL_OBSERVABILITY_REPORT.json",
+      "source_group": "B17",
+      "source_name": "B17_REAL_OBSERVABILITY_REPORT.json",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "d4cadedf267aa9de6aa03120ce3642ee4811d87c88f1cacedbfe769ae7cddd05",
+      "public_sha256": "6a60b41dc6ec3e552a902d1730f47e2e7560a282a2ef04d7ef05dc3bd5671383",
+      "bytes": 1388,
+      "public_copy_changed": true
+    },
+    {
+      "file": "goal_bridge/reports/B17_TEMPORAL_ALIGNMENT_REPORT.json",
+      "source_group": "B17",
+      "source_name": "B17_TEMPORAL_ALIGNMENT_REPORT.json",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "7503a6e559602a21651b9cdd5b474c6fcc805ce11f63d3652cf82fe2372d3856",
+      "public_sha256": "913919433384fb2aede4593203fff8a3981bd8d6e7ba340458da0b1cdfde7416",
+      "bytes": 884,
+      "public_copy_changed": true
+    },
+    {
+      "file": "goal_bridge/reports/B17_VIEW_CANDIDATE_COMPARISON.json",
+      "source_group": "B17",
+      "source_name": "B17_VIEW_CANDIDATE_COMPARISON.json",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "aa3f0663a5de40650538514e4bbebcb072dfbdfed0e41778e0fdb25730da30c2",
+      "public_sha256": "6d412dc0145042d3be579eb616ce8019557e3dd5a9daf01964c39b3fe36b3368",
+      "bytes": 873,
+      "public_copy_changed": true
+    },
+    {
+      "file": "goal_bridge/run_b17.py",
+      "source_group": "B17",
+      "source_name": "run_b17.py",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "6447a7c72b6b8673d2b0fa736412870f50825464dff9691d5ea901473bd64a2b",
+      "public_sha256": "6447a7c72b6b8673d2b0fa736412870f50825464dff9691d5ea901473bd64a2b",
+      "bytes": 16374,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/stored_replay.py",
+      "source_group": "B17",
+      "source_name": "stored_replay.py",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "e9554de874ed5a30e9c765b3e0f04dfb9c0f42d844d1d0c727ef909939798ba8",
+      "public_sha256": "e9554de874ed5a30e9c765b3e0f04dfb9c0f42d844d1d0c727ef909939798ba8",
+      "bytes": 13539,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/test_b16_goal_bridge.py",
+      "source_group": "B17",
+      "source_name": "test_b16_goal_bridge.py",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "99ca8580ba2221dc7ebb1a1815ea28c72285e63739f9ad7d0d9174d321f54747",
+      "public_sha256": "99ca8580ba2221dc7ebb1a1815ea28c72285e63739f9ad7d0d9174d321f54747",
+      "bytes": 10076,
+      "public_copy_changed": false
+    },
+    {
+      "file": "goal_bridge/test_b17_alignment.py",
+      "source_group": "B17",
+      "source_name": "test_b17_alignment.py",
+      "component": "B_GOAL_SHADOW",
+      "source_sha256": "07d9003359d554c799ea275fe82c6fc54b5ce0056bbd515a75fab601020dc622",
+      "public_sha256": "07d9003359d554c799ea275fe82c6fc54b5ce0056bbd515a75fab601020dc622",
+      "bytes": 5270,
       "public_copy_changed": false
     },
     {

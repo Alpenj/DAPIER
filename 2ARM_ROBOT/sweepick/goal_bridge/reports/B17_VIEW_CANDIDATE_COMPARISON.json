@@ -1,0 +1,21 @@
+{
+  "status": "MODEL_VIEW_CANDIDATE",
+  "existing_A_targets": 2,
+  "pure_A_IK": "SOLVED",
+  "model_collision": "CLEAR",
+  "B16_waypoints_identical": true,
+  "target_generation": "unchanged recorded CURRENT_TOOL targets only",
+  "model_assumptions": [
+    "existing object SEARCH_PRIOR",
+    "offline unverified optical mount",
+    "candidate actual-q model mapping"
+  ],
+  "expected_information": "right wrist model-facing object faces can change; top/left viewpoint does not change with the held object; right-arm occlusion remains unverified",
+  "actual_post_target_evidence": false,
+  "historical_outcome": "recorded observation movement did not execute; approval arrived after native stop, without consumption",
+  "actual_information_gain_proven": false,
+  "measured_goal": false,
+  "physical_success": false,
+  "executable": false,
+  "motor_write_authorized": false
+}
