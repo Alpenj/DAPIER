@@ -79,8 +79,18 @@ def preapproval_record(approval, out, manifest_sha):
     if pre is None:
         return None
     expected = dict(approved=True, scope=PREAPPROVAL_SCOPE, candidate_id=PREAPPROVAL_CANDIDATE, candidate_count=1, purpose=PREAPPROVAL_PURPOSE,
-                    insertion_permitted=False, close_permitted=False, session_out=str(out), prepared_manifest_sha256=manifest_sha)
+                    insertion_permitted=False, close_permitted=False, session_out=str(out), prepared_manifest_sha256=manifest_sha,
+                    operator_source='local_console_start_option')
     wrong = sorted(k for k, v in expected.items() if pre.get(k) != v)
+    # linked to THIS START approval: the same session and manifest binding, granted by an approval that permits execution
+    if approval.get('session_out') != pre.get('session_out'):
+        wrong.append('start_approval.session_out')
+    if approval.get('prepared_manifest_sha256') != pre.get('prepared_manifest_sha256'):
+        wrong.append('start_approval.prepared_manifest_sha256')
+    if approval.get('approved') is not True or approval.get('permission_to_execute') is not True:
+        wrong.append('start_approval.approved')
+    if not isinstance(pre.get('granted_at'), str) or not pre.get('granted_at'):
+        wrong.append('granted_at')
     if wrong:
         raise RuntimeError('observation view pre-approval does not match this session/manifest/scope: ' + ', '.join(wrong))
     return pre
@@ -95,6 +105,20 @@ def preapproval_covers(pre, owner_out, manifest_sha, proposed, raw, candidate, u
         return cert.get('nominal_verdict') == 'CLEAR' and not native.get('hard') and not native.get('provisional')
     status = (raw or {}).get('status') or {}
     first = steps[0] if steps else {}
+    targets = candidate.get('targets') if isinstance(candidate, dict) else None
+    def inside(step):
+        """the certified trajectory of one step stays within that step's start..target joint box (no overshoot, no extra excursion)"""
+        traj = step.get('trajectory') or {}; goals = traj.get('goals') or {}
+        start, target = step.get('start_ticks') or {}, step.get('target_ticks') or {}
+        if not goals or not start or not target or any(round(float(traj.get('start', {}).get(n, float('nan')))) != round(float(v)) for n, v in start.items()):
+            return False
+        if any(round(float(traj.get('target', {}).get(n, float('nan')))) != round(float(v)) for n, v in target.items()):
+            return False
+        for n, values in goals.items():
+            a = float(traj['start'][n]); b = float(traj['target'].get(n, a)); lo, hi = min(a, b), max(a, b)
+            if not values or min(values) < lo or max(values) > hi:
+                return False
+        return True
     checks = dict(
         preapproved=pre is not None,
         not_used_yet=not used,
@@ -104,6 +128,9 @@ def preapproval_covers(pre, owner_out, manifest_sha, proposed, raw, candidate, u
         plan_ready=proposed.get('ready') is True and proposed.get('phase') == 'OBSERVATION_CANDIDATE',
         finite_right_noncontact_steps=bool(steps) and all(step.get('side') == 'right' for step in steps),
         every_step_certified_clear=bool(steps) and all(certified(step) for step in steps),
+        waypoint_count_equals_candidate_targets=isinstance(targets, list) and len(targets) == len(steps) and all(t.get('side') == st.get('side') for t, st in zip(targets, steps)),
+        steps_continuous=all(round(float(steps[k]['start_ticks'][n])) == round(float(steps[k - 1]['target_ticks'][n])) for k in range(1, len(steps)) for n in steps[k].get('start_ticks', {})) if steps else False,
+        every_step_within_its_certified_box=bool(steps) and all(inside(step) for step in steps),
         planned_from_current_actual=bool(first) and isinstance((raw or {}).get('ticks', {}).get('right'), dict)
             and all(round(float(first['start_ticks'][n])) == round(float(raw['ticks']['right'][n])) for n in first.get('start_ticks', {})) and bool(first.get('start_ticks')),
         bus_status_zero=bool(status) and all(isinstance(status.get(side), dict) and status[side] and not any(status[side].values()) for side in ('left', 'right')))
@@ -126,8 +153,14 @@ def authorize_observation_plan(owner, proposed, raw, candidate, preapproval=None
     if preapproval is not None:
         stop_checkpoint()
         covered, checks = preapproval_covers(preapproval, owner.out, manifest_sha, proposed, raw, candidate, getattr(owner, 'preapproval_used', False))
-        supported, why = owner.recovery_ready('before pre-approved observation move', observation=owner.raw()) if covered else (False, 'not covered')
+        fresh = owner.raw() if covered else None
+        # the measured pose right before use must still be the one the plan started from; any change goes to the operator
+        first = (proposed.get('forward') or [{}])[0].get('start_ticks') or {}
+        checks['fresh_actual_matches_plan_start'] = bool(fresh) and bool(first) and all(
+            round(float(fresh['ticks']['right'][n])) == round(float(v)) for n, v in first.items())
+        supported, why = owner.recovery_ready('before pre-approved observation move', observation=fresh) if covered and checks['fresh_actual_matches_plan_start'] else (False, 'not covered')
         checks['current_support_and_bus'] = bool(supported)
+        covered = covered and checks['fresh_actual_matches_plan_start']
         if covered and supported:
             owner.preapproval_used = True
             record = dict(approved=True, request_sha256=digest, session_out=str(owner.out), scope=proposal['scope'], operator_source='START_PREAPPROVAL',

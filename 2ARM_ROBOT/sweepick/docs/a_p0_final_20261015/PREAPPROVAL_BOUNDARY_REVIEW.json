@@ -1,0 +1,63 @@
+{
+ "schema": "sweepick.preapproval-boundary-review.v1",
+ "device_access": false,
+ "input": "stored REAL request 20261015_151937_81d00c",
+ "questions": {
+  "1_waypoints_and_range_within_the_approved_candidate": {
+   "answer": "BOUNDED_STRUCTURALLY_NO_DISTANCE_CAP",
+   "checks": [
+    "waypoint_count_equals_candidate_targets (forward steps == candidate['targets'], sides match)",
+    "steps_continuous (step k start == step k-1 target)",
+    "every_step_within_its_certified_box (trajectory start/target == step ticks; every goal inside that step's start..target box)",
+    "every_step_certified_clear",
+    "finite_right_noncontact_steps"
+   ],
+   "not_added": "no absolute distance / angle cap: the candidate's targets are computed at runtime from current geometry, so START cannot pre-bind a magnitude from verified evidence; a session that needs a magnitude bound uses the existing manual approval",
+   "stored_request": {
+    "candidate_targets": 2,
+    "forward_steps": 2,
+    "covered": true
+   }
+  },
+  "2_plan_actual_vs_fresh_actual": {
+   "answer": "EXACT_TICK_MATCH_REQUIRED_ELSE_MANUAL",
+   "checks": [
+    "planned_from_current_actual (first step start == the raw the plan used)",
+    "fresh_actual_matches_plan_start (a new read right before use, right arm, rounded ticks)"
+   ],
+   "existing_contract_after_approval": "sweepick_move_a still rebuilds the trajectory from the read just before the first write and re-certifies a changed start (unchanged)"
+  },
+  "3_same_candidate_id_more_motion": {
+   "answer": "DETECTED",
+   "tests": [
+    "test_more_waypoints_than_the_candidate_declares_is_outside_the_scope",
+    "test_an_excursion_outside_the_certified_step_box_is_outside_the_scope",
+    "test_discontinuous_steps_are_outside_the_scope"
+   ]
+  },
+  "4_link_to_the_actual_start_approval": {
+   "answer": "CHECKED_AT_LAUNCH",
+   "checks": [
+    "operator_source == local_console_start_option",
+    "pre.session_out == approval.session_out == launch session",
+    "pre.prepared_manifest_sha256 == approval.prepared_manifest_sha256 == sha256(MANIFEST)",
+    "approval.approved and permission_to_execute",
+    "granted_at present"
+   ],
+   "tests": [
+    "test_a_preapproval_linked_to_this_start_approval_is_accepted",
+    "test_a_preapproval_not_linked_to_the_actual_start_approval_is_rejected[6 cases]"
+   ]
+  }
+ },
+ "fallback": "any failed check -> observation_move_preapproval_not_applicable + existing operator decision; no automatic move",
+ "unchanged": [
+  "IK",
+  "collision checks",
+  "LEFT hold check (recovery_ready)",
+  "single owner / port lease",
+  "STOP (stop_checkpoint)",
+  "RIGHT INSERT/CLOSE refusal",
+  "sweepick_move_a motion"
+ ]
+}

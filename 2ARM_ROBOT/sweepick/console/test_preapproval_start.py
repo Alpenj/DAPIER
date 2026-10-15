@@ -73,3 +73,13 @@ class PreapprovalStart(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class NewOpenFailureText(unittest.TestCase):
+    def test_new_bus_open_detail_keeps_the_bus_lost_classification(self):
+        from replay import stop_gate
+        new = ("RECEIVE_CONTACT: RuntimeError: contact_right_return_initial (right): the executor did not plan it: {'gate': 'bus_lost', 'level': 'HARD', "
+               "'detail': \"the bus could not be opened: ConnectionError: Could not connect on port '/dev/dapier/right_arm'. (from OSError errno 16 Device or resource busy)\"}")
+        old = "RECEIVE_CONTACT: RuntimeError: x: {'gate': 'bus_lost', 'level': 'HARD', 'detail': 'the bus could not be opened: ConnectionError: '}"
+        self.assertEqual(stop_gate(new), 'BUS_LOST'); self.assertEqual(stop_gate(old), 'BUS_LOST')
+        self.assertEqual(stop_gate('existing owner stopped'), 'OWNER_STOP')

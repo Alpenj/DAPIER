@@ -1,0 +1,126 @@
+{
+ "schema": "sweepick.final-a-p0-regression.v1",
+ "device_access": false,
+ "real_start": 0,
+ "real_motor_writes": 0,
+ "real_torque_writes": 0,
+ "required": {
+  "checkbox_unchecked_manual_approval": "browser: unchecked_sends_preapprove_view_false; console: test_without_the_option_the_approval_has_no_preapproval; native: test_manual_mode_is_unchanged",
+  "checkbox_checked_sends_preapprove_view_true": "browser: checked_sends_preapprove_view_true; console: test_option_binds_session_manifest_and_scope_and_passes_the_launcher_check",
+  "limited_scope_refuses_preapproval": "browser: limited_scope_disables_and_never_sends_preapproval; console: test_option_is_refused_for_the_limited_scope",
+  "path_beyond_scope_not_auto": "native: waypoint count / certified box / continuity / candidate / certificate / side cases",
+  "feedback_change_and_stop_not_auto": "native: test_a_changed_actual_right_before_use_goes_to_the_operator, test_stop_before_a_preapproved_move_raises, bus fault cases",
+  "same_fake_bus_commands_as_manual": "native: test_preapproved_and_manual_modes_send_the_same_commands",
+  "session_14_08": {
+   "state": "ENDED",
+   "first_error": null,
+   "normal_return": true,
+   "settled_short": 2,
+   "receive": {
+    "result": "RECEIVE_CONTACT_NOT_READY_RETURNED",
+    "time_s": 1792041231.3593943,
+    "why": "insertion planning readiness was recorded; observation-only permission withheld insert/contact and the actual-state normal return completed",
+    "normal_end": true,
+    "diagnostic_scope_completed": true,
+    "insertion_ready": false,
+    "bimanual_handover_success": false,
+    "basis": "episode/events.jsonl receive_contact_outcome; this scope never releases the left hand"
+   }
+  },
+  "session_15_19": {
+   "state": "FAULT",
+   "first_error_gate": "BUS_LOST",
+   "normal_return": false,
+   "safe_shutdown": "UNKNOWN",
+   "settled_short": 2,
+   "start_blocked": "test_bus_lost_session_stays_fault_and_blocks_start_until_recovery + live console FAULT/can_prepare=false"
+  }
+ },
+ "results": {
+  "new_native": {
+   "passed": 51,
+   "files": [
+    "test_preapproved_view.py",
+    "revision/test_preapproved_view_fake_bus.py",
+    "revision/test_bus_open_exception.py",
+    "revision/test_obs_reach_20261015.py",
+    "revision/test_vservo_timing_shadow.py",
+    "revision/test_vservo_shadow_interface.py"
+   ]
+  },
+  "a_gripper": {
+   "passed": 154,
+   "failed": 0
+  },
+  "console17_native": {
+   "passed": 28,
+   "failed": 0
+  },
+  "native_full": {
+   "passed": 522,
+   "failed": 38,
+   "error": 1,
+   "new_failures": 0,
+   "fixed": 0,
+   "note": "38 failures + 1 collection error identical to the active-source list; not repaired"
+  },
+  "full_chain_unit": {
+   "failed": 28,
+   "identical_to_active": true,
+   "repaired": false
+  },
+  "console": {
+   "ran": 130,
+   "ok": 130,
+   "runs": 2
+  },
+  "browser_smoke": {
+   "passed": 3,
+   "of": 3,
+   "errors": [],
+   "real_control_posts": 0,
+   "server": "console working copy on 127.0.0.1:8777 with scratch runs and tmux launch refused; live 8765 untouched"
+  }
+ },
+ "gripper_contract_unchanged": "sweepick_move_a.py diff is limited to bus_open_exception() and its two call sites; initial following / contact / calibration / jaw profile / collision binding untouched (A gripper 154 pass)",
+ "sha256": {
+  "active": {
+   "RUN_APPROVED_SESSION.py": "59a33f1abbdb43445f93c5aded1b38405d03224a33137a034c9d54bfa6568e8e",
+   "revision/sweepick_move_a.py": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+   "revision/sweepick_pick01.py": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
+   "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+   "revision/sweepick_full_chain.py": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+   "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+   "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
+  },
+  "candidate": {
+   "RUN_APPROVED_SESSION.py": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+   "revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+   "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+   "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+   "revision/sweepick_full_chain.py": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+   "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+   "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
+  },
+  "live_console": {
+   "control.py": "325ce77a98900b6c424bb5f366e5e7eb8214c690bdf3b285afd55cc6c963d1e3",
+   "records.py": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da",
+   "replay.py": "d0e2cb426e0330dc9f016a8341dc68c656411f830532c1a1bd032cb040fbe5b0",
+   "app.py": "c5cff84c118d521b81fb9ecd3df144fee4db3cbd16bc4bd28c00cb7bf853a2f1",
+   "static/app.js": "9e5137a7d8586a99ed3a6f895c5d6b8f96611680234e8e18f3732341736dfb3f",
+   "static/index.html": "8508bc6c1a43d5583f7badec180d9269c49508ed14b7ea9cc9977fb5f2098bbe",
+   "CONSOLE17_TESTED_NATIVE_SHA256.json": "303f60d1d4d0872c72148db2eb677a66a10fda891e92de70eac0433e76de5d23"
+  },
+  "candidate_console": {
+   "control.py": "6e13e17d2994b42f6e4abd4a2d6da576270266e1a84d68d9907dd07c36647f8d",
+   "records.py": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406",
+   "replay.py": "e10bbbd98927df79803388eff6f9e12d764dd6733371183e697f555bf9c30da1",
+   "app.py": "9f76e6bd0e4c50593090e538f236c7220cf3a55d81ddbbab3a96eb0d18e2fd86",
+   "static/app.js": "100e431ae57dd31b543b2b11b100019a993076e3e1a1aa5c404891d3ae87e16d",
+   "static/index.html": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819",
+   "CONSOLE17_TESTED_NATIVE_SHA256.json": "6b07fb4dc2c25ccf8879e0f0e7d55f942b270ae2e999d1938ae4cf2ea00d0b20"
+  },
+  "tested_record_matches_candidate": true,
+  "past_run_manifests_changed": false
+ }
+}

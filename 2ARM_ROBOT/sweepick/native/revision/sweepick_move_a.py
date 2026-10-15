@@ -62,6 +62,27 @@ def _fresh_arm_goal_matches(feedback, writes_after_read, joint, requested):
             and feedback["torque"][joint] == 1 and feedback["goal"][joint] == requested)
 
 
+def bus_open_exception(exc, port, stage):
+    """2026-10-15: what a failed bus open actually carried. lerobot wraps the OS error in a ConnectionError whose text
+    starts with a newline, so its first line is empty; the original error is its __cause__ (or __context__). Only
+    fields that exist are filled; a missing errno stays None. Recording only: the gate, result and exit are unchanged."""
+    chain, seen, e = [], set(), exc
+    while e is not None and id(e) not in seen and len(chain) < 8:
+        seen.add(id(e))
+        chain.append(dict(type=type(e).__name__, message=str(e).strip() or None,
+                          errno=getattr(e, "errno", None) if isinstance(getattr(e, "errno", None), int) else None,
+                          strerror=getattr(e, "strerror", None) if isinstance(getattr(e, "strerror", None), str) else None,
+                          link="raised" if e is exc else ("cause" if e is getattr(prev, "__cause__", None) else "context")))
+        prev = e; e = e.__cause__ if e.__cause__ is not None else (None if e.__suppress_context__ else e.__context__)
+    first = next((c for c in chain if c["errno"] is not None), None)
+    lines = [l.strip() for l in str(exc).splitlines() if l.strip()]
+    root = chain[-1]
+    return dict(port=port, stage=stage, type=type(exc).__name__, message=" ".join(lines) or None,
+                original_type=root["type"] if len(chain) > 1 else None, errno=first["errno"] if first else None,
+                strerror=first["strerror"] if first else None, chain=chain,
+                summary=f"{type(exc).__name__}: {lines[0] if lines else ''}" + (f" (from {root['type']}" + (f" errno {first['errno']} {first['strerror']}" if first else "") + ")" if len(chain) > 1 else ""))
+
+
 def write_goal_position(bus, log, joint, requested):
     """The existing unicast Goal write and ACK contract, also used by the seed-only field entry."""
     log["last_goal_write_attempt"] = dict(joint=joint, requested_tick=requested, acknowledgement="UNKNOWN")
@@ -197,10 +218,12 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
                     else:
                         command_start[name] = mp[name]["lo"] if start[name] < mp[name]["lo"] else mp[name]["hi"]
         return tt.make(start, target, prof, **({"command_start": command_start} if command_start != start else {}))
+    stage = "construct"
     try:
-        bus = open_bus(port); bus.connect()
+        bus = open_bus(port); stage = "connect"; bus.connect()
     except Exception as e:
-        refuse(G.hard("bus_lost", f"the bus could not be opened: {type(e).__name__}: {str(e).splitlines()[0]}")); return finish("REFUSED")
+        log["bus_open_error"] = bus_open_exception(e, port, stage)
+        refuse(G.hard("bus_lost", f"the bus could not be opened: {log['bus_open_error']['summary']}")); return finish("REFUSED")
 
     last_feedback = None
     writes_after_read = set()
@@ -846,10 +869,12 @@ def grip(side, out, *, torque_joints, cert=None, level="device", execute=False, 
     if mapping is None:
         mapping = rc.load_mapping(IN / "CANDIDATE_Q12_CONFIG.json", CAL, IN / "ASSEMBLED_ZERO_AND_PGRIPPER.json")
     mp = mapping[side]
+    stage = "construct"
     try:
-        bus = open_bus(port); bus.connect()
+        bus = open_bus(port); stage = "connect"; bus.connect()
     except Exception as e:
-        log["refused"] = G.hard("bus_lost", f"the bus could not be opened: {type(e).__name__}: {str(e).splitlines()[0]}"); return finish("REFUSED")
+        log["bus_open_error"] = bus_open_exception(e, port, stage)
+        log["refused"] = G.hard("bus_lost", f"the bus could not be opened: {log['bus_open_error']['summary']}"); return finish("REFUSED")
     def read():
         t0 = clock(); r = {}
         try:

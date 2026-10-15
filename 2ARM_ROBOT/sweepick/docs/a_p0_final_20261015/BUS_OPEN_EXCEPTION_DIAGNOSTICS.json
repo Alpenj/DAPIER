@@ -1,0 +1,45 @@
+{
+ "schema": "sweepick.bus-open-exception-diagnostics.v1",
+ "device_access": false,
+ "change": {
+  "file": "revision/sweepick_move_a.py",
+  "sites": [
+   "run(): executor bus open",
+   "grip(): gripper bus open"
+  ],
+  "helper": "bus_open_exception(exc, port, stage)",
+  "before": "detail = f'{type}: {str(e).splitlines()[0]}' -> empty for lerobot's ConnectionError('\\nCould not connect ...'); cause chain dropped",
+  "after": "log['bus_open_error'] = {port, stage (construct|connect), type, message (all non-empty lines), original_type, errno, strerror, chain[{type,message,errno,strerror,link}]}; detail = first NON-empty line + '(from <original> errno N <strerror>)' when a cause exists",
+  "unchanged": [
+   "gate bus_lost (HARD)",
+   "result REFUSED",
+   "exit code",
+   "no Goal/Torque write",
+   "STOP",
+   "no reconnect / retry / automatic recovery"
+  ]
+ },
+ "missing_values": "errno/strerror only when the exception carries an int errno / str strerror; otherwise null; original_type null when there is no cause",
+ "privacy": "the full text (with the local port path) stays in the session's own move.json; public copies replace home paths",
+ "fake_bus_tests": {
+  "file": "revision/test_bus_open_exception.py",
+  "passed": 5,
+  "cases": [
+   "ConnectionError with empty first line + OSError(16) cause -> errno 16 'Device or resource busy', chain raised/cause, detail no longer empty",
+   "cause without errno (SerialException-like) -> errno null, cause message kept",
+   "bare ConnectionError, empty first line, no cause -> message kept, original_type null, errno null",
+   "failure while constructing the bus -> stage 'construct', errno 2",
+   "grip() open failure -> same chain record"
+  ]
+ },
+ "stored_session_note": "20261015_151937_81d00c was recorded with the old code: its errno is not recoverable from the stored files",
+ "classification_kept": {
+  "console_stop_gate_new_text": "BUS_LOST (test NewOpenFailureText)",
+  "replay_14_08": "ENDED",
+  "replay_15_19": "FAULT"
+ },
+ "sha256": {
+  "active_before": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+  "candidate_after": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05"
+ }
+}

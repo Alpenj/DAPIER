@@ -120,3 +120,64 @@ def test_launch_rejects_a_preapproval_that_widens_or_moves_scope(tmp_path, field
     with pytest.raises(RuntimeError, match=field):
         runner.preapproval_record(dict(observation_view_preapproval=pre(tmp_path, **{field: value})), tmp_path, MSHA)
     assert runner.preapproval_record({}, tmp_path, MSHA) is None
+
+
+# ---- 2026-10-15 final audit: boundary of the pre-approved scope -------------------------------------------------
+def start_approval(out, p):
+    return dict(approved=True, permission_to_execute=True, session_out=str(out), prepared_manifest_sha256=MSHA, observation_view_preapproval=p)
+
+
+def linked(out, **over):
+    return pre(out, **dict(dict(operator_source="local_console_start_option"), **over))
+
+
+def test_a_preapproval_linked_to_this_start_approval_is_accepted(tmp_path):
+    p = linked(tmp_path)
+    assert runner.preapproval_record(start_approval(tmp_path, p), tmp_path, MSHA) == p
+
+
+@pytest.mark.parametrize("approval_change, p_change", [
+    (dict(), dict(operator_source="somebody_else")),
+    (dict(session_out="/other/session"), dict()),
+    (dict(prepared_manifest_sha256="d" * 64), dict()),
+    (dict(approved=False), dict()),
+    (dict(permission_to_execute=False), dict()),
+    (dict(), dict(granted_at="")),
+])
+def test_a_preapproval_not_linked_to_the_actual_start_approval_is_rejected(tmp_path, approval_change, p_change):
+    approval = start_approval(tmp_path, linked(tmp_path, **p_change)); approval.update(approval_change)
+    with pytest.raises(RuntimeError):
+        runner.preapproval_record(approval, tmp_path, MSHA)
+
+
+def test_more_waypoints_than_the_candidate_declares_is_outside_the_scope(tmp_path):
+    plan, raw, cand = inputs()
+    extra = copy.deepcopy(plan["forward"][-1]); extra["start_ticks"] = dict(plan["forward"][-1]["target_ticks"])
+    extra["trajectory"] = dict(extra["trajectory"], start=dict(extra["trajectory"]["target"], gripper=extra["trajectory"]["start"].get("gripper")))
+    plan["forward"].append(extra)                                                       # same candidate id, one more move
+    covered, checks = runner.preapproval_covers(linked(tmp_path), tmp_path, MSHA, plan, raw, cand, used=False)
+    assert not covered and checks["waypoint_count_equals_candidate_targets"] is False
+
+
+def test_an_excursion_outside_the_certified_step_box_is_outside_the_scope(tmp_path):
+    plan, raw, cand = inputs()
+    goals = plan["forward"][0]["trajectory"]["goals"]["elbow_flex"]; goals[len(goals) // 2] = max(goals) + 40.0
+    covered, checks = runner.preapproval_covers(linked(tmp_path), tmp_path, MSHA, plan, raw, cand, used=False)
+    assert not covered and checks["every_step_within_its_certified_box"] is False
+
+
+def test_discontinuous_steps_are_outside_the_scope(tmp_path):
+    plan, raw, cand = inputs()
+    plan["forward"][1]["start_ticks"] = dict(plan["forward"][1]["start_ticks"], elbow_flex=plan["forward"][1]["start_ticks"]["elbow_flex"] + 30)
+    covered, checks = runner.preapproval_covers(linked(tmp_path), tmp_path, MSHA, plan, raw, cand, used=False)
+    assert not covered and checks["steps_continuous"] is False
+
+
+def test_a_changed_actual_right_before_use_goes_to_the_operator(tmp_path):
+    owner = Owner(tmp_path, decision=None)
+    moved = copy.deepcopy(REQ["actual_feedback"]); moved["ticks"]["right"]["shoulder_lift"] += 2
+    owner.raw = lambda: copy.deepcopy(moved)
+    with pytest.raises(TimeoutError):
+        authorize(owner, linked(tmp_path))
+    note = next(n for n in owner.notes if n["kind"] == "observation_move_preapproval_not_applicable")
+    assert note["checks"]["fresh_actual_matches_plan_start"] is False and not (tmp_path / "OBSERVATION_MOVE_APPROVAL.json").exists()
