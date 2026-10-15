@@ -1,0 +1,68 @@
+{
+  "status": "PASS",
+  "tests": {
+    "run": 57,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "synthetic_positive": {
+    "source_kind": "TEST_FIXTURE",
+    "physical_measurement": false,
+    "expected_X_error_px": 4.0,
+    "actual_X_error_px": 4.0,
+    "Y_error_px": null,
+    "Correction": null,
+    "graph_requested": false
+  },
+  "REAL_negative_records": 14,
+  "all_REAL_errors_and_corrections_null": true,
+  "REAL_original_feedback_and_image_packets_validated": 14,
+  "required_cases": [
+    "missing target verification",
+    "independent reference/current bindings",
+    "object identity",
+    "Opening difference",
+    "clipped/occluded/missing feature",
+    "actual feedback source",
+    "camera mount/mode",
+    "MODEL/REAL/fixture mixing",
+    "unvalidated Jacobian",
+    "fit-independent sign and actual-X source",
+    "UNKNOWN contexts",
+    "reencoded fit capture reuse",
+    "finite feedback/frame identity",
+    "malformed nested documents",
+    "independent new-capture identical-pixel revisit"
+  ],
+  "existing_PAD_fast_path_LEFT_HELD": "unit regressions run; existing implementations unchanged",
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "original_source_changes": [],
+  "REAL_J_VALIDATED": false,
+  "FIELD_PHYSICAL_CONFIRMATION_REQUIRED": true,
+  "motor_write_authorized": false,
+  "environment": {
+    "python": "3.12.3",
+    "numpy": "2.2.6"
+  },
+  "code_sha256": {
+    "target_image.py": "f0021567f938963dfde3737e2e25aae4d48eebecdc01064c9d3a16a1891535d5",
+    "test_target_image.py": "999186d18e734fb927c89a7e762696fee07723263dcfd2f7f0283d7436168d2a",
+    "run_target_image.py": "5fef4eef09f9ff43782c471ab580d9060bd642d39dedaabf3509d715dbf89b95"
+  },
+  "raw_images_calibration_identity_in_public_report": false,
+  "independent_review": {
+    "initial_findings": 4,
+    "resolved": 4,
+    "remaining": 0,
+    "scope": "four source/context/capture-lineage findings; five targeted repair regressions independently checked"
+  }
+}

@@ -14,7 +14,8 @@
     "B19 adds right-relative pure calculations and anonymized timing/accuracy reports; raw frames, feedback, optical parameters, device identities and original timestamps stay private",
     "B20 anonymized reference/optical/feature/CPU findings exclude original images, feedback, optical parameters, device identity and recording timestamps",
     "B20 archive recovery summaries omit original frames, actual q/ticks, calibration, device identities, machine paths and receipt timestamps; original evidence remains local",
-    "B20 Right X handoff publishes three technical contracts only; actual RGB review PNG, measured feedback and source receipt metadata remain local"
+    "B20 Right X handoff publishes three technical contracts only; actual RGB review PNG, measured feedback and source receipt metadata remain local",
+    "B20 target-image consumer adds pure code and anonymized regressions; original REAL image/feedback/operator evidence/calibration/device records remain local"
   ],
   "files": [
     {
@@ -2115,6 +2116,56 @@
       "source_sha256": "ff77682e648c3ccb3618a1084904e6480d02b250c0836a60f05db8a37594486a",
       "public_sha256": "ff77682e648c3ccb3618a1084904e6480d02b250c0836a60f05db8a37594486a",
       "bytes": 8427,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/target_image.py",
+      "source_group": "B20_TARGET_IMAGE_CONSUMER",
+      "source_name": "target_image.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "f0021567f938963dfde3737e2e25aae4d48eebecdc01064c9d3a16a1891535d5",
+      "public_sha256": "f0021567f938963dfde3737e2e25aae4d48eebecdc01064c9d3a16a1891535d5",
+      "bytes": 17192,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/test_target_image.py",
+      "source_group": "B20_TARGET_IMAGE_CONSUMER",
+      "source_name": "test_target_image.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "999186d18e734fb927c89a7e762696fee07723263dcfd2f7f0283d7436168d2a",
+      "public_sha256": "999186d18e734fb927c89a7e762696fee07723263dcfd2f7f0283d7436168d2a",
+      "bytes": 19952,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/run_target_image.py",
+      "source_group": "B20_TARGET_IMAGE_CONSUMER",
+      "source_name": "run_target_image.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "5fef4eef09f9ff43782c471ab580d9060bd642d39dedaabf3509d715dbf89b95",
+      "public_sha256": "5fef4eef09f9ff43782c471ab580d9060bd642d39dedaabf3509d715dbf89b95",
+      "bytes": 7469,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/TARGET_IMAGE_A_CONTRACT.md",
+      "source_group": "B20_TARGET_IMAGE_CONSUMER",
+      "source_name": "TARGET_IMAGE_A_CONTRACT.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "3be50c2a84c057a23ab0290122fc11a19e9f9064cdb972df91c1102c86aa3658",
+      "public_sha256": "3be50c2a84c057a23ab0290122fc11a19e9f9064cdb972df91c1102c86aa3658",
+      "bytes": 8665,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/TARGET_IMAGE_CONSUMER_REGRESSION.json",
+      "source_group": "B20_TARGET_IMAGE_CONSUMER",
+      "source_name": "TARGET_IMAGE_CONSUMER_REGRESSION.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "01d823d1c0a892307098a36b00c60eb1f021024f4df02b1626a25a56ff1266d5",
+      "public_sha256": "01d823d1c0a892307098a36b00c60eb1f021024f4df02b1626a25a56ff1266d5",
+      "bytes": 2159,
       "public_copy_changed": false
     }
   ]
