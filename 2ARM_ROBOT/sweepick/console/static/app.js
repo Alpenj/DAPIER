@@ -202,6 +202,8 @@ function renderControl() {
   $('fieldReady').disabled = !connected || !active || active.state !== 'PREPARED' || control?.can_start !== true || state.controlBusy;
   if (active?.consumed === true) $('fieldReady').checked = true;
   $('startControl').disabled = $('fieldReady').disabled || !$('fieldReady').checked;
+  $('preapproveView').disabled = $('fieldReady').disabled || active?.execution_scope === 'LEFT_START_TO_LIFT';
+  if ($('preapproveView').disabled) $('preapproveView').checked = false;
   const scopeName = active?.execution_scope === 'LEFT_START_TO_LIFT' ? 'LEFT_START_TO_LIFT' : 'FULL_CHAIN';
   $('startControl').textContent = control?.state === 'LIMITED_HOLDING' ? 'LEFT_START_TO_LIFT 보유 종료 · 수동 복구 전 새 실행 차단'
     : control?.state === 'FAULT' ? `${scopeName} 중단됨 · 새 실행 차단`
@@ -1012,6 +1014,7 @@ async function startControl() {
   await runControlAction('/api/control/start', {
     job_id: active.id, field_ready: true, mounts_unchanged: true, supervised: true,
     execution_scope: active.execution_scope || 'FULL_CHAIN_RECEIVE_CONTACT',
+    preapprove_view: active.execution_scope !== 'LEFT_START_TO_LIFT' && $('preapproveView').checked === true,
   }, '실물 START 실패');
   if (state.control?.active?.id === active.id && state.control.active.consumed && liveViewAvailable()) {
     if ($('rerunDialog').open) $('rerunDialog').close();

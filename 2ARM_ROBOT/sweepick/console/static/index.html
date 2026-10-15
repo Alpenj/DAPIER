@@ -351,6 +351,7 @@
           <dl class="plan-details"><div><dt>작업 ID</dt><dd id="preparedJob">—</dd></div><div><dt>새 session_out</dt><dd id="preparedOutput" class="mono">—</dd></div><div><dt>승인 실행 범위</dt><dd id="preparedScope">—</dd></div></dl>
           <p class="notice">STOP은 기존 실행기의 중단 절차를 요청합니다. BUS_LOST·적용 불명 상태에서는 후속 목표·재전송·자동 OFF/복귀를 추가하지 않습니다. 상태를 확인할 수 없으면 UNKNOWN으로 남기고 작업자가 팔·물체를 지지한 뒤 필요한 전원 차단을 수행합니다.</p>
           <label class="field-check"><input id="fieldReady" type="checkbox"><span>현재 배치·카메라 결합·케이블/주변공간 확인 · 실행 감독 · 위 범위와 실패 복구 절차에 대한 이번 세션 현장 승인</span></label>
+          <label class="field-check"><input id="preapproveView" type="checkbox"><span>(선택) RIGHT 비접촉 관측 이동 사전 승인 · 기존 단일 후보 CURRENT_RECEIVER_CLEAR_THEN_INNER_PAD_VIEW · 현재 실측에서 새로 계획·충돌검사 CLEAR인 경로만 · INSERT/CLOSE/RELEASE 미포함 · 조건이 하나라도 다르면 기존 중간 승인으로 돌아감</span></label>
           <p id="fieldApprovalInfo" role="status">새 작업 준비 후에 현장 승인을 입력할 수 있습니다.</p>
           <button id="startControl" class="button primary start-control" type="button" disabled>FULL_CHAIN 현장 승인 후 실물 START</button>
         </div>

@@ -1,0 +1,212 @@
+{
+ "schema": "sweepick.two-session-fault-classification.v1",
+ "console_code": "d0aca04 console + this P0 (stop_gate, receive_contact summary); offline replay of scratch copies, originals unchanged",
+ "device_access": false,
+ "sessions": {
+  "20261015_140844_3cc05c": {
+   "before": {
+    "off_confirmed": true,
+    "state": "ENDED",
+    "category": "partial",
+    "first_error": {
+     "gate": "TARGET_NOT_REACHED",
+     "time_s": 1792041131.7513077,
+     "detail": "handoff_observe_0_0",
+     "source": "episode/EPISODE.json stages"
+    },
+    "normal_return_confirmed": false,
+    "safe_shutdown": "UNKNOWN",
+    "bucket": "success_candidates",
+    "failure_packet": false,
+    "settled_short": null,
+    "inspection_first": {
+     "gate": "TARGET_NOT_REACHED",
+     "time_s": 1792041131.7513077,
+     "detail": "handoff_observe_0_0",
+     "source": "episode/EPISODE.json stages"
+    },
+    "observe_stage": [
+     [
+      "PREGRASP",
+      "HOLDING"
+     ],
+     [
+      "OBSERVE",
+      "NOT_READY"
+     ]
+    ]
+   },
+   "after": {
+    "off_confirmed": true,
+    "state": "ENDED",
+    "category": "success",
+    "first_error": null,
+    "normal_return_confirmed": true,
+    "safe_shutdown": "RECORDED_BOTH_ARMS_OFF",
+    "bucket": "success_candidates",
+    "failure_packet": false,
+    "settled_short": [
+     {
+      "gate": "OBSERVATION_VIEW_SETTLED_SHORT",
+      "time_s": 1792041131.7513077,
+      "detail": "handoff_observe_0_0",
+      "short_ticks": {
+       "elbow_flex": 26.0
+      },
+      "source": "episode/EPISODE.json stages + run/move.json observation_view",
+      "meaning": "command completed, actual settled and resolved, target not reached; the owner observed from the measured pose"
+     },
+     {
+      "gate": "OBSERVATION_VIEW_SETTLED_SHORT",
+      "time_s": 1792041146.4570332,
+      "detail": "handoff_observe_0_1",
+      "short_ticks": {
+       "elbow_flex": 23.0
+      },
+      "source": "episode/EPISODE.json stages + run/move.json observation_view",
+      "meaning": "command completed, actual settled and resolved, target not reached; the owner observed from the measured pose"
+     }
+    ],
+    "inspection_first": null,
+    "receive": {
+     "result": "RECEIVE_CONTACT_NOT_READY_RETURNED",
+     "time_s": 1792041231.3593943,
+     "why": "insertion planning readiness was recorded; observation-only permission withheld insert/contact and the actual-state normal return completed",
+     "normal_end": true,
+     "diagnostic_scope_completed": true,
+     "insertion_ready": false,
+     "bimanual_handover_success": false,
+     "basis": "episode/events.jsonl receive_contact_outcome; this scope never releases the left hand"
+    },
+    "observe_stage": [
+     [
+      "PREGRASP",
+      "HOLDING"
+     ],
+     [
+      "OBSERVE",
+      "NOT_READY"
+     ]
+    ]
+   },
+   "expected": {
+    "accepted_settled_short": 2,
+    "first_error": null,
+    "normal_return_confirmed": true,
+    "insertion_ready": false
+   }
+  },
+  "20261015_151937_81d00c": {
+   "before": {
+    "off_confirmed": false,
+    "state": "FAULT",
+    "category": "partial",
+    "first_error": {
+     "gate": "TARGET_NOT_REACHED",
+     "time_s": 1792045374.7258348,
+     "detail": "handoff_observe_0_0",
+     "source": "episode/EPISODE.json stages"
+    },
+    "normal_return_confirmed": false,
+    "safe_shutdown": "UNKNOWN",
+    "bucket": "failed",
+    "failure_packet": true,
+    "settled_short": null,
+    "inspection_first": {
+     "gate": "TARGET_NOT_REACHED",
+     "time_s": 1792045374.7258348,
+     "detail": "handoff_observe_0_0",
+     "source": "episode/EPISODE.json stages"
+    },
+    "observe_stage": [
+     [
+      "PREGRASP",
+      "HOLDING"
+     ],
+     [
+      "OBSERVE",
+      "NOT_READY"
+     ]
+    ]
+   },
+   "after": {
+    "off_confirmed": false,
+    "state": "FAULT",
+    "category": "partial",
+    "first_error": {
+     "gate": "BUS_LOST",
+     "stop_event": "owner_stop",
+     "detail": "RECEIVE_CONTACT: RuntimeError: contact_right_return_initial (right): the executor did not plan it: {'gate': 'bus_lost', 'level': 'HARD', 'detail': 'the bus could not be opened: ConnectionError: '}",
+     "time_s": 1792045423.1345298,
+     "source": "episode/events.jsonl"
+    },
+    "normal_return_confirmed": false,
+    "safe_shutdown": "UNKNOWN",
+    "bucket": "failed",
+    "failure_packet": true,
+    "settled_short": [
+     {
+      "gate": "OBSERVATION_VIEW_SETTLED_SHORT",
+      "time_s": 1792045374.7258348,
+      "detail": "handoff_observe_0_0",
+      "short_ticks": {
+       "elbow_flex": 26.0
+      },
+      "source": "episode/EPISODE.json stages + run/move.json observation_view",
+      "meaning": "command completed, actual settled and resolved, target not reached; the owner observed from the measured pose"
+     },
+     {
+      "gate": "OBSERVATION_VIEW_SETTLED_SHORT",
+      "time_s": 1792045389.255621,
+      "detail": "handoff_observe_0_1",
+      "short_ticks": {
+       "elbow_flex": 23.0
+      },
+      "source": "episode/EPISODE.json stages + run/move.json observation_view",
+      "meaning": "command completed, actual settled and resolved, target not reached; the owner observed from the measured pose"
+     }
+    ],
+    "inspection_first": {
+     "gate": "BUS_LOST",
+     "stop_event": "owner_stop",
+     "detail": "RECEIVE_CONTACT: RuntimeError: contact_right_return_initial (right): the executor did not plan it: {'gate': 'bus_lost', 'level': 'HARD', 'detail': 'the bus could not be opened: ConnectionError: '}",
+     "time_s": 1792045423.1345298,
+     "source": "episode/events.jsonl"
+    },
+    "receive": {
+     "result": "FAILED",
+     "time_s": 1792045423.134574,
+     "why": "receive contact stopped: RuntimeError: contact_right_return_initial (right): the executor did not plan it: {'gate': 'bus_lost', 'level': 'HARD', 'detail': 'the bus could not be opened: ConnectionError: '}",
+     "normal_end": false,
+     "diagnostic_scope_completed": false,
+     "insertion_ready": false,
+     "bimanual_handover_success": false,
+     "basis": "episode/events.jsonl receive_contact_outcome; this scope never releases the left hand"
+    },
+    "observe_stage": [
+     [
+      "PREGRASP",
+      "HOLDING"
+     ],
+     [
+      "OBSERVE",
+      "NOT_READY"
+     ]
+    ]
+   },
+   "expected": {
+    "accepted_settled_short": 2,
+    "first_error_gate": "BUS_LOST",
+    "state": "FAULT",
+    "normal_return_confirmed": false,
+    "safe_shutdown": "UNKNOWN",
+    "start_blocked_until_recovery": true
+   }
+  }
+ },
+ "notes": [
+  "15:19 final error source: episode/events.jsonl owner_stop (t_host_s 1792045423.1345298) and receive_contact_outcome FAILED; the gate is the native executor's own 'bus_lost' read from the stop text (stop_gate); no time is generated",
+  "category 'success' for 14:08 is the existing console scope rule (observation-only RECEIVE_CONTACT + normal put-back); receive_contact.diagnostic_scope_completed=true, insertion_ready=false, bimanual_handover_success=false are shown next to it",
+  "START block for 15:19: live console status FAULT, can_prepare=false (read-only check); console test test_bus_lost_session_stays_fault_and_blocks_start_until_recovery"
+ ]
+}

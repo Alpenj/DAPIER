@@ -68,8 +68,51 @@ def stop_checkpoint():
         raise RuntimeError(f'{signal.Signals(_STOP_SIGNAL).name} requested STOP during {_PHASE}')
 
 
-def authorize_observation_plan(owner, proposed, raw, candidate):
-    """One operator decision on this actual-bound plan; no movement while waiting."""
+PREAPPROVAL_SCOPE = 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION_MOVE'
+PREAPPROVAL_CANDIDATE = 'CURRENT_RECEIVER_CLEAR_THEN_INNER_PAD_VIEW'
+PREAPPROVAL_PURPOSE = 'NONCONTACT_INNER_PAD_VIEW'
+
+
+def preapproval_record(approval, out, manifest_sha):
+    """The START-time pre-approval of the observation move, validated against this session and manifest. None if absent."""
+    pre = approval.get('observation_view_preapproval')
+    if pre is None:
+        return None
+    expected = dict(approved=True, scope=PREAPPROVAL_SCOPE, candidate_id=PREAPPROVAL_CANDIDATE, candidate_count=1, purpose=PREAPPROVAL_PURPOSE,
+                    insertion_permitted=False, close_permitted=False, session_out=str(out), prepared_manifest_sha256=manifest_sha)
+    wrong = sorted(k for k, v in expected.items() if pre.get(k) != v)
+    if wrong:
+        raise RuntimeError('observation view pre-approval does not match this session/manifest/scope: ' + ', '.join(wrong))
+    return pre
+
+
+def preapproval_covers(pre, owner_out, manifest_sha, proposed, raw, candidate, used):
+    """(covered, checks). Every check is a fact of this proposal; anything missing or different is not covered."""
+    forward = proposed.get('forward') if isinstance(proposed, dict) else None
+    steps = forward if isinstance(forward, list) else []
+    def certified(step):
+        cert, native = step.get('certificate') or {}, step.get('native_validation') or {}
+        return cert.get('nominal_verdict') == 'CLEAR' and not native.get('hard') and not native.get('provisional')
+    status = (raw or {}).get('status') or {}
+    first = steps[0] if steps else {}
+    checks = dict(
+        preapproved=pre is not None,
+        not_used_yet=not used,
+        same_session=pre is not None and pre.get('session_out') == str(owner_out),
+        same_manifest=pre is not None and pre.get('prepared_manifest_sha256') == manifest_sha,
+        candidate_kind=isinstance(candidate, dict) and candidate.get('id') == PREAPPROVAL_CANDIDATE and proposed.get('candidate_id') == PREAPPROVAL_CANDIDATE,
+        plan_ready=proposed.get('ready') is True and proposed.get('phase') == 'OBSERVATION_CANDIDATE',
+        finite_right_noncontact_steps=bool(steps) and all(step.get('side') == 'right' for step in steps),
+        every_step_certified_clear=bool(steps) and all(certified(step) for step in steps),
+        planned_from_current_actual=bool(first) and isinstance((raw or {}).get('ticks', {}).get('right'), dict)
+            and all(round(float(first['start_ticks'][n])) == round(float(raw['ticks']['right'][n])) for n in first.get('start_ticks', {})) and bool(first.get('start_ticks')),
+        bus_status_zero=bool(status) and all(isinstance(status.get(side), dict) and status[side] and not any(status[side].values()) for side in ('left', 'right')))
+    return all(checks.values()), checks
+
+
+def authorize_observation_plan(owner, proposed, raw, candidate, preapproval=None, manifest_sha=None):
+    """One operator decision on this actual-bound plan; no movement while waiting. With a START pre-approval that covers
+    this exact proposal the same request is recorded and consumed without the mid-session wait; otherwise unchanged."""
     proposal = dict(scope='RIGHT_RECEIVE_NONCONTACT_OBSERVATION_MOVE', session_out=str(owner.out),
                     candidate=candidate, actual_feedback=raw, plan=proposed,
                     insertion_permitted=False, close_permitted=False,
@@ -79,8 +122,23 @@ def authorize_observation_plan(owner, proposed, raw, candidate):
     digest = hashlib.sha256(content).hexdigest()
     request = owner.out / 'OBSERVATION_MOVE_REQUEST.json'
     request.write_bytes(content)
-    owner.note('awaiting_observation_move_approval', request=str(request), sha256=digest)
     decision_path = owner.out / 'OBSERVATION_MOVE_APPROVAL.json'
+    if preapproval is not None:
+        stop_checkpoint()
+        covered, checks = preapproval_covers(preapproval, owner.out, manifest_sha, proposed, raw, candidate, getattr(owner, 'preapproval_used', False))
+        supported, why = owner.recovery_ready('before pre-approved observation move', observation=owner.raw()) if covered else (False, 'not covered')
+        checks['current_support_and_bus'] = bool(supported)
+        if covered and supported:
+            owner.preapproval_used = True
+            record = dict(approved=True, request_sha256=digest, session_out=str(owner.out), scope=proposal['scope'], operator_source='START_PREAPPROVAL',
+                          preapproval_granted_at=preapproval.get('granted_at'), checks=checks)
+            decision_path.write_text(json.dumps(record, sort_keys=True))
+            owner.note('observation_move_preapproval_applied', request=str(request), sha256=digest, checks=checks)
+            owner.note('observation_move_approval_consumed', approved=True, request_sha256=digest, source='START_PREAPPROVAL')
+            return True
+        owner.note('observation_move_preapproval_not_applicable', sha256=digest, checks=checks, support_why=None if supported else str(why),
+                   fallback='existing operator decision')
+    owner.note('awaiting_observation_move_approval', request=str(request), sha256=digest)
     # Human approval is a supervised pause, not the software computation budget.
     cadence = json.loads((REV / 'sweepick_jaw_profile_left.json').read_text())['creep_period_s']['value']
     frame_wait_started = None
@@ -177,6 +235,7 @@ def validate_launch():
     for name, digest in manifest['files'].items():
         if hashlib.sha256(Path(name).read_bytes()).hexdigest() != digest:
             raise RuntimeError(f'prepared source/profile/plan changed before launch: {name}')
+    preapproval_record(approval, out, hashlib.sha256(MANIFEST.read_bytes()).hexdigest())   # a malformed pre-approval stops here, before any device
     return approval, plan, out, manifest
 
 
@@ -337,7 +396,9 @@ def main():
             owner.last_contact_frames = first_right_wrist_frame(owner, fc)
             owner.configure_right_wrist_optical(policy['calibration_path'], current_mount)
             owner.model_assisted_live_enabled = False
-            owner.authorize_observation_plan = lambda proposed, raw, candidate: authorize_observation_plan(owner, proposed, raw, candidate)
+            preapproval = preapproval_record(approval, out, hashlib.sha256(MANIFEST.read_bytes()).hexdigest())
+            owner.authorize_observation_plan = lambda proposed, raw, candidate: authorize_observation_plan(
+                owner, proposed, raw, candidate, preapproval=preapproval, manifest_sha=hashlib.sha256(MANIFEST.read_bytes()).hexdigest())
             owner.note('noncontact_current_measurement_contract', policy=policy,
                        source_role='current REAL RGB pixels + estimated pose + CAD/model priors',
                        physical_error_bound_m=None, full_release_permitted=False)

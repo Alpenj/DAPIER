@@ -264,7 +264,7 @@ def start(request: Request, body: dict = Body(...)):
     operator_request(request)
     return action(controller.start, body.get('job_id'), field_ready=body.get('field_ready'),
                   mounts_unchanged=body.get('mounts_unchanged'), supervised=body.get('supervised'),
-                  execution_scope=body.get('execution_scope'))
+                  execution_scope=body.get('execution_scope'), preapprove_view=body.get('preapprove_view') is True)
 
 
 @app.post('/api/control/stop')

@@ -1,0 +1,96 @@
+{
+ "schema": "sweepick.preapproved-view-fake-regression.v1",
+ "device_access": false,
+ "real_start": 0,
+ "real_motor_writes": 0,
+ "real_torque_writes": 0,
+ "input": "stored REAL request 20261015_151937_81d00c/OBSERVATION_MOVE_REQUEST.json (plan, candidate, actual feedback); fake owner / fake bus",
+ "new_native": {
+  "passed": 28,
+  "failed": 0,
+  "tests": [
+   "test_preapproved_view.py::test_the_stored_request_is_covered_by_the_start_preapproval",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-candidate_kind]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-same_session]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-same_manifest]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-every_step_certified_clear]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-planned_from_current_actual]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-bus_status_zero]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-finite_right_noncontact_steps]",
+   "test_preapproved_view.py::test_anything_outside_the_preapproved_scope_is_not_covered[<lambda>-plan_ready]",
+   "test_preapproved_view.py::test_preapproval_is_single_use",
+   "test_preapproved_view.py::test_covered_request_proceeds_without_the_mid_session_wait",
+   "test_preapproved_view.py::test_uncovered_or_unsupported_request_falls_back_to_the_existing_operator_decision[support]",
+   "test_preapproved_view.py::test_uncovered_or_unsupported_request_falls_back_to_the_existing_operator_decision[candidate]",
+   "test_preapproved_view.py::test_manual_mode_is_unchanged",
+   "test_preapproved_view.py::test_stop_before_a_preapproved_move_raises",
+   "test_preapproved_view.py::test_launch_rejects_a_preapproval_that_widens_or_moves_scope[session_out-/elsewhere]",
+   "test_preapproved_view.py::test_launch_rejects_a_preapproval_that_widens_or_moves_scope[prepared_manifest_sha256-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc]",
+   "test_preapproved_view.py::test_launch_rejects_a_preapproval_that_widens_or_moves_scope[insertion_permitted-True]",
+   "test_preapproved_view.py::test_launch_rejects_a_preapproval_that_widens_or_moves_scope[close_permitted-True]",
+   "test_preapproved_view.py::test_launch_rejects_a_preapproval_that_widens_or_moves_scope[candidate_count-2]",
+   "test_preapproved_view.py::test_launch_rejects_a_preapproval_that_widens_or_moves_scope[scope-RIGHT_INSERT]",
+   "test_preapproved_view_fake_bus.py::test_preapproved_and_manual_modes_send_the_same_commands",
+   "test_preapproved_view_fake_bus.py::test_bus_fault_at_the_request_never_auto_moves",
+   "test_preapproved_view_fake_bus.py::test_right_insert_and_close_stay_refused_in_the_observation_scope[RIGHT_INSERT_REPLAN]",
+   "test_preapproved_view_fake_bus.py::test_right_insert_and_close_stay_refused_in_the_observation_scope[RIGHT_CLOSE]",
+   "test_obs_reach_20261015.py::test_observation_view_03_completes_settles_and_misses_by_26",
+   "test_obs_reach_20261015.py::test_observation_view_04_starts_from_the_latest_actual_and_misses_by_23",
+   "test_obs_reach_20261015.py::test_the_same_move_with_the_existing_settle_trim_reaches_but_moves_the_goal_off_the_view_target"
+  ]
+ },
+ "new_console": {
+  "ran": 8,
+  "ok": 8,
+  "tests": [
+   "test_accepted_view_is_recorded_not_first_error (test_obs_settled_short.SettledShortView.test_accepted_view_is_recorded_not_first_error)",
+   "test_predicate_matches_the_owner_acceptance (test_obs_settled_short.SettledShortView.test_predicate_matches_the_owner_acceptance)",
+   "test_unresolved_view_or_other_stage_still_faults (test_obs_settled_short.SettledShortView.test_unresolved_view_or_other_stage_still_faults)",
+   "test_a_preapproved_decision_shows_no_pending_popup (test_preapproval_start.PreapprovalStart.test_a_preapproved_decision_shows_no_pending_popup)",
+   "test_bus_lost_session_stays_fault_and_blocks_start_until_recovery (test_preapproval_start.PreapprovalStart.test_bus_lost_session_stays_fault_and_blocks_start_until_recovery)",
+   "test_option_binds_session_manifest_and_scope_and_passes_the_launcher_check (test_preapproval_start.PreapprovalStart.test_option_binds_session_manifest_and_scope_and_passes_the_launcher_check)",
+   "test_option_is_refused_for_the_limited_scope (test_preapproval_start.PreapprovalStart.test_option_is_refused_for_the_limited_scope)",
+   "test_without_the_option_the_approval_has_no_preapproval (test_preapproval_start.PreapprovalStart.test_without_the_option_the_approval_has_no_preapproval)"
+  ]
+ },
+ "required_cases": {
+  "14:08 settled short + normal return": "TWO_SESSION_FAULT_CLASSIFICATION.json (offline replay) + test_obs_settled_short",
+  "15:19 settled short + real BUS_LOST": "TWO_SESSION_FAULT_CLASSIFICATION.json + test_bus_lost_session_stays_fault_and_blocks_start_until_recovery",
+  "pre-approved single non-contact candidate": "test_the_stored_request_is_covered_by_the_start_preapproval, test_covered_request_proceeds_without_the_mid_session_wait",
+  "candidate outside the pre-approved scope": "test_anything_outside_the_preapproved_scope_is_not_covered[candidate_kind/certificate/side/plan_ready]",
+  "other session / Source SHA / measured feedback": "same_session, same_manifest, planned_from_current_actual cases; test_launch_rejects_a_preapproval_that_widens_or_moves_scope",
+  "STOP and Bus Fault": "test_stop_before_a_preapproved_move_raises, test_bus_fault_at_the_request_never_auto_moves, bus_status_zero case",
+  "RIGHT INSERT/CLOSE without approval refused": "test_right_insert_and_close_stay_refused_in_the_observation_scope (real Owner.segment)",
+  "pre-approved vs manual on the fake bus": "test_preapproved_and_manual_modes_send_the_same_commands (identical write lists)",
+  "manual mode unchanged": "test_manual_mode_is_unchanged"
+ },
+ "existing": {
+  "a_gripper": {
+   "passed": 154,
+   "failed": 0
+  },
+  "console17_native": {
+   "passed": 28,
+   "failed": 0
+  },
+  "native_full": {
+   "passed": 506,
+   "failed": 38,
+   "error": 1,
+   "new_failures": 0,
+   "note": "38 failures + 1 collection error identical to the active baseline list"
+  },
+  "full_chain_unit": {
+   "failed": 28,
+   "identical": true,
+   "repaired": false
+  },
+  "console": {
+   "ran": 129,
+   "ok": 129,
+   "runs": 2,
+   "note": "one earlier run had the known HTTP read-only start-up timing error; not reproduced in two clean full runs"
+  },
+  "browser": "NOT_RUN in this task (UI change: one START checkbox; the existing browser start-body expectation will need 'preapprove_view')"
+ }
+}

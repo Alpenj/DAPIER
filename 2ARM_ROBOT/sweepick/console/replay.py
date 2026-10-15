@@ -209,6 +209,16 @@ def depth_png(path_string):
     return output.getvalue(), bounds
 
 
+def stop_gate(detail):
+    """The gate an owner stop reports: the native executor's own gate when the stop text carries one (e.g. bus_lost ->
+    BUS_LOST), the existing vision gate, else OWNER_STOP. Nothing is inferred beyond the recorded text."""
+    import re
+    if 'fresh left wrist' in str(detail):
+        return 'LEFT_HOLD_VISION_UNCONFIRMED'
+    native = re.search(r"'gate': '([a-z_]+)'", str(detail))
+    return native.group(1).upper() if native else 'OWNER_STOP'
+
+
 def settled_short_view(stage):
     """An OBSERVATION_VIEW that ended TARGET_NOT_REACHED_HOLDING with the same conditions the full-chain owner accepts
     (sweepick_full_chain Owner.segment missed_view): command completed, actual settled, command state resolved, Status 0."""
@@ -469,7 +479,7 @@ class ReplaySession:
                 self.bookmarks.append({'name': '추가 관측 이동 승인 대기', 't_s': event['t_host_s']})
             if event.get('kind') in ('observation_plan_authorization_failed', 'owner_stop'):
                 detail = event.get('reason') or '; '.join(event.get('reasons', [])) or 'existing owner stopped'
-                error = {'gate': 'LEFT_HOLD_VISION_UNCONFIRMED' if 'fresh left wrist' in detail else 'OWNER_STOP',
+                error = {'gate': stop_gate(detail), 'stop_event': 'owner_stop',
                          'time_s': event['t_host_s'], 'detail': detail, 'source': 'episode/events.jsonl'}
                 if not self.fault or error['time_s'] < self.fault['time_s']:
                     self.fault = error

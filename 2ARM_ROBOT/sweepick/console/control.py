@@ -13,7 +13,7 @@ import shlex
 import subprocess
 import threading
 
-from replay import HOME, ROOTS, JOINTS, ReplaySession, read_json, terminal_evidence
+from replay import HOME, ROOTS, JOINTS, ReplaySession, read_json, terminal_evidence, stop_gate
 from records import atomic_json, capture_sources, run_record, save_review
 
 A = HOME / 'sweepick_261013_receive_alignment_restore'
@@ -197,7 +197,7 @@ class Controller:
                     job['block_reason'] = reason
             if failure:
                 detail = failure.get('reason') or '; '.join(failure.get('reasons', [])) or 'existing owner stopped'
-                event_error = {'gate': 'LEFT_HOLD_VISION_UNCONFIRMED' if 'fresh left wrist' in detail else 'OWNER_STOP',
+                event_error = {'gate': stop_gate(detail), 'stop_event': 'owner_stop',
                                'detail': detail, 'time_s': failure.get('t_host_s'), 'source': 'episode/events.jsonl'}
                 prior_time = (job.get('first_error') or {}).get('time_s') if isinstance(job.get('first_error'), dict) else None
                 if not isinstance(prior_time, (int, float)) or (isinstance(event_error['time_s'], (int, float)) and event_error['time_s'] < prior_time):
@@ -591,7 +591,7 @@ class Controller:
                 owners[path] = result.stdout.strip()
         return owners
 
-    def start(self, job_id, *, field_ready=False, mounts_unchanged=False, supervised=False, execution_scope=None):
+    def start(self, job_id, *, field_ready=False, mounts_unchanged=False, supervised=False, execution_scope=None, preapprove_view=False):
         if execution_scope is not None:
             self.require_execution_scope(execution_scope)
         if not all(value is True for value in (field_ready, mounts_unchanged, supervised)):
@@ -618,11 +618,23 @@ class Controller:
                 bound = prepared_manifest.get('files') or {}
                 if any(bound.get(str(A / name)) != row['tested_sha256'] for name, row in tested.items()):
                     raise ControlError('승인 Manifest가 시험한 native 소스 SHA와 다름; START하지 않음')
+            if preapprove_view is True:
+                if scope != FULL_CHAIN:
+                    raise ControlError('관측 이동 사전 승인은 FULL_CHAIN_RECEIVE_CONTACT의 비접촉 관측에만 해당')
+                # one explicit operator choice at START: the single existing non-contact view candidate, bound to this
+                # session and prepared manifest; the launcher re-checks every fact of the generated path before using it
+                approval['observation_view_preapproval'] = {
+                    'approved': True, 'scope': 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION_MOVE', 'candidate_id': 'CURRENT_RECEIVER_CLEAR_THEN_INNER_PAD_VIEW',
+                    'candidate_count': 1, 'purpose': 'NONCONTACT_INNER_PAD_VIEW', 'insertion_permitted': False, 'close_permitted': False,
+                    'session_out': job['session_out'], 'prepared_manifest_sha256': approval.get('prepared_manifest_sha256'),
+                    'operator_source': 'local_console_start_option', 'granted_at': datetime.now().astimezone().isoformat(),
+                    'requires': ['same session and manifest', 'candidate kind', 'planned from current measured ticks', 'every step certified CLEAR',
+                                 'right arm only', 'Status 0 on both arms', 'current LEFT support/bus confirmed', 'single use']}
             approval.update(approved=True, field_ready=True, permission_to_execute=True, permission_to_open_devices=True,
                             unchanged_wrist_mount_and_routes=True, timestamp=datetime.now().astimezone().isoformat(),
                             field_confirmation='operator START click: setup/routes/support/supervision confirmed')
             (directory / 'APPROVAL.json').write_text(json.dumps(approval, ensure_ascii=False, indent=2))
-            job.update(state='STARTING', consumed=True, phase='launch_requested')
+            job.update(state='STARTING', consumed=True, phase='launch_requested', observation_view_preapproved=preapprove_view is True)
             self.save(job)
             argv = ['env', 'SWEEPICK_START_APPROVAL_PATH=' + str(directory / 'APPROVAL.json'),
                     'SWEEPICK_SOURCE_MANIFEST_PATH=' + str(directory / 'MANIFEST.json'),

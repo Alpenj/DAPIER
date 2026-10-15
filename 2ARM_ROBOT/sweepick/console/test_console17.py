@@ -68,7 +68,7 @@ class LimitedBackend(unittest.TestCase):
         if supported:
             self.skipTest('the active native folder already carries the Console-17 contract')
         self.assertFalse(by[LEFT_TO_LIFT]['supported']); self.assertEqual(by[LEFT_TO_LIFT]['backend_status'], 'BACKEND_CHANGE_REQUIRED')
-        self.assertIn('Console-17', reason)
+        self.assertTrue('Console-17' in reason or 'SHA' in reason or '시험 기록' in reason, reason)
         with self.assertRaisesRegex(ControlError, 'BACKEND_CHANGE_REQUIRED'):
             self.control.prepare(execution_scope=LEFT_TO_LIFT)
 

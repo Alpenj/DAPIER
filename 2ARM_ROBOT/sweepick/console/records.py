@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from replay import CAMERAS, ROOTS, UNKNOWN, ReplaySession, clean, read_json, terminal_evidence, finite
+from replay import CAMERAS, ROOTS, UNKNOWN, ReplaySession, clean, read_json, terminal_evidence, finite, stop_gate
 
 SMALL_RAW_LIMIT = 64 * 1024
 
@@ -85,6 +85,20 @@ def lines(path, errors):
         errors.append(f'{path.name}: {exc}')
 
 
+def receive_summary(events):
+    """The owner's own receive_contact_outcome, kept apart from the run category: a completed observation-only scope is
+    not an insertion-ready view and not a hand-over."""
+    row = next((e for e in reversed(events) if e.get('kind') == 'receive_contact_outcome'), None)
+    if row is None:
+        return None
+    result = row.get('result')
+    view = next((e for e in reversed(events) if e.get('kind') == 'observation_view_actual_consumed'), None)
+    return {'result': result, 'time_s': row.get('t_host_s'), 'why': row.get('why'), 'normal_end': row.get('normal_end'),
+            'diagnostic_scope_completed': result in ('RECEIVE_CONTACT_COLLECTED', 'RECEIVE_CONTACT_NO_CONTACT', 'RECEIVE_CONTACT_NOT_READY_RETURNED'),
+            'insertion_ready': view.get('insertion_ready') if view else None, 'bimanual_handover_success': False,
+            'basis': 'episode/events.jsonl receive_contact_outcome; this scope never releases the left hand'}
+
+
 def run_record(directory, *, current=None, owner_alive=False, off_confirmed=False):
     directory = Path(directory).resolve()
     root, errors = directory / 'session', []
@@ -103,7 +117,7 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
     stopped = next((row for row in events if row.get('kind') in ('observation_plan_authorization_failed', 'owner_stop')), None)
     if stopped:
         detail = stopped.get('reason') or '; '.join(stopped.get('reasons', [])) or UNKNOWN
-        error_candidates.append({'gate': 'LEFT_HOLD_VISION_UNCONFIRMED' if 'fresh left wrist' in detail else 'OWNER_STOP',
+        error_candidates.append({'gate': stop_gate(detail), 'stop_event': 'owner_stop',
                                  'detail': detail, 'time_s': stopped.get('t_host_s'), 'source': 'episode/events.jsonl'})
     if terminal.get('error'):
         error_candidates.append({**terminal['error'], 'time_s': (terminal.get('failed_stage') or {}).get('t_host_s'),
@@ -201,6 +215,7 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
               'execution_scope': job.get('execution_scope', 'FULL_CHAIN_RECEIVE_CONTACT'),
               'session_out': str(root), 'first_error': error, 'normal_return_confirmed': off_confirmed and error is None,
               'safe_shutdown': 'RECORDED_BOTH_ARMS_OFF' if off_confirmed and error is None else 'NOT_PERFORMED' if limited_kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN') else UNKNOWN,
+              'receive_contact': receive_summary(events),
               'limited_terminal': None if not limited else (limited_doc or {'terminal': UNKNOWN, 'missing': 'LIMITED_SCOPE_TERMINAL.json'}),
               'recording': {'status': data_status, 'files': len(originals), 'bytes': sum(row['bytes'] for row in originals),
                             'camera_frames': frames, 'missing': sorted(set(missing)), 'errors': errors,

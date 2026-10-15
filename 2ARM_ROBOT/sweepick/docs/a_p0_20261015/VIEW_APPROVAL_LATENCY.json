@@ -1,0 +1,59 @@
+{
+ "schema": "sweepick.view-approval-latency.v1",
+ "clock": "episode/events.jsonl t_host_s; executor rows t (same host clock)",
+ "method": "awaiting_observation_move_approval -> observation_move_approval_consumed; reads = observation_return_check notes inside the interval, each reading both arms with open/close per arm",
+ "sessions": {
+  "20261015_151937_81d00c": {
+   "approval_requested_t_host_s": 1792045363.589375,
+   "approval_consumed_t_host_s": 1792045370.1628954,
+   "approval_wait_s": 6.5735204219818115,
+   "owner_register_reads_during_wait": 17,
+   "port_open_close_during_wait": 34,
+   "read_period_s": 0.38667767188128305,
+   "session_event_span_s": 239.09356141090393,
+   "wait_share_of_session": 0.02749350665568372,
+   "removable_by_preapproval_s": 6.5735204219818115,
+   "not_removable": {
+    "motor_moves_handoff_s": {
+     "00_approach_carry_right_right": 22.138,
+     "01_approach_carry_left_left": 24.366,
+     "02_approach_right_approach_right": 3.325,
+     "03_observe_0_0_right": 3.017,
+     "04_observe_0_1_right": 11.801,
+     "05_contact_observation_back_001_right": 11.727,
+     "06_contact_observation_back_000_right": 3.099,
+     "07_contact_right_back_to_carry_right": 5.137
+    },
+    "observation_view_moves_s": 14.818
+   },
+   "note": "the wait is operator response time; the motor move time is unchanged by pre-approval"
+  },
+  "20261015_140844_3cc05c": {
+   "approval_requested_t_host_s": 1792041120.0207627,
+   "approval_consumed_t_host_s": 1792041127.2301927,
+   "approval_wait_s": 7.209429979324341,
+   "owner_register_reads_during_wait": 19,
+   "port_open_close_during_wait": 38,
+   "read_period_s": 0.37944368312233373,
+   "session_event_span_s": 351.42628931999207,
+   "wait_share_of_session": 0.020514771371471806,
+   "removable_by_preapproval_s": 7.209429979324341,
+   "not_removable": {
+    "motor_moves_handoff_s": {
+     "00_approach_carry_right_right": 22.655,
+     "01_approach_carry_left_left": 24.225,
+     "02_approach_right_approach_right": 3.203,
+     "03_observe_0_0_right": 3.019,
+     "04_observe_0_1_right": 11.901,
+     "05_contact_observation_back_001_right": 11.805,
+     "06_contact_observation_back_000_right": 3.221,
+     "07_contact_right_back_to_carry_right": 4.937,
+     "08_contact_right_return_initial_right": 20.451,
+     "09_contact_left_back_to_lift_left": 26.427
+    },
+    "observation_view_moves_s": 14.92
+   },
+   "note": "the wait is operator response time; the motor move time is unchanged by pre-approval"
+  }
+ }
+}
