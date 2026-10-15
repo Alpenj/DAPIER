@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "preserved_B16_cases": 17,
+  "additional_timing_cases": 8,
+  "stored_REAL_replay_cases": 4,
+  "total_tests": 29,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "schema_validation": {
+    "status": "PASS",
+    "schema_version": "sweepick.b17.goal-proposal/1",
+    "stored_REAL": 5,
+    "synthetic_contract_only": 1,
+    "illegal_mutations_rejected": 5
+  },
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "C10_R13_changed": false,
+  "normalization_changed": false,
+  "training_split_changed": false,
+  "hardware_test_performed": false,
+  "source_recordings_changed": false,
+  "verification_scope": "private frozen evidence required for 3 original A geometry cases and stored REAL replay; public portable tests skip those 3 without B16_PRIVATE_ROOT",
+  "runtime_environment": {
+    "python": "3.12.3",
+    "numpy": "2.2.6",
+    "mujoco": "3.3.7"
+  }
+}

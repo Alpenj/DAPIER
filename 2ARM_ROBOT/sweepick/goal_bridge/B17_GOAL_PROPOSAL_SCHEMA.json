@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sweepick:b17:goal-proposal:1",
+  "title": "B17 observation evidence and model-only goal preview",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "type",
+    "origin",
+    "proposal_id",
+    "task_goal",
+    "primitive",
+    "target_object",
+    "target_arm",
+    "coordinate_frame",
+    "target_reference_frame",
+    "goal_expression",
+    "targets",
+    "observation_policy",
+    "reference_times",
+    "canonical_state",
+    "provenance",
+    "geometry_evidence",
+    "unknown_geometry",
+    "required_additional_observations",
+    "source",
+    "planning_preview",
+    "status",
+    "invalid_reasons",
+    "shadow_only",
+    "executable",
+    "motor_write_authorized",
+    "insertion_requested",
+    "motion_requested",
+    "temporal_alignment",
+    "physical_execution_requirements",
+    "goal_evidence_role",
+    "model_view_candidate"
+  ],
+  "properties": {
+    "schema": {
+      "const": "sweepick.b17.goal-proposal/1"
+    },
+    "type": {
+      "const": "GoalProposal"
+    },
+    "origin": {
+      "const": "B_GOAL_PROPOSAL"
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primitive": {
+      "const": "OBSERVE_HELD_OBJECT"
+    },
+    "target_object": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "target_arm": {
+      "enum": [
+        "left",
+        "right",
+        "both",
+        "UNKNOWN"
+      ]
+    },
+    "coordinate_frame": {
+      "enum": [
+        "assembled dual model world (left base at its model pose)",
+        null
+      ]
+    },
+    "target_reference_frame": {
+      "enum": [
+        "CURRENT_TOOL",
+        "MISSING"
+      ]
+    },
+    "goal_expression": {
+      "enum": [
+        "A_RELATIVE_TOOL",
+        "MISSING"
+      ]
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "side",
+          "reference_frame",
+          "reference_from_target_tool"
+        ],
+        "properties": {
+          "side": {
+            "enum": [
+              "left",
+              "right"
+            ]
+          },
+          "reference_frame": {
+            "const": "CURRENT_TOOL"
+          },
+          "reference_from_target_tool": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "observation_policy": {
+      "const": "FINAL_TARGET_ONLY"
+    },
+    "reference_times": {
+      "type": "object"
+    },
+    "canonical_state": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "items": {
+            "type": "number"
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "observed",
+        "estimated",
+        "model_assumptions",
+        "unidentified"
+      ],
+      "properties": {
+        "observed": {
+          "type": "array"
+        },
+        "estimated": {
+          "type": "array"
+        },
+        "model_assumptions": {
+          "type": "array"
+        },
+        "unidentified": {
+          "type": "array"
+        }
+      }
+    },
+    "geometry_evidence": {
+      "type": "object"
+    },
+    "unknown_geometry": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_additional_observations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "observation_id",
+        "source_sha256",
+        "source_files"
+      ],
+      "properties": {
+        "run_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_sha256": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "source_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "planning_preview": {
+      "type": "object",
+      "required": [
+        "status",
+        "model_only"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "model_only": {
+          "const": true
+        },
+        "physical_success": {
+          "const": false
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "EXCLUDED",
+        "NEEDS_OBSERVATION",
+        "PREVIEW_UNSUPPORTED",
+        "MODEL_PREVIEW_ONLY",
+        "PREVIEW_FAILED"
+      ]
+    },
+    "invalid_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "shadow_only": {
+      "const": true
+    },
+    "executable": {
+      "const": false
+    },
+    "motor_write_authorized": {
+      "const": false
+    },
+    "insertion_requested": {
+      "const": false
+    },
+    "motion_requested": {
+      "const": false
+    },
+    "temporal_alignment": {
+      "type": "object"
+    },
+    "physical_execution_requirements": {
+      "type": "object",
+      "properties": {
+        "physical_approval": {
+          "const": false
+        }
+      },
+      "required": [
+        "physical_approval"
+      ]
+    },
+    "goal_evidence_role": {
+      "enum": [
+        "OBSERVATION_INCOMPLETE",
+        "UNAPPROVED_OBSERVATION_INPUT"
+      ]
+    },
+    "model_view_candidate": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "role": {
+          "const": "MODEL_VIEW_CANDIDATE"
+        },
+        "measured_goal": {
+          "const": false
+        },
+        "information_gain_proven": {
+          "const": false
+        },
+        "executable": {
+          "const": false
+        }
+      },
+      "required": [
+        "role",
+        "targets",
+        "measured_goal",
+        "information_gain_proven",
+        "executable"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "NEEDS_OBSERVATION",
+              "EXCLUDED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "targets": {
+            "maxItems": 0
+          },
+          "goal_expression": {
+            "const": "MISSING"
+          },
+          "target_reference_frame": {
+            "const": "MISSING"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "goal_expression": {
+            "const": "A_RELATIVE_TOOL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "targets": {
+            "minItems": 1
+          },
+          "target_reference_frame": {
+            "const": "CURRENT_TOOL"
+          }
+        }
+      }
+    }
+  ]
+}

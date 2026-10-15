@@ -1,0 +1,27 @@
+{
+  "status": "DIAGNOSTICS_SEPARATED_FROM_GOAL_GATING",
+  "privacy": "anonymized technical summary; source recordings and timestamps stay private",
+  "camera_references": {
+    "left_wrist": [
+      "left"
+    ],
+    "right_wrist": [
+      "right"
+    ],
+    "top": [
+      "left",
+      "right"
+    ]
+  },
+  "normal_async_is_goal_failure": false,
+  "earlier_camera_receipt_is_goal_failure": false,
+  "actual_measurement_time": "unknown; host receipt is not a servo sampling timestamp",
+  "native_exposure_clock_mapping": "unverified",
+  "receipt_clock_differences": "signed differences only within the same qualified clock; original units normalized before subtraction",
+  "geometric_uncertainty": [
+    "unknown motion between exposure and joint measurement",
+    "unverified camera/FK mapping"
+  ],
+  "numeric_hard_gates_added": 0,
+  "model_preview_blocked_by_time_order": false
+}
