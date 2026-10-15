@@ -3,6 +3,7 @@
 (() => {
   const LIMITED = 'LEFT_START_TO_LIFT';
   const FULL = 'FULL_CHAIN_RECEIVE_CONTACT';
+  const RIGHT_X = 'RIGHT_X_FINITE_METROLOGY';
   const panelState = { catalog: null, control: null, snapshot: null, snapshotError: null, onPrepare: null, busy: false };
   const byId = (id) => document.getElementById(id);
   const shown = (value) => value === null || value === undefined || value === '' ? 'UNKNOWN' : String(value);
@@ -32,7 +33,7 @@
   }
 
   function prepareAllowed(scope) {
-    return (scope?.id === FULL || scope?.id === LIMITED) && scope.supported === true && scope.can_prepare === true
+    return [FULL, LIMITED, RIGHT_X].includes(scope?.id) && scope.supported === true && scope.can_prepare === true
       && panelState.control?.execution_connected === true && panelState.control?.can_prepare === true;
   }
 
@@ -40,10 +41,11 @@
     const selected = byId('fieldScopeSelect').value;
     const scope = scopeById(selected);
     const limited = selected === LIMITED;
+    const measuring = selected === RIGHT_X;
     const supported = scope?.supported === true;
     byId('fieldScopeStatus').textContent = scope
       ? `${shown(scope.backend_status)} · ${supported ? 'SUPPORTED' : 'UNSUPPORTED'}`
-      : limited ? 'BACKEND_CHANGE_REQUIRED · UNSUPPORTED' : 'UNKNOWN';
+      : limited || measuring ? 'BACKEND_CHANGE_REQUIRED · UNSUPPORTED' : 'UNKNOWN';
     byId('fieldScopeReason').textContent = scope?.reason || (limited
       ? 'native fixed full-chain · no hold terminal · ownership continuous contract'
       : '범위 계약 응답에 이 ID가 없습니다.');
@@ -55,8 +57,12 @@
     const button = byId('fieldPrepare');
     button.disabled = !allowed;
     button.textContent = limited ? (allowed ? 'LEFT_START_TO_LIFT 제한 준비 흐름 열기' : supported ? 'LEFT_START_TO_LIFT 준비 조건 미충족' : '현재 제한 범위는 준비할 수 없음')
+      : measuring ? (allowed ? 'RIGHT_X 측정 준비 흐름 열기 · 운영자 입력 5개' : supported ? 'RIGHT_X 준비 조건 미충족' : 'RIGHT_X 측정 범위는 준비할 수 없음')
       : allowed ? 'FULL_CHAIN 기존 준비 흐름 열기' : 'FULL_CHAIN 준비 조건 미충족';
-    byId('fieldScopeMessage').textContent = limited
+    byId('fieldScopeMessage').textContent = measuring
+      ? (supported ? `RIGHT_X_FINITE_METROLOGY는 이 범위 전용 승인·Manifest로만 준비합니다. 축·변위는 운영자가 직접 입력하며 기본값·상한이 없고, 입력값은 실물 허가가 아닙니다(${shown(scope?.physical_basis?.status)}). F/V 이동마다 계획 시작 실측·목표·충돌검사·정상 복귀를 보고 따로 결정합니다. START 사전 승인은 쓰지 않습니다. ${scope?.reason || ''}`
+        : `RIGHT_X_FINITE_METROLOGY는 활성 native가 이 범위를 시험한 소스와 같지 않아 준비할 수 없습니다. ${scope?.reason || ''}`)
+      : limited
       ? (supported ? `LEFT_START_TO_LIFT는 이 범위 전용 승인·Manifest로만 준비합니다. LIFT 뒤 보유 상태로 종료하며 다음 실행은 수동 복구 확인 전까지 막힙니다. ${scope?.reason || ''}`
         : `LEFT_START_TO_LIFT는 현재 backend가 지원하지 않아 실행·준비할 수 없습니다. ${scope?.reason || 'native 실행기는 fixed full-chain이며 LIFT/HOLDING 종료와 범위별 ownership 계약이 없습니다.'}`)
       : supported

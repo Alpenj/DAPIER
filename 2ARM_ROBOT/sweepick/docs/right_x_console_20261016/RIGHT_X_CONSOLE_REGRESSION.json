@@ -1,0 +1,318 @@
+{
+ "schema": "sweepick.right-x-console-regression.v1",
+ "date": "2026-10-16",
+ "basis": {
+  "native_candidate": "pro/sweepick-right-x-metrology-20261016 0cb3ad4 (unchanged in this work)",
+  "console_candidate_from": "live console control.py c90beb6e / app.py 83ee66be / static/app.js 108be397 (integration d527494)"
+ },
+ "device_access": false,
+ "real_start": false,
+ "motor_or_torque_write": false,
+ "active_native_changed": false,
+ "live_console_changed": false,
+ "environment": {
+  "native_python": "so101_imitation_learning/.venv python",
+  "native_env": "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1, SWEEPICK_RECEIVE_DIR unset, trees run one after another",
+  "console_python": "live console .venv (shared, read-only)",
+  "note": "An earlier attempt with SWEEPICK_RECEIVE_DIR set to an empty string and both trees in parallel turned 28 skips into failures in BOTH trees (66/68 failed). Discarded; only the clean run below is used."
+ },
+ "native_full_suite": {
+  "command": "pytest -q -p no:cacheprovider --continue-on-collection-errors revision test_observation_launch.py test_console17_launch_scope.py [test_right_x_launch.py]",
+  "compared_by": "test id (junit xml), not by totals",
+  "active": {
+   "ids": 541,
+   "outcomes": {
+    "error": 1,
+    "passed": 471,
+    "failed": 38,
+    "skipped": 31
+   }
+  },
+  "candidate": {
+   "ids": 578
+  },
+  "common_ids": 541,
+  "common_outcomes_active": {
+   "error": 1,
+   "passed": 471,
+   "failed": 38,
+   "skipped": 31
+  },
+  "common_outcomes_candidate": {
+   "error": 1,
+   "passed": 471,
+   "failed": 38,
+   "skipped": 31
+  },
+  "outcome_changed_on_common_ids": [],
+  "only_in_candidate": {
+   "count": 37,
+   "outcomes": {
+    "passed": 37
+   },
+   "files": [
+    "revision.test_right_x_metrology",
+    "test_right_x_launch"
+   ]
+  },
+  "only_in_active": [],
+  "failing_in_both_count": 39,
+  "failing_in_both": [
+   "::revision.test_capture_right_wrist_calibration",
+   "revision.test_model_assisted_receive_plan::test_native_hops_cannot_hide_a_changed_native_jaw_command",
+   "revision.test_model_assisted_receive_plan::test_native_hops_keep_original_jaw_provenance_after_lossy_affine_round_trip",
+   "revision.test_receive_followup::test_observation_seed_accepts_saved_passive_jaw_without_changing_geometry",
+   "revision.test_sweepick_episode::test_the_looks_use_the_recorders_readers_and_only_frames_received_after_the_call",
+   "revision.test_sweepick_episode::test_the_real_session_with_the_recorder_on",
+   "revision.test_sweepick_grip::test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage",
+   "revision.test_sweepick_pick02_actual::test_a_block_disturbed_by_the_last_descent_is_not_closed_on_and_the_arm_backs_up_despite_the_flicker[not readable]",
+   "revision.test_sweepick_pick02_actual::test_a_block_disturbed_by_the_last_descent_is_not_closed_on_and_the_arm_backs_up_despite_the_flicker[shifted]",
+   "revision.test_sweepick_pick02_actual::test_a_block_disturbed_by_the_last_descent_is_not_closed_on_and_the_arm_backs_up_despite_the_flicker[turned]",
+   "revision.test_sweepick_pick02_actual::test_a_block_turned_at_the_first_stop_ends_the_descent_there",
+   "revision.test_sweepick_pick02_actual::test_a_real_lateral_error_is_removed_by_the_visual_loop_and_the_block_stays_where_it_was_observed",
+   "revision.test_sweepick_pick02_actual::test_a_request_refused_before_any_write_is_kept_as_a_refusal_and_does_not_close_the_way_home",
+   "revision.test_sweepick_pick02_actual::test_the_whole_session_on_an_arm_with_the_real_servo_behaviour",
+   "revision.test_sweepick_pick02_actual::test_the_whole_session_with_a_flickering_readback_and_a_second_stop_from_the_measured_error",
+   "revision.test_sweepick_real_command::test_arms_only_report_uses_only_the_range_gates_and_heuristics_are_diagnostics",
+   "revision.test_sweepick_real_command::test_classification_separates_hard_from_temporary",
+   "revision.test_sweepick_real_command::test_dry_run_sends_nothing_and_reports_refusals",
+   "revision.test_sweepick_real_command::test_inverse_reproduces_the_stored_real_sample",
+   "test_observation_launch::test_adopted_view_uses_supplied_actual_and_camera",
+   "test_observation_launch::test_approval_wait_lost_support_raises_without_permission",
+   "test_observation_launch::test_current06_yaw_target_survives_wrist_perspective_changes",
+   "test_observation_launch::test_initial_observation_and_stage_keep_both_ports_with_the_primary_owner",
+   "test_observation_launch::test_initial_planning_exception_keeps_traceback_without_stage",
+   "test_observation_launch::test_owner_observation_preserves_fresh_passive_feedback",
+   "test_observation_launch::test_owner_optical_startup_with_actual_reenumerated_pairing",
+   "test_observation_launch::test_passive_gripper_seed_preserves_actual_and_collision_geometry",
+   "test_observation_launch::test_passive_seed_does_not_replace_nonfinite_actual[-inf]",
+   "test_observation_launch::test_passive_seed_does_not_replace_nonfinite_actual[inf]",
+   "test_observation_launch::test_passive_seed_does_not_replace_nonfinite_actual[nan]",
+   "test_observation_launch::test_rebound_optical_rejects_left_camera_binding",
+   "test_observation_launch::test_receive_keeps_passive_actual_and_bounds_only_the_command_seed",
+   "test_observation_launch::test_receive_measured_input_still_rejects_nonfinite[-inf]",
+   "test_observation_launch::test_receive_measured_input_still_rejects_nonfinite[inf]",
+   "test_observation_launch::test_receive_measured_input_still_rejects_nonfinite[nan]",
+   "test_observation_launch::test_startup_plans_only_the_current_pick",
+   "test_observation_launch::test_view_approval_is_current_plan_bound[declined-False]",
+   "test_observation_launch::test_view_approval_is_current_plan_bound[match-True]",
+   "test_observation_launch::test_view_approval_is_current_plan_bound[wrong_hash-False]"
+  ],
+  "failure_groups_same_in_both": [
+   [
+    "test_observation_launch",
+    "RuntimeError: canonical field readers were shadowed before any device access",
+    16
+   ],
+   [
+    "test_sweepick_real_command",
+    "FileNotFoundError: [Errno #] No such file or directory: '/home/robot/sweepick_#_commi",
+    4
+   ],
+   [
+    "test_observation_launch",
+    "AttributeError: 'types.SimpleNamespace' object has no attribute 'raw'",
+    4
+   ],
+   [
+    "test_model_assisted_receive_plan",
+    "ModuleNotFoundError: No module named 'sweepick_#_receive_plan'",
+    2
+   ],
+   [
+    "",
+    "collection failure",
+    1
+   ],
+   [
+    "test_receive_followup",
+    "ModuleNotFoundError: No module named 'sweepick_#_receive_real_adapter'",
+    1
+   ],
+   [
+    "test_sweepick_episode",
+    "assert None is not None",
+    1
+   ],
+   [
+    "test_sweepick_episode",
+    "FileNotFoundError: [Errno #] No such file or directory: '/home/robot/sweepick_#_commi",
+    1
+   ],
+   [
+    "test_sweepick_grip",
+    "KeyError: 'provisional'",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: ('not readable', 'STOPPED_IN_DESCEND_A_HOLDING_NEEDS_A_PERSON', ['pregrasp",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: ('shifted', 'STOPPED_IN_DESCEND_A_HOLDING_NEEDS_A_PERSON', ['pregrasp', 'd",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: ('turned', 'STOPPED_IN_DESCEND_A_HOLDING_NEEDS_A_PERSON', ['pregrasp', 'de",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: ('PICKED_LIFTED_AND_PUT_BACK', ['pregrasp', 'descend_a', 'descend', 'close",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: assert (# > # and 'correction' in {'allowed_mm': #, 'checks': {'centred': ",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: assert ('BUS_LOST' == 'REFUSED'\n  \n  - REFUSED\n  + BUS_LOST)",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "FileNotFoundError: [Errno #] No such file or directory: '/home/robot/sweepick_#_commi",
+    1
+   ],
+   [
+    "test_sweepick_pick02_actual",
+    "AssertionError: ('STOPPED_IN_DESCEND_A_HOLDING_NEEDS_A_PERSON', ['pregrasp', 'descend_a'],",
+    1
+   ]
+  ],
+  "order_dependence": "test_observation_launch.py alone: 5 failed / 16 passed in BOTH trees; the 16 \"canonical field readers were shadowed\" failures appear only in the combined run (module order), the same in both trees",
+  "reading_of_totals": "471 = active passed; 508 = candidate passed = 471 common + 37 new RIGHT_X tests; these are different test sets and are not one baseline. No other total was produced by this run."
+ },
+ "gripper_suite": {
+  "files": [
+   "revision/test_gripper_initial_range.py",
+   "revision/test_a16_close_binding.py",
+   "review/a17_20261015/test_a17_first_goal.py",
+   "revision/test_sweepick_hard_gate_allowlist.py",
+   "revision/test_postwrite_order.py",
+   "revision/test_sweepick_grip.py"
+  ],
+  "active": {
+   "passed": 154,
+   "failed": 1
+  },
+  "candidate": {
+   "passed": 154,
+   "failed": 1
+  },
+  "same_ids": true,
+  "outcome_changed": [],
+  "the_one_failure": {
+   "revision.test_sweepick_grip::test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage": "KeyError: 'provisional'"
+  },
+  "cause": "the test reads t['provisional'] from a trim record that the executor no longer writes; same failure in the unmodified active tree; test not changed (gripper/move_a logic is out of scope)"
+ },
+ "native_focused": {
+  "console17 (3 files)": {
+   "active": "28 passed",
+   "candidate": "28 passed"
+  },
+  "observation-only + approval wait (2 files)": {
+   "active": "34 passed",
+   "candidate": "34 passed"
+  }
+ },
+ "console_suite": {
+  "command": ".venv/bin/python -m unittest discover -p test_*.py",
+  "live": "Ran 144: 1 error (test_replay.HttpReadOnly), 1 skipped",
+  "candidate": "Ran 175: 1 error (test_replay.HttpReadOnly), 1 skipped",
+  "parsed_ids": {
+   "live": 138,
+   "candidate": 169,
+   "common": 138,
+   "changed_on_common": [],
+   "only_in_live": [],
+   "only_in_candidate_by_class": {
+    "test_preapproval_start.PreapprovalStart": 5,
+    "test_right_x_console.RightXConsole": 20,
+    "test_preapproval_start.NewOpenFailureText": 1,
+    "test_obs_settled_short.SettledShortView": 3,
+    "test_right_x_console.RightXRecord": 2
+   }
+  },
+  "HttpReadOnly": "known flaky; passes when rerun alone (live and candidate)",
+  "skipped": "test_console17 ...current_active_native_without_the_contract_stays_disabled (active already carries the Console-17 contract)",
+  "repo_only_tests": "test_preapproval_start.py and test_obs_settled_short.py are in the repository but not in the live folder; 9 tests also pass against the unmodified live code",
+  "new": "test_right_x_console.py: 22 tests",
+  "mutation_checks": [
+   "field-confirmation gate disabled -> 5 failures in test_f_and_v_are_separate_digests_and_the_f_approval_never_answers_v",
+   "answered-digest check removed -> 1 failure (V request not shown while the F decision file exists)"
+  ]
+ },
+ "right_x_console_tests": [
+  "offered only when the active native carries the RIGHT_X markers AND equals the tested SHA record; the current active native -> BACKEND_CHANGE_REQUIRED",
+  "catalog lists the native DECLARED_WRITES (13) and EXCLUDED (7), five inputs with default=None and limit=None, physical status FIELD_PHYSICAL_CONFIRMATION_REQUIRED",
+  "malformed input (missing, zero, NaN, non-unit axis, empty source, bool, extra key) prepares nothing; RIGHT_X input on another scope is refused",
+  "own approval/manifest scope RIGHT_X_FINITE_METROLOGY, manifest binds the 12 tested sources, approval unapproved, no START pre-approval, not copied from the full-chain approval",
+  "START needs the write-list acknowledgment; START pre-approval refused; changed write list, inputs or bound bytes refused; no launch",
+  "console-generated APPROVAL/MANIFEST pass the candidate launcher validate_launch(); plan.right_x_metrology equals the five inputs + verify_from F",
+  "full-chain approval cannot open RIGHT_X (also with a forged job scope); FULL_CHAIN prepare/START/pre-approval unchanged; no automatic next session after RIGHT_X",
+  "with the native authorize_observation_plan running: F and V requests have different digests; F approval needs all field confirmations; the F decision file never answers V; replaying the F digest is refused; V decline ends the wait as not approved",
+  "decisions with another digest are ignored (still waiting, request still shown, STOP available); console STOP (.STOP + C-c) ends the wait with RuntimeError within one cadence",
+  "same digest but another session or scope: the wait ends as NOT approved (no move); support loss during the wait raises into the stop contract",
+  "a request that is not one CLEAR, native-executable, returnable, actual-bound move cannot be approved (decline only); a request for another session, or an X request inside a FULL_CHAIN job, is decline-only",
+  "adopted-view request inside a RIGHT_X job keeps the existing single-click decision; a completed RIGHT_X session is never a success_candidates dataset entry"
+ ],
+ "browser_qa": {
+  "server": "candidate console on 127.0.0.1:8775, native = candidate folder, device topology fixture, tmux replaced by a fake owner flag; the F/V requests come from the candidate native authorize_observation_plan in a separate process",
+  "checks": [
+   {
+    "check": "scope_catalog_13_writes_7_excluded_supported_only_with_tested_candidate"
+   },
+   {
+    "check": "inputs_have_no_default_and_prepare_disabled_until_entered"
+   },
+   {
+    "check": "zero_displacement_and_non_unit_axis_keep_prepare_disabled"
+   },
+   {
+    "check": "prepared_job_shows_13_writes_start_needs_field_and_writes_ack_no_preapproval"
+   },
+   {
+    "check": "F_request_shows_start_actual_displacement_target_collision_return_and_needs_field_confirmation"
+   },
+   {
+    "check": "phone_width_390_no_horizontal_scroll",
+    "scrollWidth": 390
+   },
+   {
+    "check": "after_F_approval_V_is_a_new_request_with_reset_field_confirmation"
+   },
+   {
+    "check": "native_wait_consumed_F_true_then_V_false_with_distinct_digests",
+    "digests": [
+     "fe53c4b32f53",
+     "db28e45b3592"
+    ]
+   },
+   {
+    "check": "full_chain_prepare_start_and_preapproval_option_unchanged"
+   },
+   {
+    "check": "full_chain_view_request_decided_with_existing_single_click"
+   },
+   {
+    "check": "only_fake_tmux_fuser_calls",
+    "launches": 2
+   },
+   {
+    "check": "no_page_exceptions"
+   }
+  ],
+  "page_exceptions": []
+ },
+ "deployment_notes": [
+  "Applying the candidate native would make LEFT_START_TO_LIFT report BACKEND_CHANGE_REQUIRED until console/CONSOLE17_TESTED_NATIVE_SHA256.json is re-recorded for the new launcher/full_chain bytes (the candidate passes the Console-17 suite 28/28). Not changed here.",
+  "RIGHT_X_TESTED_NATIVE_SHA256.json records the candidate native; the console offers RIGHT_X only when the active native equals it."
+ ]
+}

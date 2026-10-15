@@ -151,8 +151,10 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
                    'handoff_approach_right_approach'} <= finished)
     category = ('success' if not owner_alive and off_confirmed and not error and scope_done
                 else 'partial' if progressed else 'failure') if attempted else None
+    # RIGHT_X: the F/V moves are measurement motions, not a demonstration; a completed measurement session is never a success candidate
+    measuring = job.get('execution_scope') == 'RIGHT_X_FINITE_METROLOGY'
     auto_bucket = ('failed' if category == 'failure' or error or terminal.get('refused') or terminal.get('stopped_by') or terminal.get('exception')
-                   else 'success_candidates' if category == 'success' else 'partial') if attempted else None
+                   else 'success_candidates' if category == 'success' and not measuring else 'partial') if attempted else None
     missing = []
     frames = {key: 0 for key in CAMERAS}
     for row in lines(root / 'episode/frames.jsonl', errors):
@@ -207,6 +209,10 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
         for path in root.rglob('*'):
             if path.is_file() and not path.is_symlink():
                 originals.append({'file': path.relative_to(directory).as_posix(), 'bytes': path.stat().st_size})
+    measured = None
+    if measuring:
+        doc = load(root / 'RIGHT_X_METROLOGY.json', errors) if (root / 'RIGHT_X_METROLOGY.json').exists() else {'missing': 'RIGHT_X_METROLOGY.json'}
+        measured = {'status': doc.get('status', UNKNOWN), 'why': doc.get('why'), 'missing': doc.get('missing')}
     replay_id = next((key for key, path in ROOTS.items() if path.resolve() == root), directory.name)
     replay_ready = not owner_alive and any(row.get('t_host_s') is not None for row in events)
     record = {'schema': 'sweepick.console-run.v1', 'id': directory.name, 'state': state, 'category': category,
@@ -217,6 +223,7 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
               'safe_shutdown': 'RECORDED_BOTH_ARMS_OFF' if off_confirmed and error is None else 'NOT_PERFORMED' if limited_kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN') else UNKNOWN,
               'receive_contact': receive_summary(events),
               'limited_terminal': None if not limited else (limited_doc or {'terminal': UNKNOWN, 'missing': 'LIMITED_SCOPE_TERMINAL.json'}),
+              'right_x_metrology': measured,
               'recording': {'status': data_status, 'files': len(originals), 'bytes': sum(row['bytes'] for row in originals),
                             'camera_frames': frames, 'missing': sorted(set(missing)), 'errors': errors,
                             'coverage': coverage.get('status', UNKNOWN)},

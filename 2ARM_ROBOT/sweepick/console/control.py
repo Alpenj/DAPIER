@@ -1,4 +1,5 @@
 """Forward explicit operator requests to the existing managed A owner. Never open devices."""
+import ast
 from contextlib import contextmanager
 from datetime import datetime
 import fcntl
@@ -19,6 +20,7 @@ from records import atomic_json, capture_sources, run_record, save_review
 A = HOME / 'sweepick_261013_receive_alignment_restore'
 PYTHON = HOME / 'DAPIER/so101_imitation_learning/.venv/bin/python'
 SCOPE = 'Fresh LEFT PICK/LIFT/CARRY/RIGHT PREGRASP → 비접촉 관측 → 조건이 충족된 put-back/home/OFF'
+RIGHT_X_LABEL = 'Fresh LEFT PICK/LIFT/CARRY/RIGHT PREGRASP → T 관측 → RIGHT X F·V(이동마다 운영자 결정) → 기존 정상 역경로 → put-back/home/OFF'
 MANAGED = 'sweepick_console_field'
 FULL_CHAIN = 'FULL_CHAIN_RECEIVE_CONTACT'
 LEFT_TO_LIFT = 'LEFT_START_TO_LIFT'
@@ -30,24 +32,161 @@ LIMITED_BOUND_SOURCES = ('RUN_APPROVED_SESSION.py', 'confirmed_wrist_routes.py',
                          'revision/sweepick_jaw_profile_left.json', 'revision/sweepick_progress_profile.json', 'revision/console_feedback.py')
 LIMITED_TERMINALS = ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN', 'LEFT_CLOSE_UNAVAILABLE', 'LEFT_LIFT_FAILED',
                      'OPERATOR_STOPPED', 'BUS_OR_SERVO_FAULT', 'ENDED_BEFORE_LIFT', 'NOT_STARTED')
+# RIGHT_X_FINITE_METROLOGY: the existing chain, then T/F/V right X endpoints, then the existing normal return. Its own approval,
+# manifest and tested native SHA; every F/V move is its own request digest and its own operator decision.
+RIGHT_X = 'RIGHT_X_FINITE_METROLOGY'
+RIGHT_X_MOVE = 'RIGHT_X_FINITE_METROLOGY_MOVE'
+VIEW_MOVE = 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION_MOVE'
+RIGHT_X_BACKEND_MARKERS = {'RUN_APPROVED_SESSION.py': ("RIGHT_X = 'RIGHT_X_FINITE_METROLOGY'", 'rx.approval_errors(approval, out)', 'scope=rx.MOVE_SCOPE)'),
+                           'revision/right_x_metrology.py': ("SCOPE = 'RIGHT_X_FINITE_METROLOGY'", "MOVE_SCOPE = 'RIGHT_X_FINITE_METROLOGY_MOVE'",
+                                                             'def approval_errors(', 'DECLARED_WRITES = (', 'EXCLUDED = ('),
+                           'revision/sweepick_full_chain.py': ('def run_right_x_metrology(', 'RIGHT_X_METROLOGY.json')}
+RIGHT_X_BOUND_SOURCES = LIMITED_BOUND_SOURCES + ('revision/right_x_metrology.py', 'revision/current_view_candidate.py')
+RIGHT_X_T_POSES = ('AFTER_RIGHT_PREGRASP', 'AFTER_ADOPTED_VIEW')
+# P0-2: a finite operator input is not a physical permission. These are the facts only the field can confirm.
+FIELD_REQUIRED = 'FIELD_PHYSICAL_CONFIRMATION_REQUIRED'
+FIELD_ITEMS = ('direction_observed', 'start_pose_observed', 'noncontact_space_observed')
 
 
 TESTED_NATIVE = Path(__file__).resolve().parent / 'CONSOLE17_TESTED_NATIVE_SHA256.json'
+RIGHT_X_TESTED_NATIVE = Path(__file__).resolve().parent / 'RIGHT_X_TESTED_NATIVE_SHA256.json'
 
 
-def native_source_check():
-    """Console-17: the active native files against the SHA of the source that passed the Fake regression. Read-only."""
+def native_source_check(names=None, record=None):
+    """The active native files against the SHA of the source that passed the Fake regression. Read-only.
+    Default: the Console-17 record and files; RIGHT_X passes its own."""
+    names, record = names or LIMITED_BOUND_SOURCES, record or TESTED_NATIVE
     try:
-        tested = read_json(TESTED_NATIVE).get('files') or {}
+        tested = read_json(record).get('files') or {}
     except (OSError, ValueError, AttributeError):
         tested = {}
     rows = {}
-    for name in LIMITED_BOUND_SOURCES:
+    for name in names:
         path = A / name
         active = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
         rows[name] = {'active_sha256': active, 'tested_sha256': tested.get(name), 'match': bool(active and active == tested.get(name))}
-    return {'tested_record': str(TESTED_NATIVE), 'tested_record_present': bool(tested), 'files': rows,
+    return {'tested_record': str(record), 'tested_record_present': bool(tested), 'files': rows,
             'all_match': bool(tested) and all(row['match'] for row in rows.values())}
+
+
+def right_x_source_check():
+    return native_source_check(RIGHT_X_BOUND_SOURCES, RIGHT_X_TESTED_NATIVE)
+
+
+def right_x_contract():
+    """DECLARED_WRITES / EXCLUDED / scopes of the native right_x_metrology.py, read as literals (never imported)."""
+    tree = ast.parse((A / 'revision/right_x_metrology.py').read_text())
+    values = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) \
+                and node.targets[0].id in ('SCOPE', 'MOVE_SCOPE', 'DECLARED_WRITES', 'EXCLUDED'):
+            values[node.targets[0].id] = ast.literal_eval(node.value)
+    if values.get('SCOPE') != RIGHT_X or values.get('MOVE_SCOPE') != RIGHT_X_MOVE \
+            or not values.get('DECLARED_WRITES') or not values.get('EXCLUDED'):
+        raise ValueError('right_x_metrology.py does not state the RIGHT_X scope/write contract')
+    return {'declared_motor_writes': list(values['DECLARED_WRITES']), 'excluded': list(values['EXCLUDED'])}
+
+
+def right_x_backend():
+    """(supported, reason) for RIGHT_X_FINITE_METROLOGY: contract markers, readable write list AND active native SHA = tested source."""
+    missing = []
+    for name, markers in RIGHT_X_BACKEND_MARKERS.items():
+        try:
+            text = (A / name).read_text(errors='replace')
+        except OSError:
+            missing.append(f'{name}: not readable')
+            continue
+        missing.extend(f'{name}: {marker}' for marker in markers if marker not in text)
+    if missing:
+        return False, 'native 실행본에 RIGHT_X 측정 계약이 없음: ' + '; '.join(missing)
+    try:
+        right_x_contract()
+    except (OSError, ValueError, SyntaxError) as exc:
+        return False, f'native RIGHT_X write 목록을 읽을 수 없음: {exc}'
+    check = right_x_source_check()
+    if not check['all_match']:
+        differs = [name for name, row in check['files'].items() if not row['match']]
+        return False, ('RIGHT_X 시험 기록이 없음' if not check['tested_record_present'] else '활성 native SHA가 시험한 소스와 다름: ' + ', '.join(differs))
+    return True, 'native RIGHT_X 계약 표식 + 활성 native SHA = 시험한 소스 SHA'
+
+
+def finite_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def right_x_config(inputs):
+    """The five operator inputs -> the native right_x_metrology object. Mirrors the native config check (which re-checks at
+    launch). No default, recommended value or limit: a well-formed input is not a physical permission."""
+    if not isinstance(inputs, dict):
+        raise ControlError('RIGHT_X 운영자 입력 5개가 필요함')
+    problems = []
+    extra = set(inputs) - {'t_pose', 'x_basis_tool', 'x_basis_source', 'fit_displacement_m', 'verify_displacement_m'}
+    if extra:
+        problems.append(f'알 수 없는 입력 {sorted(extra)}')
+    if inputs.get('t_pose') not in RIGHT_X_T_POSES:
+        problems.append(f't_pose는 {RIGHT_X_T_POSES} 중 하나')
+    basis = inputs.get('x_basis_tool')
+    if not (isinstance(basis, list) and len(basis) == 3 and all(finite_number(v) for v in basis)):
+        problems.append('x_basis_tool은 유한한 숫자 3개(right_cube_grasp CURRENT_TOOL 좌표)')
+    elif not math.isclose(math.sqrt(sum(v * v for v in basis)), 1.0, rel_tol=0, abs_tol=1e-9):
+        problems.append('x_basis_tool은 단위 벡터(방향만; 크기는 변위가 정함)')
+    source = inputs.get('x_basis_source')
+    if not isinstance(source, str) or not source.strip():
+        problems.append('x_basis_source(축 근거 문장)가 필요함')
+    for key in ('fit_displacement_m', 'verify_displacement_m'):
+        if not finite_number(inputs.get(key)) or inputs.get(key) == 0:
+            problems.append(f'{key}는 운영자가 정한 0이 아닌 유한한 부호 있는 m 값')
+    if problems:
+        raise ControlError('RIGHT_X 입력 오류: ' + '; '.join(problems))
+    return {'t_pose': inputs['t_pose'], 'x_basis_tool': [float(v) for v in basis], 'x_basis_source': source.strip(),
+            'fit_displacement_m': float(inputs['fit_displacement_m']), 'verify_displacement_m': float(inputs['verify_displacement_m']),
+            'verify_from': 'F'}
+
+
+def right_x_physical_basis(cfg):
+    """P0-2: what each part of the plan rests on. The operator's numbers and the A model are not field evidence."""
+    return {'status': FIELD_REQUIRED, 'operator_displacement_is_physical_permission': False,
+            'direction': {'operator_stated': cfg['x_basis_source'], 'model': 'A model tool frame (candidate mapping, verified=false)',
+                          'field_confirmed': False},
+            'start_pose': {'model': 'each move is planned from the latest bus read at request time', 'field_confirmed': False},
+            'noncontact_space': {'model': 'A model collision check with the held SEARCH_PRIOR; not a measured clearance', 'field_confirmed': False},
+            'offline_probe_values': 'the ±5/10/20 mm offline probes covered two saved start states only; not a recommended value or a limit',
+            'confirmed_by': 'operator field observation at each F/V request (direction, start pose, non-contact space)'}
+
+
+def right_x_request_summary(proposed):
+    """Display facts of one RIGHT_X move request (P0-1): plan start actual, approved displacement, target, collision, return."""
+    candidate = proposed.get('candidate') if isinstance(proposed.get('candidate'), dict) else {}
+    plan = proposed.get('plan') if isinstance(proposed.get('plan'), dict) else {}
+    forward = plan.get('forward') if isinstance(plan.get('forward'), list) else []
+    step = forward[0] if len(forward) == 1 and isinstance(forward[0], dict) else {}
+    actual = proposed.get('actual_feedback') if isinstance(proposed.get('actual_feedback'), dict) else {}
+    ticks = actual.get('ticks') if isinstance(actual.get('ticks'), dict) else {}
+    start, target = step.get('start_ticks') or {}, step.get('target_ticks') or {}
+    ident = str(candidate.get('id') or '')
+    role = ident.rsplit('_', 1)[-1] if ident.startswith('RIGHT_X_METROLOGY_') and ident[-1:] in ('F', 'V') else None
+    try:
+        delta = {name: float(target[name]) - float(start[name]) for name in target}
+        from_actual = bool(start) and isinstance(ticks.get('right'), dict) and all(
+            round(float(start[name])) == round(float(ticks['right'][name])) for name in start)
+    except (KeyError, TypeError, ValueError):
+        delta, from_actual = None, False
+    cert = step.get('certificate') if isinstance(step.get('certificate'), dict) else {}
+    native = step.get('native_validation') if isinstance(step.get('native_validation'), dict) else {}
+    ret = plan.get('normal_return') if isinstance(plan.get('normal_return'), dict) else {}
+    return {'role': role, 'candidate_id': ident or None,
+            'commanded_tool_displacement_m': candidate.get('commanded_tool_displacement_m'),
+            'x_basis_tool': candidate.get('x_basis_tool'), 'x_basis_source': candidate.get('x_basis_source'),
+            'planned_from': {'bus_seq': actual.get('bus_seq'), 't_bus_monotonic': actual.get('t_bus_monotonic'),
+                             'right_ticks': ticks.get('right'), 'left_ticks': ticks.get('left'), 'plan_start_ticks': start or None},
+            'plan_start_equals_request_actual': from_actual, 'target_ticks': target or None, 'tick_change': delta,
+            'plan_ready': plan.get('ready'), 'step_count': len(forward), 'why': plan.get('why'),
+            'collision': cert.get('nominal_verdict'), 'first_contact': cert.get('first_nominal_contact'),
+            'native_executable': native.get('executable'), 'native_hard': native.get('hard'), 'native_provisional': native.get('provisional'),
+            'normal_return_ready': ret.get('ready'), 'normal_return_why': ret.get('why'),
+            'physical_status': FIELD_REQUIRED,
+            'evidence': {'direction': 'OPERATOR_STATED + A_MODEL', 'start_pose': 'BUS_ACTUAL_AT_REQUEST', 'noncontact_space': 'A_MODEL_ONLY',
+                         'field': 'NOT_CONFIRMED until the operator records it for this request'}}
 
 
 def limited_backend():
@@ -291,11 +430,27 @@ class Controller:
                     digest = hashlib.sha256(data).hexdigest()
                     proposed = json.loads(data)
                     answered = read_json(decision)
+                    # an earlier decision (another digest, e.g. the F approval while V waits) never answers this request
                     if answered.get('request_sha256') != digest:
-                        job['pending_view'] = {key: proposed.get(key) for key in ('scope', 'plan', 'candidate')}
-                        job['pending_view']['request_sha256'] = digest
-                except (OSError, ValueError):
+                        pending = {key: proposed.get(key) for key in ('scope', 'plan', 'candidate')}
+                        pending['request_sha256'] = digest
+                        allowed = (VIEW_MOVE, RIGHT_X_MOVE) if job.get('execution_scope') == RIGHT_X else (VIEW_MOVE,)
+                        if proposed.get('session_out') != job['session_out'] or proposed.get('scope') not in allowed:
+                            pending['approval_refused'] = '요청의 session/scope가 이 작업과 다름 · 거절만 가능'
+                        if proposed.get('scope') == RIGHT_X_MOVE:
+                            pending['right_x'] = right_x_request_summary(proposed)
+                        job['pending_view'] = pending
+                except (OSError, ValueError, AttributeError):
                     job['pending_view_state'] = 'UNKNOWN · 요청 파일 수신 중'
+            if job.get('execution_scope') == RIGHT_X:
+                try:
+                    measured = read_json(Path(job['session_out']) / 'RIGHT_X_METROLOGY.json')
+                    job['right_x_record'] = {'status': measured.get('status'), 'why': measured.get('why'),
+                                             'endpoints': [e.get('role') for e in measured.get('endpoints') or [] if isinstance(e, dict)],
+                                             'moves': [{k: m.get(k) for k in ('role', 'plan_ready', 'approved', 'result')}
+                                                       for m in measured.get('moves') or [] if isinstance(m, dict)]} if measured else None
+                except (OSError, ValueError, AttributeError):
+                    job['right_x_record'] = {'status': 'UNKNOWN', 'why': 'RIGHT_X_METROLOGY.json unreadable'}
         if alive and not ours:
             state, reason = 'BLOCKED', '기존 managed owner가 존재함'
         recovery = self.recovery_confirmation(job) if job and state in ('FAULT', 'LIMITED_HOLDING') else None
@@ -303,7 +458,8 @@ class Controller:
             job['operator_recovery'] = recovery
         if recovery:
             reason = (reason or '원래 실패 기록 보존') + ' · 수동 복구 처리 확인됨; 새 준비와 이번 현장 승인 후 fresh 상태로 재검사'
-        return {'csrf_token': self.csrf_token, 'execution_connected': True, 'state': state, 'scope': SCOPE, 'owner_alive': ours,
+        label = RIGHT_X_LABEL if (job or {}).get('execution_scope') == RIGHT_X else SCOPE
+        return {'csrf_token': self.csrf_token, 'execution_connected': True, 'state': state, 'scope': label, 'owner_alive': ours,
                 'active': job, 'can_prepare': not alive and (state not in ('FAULT', 'LIMITED_HOLDING') or recovery is not None),
                 'can_confirm_recovery': not alive and state in ('FAULT', 'LIMITED_HOLDING') and recovery is None,
                 'can_start': not alive and state == 'PREPARED', 'can_stop': bool(ours and state != 'STOP_REQUESTED' and not job.get('stop_sent')),
@@ -406,6 +562,11 @@ class Controller:
             if not supported:
                 raise ControlError('BACKEND_CHANGE_REQUIRED: ' + reason)
             return execution_scope
+        if execution_scope == RIGHT_X:
+            supported, reason = right_x_backend()
+            if not supported:
+                raise ControlError('BACKEND_CHANGE_REQUIRED: ' + reason)
+            return execution_scope
         if execution_scope != FULL_CHAIN:
             raise ControlError('지원되지 않는 execution_scope')
         return execution_scope
@@ -424,6 +585,11 @@ class Controller:
                             'bytes': path.stat().st_size if path.is_file() else None})
         launcher_available = (A / 'RUN_APPROVED_SESSION.py').is_file()
         limited_ok, limited_reason = limited_backend()
+        right_x_ok, right_x_reason = right_x_backend()
+        try:
+            right_x_writes = right_x_contract()
+        except (OSError, ValueError, SyntaxError):
+            right_x_writes = {'declared_motor_writes': [], 'excluded': []}
         return {'schema': 'sweepick.operation-contract.v1', 'checked_at': datetime.now().astimezone().isoformat(),
             'scopes': [
                 {'id': FULL_CHAIN, 'label': '기존 Full-chain 실행', 'supported': launcher_available,
@@ -443,13 +609,29 @@ class Controller:
                                      'LIFT 이후 자동 LOWER/OPEN/HOME/Torque OFF', 'ACT'],
                  'reason': limited_reason + ' · 기존 Full-chain 승인은 사용할 수 없고 이 범위의 새 승인·Manifest가 필요합니다.',
                  'termination': ('LIFT 뒤 LIMITED_SCOPE_TERMINAL.json 기록 후 owner 종료. 왼팔은 LIFT Goal로 Torque ON 유지 · 정상 HOME/RELEASE/safe shutdown 아님 · '
-                                 '다음 실행은 수동 복구 확인 전 차단. LIFT 전 기존 거부/복귀 조건은 그대로.')}],
+                                 '다음 실행은 수동 복구 확인 전 차단. LIFT 전 기존 거부/복귀 조건은 그대로.')},
+                {'id': RIGHT_X, 'label': '오른팔 X축 T/F/V 비접촉 측정', 'supported': right_x_ok,
+                 'backend_status': 'SUPPORTED_RIGHT_X_METROLOGY_BACKEND' if right_x_ok else 'BACKEND_CHANGE_REQUIRED',
+                 'can_prepare': right_x_ok and status['can_prepare'] and occupancy == {},
+                 'included_stages': right_x_writes['declared_motor_writes'], 'excluded_stages': right_x_writes['excluded'],
+                 'operator_inputs': [
+                     {'key': 't_pose', 'choices': list(RIGHT_X_T_POSES), 'default': None},
+                     {'key': 'x_basis_tool', 'kind': 'unit vector, right_cube_grasp CURRENT_TOOL frame', 'default': None},
+                     {'key': 'x_basis_source', 'kind': 'evidence sentence for the axis', 'default': None},
+                     {'key': 'fit_displacement_m', 'kind': 'signed non-zero metres (F)', 'default': None, 'limit': None},
+                     {'key': 'verify_displacement_m', 'kind': 'signed non-zero metres (V, from the measured F endpoint)', 'default': None, 'limit': None}],
+                 'physical_basis': {'status': FIELD_REQUIRED, 'operator_displacement_is_physical_permission': False,
+                                    'offline_probe_values': '±5/10/20 mm 오프라인 계획값은 권장값·안전 한계가 아님'},
+                 'reason': right_x_reason + ' · 기존 Full-chain·LEFT_START_TO_LIFT 승인과 START 사전 승인은 쓰지 않습니다. 이 범위 전용 승인·Manifest와 F/V 이동마다 별도 결정이 필요합니다.',
+                 'termination': ('T·F·V 끝점 기록 뒤(또는 계획 불가·거절·관측 누락 시 그 자리에서) 기존 정상 역경로 → put-back/home/OFF. '
+                                 'STOP·Servo/Bus fault·왼팔 보유 미확인은 기존 중단 계약: 자동 복귀 없음, 운영자 수동 회수.')}],
             'owner': {'state': status['state'], 'owner_alive': status['owner_alive'],
                       'active_run_id': (status['active'] or {}).get('id'), 'device_occupancy': occupancy,
                       'device_query_error': query_error}, 'sources': sources,
             'observation': {'status': 'NOT_CHECKED', 'basis': '새 reader/관절 조회 없음. 기존 owner의 실측 화면과 시각을 별도로 확인합니다.'},
             'calibration': {'status': 'NOT_CHECKED', 'basis': '장치 identity/EEPROM 및 Calibration 실측 대조 미수행. 기존 실행기 검사는 유지합니다.'},
             'limited_source_check': native_source_check(),
+            'right_x_source_check': right_x_source_check(),
             'device_access': False}
 
     def auto_prepare_next(self):
@@ -472,8 +654,14 @@ class Controller:
                     self.save(current)
         return self.status()
 
-    def prepare(self, source_session=None, *, execution_scope=FULL_CHAIN, auto_after=None):
+    def prepare(self, source_session=None, *, execution_scope=FULL_CHAIN, auto_after=None, right_x=None):
         self.require_execution_scope(execution_scope)
+        if execution_scope == RIGHT_X:
+            if source_session is not None or auto_after is not None:
+                raise ControlError('RIGHT_X 측정은 현재 입력의 새 세션으로만, 운영자 입력과 함께 준비함')
+            right_x = right_x_config(right_x)
+        elif right_x is not None:
+            raise ControlError('RIGHT_X 입력은 RIGHT_X_FINITE_METROLOGY 범위에만 해당')
         if source_session is not None and (not isinstance(source_session, str)
                 or (source_session not in ROOTS and not self.run_directory(source_session))):
             raise ControlError('알 수 없는 저장 세션')
@@ -500,12 +688,15 @@ class Controller:
             files = [Path(name) for name in manifest['files']]
             files.append(A / 'revision/console_feedback.py')
             limited = execution_scope == LEFT_TO_LIFT
+            measuring = execution_scope == RIGHT_X
             if limited:                                                  # this scope binds the current launcher/executors explicitly
                 files.extend(A / name for name in LIMITED_BOUND_SOURCES)
-            prepared = {'scope': LEFT_TO_LIFT if limited else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION', 'files': {
+            if measuring:
+                files.extend(A / name for name in RIGHT_X_BOUND_SOURCES)
+            prepared = {'scope': execution_scope if limited or measuring else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION', 'files': {
                 str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in dict.fromkeys(files)}}
-            if limited:
-                prepared['execution_scope'] = LEFT_TO_LIFT
+            if limited or measuring:
+                prepared['execution_scope'] = execution_scope
             try:
                 atomic_json(directory / 'MANIFEST.json', prepared)
                 console = Path(__file__).resolve().parent
@@ -520,6 +711,17 @@ class Controller:
                             'Ends after held_after_lift with the left arm still powered. No CARRY, no RIGHT arm command, no automatic return after LIFT. No automatic next session.',
                             'right_arm_commands_permitted': False, 'automatic_return_after_lift': False, 'permission_to_open_devices': False,
                             'unchanged_wrist_mount_and_routes': False, 'policy_training_allowed': False}
+            elif measuring:                                              # never derived from the full-chain approval
+                contract = right_x_contract()
+                approval = {'scope': RIGHT_X, 'permission_detail': 'One supervised fresh session: the existing LEFT PICK/LIFT/CARRY and RIGHT '
+                            'approach, then the T observation and the right ARM5 X moves F and V, each by its own operator decision, then the '
+                            'existing normal reverse, put-back, home and Torque OFF. No right gripper command, insertion, close or left release. '
+                            'No automatic next session.',
+                            'declared_motor_writes': contract['declared_motor_writes'], 'excluded': contract['excluded'],
+                            'right_gripper_commands_permitted': False, 'insertion_permitted': False, 'close_permitted': False,
+                            'left_release_permitted': False, 'right_x_metrology': right_x,
+                            'right_x_physical_basis': right_x_physical_basis(right_x), 'writes_acknowledged': False,
+                            'permission_to_open_devices': False, 'unchanged_wrist_mount_and_routes': False, 'policy_training_allowed': False}
             else:
                 approval = read_json(A / 'NONCONTACT_START_APPROVAL.json')
             approval.update(approved=False, permission_to_execute=False, field_ready=False, session_out=str(out),
@@ -533,6 +735,10 @@ class Controller:
                    'preparation': 'FRESH_SESSION' if source_session is None else 'ARCHIVE_REFERENCE'}
             if auto_after is not None:
                 job['auto_prepared_after'] = auto_after
+            if measuring:
+                job['right_x_metrology'] = right_x
+                job['right_x_physical_basis'] = approval['right_x_physical_basis']
+                job['right_x_declared_motor_writes'], job['right_x_excluded'] = approval['declared_motor_writes'], approval['excluded']
             atomic_json(directory / 'JOB.json', job)
             self.save(job)
         return self.status()
@@ -703,7 +909,8 @@ class Controller:
                 owners[path] = result.stdout.strip()
         return owners
 
-    def start(self, job_id, *, field_ready=False, mounts_unchanged=False, supervised=False, execution_scope=None, preapprove_view=False):
+    def start(self, job_id, *, field_ready=False, mounts_unchanged=False, supervised=False, execution_scope=None, preapprove_view=False,
+              writes_acknowledged=False):
         if execution_scope is not None:
             self.require_execution_scope(execution_scope)
         if not all(value is True for value in (field_ready, mounts_unchanged, supervised)):
@@ -720,16 +927,29 @@ class Controller:
                 raise ControlError('장치 owner가 이미 존재함: ' + str(owners))
             directory = Path(job['session_out']).parent
             approval = read_json(directory / 'APPROVAL.json')
-            expected = LEFT_TO_LIFT if scope == LEFT_TO_LIFT else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION'
+            expected = scope if scope in (LEFT_TO_LIFT, RIGHT_X) else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION'
             prepared_manifest = read_json(directory / 'MANIFEST.json') or {}
             manifest_scope = prepared_manifest.get('scope')
-            if approval.get('scope') != expected or approval.get('execution_scope', FULL_CHAIN) != scope or manifest_scope != expected:
+            if approval.get('scope') != expected or approval.get('execution_scope', FULL_CHAIN) != scope or manifest_scope != expected \
+                    or (scope == RIGHT_X and prepared_manifest.get('execution_scope') != RIGHT_X):
                 raise ControlError('준비된 승인/Manifest 범위가 실행 범위와 다름; START하지 않음')
-            if scope == LEFT_TO_LIFT:                                    # the approved manifest must bind exactly the tested native bytes
-                tested = native_source_check()['files']
+            if scope in (LEFT_TO_LIFT, RIGHT_X):                         # the approved manifest must bind exactly the tested native bytes
+                tested = (native_source_check() if scope == LEFT_TO_LIFT else right_x_source_check())['files']
                 bound = prepared_manifest.get('files') or {}
                 if any(bound.get(str(A / name)) != row['tested_sha256'] for name, row in tested.items()):
                     raise ControlError('승인 Manifest가 시험한 native 소스 SHA와 다름; START하지 않음')
+            if scope == RIGHT_X:
+                if writes_acknowledged is not True:
+                    raise ControlError('RIGHT_X: 전체 조작 단계와 제외 범위 확인 필요; START하지 않음')
+                if preapprove_view is True:
+                    raise ControlError('START 사전 승인은 RIGHT_X_FINITE_METROLOGY에 적용하지 않음; F/V는 이동마다 결정')
+                contract = right_x_contract()
+                if approval.get('declared_motor_writes') != contract['declared_motor_writes'] or approval.get('excluded') != contract['excluded']:
+                    raise ControlError('준비된 write/제외 목록이 native 계약과 다름; START하지 않음')
+                if right_x_config({k: v for k, v in (approval.get('right_x_metrology') or {}).items() if k != 'verify_from'}) \
+                        != approval.get('right_x_metrology') or approval.get('right_x_metrology') != job.get('right_x_metrology'):
+                    raise ControlError('준비된 RIGHT_X 입력이 작업 기록과 다름; START하지 않음')
+                approval['writes_acknowledged'] = True
             if preapprove_view is True:
                 if scope != FULL_CHAIN:
                     raise ControlError('관측 이동 사전 승인은 FULL_CHAIN_RECEIVE_CONTACT의 비접촉 관측에만 해당')
@@ -777,14 +997,37 @@ class Controller:
             self.save(job)
         return self.status()
 
-    def view_decision(self, job_id, digest, approved):
+    def view_decision(self, job_id, digest, approved, field_confirmation=None):
         with self.locked():
             job = self.selected(job_id)
             pending = (self.status()['active'] or {}).get('pending_view')
             if not pending or pending['request_sha256'] != digest or not isinstance(approved, bool):
                 raise ControlError('현재 actual 기반 관측 이동 요청과 일치하지 않음')
+            if approved and pending.get('approval_refused'):
+                raise ControlError(pending['approval_refused'])
             record = {'approved': approved, 'request_sha256': digest, 'session_out': job['session_out'],
                       'scope': pending['scope'], 'operator_source': 'local_console_explicit_click'}
+            if pending['scope'] == RIGHT_X_MOVE:
+                summary = pending.get('right_x') or {}
+                record['role'] = summary.get('role')
+                record['model_plan_basis'] = {k: summary.get(k) for k in ('commanded_tool_displacement_m', 'x_basis_tool', 'collision',
+                                                                           'native_executable', 'normal_return_ready', 'plan_start_equals_request_actual')}
+                record['operator_displacement_is_physical_permission'] = False
+                if approved:
+                    # P0-2: the approval of this one move rests on what the operator saw in the field now, not on the numbers
+                    fc = field_confirmation if isinstance(field_confirmation, dict) else {}
+                    note = fc.get('direction_note')
+                    missing = [k for k in FIELD_ITEMS if fc.get(k) is not True] + ([] if isinstance(note, str) and note.strip() else ['direction_note'])
+                    if missing:
+                        raise ControlError(f'{FIELD_REQUIRED}: 이 요청의 현장 확인 없음 ({", ".join(missing)}); 승인하지 않음')
+                    if summary.get('plan_ready') is not True or summary.get('step_count') != 1 or summary.get('collision') != 'CLEAR' \
+                            or summary.get('native_executable') is not True or summary.get('normal_return_ready') is not True \
+                            or summary.get('plan_start_equals_request_actual') is not True or summary.get('role') not in ('F', 'V'):
+                        raise ControlError('요청 계획이 1개 X 목표·충돌 CLEAR·native 실행 가능·정상 역경로·실측 시작을 모두 갖추지 않음; 승인하지 않음')
+                    record['field_physical_confirmation'] = {
+                        **{k: True for k in FIELD_ITEMS}, 'direction_note': note.strip(),
+                        'source': 'local_operator_field_observation', 'at': datetime.now().astimezone().isoformat(),
+                        'scope': 'this request digest only'}
             path = Path(job['session_out']) / 'OBSERVATION_MOVE_APPROVAL.json'
             temporary = path.with_suffix('.tmp')
             temporary.write_text(json.dumps(record))

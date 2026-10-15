@@ -10,6 +10,8 @@ const STAGE_ORDER = ['PICK', 'LIFT', 'CARRY', 'PREGRASP', 'OBSERVE'];
 const CATEGORY_LABEL = { success: '성공', failure: '실패', partial: '부분성공' };
 const OWNER_ACTIVE_STATES = ['STARTING', 'RUNNING', 'STOP_REQUESTED'];
 const OWNER_TERMINAL_STATES = ['ENDED', 'FAULT', 'LIMITED_HOLDING'];
+const RIGHT_X = 'RIGHT_X_FINITE_METROLOGY';
+const RIGHT_X_MOVE = 'RIGHT_X_FINITE_METROLOGY_MOVE';
 const state = {
   sessions: [], session: null, snapshot: null, plan: null, prepareSource: undefined, category: 'all',
   runs: [], runBucket: 'all', runsBusy: false, runsRefreshPending: false, lastTerminalKey: null,
@@ -107,7 +109,7 @@ function applyControl(control) {
   const previousJob = state.control?.active?.id;
   state.control = control;
   if (control.active?.id !== previousJob) {
-    $('fieldReady').checked = false;
+    $('fieldReady').checked = false; $('rightXWritesAck').checked = false;
     $('recoveryPower').checked = false; $('recoveryWorkspace').checked = false;
     state.recoveryJobId = null;
     if ($('recoveryDialog').open) $('recoveryDialog').close();
@@ -185,8 +187,12 @@ function renderControl() {
   $('recoveryControl').disabled = !connected || state.controlBusy;
   $('confirmRecovery').disabled = !connected || control?.can_confirm_recovery !== true || state.controlBusy
     || state.recoveryJobId !== active?.id || !$('recoveryPower').checked || !$('recoveryWorkspace').checked;
+  const rightXProblems = state.prepareScope === RIGHT_X ? rightXInputProblems(rightXInputs()) : [];
+  $('rightXInputs').hidden = state.prepareScope !== RIGHT_X;
+  $('rightXInputState').textContent = rightXProblems.length ? `입력 필요: ${rightXProblems.join(', ')}` : '입력 형식 확인됨 · 실물 허가 아님 · 서버와 launcher가 다시 검사';
+  $('prepareControl').textContent = state.prepareScope === RIGHT_X ? 'RIGHT_X 새 측정 세션 준비' : state.prepareScope === 'LEFT_START_TO_LIFT' ? 'LEFT_START_TO_LIFT 새 실물 세션 준비' : 'FULL_CHAIN 새 실물 세션 준비';
   $('prepareControl').disabled = !connected || control?.can_prepare !== true || !state.plan
-    || state.prepareSource === undefined || state.controlBusy;
+    || state.prepareSource === undefined || state.controlBusy || rightXProblems.length > 0;
   $('rerunRecovery').hidden = !['FAULT', 'LIMITED_HOLDING'].includes(control?.state);
   $('rerunBlockReason').textContent = control?.can_confirm_recovery === true
     ? '이전 실패 작업의 수동 복구 확인이 없어 새 준비가 막혀 있습니다. 아래에서 팔·물체 지지 후 전원 차단과 배치 복원 처리를 확인하십시오. 이미 사용한 START 승인은 재사용할 수 없습니다.'
@@ -203,10 +209,22 @@ function renderControl() {
   $('preparedScope').textContent = display(active?.scope ?? control?.scope);
   $('fieldReady').disabled = !connected || !active || active.state !== 'PREPARED' || control?.can_start !== true || state.controlBusy;
   if (active?.consumed === true) $('fieldReady').checked = true;
-  $('startControl').disabled = $('fieldReady').disabled || !$('fieldReady').checked;
-  $('preapproveView').disabled = $('fieldReady').disabled || active?.execution_scope === 'LEFT_START_TO_LIFT';
+  const measuring = active?.execution_scope === RIGHT_X;
+  if (active?.consumed === true && measuring) $('rightXWritesAck').checked = true;
+  $('rightXPrepared').hidden = !measuring;
+  if (measuring) {
+    const cfg = active.right_x_metrology || {};
+    $('rightXPreparedInputs').textContent = `T ${display(cfg.t_pose)} · 축 ${JSON.stringify(cfg.x_basis_tool)} (${display(cfg.x_basis_source)}) · F ${display(cfg.fit_displacement_m)} m · V ${display(cfg.verify_displacement_m)} m (from ${display(cfg.verify_from)})`;
+    $('rightXPreparedPhysical').textContent = `${display(active.right_x_physical_basis?.status)} · 입력 변위는 실물 허가 아님 · F/V 요청마다 현장 확인`;
+    listItems($('rightXWrites'), active.right_x_declared_motor_writes);
+    listItems($('rightXExcluded'), active.right_x_excluded);
+  }
+  $('rightXWritesAck').disabled = $('fieldReady').disabled;
+  $('startControl').disabled = $('fieldReady').disabled || !$('fieldReady').checked || (measuring && !$('rightXWritesAck').checked);
+  $('preapproveView').disabled = $('fieldReady').disabled || active?.execution_scope === 'LEFT_START_TO_LIFT' || measuring;
   if ($('preapproveView').disabled) $('preapproveView').checked = false;
-  const scopeName = active?.execution_scope === 'LEFT_START_TO_LIFT' ? 'LEFT_START_TO_LIFT' : 'FULL_CHAIN';
+  $('preapproveView').closest('label').hidden = measuring;
+  const scopeName = active?.execution_scope === 'LEFT_START_TO_LIFT' ? 'LEFT_START_TO_LIFT' : measuring ? 'RIGHT_X' : 'FULL_CHAIN';
   $('startControl').textContent = control?.state === 'LIMITED_HOLDING' ? 'LEFT_START_TO_LIFT 보유 종료 · 수동 복구 전 새 실행 차단'
     : control?.state === 'FAULT' ? `${scopeName} 중단됨 · 새 실행 차단`
     : active?.consumed ? `${scopeName} 이번 세션 START 이미 전달됨` : `${scopeName} 현장 승인 후 실물 START`;
@@ -249,14 +267,60 @@ function sourceLabel(source) {
   return source === null ? '현재 입력 · FULL_CHAIN 새 실물 세션' : display(source);
 }
 
+// RIGHT_X: the operator's five inputs as the server expects them (mm in the form -> m). Empty means not entered; no default.
+function rightXInputs() {
+  const number = (id) => $(id).value.trim() === '' ? null : Number($(id).value);
+  const mm = (id) => number(id) === null ? null : number(id) / 1000;
+  return { t_pose: $('rightXTPose').value || null, x_basis_tool: ['rightXBasisX', 'rightXBasisY', 'rightXBasisZ'].map(number),
+    x_basis_source: $('rightXBasisSource').value.trim() || null, fit_displacement_m: mm('rightXFit'), verify_displacement_m: mm('rightXVerify') };
+}
+
+function rightXInputProblems(inputs) {
+  const problems = [];
+  if (!inputs.t_pose) problems.push('T 자세');
+  const basis = inputs.x_basis_tool;
+  if (basis.some((v) => v === null || !Number.isFinite(v))) problems.push('축 3성분');
+  else if (Math.abs(Math.hypot(...basis) - 1) > 1e-9) problems.push('축은 단위 벡터');
+  if (!inputs.x_basis_source) problems.push('축 근거');
+  if (!Number.isFinite(inputs.fit_displacement_m) || inputs.fit_displacement_m === 0) problems.push('F 변위');
+  if (!Number.isFinite(inputs.verify_displacement_m) || inputs.verify_displacement_m === 0) problems.push('V 변위');
+  return problems;
+}
+
+const ticksText = (ticks) => ticks && typeof ticks === 'object' ? Object.entries(ticks).map(([k, v]) => `${k}=${finiteNumber(v) ? Number(v).toFixed(0) : display(v)}`).join(' ') : 'UNKNOWN';
+const signedTicks = (ticks) => ticks && typeof ticks === 'object' ? Object.entries(ticks).map(([k, v]) => `${k} ${finiteNumber(v) ? (Number(v) > 0 ? '+' : '') + Number(v).toFixed(0) : display(v)}`).join(' · ') : 'UNKNOWN';
+
+function rightXFieldConfirmed() {
+  return $('rightXDirection').checked && $('rightXStartPose').checked && $('rightXSpace').checked && $('rightXDirectionNote').value.trim() !== '';
+}
+
 function renderPendingView(pending) {
   $('pendingView').hidden = !pending;
-  if (!pending) return;
-  $('pendingViewScope').textContent = display(pending.scope);
-  $('pendingViewPlan').textContent = proposalText(pending.plan);
-  $('pendingViewCandidate').textContent = proposalText(pending.candidate);
-  $('approveView').disabled = state.control?.execution_connected !== true || state.controlBusy;
-  $('declineView').disabled = state.control?.execution_connected !== true || state.controlBusy;
+  if (!pending) { state.pendingDigest = null; return; }
+  if (state.pendingDigest !== pending.request_sha256) {               // a new request (F -> V): the field confirmation starts empty
+    state.pendingDigest = pending.request_sha256;
+    ['rightXDirection', 'rightXStartPose', 'rightXSpace'].forEach((id) => { $(id).checked = false; });
+    $('rightXDirectionNote').value = '';
+  }
+  const x = pending.right_x;
+  $('pendingRightX').hidden = !x;
+  $('pendingViewScope').textContent = display(pending.scope) + (pending.approval_refused ? ` · ${pending.approval_refused}` : '');
+  if (x) {
+    const metres = finiteNumber(x.commanded_tool_displacement_m) ? Number(x.commanded_tool_displacement_m) : null;
+    $('pendingRightXRole').textContent = `RIGHT_X ${display(x.role)} 이동`;
+    $('pendingRightXPhysical').textContent = display(x.physical_status);
+    $('pendingRightXDisplacement').textContent = `${metres === null ? 'UNKNOWN' : `${(metres * 1000).toFixed(3)} mm (${metres} m)`} · 축 ${JSON.stringify(x.x_basis_tool)}`;
+    $('pendingRightXBasis').textContent = display(x.x_basis_source);
+    $('pendingRightXFrom').textContent = `bus_seq ${display(x.planned_from?.bus_seq)} · right ${ticksText(x.planned_from?.right_ticks)} · 계획 시작=요청 실측 ${display(x.plan_start_equals_request_actual)}`;
+    $('pendingRightXTarget').textContent = `${ticksText(x.target_ticks)} · 변화 ${signedTicks(x.tick_change)}`;
+    $('pendingRightXCollision').textContent = `충돌 ${display(x.collision)}${x.first_contact ? ` (${proposalText(x.first_contact)})` : ''} · native 실행 가능 ${display(x.native_executable)} · 목표 수 ${display(x.step_count)} · 계획 ready ${display(x.plan_ready)}`;
+    $('pendingRightXReturn').textContent = `정상 역경로 ${display(x.normal_return_ready)}${x.normal_return_why ? ` · ${x.normal_return_why}` : ''}`;
+    $('pendingRightXEvidence').textContent = Object.entries(x.evidence || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'UNKNOWN';
+  }
+  const usable = state.control?.execution_connected === true && !state.controlBusy;
+  $('approveView').textContent = x ? `${display(x.role)} 이동 승인 (이 요청 1건)` : '제안 이동 승인';
+  $('approveView').disabled = !usable || Boolean(pending.approval_refused) || (x && !rightXFieldConfirmed());
+  $('declineView').disabled = !usable;
 }
 
 function filteredSessions() {
@@ -935,8 +999,11 @@ async function openRerunPlan(sourceSession = state.session?.id, scope = 'FULL_CH
   state.prepareSource = sourceSession;
   state.prepareScope = scope;
   const limited = scope === 'LEFT_START_TO_LIFT';
-  $('rerunTitle').textContent = limited ? 'LEFT_START_TO_LIFT 제한 실물 세션 준비' : sourceSession === null ? 'FULL_CHAIN 다음 실물 세션 준비' : 'FULL_CHAIN 저장 세션 기반 재실행 준비';
-  $('prepareDescription').textContent = limited
+  const measuring = scope === RIGHT_X;
+  $('rerunTitle').textContent = measuring ? 'RIGHT_X_FINITE_METROLOGY 측정 세션 준비' : limited ? 'LEFT_START_TO_LIFT 제한 실물 세션 준비' : sourceSession === null ? 'FULL_CHAIN 다음 실물 세션 준비' : 'FULL_CHAIN 저장 세션 기반 재실행 준비';
+  $('prepareDescription').textContent = measuring
+    ? 'RIGHT_X_FINITE_METROLOGY · 기존 체인 → T 관측 → F·V X 이동(각각 별도 결정) → 기존 정상 역경로. 아래 입력 5개로 이 범위 전용 승인·Manifest만 준비합니다. START하지 않습니다.'
+    : limited
     ? 'LEFT_START_TO_LIFT · 현재 입력으로 새 출력과 이 범위 전용 승인·Manifest만 준비합니다. LIFT 뒤 왼팔은 Torque ON으로 남고 자동 HOME/OFF는 없습니다.'
     : sourceSession === null
     ? 'FULL_CHAIN_RECEIVE_CONTACT · 저장 기록과 독립된 현재 입력으로 새 출력 디렉터리와 실행 작업만 준비합니다.'
@@ -950,7 +1017,7 @@ async function openRerunPlan(sourceSession = state.session?.id, scope = 'FULL_CH
     if (plan.source_session !== sourceSession) throw new Error('계획의 입력 컨텍스트가 요청과 일치하지 않습니다.');
     state.plan = plan;
     $('planSource').textContent = sourceLabel(plan.source_session);
-    $('planScope').textContent = display(plan.scope);
+    $('planScope').textContent = scope === RIGHT_X ? 'RIGHT_X_FINITE_METROLOGY · 기존 체인 → T 관측 → F·V X 이동(이동마다 결정) → 기존 정상 역경로' : display(plan.scope);
     $('planApproval').textContent = display(plan.approval_state);
     $('planLauncher').textContent = display(plan.existing_launcher);
     $('approvedBadge').textContent = plan.approved === true ? '승인됨' : '승인 대기';
@@ -1012,16 +1079,24 @@ async function runControlAction(path, body, failureLabel) {
 
 async function prepareControl() {
   if (!state.plan || state.prepareSource === undefined || state.control?.execution_connected !== true || state.control.can_prepare !== true) return;
-  await runControlAction('/api/control/prepare', { source_session: state.prepareSource, execution_scope: state.prepareScope || 'FULL_CHAIN_RECEIVE_CONTACT' }, '실물 세션 준비 실패');
+  const body = { source_session: state.prepareSource, execution_scope: state.prepareScope || 'FULL_CHAIN_RECEIVE_CONTACT' };
+  if (state.prepareScope === RIGHT_X) {
+    if (rightXInputProblems(rightXInputs()).length) return;
+    body.right_x = rightXInputs();
+  }
+  await runControlAction('/api/control/prepare', body, '실물 세션 준비 실패');
 }
 
 async function startControl() {
   const active = state.control?.active;
   if (!active || state.control?.execution_connected !== true || state.control.can_start !== true || !$('fieldReady').checked) return;
+  const measuring = active.execution_scope === RIGHT_X;
+  if (measuring && !$('rightXWritesAck').checked) return;
   await runControlAction('/api/control/start', {
+    writes_acknowledged: measuring && $('rightXWritesAck').checked === true,
     job_id: active.id, field_ready: true, mounts_unchanged: true, supervised: true,
     execution_scope: active.execution_scope || 'FULL_CHAIN_RECEIVE_CONTACT',
-    preapprove_view: active.execution_scope !== 'LEFT_START_TO_LIFT' && $('preapproveView').checked === true,
+    preapprove_view: !['LEFT_START_TO_LIFT', RIGHT_X].includes(active.execution_scope) && $('preapproveView').checked === true,
   }, '실물 START 실패');
   if (state.control?.active?.id === active.id && state.control.active.consumed && liveViewAvailable()) {
     if ($('rerunDialog').open) $('rerunDialog').close();
@@ -1054,9 +1129,13 @@ async function decidePendingView(approved) {
   const active = state.control?.active;
   const pending = active?.pending_view;
   if (!active || !pending || state.control?.execution_connected !== true) return;
-  await runControlAction('/api/control/view-decision', {
-    job_id: active.id, request_sha256: pending.request_sha256, approved,
-  }, '관측 이동 결정 실패');
+  const body = { job_id: active.id, request_sha256: pending.request_sha256, approved };
+  if (approved && pending.scope === RIGHT_X_MOVE) {
+    if (!rightXFieldConfirmed()) return;
+    body.field_confirmation = { direction_observed: true, start_pose_observed: true, noncontact_space_observed: true,
+      direction_note: $('rightXDirectionNote').value.trim() };
+  }
+  await runControlAction('/api/control/view-decision', body, '관측 이동 결정 실패');
 }
 
 async function init() {
@@ -1104,6 +1183,10 @@ $('liveView').addEventListener('click', enterLiveMode);
 $('archiveView').addEventListener('click', exitLiveMode);
 $('prepareControl').addEventListener('click', prepareControl);
 $('fieldReady').addEventListener('change', renderControl);
+['rightXTPose', 'rightXBasisX', 'rightXBasisY', 'rightXBasisZ', 'rightXBasisSource', 'rightXFit', 'rightXVerify', 'rightXWritesAck',
+  'rightXDirection', 'rightXDirectionNote', 'rightXStartPose', 'rightXSpace'].forEach((id) => {
+  $(id).addEventListener('input', renderControl); $(id).addEventListener('change', renderControl);
+});
 $('startControl').addEventListener('click', startControl);
 $('controlStop').addEventListener('click', stopControl);
 $('recoveryControl').addEventListener('click', () => {

@@ -27,24 +27,24 @@
       "source_group": "console",
       "source_name": "app.py",
       "component": "CONSOLE",
-      "source_sha256": "83ee66bef5f41d9c9667a52b9ae5a3375f682b815003f833cf629c3a97e748b2",
-      "public_sha256": "be7f90fc64be1a0b08930c0fc061555e4a1f29ef63df1fd563e783cf5c2d2102",
-      "bytes": 18167,
+      "source_sha256": "0d2b0829a0c30652b6e97d1d15ecc76b7405ab69642fc925447e9b15d857e268",
+      "public_sha256": "48686c3014b3abbf19d3c396776963eeaa7f9d787f7cc582766f00034dc029f9",
+      "bytes": 18362,
       "public_copy_changed": true,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "1969a2c72326741a59ae3353dbf9f529af0114563672362cde94ac0d218dc1c2"
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "83ee66bef5f41d9c9667a52b9ae5a3375f682b815003f833cf629c3a97e748b2"
     },
     {
       "file": "console/control.py",
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a",
-      "public_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a",
-      "bytes": 50271,
+      "source_sha256": "73ee3bf160a1e7b962ff1b6108ca4f6e803dba8eb918acbf75c5ba9fea715ee0",
+      "public_sha256": "73ee3bf160a1e7b962ff1b6108ca4f6e803dba8eb918acbf75c5ba9fea715ee0",
+      "bytes": 69973,
       "public_copy_changed": false,
-      "source_location": "LIVE_CONSOLE",
-      "active_original_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b"
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a"
     },
     {
       "file": "console/inspection.py",
@@ -81,12 +81,12 @@
       "source_group": "console",
       "source_name": "records.py",
       "component": "CONSOLE",
-      "source_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406",
-      "public_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406",
-      "bytes": 30844,
+      "source_sha256": "297a98f6ba0defa4dac42be68b2922156ba4933ac407459f9cdcbd228fdccb6c",
+      "public_sha256": "297a98f6ba0defa4dac42be68b2922156ba4933ac407459f9cdcbd228fdccb6c",
+      "bytes": 31415,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0"
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406"
     },
     {
       "file": "console/replay.py",
@@ -125,36 +125,36 @@
       "source_group": "console",
       "source_name": "app.js",
       "component": "CONSOLE",
-      "source_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69",
-      "public_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69",
-      "bytes": 62002,
+      "source_sha256": "9f4da89718e408ae2ecf7f7dee8943b656e995d0d4ae19659698ee7a0e6fc26f",
+      "public_sha256": "9f4da89718e408ae2ecf7f7dee8943b656e995d0d4ae19659698ee7a0e6fc26f",
+      "bytes": 69054,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5"
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69"
     },
     {
       "file": "console/static/field.js",
       "source_group": "console",
       "source_name": "field.js",
       "component": "CONSOLE",
-      "source_sha256": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1",
-      "public_sha256": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1",
-      "bytes": 15040,
+      "source_sha256": "b892ec453d9a8cfebf799b3236a997185313da293f7e5997595e029c6dcd6581",
+      "public_sha256": "b892ec453d9a8cfebf799b3236a997185313da293f7e5997595e029c6dcd6581",
+      "bytes": 15957,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "5ab37164bd5250af9c6813e713077405efb2d66a9772e7f915718d870a580e9e"
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1"
     },
     {
       "file": "console/static/index.html",
       "source_group": "console",
       "source_name": "index.html",
       "component": "CONSOLE",
-      "source_sha256": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819",
-      "public_sha256": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819",
-      "bytes": 31687,
+      "source_sha256": "56be64b95cfebdc6f9de00efa127aba0a40c64ea91c8fc116b85679764aa9050",
+      "public_sha256": "56be64b95cfebdc6f9de00efa127aba0a40c64ea91c8fc116b85679764aa9050",
+      "bytes": 36248,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee"
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819"
     },
     {
       "file": "console/static/instructor.html",
@@ -183,10 +183,12 @@
       "source_group": "console",
       "source_name": "style.css",
       "component": "CONSOLE",
-      "source_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9",
-      "public_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9",
-      "bytes": 26980,
-      "public_copy_changed": false
+      "source_sha256": "42e5b026772013df8d71258015e700aee693fec5098f9c478b0a323d881b149f",
+      "public_sha256": "42e5b026772013df8d71258015e700aee693fec5098f9c478b0a323d881b149f",
+      "bytes": 27412,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9"
     },
     {
       "file": "console/test_a16.py",
@@ -2291,6 +2293,50 @@
       "bytes": 6140,
       "public_copy_changed": false,
       "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "console/test_right_x_console.py",
+      "source_group": "right_x_console_20261016",
+      "source_name": "test_right_x_console.py",
+      "component": "CONSOLE",
+      "source_sha256": "0c66d46353714b5d5ce6d3d2feb174f86a41fa62af77016514da5e1e0f1eb81b",
+      "public_sha256": "0c66d46353714b5d5ce6d3d2feb174f86a41fa62af77016514da5e1e0f1eb81b",
+      "bytes": 27811,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "console/RIGHT_X_TESTED_NATIVE_SHA256.json",
+      "source_group": "right_x_console_20261016",
+      "source_name": "RIGHT_X_TESTED_NATIVE_SHA256.json",
+      "component": "CONSOLE",
+      "source_sha256": "73046badaa90d4095c8c6d9ec26d9cc6cb05fadc282181ec8caf73385961796d",
+      "public_sha256": "522bcb676c432f9c188efb55f86f32814100996834e4b9f3e20d78a27ac3b34c",
+      "bytes": 1665,
+      "public_copy_changed": true,
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_console_20261016/RIGHT_X_CONSOLE_CONTRACT.md",
+      "source_group": "right_x_console_20261016",
+      "source_name": "RIGHT_X_CONSOLE_CONTRACT.md",
+      "component": "DOCS",
+      "source_sha256": "bb68b7097855360113e86b59a748da57a73a5b7d2537fc952e2e3c9c3558519f",
+      "public_sha256": "bb68b7097855360113e86b59a748da57a73a5b7d2537fc952e2e3c9c3558519f",
+      "bytes": 8542,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_console_20261016/RIGHT_X_CONSOLE_REGRESSION.json",
+      "source_group": "right_x_console_20261016",
+      "source_name": "RIGHT_X_CONSOLE_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "98bad43d36638332e1807ba52b7cf9b154cf680ac7f5c539927bf24cd4159c78",
+      "public_sha256": "2869f70f8c2a3d9902854dbad7462f4b7005710138c6d06fe7d78293b417b91c",
+      "bytes": 14813,
+      "public_copy_changed": true,
+      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
     }
   ],
   "console17": {

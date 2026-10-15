@@ -82,6 +82,22 @@
           <p id="blockReason" class="block-reason" hidden></p>
         <section id="pendingView" class="pending-view" aria-labelledby="pending-view-heading" hidden>
           <div><span class="meta-label" id="pending-view-heading">NEW observation_move_request · 사용자 결정 필요</span><strong id="pendingViewScope">UNKNOWN</strong></div>
+          <div id="pendingRightX" class="right-x-request" hidden>
+            <p class="notice"><strong id="pendingRightXRole">RIGHT_X 이동</strong> · 이 요청 1건만의 결정입니다. 입력한 변위와 모델 충돌검사 CLEAR는 실물 허가가 아닙니다 · <strong id="pendingRightXPhysical">FIELD_PHYSICAL_CONFIRMATION_REQUIRED</strong></p>
+            <dl class="plan-details">
+              <div><dt>승인 변위 · 축</dt><dd id="pendingRightXDisplacement">—</dd></div>
+              <div><dt>축 근거(운영자 입력)</dt><dd id="pendingRightXBasis">—</dd></div>
+              <div><dt>계획 시작 실측</dt><dd id="pendingRightXFrom" class="mono">—</dd></div>
+              <div><dt>실제 목표 tick · 변화</dt><dd id="pendingRightXTarget" class="mono">—</dd></div>
+              <div><dt>충돌검사 · native</dt><dd id="pendingRightXCollision">—</dd></div>
+              <div><dt>정상 복귀 가능성</dt><dd id="pendingRightXReturn">—</dd></div>
+              <div><dt>근거 구분</dt><dd id="pendingRightXEvidence">—</dd></div>
+            </dl>
+            <label class="field-check"><input id="rightXDirection" type="checkbox"><span>방향: 위 축·부호가 실제 팔에서 어느 쪽으로 움직이는지 현장에서 확인함</span></label>
+            <label class="field" for="rightXDirectionNote"><span>현장에서 확인한 방향(필수, 예: 블록에서 멀어짐)</span><input id="rightXDirectionNote" type="text" autocomplete="off"></label>
+            <label class="field-check"><input id="rightXStartPose" type="checkbox"><span>시작 자세: 지금 팔이 위 계획 시작 실측 자세에 있음을 현장에서 확인함</span></label>
+            <label class="field-check"><input id="rightXSpace" type="checkbox"><span>비접촉 공간: 이 변위만큼 움직일 공간이 물체·왼팔·케이블과 닿지 않게 비어 있음을 현장에서 확인함</span></label>
+          </div>
           <div class="view-proposal"><div><span class="meta-label">제안 plan</span><pre id="pendingViewPlan">—</pre></div><div><span class="meta-label">candidate</span><pre id="pendingViewCandidate">—</pre></div></div>
           <div class="control-actions"><button id="declineView" class="button secondary" type="button">거절</button><button id="approveView" class="button primary" type="button">제안 이동 승인</button></div>
         </section>
@@ -120,6 +136,7 @@
           <select id="fieldScopeSelect">
             <option value="LEFT_START_TO_LIFT" selected>LEFT_START_TO_LIFT · 제한 실행</option>
             <option value="FULL_CHAIN_RECEIVE_CONTACT">FULL_CHAIN_RECEIVE_CONTACT · 기존 실행</option>
+            <option value="RIGHT_X_FINITE_METROLOGY">RIGHT_X_FINITE_METROLOGY · 오른팔 X축 T/F/V 측정</option>
           </select>
         </label>
         <button id="fieldPrepare" class="button primary" type="button" disabled>현재 제한 범위는 준비할 수 없음</button>
@@ -342,6 +359,16 @@
       </div>
       <section class="prepare-section" aria-labelledby="prepare-heading">
         <div><span class="meta-label" id="prepare-heading">기존 owner 실물 세션</span><p id="prepareDescription">현재 입력으로 새 출력 디렉터리와 실행 작업만 준비합니다.</p></div>
+          <div id="rightXInputs" class="right-x-inputs" hidden>
+            <p class="notice">RIGHT_X 운영자 입력 5개 · 기본값·권장값·상한 없음. 입력한 변위는 실물 허가가 아니며 F/V 요청마다 현장 확인이 필요합니다(FIELD_PHYSICAL_CONFIRMATION_REQUIRED). ±5/10/20 mm 오프라인 계획값은 저장된 시작 자세 2개에 대한 계획 근거일 뿐, 권장값·안전 한계가 아닙니다.</p>
+            <label class="field" for="rightXTPose"><span>T 자세</span><select id="rightXTPose"><option value="" selected>선택</option><option value="AFTER_RIGHT_PREGRASP">AFTER_RIGHT_PREGRASP · RIGHT_APPROACH 직후</option><option value="AFTER_ADOPTED_VIEW">AFTER_ADOPTED_VIEW · 기존 관측 이동을 따로 승인한 뒤</option></select></label>
+            <div class="right-x-basis"><span class="meta-label">축 x_basis_tool (right_cube_grasp tool 좌표 단위 벡터)</span>
+              <input id="rightXBasisX" type="number" step="any" aria-label="x 성분"><input id="rightXBasisY" type="number" step="any" aria-label="y 성분"><input id="rightXBasisZ" type="number" step="any" aria-label="z 성분"></div>
+            <label class="field" for="rightXBasisSource"><span>축 근거 x_basis_source</span><input id="rightXBasisSource" type="text" autocomplete="off"></label>
+            <label class="field" for="rightXFit"><span>F 변위 (mm, 부호 포함, 0 제외)</span><input id="rightXFit" type="number" step="any"></label>
+            <label class="field" for="rightXVerify"><span>V 변위 (mm, 부호 포함, 0 제외, F 실측 끝점에서)</span><input id="rightXVerify" type="number" step="any"></label>
+            <p id="rightXInputState" class="field-context" role="status">입력 전</p>
+          </div>
           <button id="prepareControl" class="button secondary" type="button" disabled>FULL_CHAIN 새 실물 세션 준비</button>
         <div id="rerunRecovery" class="banner error" role="status" hidden>
           <p id="rerunBlockReason"></p>
@@ -351,6 +378,11 @@
           <dl class="plan-details"><div><dt>작업 ID</dt><dd id="preparedJob">—</dd></div><div><dt>새 session_out</dt><dd id="preparedOutput" class="mono">—</dd></div><div><dt>승인 실행 범위</dt><dd id="preparedScope">—</dd></div></dl>
           <p class="notice">STOP은 기존 실행기의 중단 절차를 요청합니다. BUS_LOST·적용 불명 상태에서는 후속 목표·재전송·자동 OFF/복귀를 추가하지 않습니다. 상태를 확인할 수 없으면 UNKNOWN으로 남기고 작업자가 팔·물체를 지지한 뒤 필요한 전원 차단을 수행합니다.</p>
           <label class="field-check"><input id="fieldReady" type="checkbox"><span>현재 배치·카메라 결합·케이블/주변공간 확인 · 실행 감독 · 위 범위와 실패 복구 절차에 대한 이번 세션 현장 승인</span></label>
+          <div id="rightXPrepared" hidden>
+            <dl class="plan-details"><div><dt>RIGHT_X 입력</dt><dd id="rightXPreparedInputs" class="mono">—</dd></div><div><dt>현장 근거</dt><dd id="rightXPreparedPhysical">—</dd></div></dl>
+            <div class="plan-lists"><div><h3>전체 Motor/Torque 조작 단계</h3><ol id="rightXWrites"></ol></div><div><h3>제외 범위</h3><ul id="rightXExcluded"></ul></div></div>
+            <label class="field-check"><input id="rightXWritesAck" type="checkbox"><span>위 전체 조작 단계와 제외 범위를 확인함 · F/V 이동은 각각 따로 요청·결정 · START 사전 승인 없음</span></label>
+          </div>
           <label class="field-check"><input id="preapproveView" type="checkbox"><span>(선택) RIGHT 비접촉 관측 이동 사전 승인 · 기존 단일 후보 CURRENT_RECEIVER_CLEAR_THEN_INNER_PAD_VIEW · 현재 실측에서 새로 계획·충돌검사 CLEAR인 경로만 · INSERT/CLOSE/RELEASE 미포함 · 조건이 하나라도 다르면 기존 중간 승인으로 돌아감</span></label>
           <p id="fieldApprovalInfo" role="status">새 작업 준비 후에 현장 승인을 입력할 수 있습니다.</p>
           <button id="startControl" class="button primary start-control" type="button" disabled>FULL_CHAIN 현장 승인 후 실물 START</button>

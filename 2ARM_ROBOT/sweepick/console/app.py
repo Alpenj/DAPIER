@@ -256,7 +256,8 @@ def run_data(run_id: str):
 @app.post('/api/control/prepare')
 def prepare(request: Request, body: dict = Body(...)):
     operator_request(request)
-    return action(controller.prepare, body.get('source_session'), execution_scope=body.get('execution_scope', FULL_CHAIN))
+    return action(controller.prepare, body.get('source_session'), execution_scope=body.get('execution_scope', FULL_CHAIN),
+                  right_x=body.get('right_x'))
 
 
 @app.post('/api/control/start')
@@ -264,7 +265,8 @@ def start(request: Request, body: dict = Body(...)):
     operator_request(request)
     return action(controller.start, body.get('job_id'), field_ready=body.get('field_ready'),
                   mounts_unchanged=body.get('mounts_unchanged'), supervised=body.get('supervised'),
-                  execution_scope=body.get('execution_scope'), preapprove_view=body.get('preapprove_view') is True)
+                  execution_scope=body.get('execution_scope'), preapprove_view=body.get('preapprove_view') is True,
+                  writes_acknowledged=body.get('writes_acknowledged') is True)
 
 
 @app.post('/api/control/stop')
@@ -276,7 +278,8 @@ def stop(request: Request, body: dict = Body(...)):
 @app.post('/api/control/view-decision')
 def view_decision(request: Request, body: dict = Body(...)):
     operator_request(request)
-    return action(controller.view_decision, body.get('job_id'), body.get('request_sha256'), body.get('approved'))
+    return action(controller.view_decision, body.get('job_id'), body.get('request_sha256'), body.get('approved'),
+                  field_confirmation=body.get('field_confirmation'))
 
 
 @app.post('/api/control/confirm-recovery')
