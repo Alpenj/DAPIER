@@ -22,6 +22,9 @@ FULL_CHAIN = 'FULL_CHAIN_RECEIVE_CONTACT'
 LEFT_TO_LIFT = 'LEFT_START_TO_LIFT'
 # Console-17: the limited scope has its own approval scope and manifest scope; a full-chain approval never opens it.
 LIMITED_APPROVAL_SCOPE = 'LEFT_START_TO_LIFT'
+# RIGHT_X_FINITE_METROLOGY: the full chain's own LEFT pick/lift/carry and RIGHT approach, then T/F/V right X endpoints, then the
+# existing normal reverse. Its own approval/manifest scope; neither the full-chain nor the limited approval opens it.
+RIGHT_X = 'RIGHT_X_FINITE_METROLOGY'
 
 _LIFETIME = None
 _OUT = None
@@ -137,10 +140,13 @@ def preapproval_covers(pre, owner_out, manifest_sha, proposed, raw, candidate, u
     return all(checks.values()), checks
 
 
-def authorize_observation_plan(owner, proposed, raw, candidate, preapproval=None, manifest_sha=None):
+def authorize_observation_plan(owner, proposed, raw, candidate, preapproval=None, manifest_sha=None, scope=PREAPPROVAL_SCOPE):
     """One operator decision on this actual-bound plan; no movement while waiting. With a START pre-approval that covers
-    this exact proposal the same request is recorded and consumed without the mid-session wait; otherwise unchanged."""
-    proposal = dict(scope='RIGHT_RECEIVE_NONCONTACT_OBSERVATION_MOVE', session_out=str(owner.out),
+    this exact proposal the same request is recorded and consumed without the mid-session wait; otherwise unchanged.
+    A decision file answering an earlier request (another digest) is not this decision and is never read as a decline."""
+    if scope != PREAPPROVAL_SCOPE:
+        preapproval = None                                  # START pre-approval covers only the adopted view
+    proposal = dict(scope=scope, session_out=str(owner.out),
                     candidate=candidate, actual_feedback=raw, plan=proposed,
                     insertion_permitted=False, close_permitted=False,
                     wait_policy='operator decision with fresh support/bus/STOP monitoring',
@@ -197,8 +203,8 @@ def authorize_observation_plan(owner, proposed, raw, candidate, preapproval=None
             owner.note('observation_approval_frame_restored', waited_s=owner.clock() - frame_wait_started,
                        camera=owner.last_recovery_check['left_wrist_frame'])
             frame_wait_started = None
-        if decision_path.exists():
-            decision = json.loads(decision_path.read_text())
+        decision = json.loads(decision_path.read_text()) if decision_path.exists() else None
+        if decision is not None and decision.get('request_sha256') == digest:
             approved = (decision.get('approved') is True and decision.get('request_sha256') == digest
                         and decision.get('session_out') == str(owner.out)
                         and decision.get('scope') == proposal['scope'])
@@ -210,7 +216,7 @@ def authorize_observation_plan(owner, proposed, raw, candidate, preapproval=None
 def execution_scope(approval):
     """The approved execution scope. A missing field is the existing full chain; anything else must match exactly."""
     scope = approval.get('execution_scope', FULL_CHAIN)
-    if scope not in (FULL_CHAIN, LEFT_TO_LIFT):
+    if scope not in (FULL_CHAIN, LEFT_TO_LIFT, RIGHT_X):
         raise RuntimeError(f'unsupported execution_scope {scope!r}; no device/SDK/motor is opened')
     return scope
 
@@ -255,8 +261,23 @@ def validate_launch():
         return validate_limited_launch(approval, plan)
     if plan.get('observation_only') is not True or plan.get('observation_candidate_policy') != 'ADOPTED_RECEIVER_INNER_PAD_VIEW':
         raise RuntimeError('noncontact-only plan scope is not bound')
+    if 'right_x_metrology' in plan:
+        raise RuntimeError('the prepared plan must not carry right_x_metrology; it comes only from a RIGHT_X approval')
     out = Path(plan['session_out'])
-    if approval.get('scope') != 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION' or approval.get('session_out') != str(out):
+    if execution_scope(approval) == RIGHT_X:
+        import right_x_metrology as rx
+        errors = rx.approval_errors(approval, out)
+        if errors:
+            raise RuntimeError('RIGHT_X_FINITE_METROLOGY approval incomplete: ' + '; '.join(errors) + '; no device/SDK/motor is opened')
+        manifest = json.loads(MANIFEST.read_text())
+        if manifest.get('scope') != RIGHT_X or manifest.get('execution_scope') != RIGHT_X:
+            raise RuntimeError('prepared source manifest is not a RIGHT_X_FINITE_METROLOGY manifest')
+        for required in (Path(__file__).resolve(), REV / 'sweepick_full_chain.py', REV / 'sweepick_pick01.py', REV / 'sweepick_move_a.py',
+                         REV / 'right_x_metrology.py', REV / 'current_view_candidate.py'):
+            if str(required) not in manifest['files']:
+                raise RuntimeError(f'RIGHT_X_FINITE_METROLOGY manifest does not bind {required.name}')
+        plan = dict(plan, right_x_metrology=dict(approval['right_x_metrology']))
+    elif approval.get('scope') != 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION' or approval.get('session_out') != str(out):
         raise RuntimeError('noncontact observation approval does not match the prepared RECEIVE_CONTACT output')
     if out.exists():
         raise RuntimeError(f'session output already exists; preserve the ended attempt: {out}')
@@ -362,7 +383,7 @@ def main():
         # The resident readers prepend the shared tools path; bind the selected owner before that import.
         fc, p1 = preload_sources(out)
         stop_checkpoint()
-        if scope == FULL_CHAIN:                                     # RIGHT RECEIVE face geometry belongs to the full chain only
+        if scope in (FULL_CHAIN, RIGHT_X):                          # RIGHT RECEIVE face geometry belongs to the full chain only
             from inner_pad_face_contract import prepare_face_geometry
             model_started = time.perf_counter(); face_model = p1.model()
             model_s = time.perf_counter() - model_started; geometry_started = time.perf_counter()
@@ -404,7 +425,7 @@ def main():
                     stop_checkpoint()
                 top = SdkTop(out / f'episode/sdk_{int(time.time())}', 30 * 60 * 20); opened.append(top)
                 stop_checkpoint()
-                ep = Episode(out, wrists=wrists, top=top, open_arm=open_readonly_bus, mode='RECEIVE_CONTACT' if scope == FULL_CHAIN else LEFT_TO_LIFT, arm_feedback=True,
+                ep = Episode(out, wrists=wrists, top=top, open_arm=open_readonly_bus, mode=LEFT_TO_LIFT if scope == LEFT_TO_LIFT else 'RECEIVE_CONTACT', arm_feedback=True,
                              identifiers=dict(prepared_manifest=manifest, wrist_route_basis=plan['wrist_route_basis']))
                 ep.owned = opened
                 if _STOP_SIGNAL is not None:
@@ -432,6 +453,10 @@ def main():
             preapproval = preapproval_record(approval, out, hashlib.sha256(MANIFEST.read_bytes()).hexdigest())
             owner.authorize_observation_plan = lambda proposed, raw, candidate: authorize_observation_plan(
                 owner, proposed, raw, candidate, preapproval=preapproval, manifest_sha=hashlib.sha256(MANIFEST.read_bytes()).hexdigest())
+            if scope == RIGHT_X:                                    # every X move: its own request and explicit operator decision
+                import right_x_metrology as rx
+                owner.authorize_right_x_move = lambda proposed, raw, candidate: authorize_observation_plan(
+                    owner, proposed, raw, candidate, preapproval=None, manifest_sha=hashlib.sha256(MANIFEST.read_bytes()).hexdigest(), scope=rx.MOVE_SCOPE)
             owner.note('noncontact_current_measurement_contract', policy=policy,
                        source_role='current REAL RGB pixels + estimated pose + CAD/model priors',
                        physical_error_bound_m=None, full_release_permitted=False)

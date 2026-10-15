@@ -1,0 +1,270 @@
+{
+ "schema": "sweepick.right-x-metrology-fake-regression.v1",
+ "device_access": false,
+ "motor_writes": 0,
+ "bus": "fake register state + fake executor; no serial port opened",
+ "new_tests": {
+  "total": 37,
+  "passed": 37,
+  "failed": 0,
+  "cases": [
+   {
+    "test": "test_right_x_metrology::test_config_contract_has_no_magnitude_limit_and_refuses_malformed_input",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_approval_contract",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_normal_path_records_T_F_V_from_fresh_actuals_and_generates_no_correction",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_refusals_end_without_further_motion[case0-REFUSED_PLAN-segments0]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_refusals_end_without_further_motion[case1-REFUSED_PLAN-segments1]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_refusals_end_without_further_motion[case2-DECLINED-segments2]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_refusals_end_without_further_motion[case3-REFUSED_PLAN-segments3]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_refusals_end_without_further_motion[case4-OBSERVATION_MISSING-segments4]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_refusals_end_without_further_motion[case5-OBSERVATION_MISSING-segments5]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case0-left hold/bus is unconfirmed before right X F-segments0]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case1-left hold/bus is unconfirmed before right X V-segments1]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case2-BUS_LOST-segments2]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case3-BUS_LOST-segments3]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case4-STOP-segments4]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_authorization_exception_is_not_a_decline",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_missing_authorizer_or_bad_config_never_moves",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_after_adopted_view_requires_an_executed_fresh_view",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_after_right_pregrasp_skips_the_adopted_view_without_reading_or_moving",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_full_chain_without_metrology_approval_never_runs_it",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_metrology_runs_before_the_existing_normal_return",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_normal_return_failure_after_metrology_keeps_the_existing_stop_contract",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_fault_inside_metrology_marks_the_record_and_stops",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_fake_executor_segment_records_the_move_for_the_existing_normal_reverse",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_real_A_ik_collision_and_normal_reverse_plan_an_x_move_from_saved_actual",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_metrology::test_real_planner_refusals_reach_no_executor",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_right_x_approval_binds_its_config_into_the_plan",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval0-RIGHT_X_FINITE_METROLOGY-None-non-zero]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval1-RIGHT_X_FINITE_METROLOGY-None-declared_motor_writes]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval2-RIGHT_X_FINITE_METROLOGY-None-pre-approval]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval3-RIGHT_X_FINITE_METROLOGY-None-left release]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval4-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a RIGHT_X_FINITE_METROLOGY manifest]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval5-RIGHT_X_FINITE_METROLOGY-plan_extra5-must not carry right_x_metrology]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval6-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-plan_extra6-must not carry right_x_metrology]",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_full_chain_approval_carries_no_metrology",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_right_x_manifest_must_bind_its_sources",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_move_request_has_its_own_scope_and_ignores_an_earlier_decision_file",
+    "result": "PASSED"
+   },
+   {
+    "test": "test_right_x_launch::test_view_decision_for_another_scope_is_not_an_x_approval",
+    "result": "PASSED"
+   }
+  ]
+ },
+ "scenario_coverage": {
+  "normal T/F/V path, fresh actual per move, own clocks, no correction": [
+   "test_right_x_metrology::test_normal_path_records_T_F_V_from_fresh_actuals_and_generates_no_correction"
+  ],
+  "IK impossible": [
+   "test_right_x_metrology::test_refusals_end_without_further_motion[case0-REFUSED_PLAN-segments0]",
+   "test_right_x_metrology::test_real_planner_refusals_reach_no_executor"
+  ],
+  "collision check failed": [
+   "test_right_x_metrology::test_refusals_end_without_further_motion[case1-REFUSED_PLAN-segments1]",
+   "test_right_x_metrology::test_real_planner_refusals_reach_no_executor"
+  ],
+  "LEFT hold uncertain (before F, before V)": [
+   "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case0-left hold/bus is unconfirmed before right X F-segments0]",
+   "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case1-left hold/bus is unconfirmed before right X V-segments1]"
+  ],
+  "new observation missing (T, F)": [
+   "test_right_x_metrology::test_refusals_end_without_further_motion[case4-OBSERVATION_MISSING-segments4]",
+   "test_right_x_metrology::test_refusals_end_without_further_motion[case5-OBSERVATION_MISSING-segments5]"
+  ],
+  "Servo/Bus fault (F, V)": [
+   "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case2-BUS_LOST-segments2]",
+   "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case3-BUS_LOST-segments3]",
+   "test_right_x_metrology::test_fault_inside_metrology_marks_the_record_and_stops"
+  ],
+  "operator STOP": [
+   "test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[case4-STOP-segments4]"
+  ],
+  "middle stage failure (V refused after F ran)": [
+   "test_right_x_metrology::test_refusals_end_without_further_motion[case3-REFUSED_PLAN-segments3]"
+  ],
+  "normal return failure": [
+   "test_right_x_metrology::test_normal_return_failure_after_metrology_keeps_the_existing_stop_contract"
+  ],
+  "operator decline, missing authorizer, authorization exception": [
+   "test_right_x_metrology::test_refusals_end_without_further_motion[case2-DECLINED-segments2]",
+   "test_right_x_metrology::test_authorization_exception_is_not_a_decline",
+   "test_right_x_metrology::test_missing_authorizer_or_bad_config_never_moves"
+  ],
+  "no RIGHT_X approval -> no new motor write": [
+   "test_right_x_metrology::test_full_chain_without_metrology_approval_never_runs_it",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval0-RIGHT_X_FINITE_METROLOGY-None-non-zero]",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval1-RIGHT_X_FINITE_METROLOGY-None-declared_motor_writes]",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval2-RIGHT_X_FINITE_METROLOGY-None-pre-approval]",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval3-RIGHT_X_FINITE_METROLOGY-None-left release]",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval4-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a RIGHT_X_FINITE_METROLOGY manifest]",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval5-RIGHT_X_FINITE_METROLOGY-plan_extra5-must not carry right_x_metrology]",
+   "test_right_x_launch::test_incomplete_or_foreign_approval_is_refused_before_any_device[approval6-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-plan_extra6-must not carry right_x_metrology]",
+   "test_right_x_launch::test_full_chain_approval_carries_no_metrology",
+   "test_right_x_launch::test_right_x_manifest_must_bind_its_sources"
+  ],
+  "T pose contract": [
+   "test_right_x_metrology::test_after_adopted_view_requires_an_executed_fresh_view",
+   "test_right_x_metrology::test_after_right_pregrasp_skips_the_adopted_view_without_reading_or_moving"
+  ],
+  "existing normal reverse after metrology / reverse history of executed move": [
+   "test_right_x_metrology::test_metrology_runs_before_the_existing_normal_return",
+   "test_right_x_metrology::test_fake_executor_segment_records_the_move_for_the_existing_normal_reverse"
+  ],
+  "real A IK/collision/native/normal reverse from saved REAL actual": [
+   "test_right_x_metrology::test_real_A_ik_collision_and_normal_reverse_plan_an_x_move_from_saved_actual"
+  ],
+  "per-move decision file handling": [
+   "test_right_x_launch::test_move_request_has_its_own_scope_and_ignores_an_earlier_decision_file",
+   "test_right_x_launch::test_view_decision_for_another_scope_is_not_an_x_approval"
+  ],
+  "contract inputs (no magnitude limit)": [
+   "test_right_x_metrology::test_config_contract_has_no_magnitude_limit_and_refuses_malformed_input",
+   "test_right_x_metrology::test_approval_contract",
+   "test_right_x_launch::test_right_x_approval_binds_its_config_into_the_plan"
+  ]
+ },
+ "preserved": {
+  "native_full": {
+   "command": "pytest -q -p no:cacheprovider --continue-on-collection-errors revision test_observation_launch.py test_console17_launch_scope.py [test_right_x_launch.py]",
+   "active": "38 failed, 471 passed, 31 skipped, 1 error in 70.04s (0:01:10)",
+   "candidate": "38 failed, 508 passed, 31 skipped, 1 error in 70.63s (0:01:10)",
+   "failure_set_identical_to_active": true,
+   "new_failures": 0,
+   "pre_existing_failures": "38 failed + 1 collection error, identical list in both trees; not repaired"
+  },
+  "a_gripper": {
+   "active": "154 passed, 1 failed",
+   "candidate": "154 passed, 1 failed (same pre-existing test_sweepick_grip failure)"
+  },
+  "console17": {
+   "active": "28 passed",
+   "candidate": "28 passed"
+  },
+  "observation_only_and_approval_wait": {
+   "active": "34 passed",
+   "candidate": "34 passed"
+  },
+  "console": "not changed in this work"
+ },
+ "no_new_write_without_approval": [
+  "FULL_CHAIN approval: plan without right_x_metrology, run_right_x_metrology never called",
+  "plan file carrying right_x_metrology is refused by the launcher in every scope",
+  "RIGHT_X approval with any missing/false field is refused before any device/SDK/motor",
+  "per move: no explicit True decision -> DECLINED, no segment()"
+ ],
+ "no_new_safety_threshold": true,
+ "source_sha256": {
+  "RUN_APPROVED_SESSION.py": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+  "revision/sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+  "revision/right_x_metrology.py": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+  "revision/test_right_x_metrology.py": "46192b92cdf945d504531529c9ee1bb3bc3f3e7dd64e0565c563458564b66999",
+  "test_right_x_launch.py": "1e913ce58c9af8aaa437a0fd4d369663f69ff6059888c30d15e79f44d565ab32"
+ }
+}

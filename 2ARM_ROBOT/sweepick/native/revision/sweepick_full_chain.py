@@ -723,6 +723,7 @@ class Scoped:
             return answer("NOT_READY", ("receive-contact" if is_contact else "receive-approach") + " input is incomplete", missing=list(dict.fromkeys(missing)))
 
         preparation, path, suffix, stages, approach_observation, contact_log, insertion = None, None, None, [], None, None, None
+        metrology = None
         try:
             with inner.recorder.lease("left", "right"):
                 preparation = inner.prepare(snapshot, context["scene"], context["evidence"])
@@ -820,6 +821,8 @@ class Scoped:
                         if isinstance(o.insert, dict):
                             o.insert["record"] = dict(insertion)
                         o.note("observation_only_insertion_decision", record=insertion)
+                        if (o.contact_plan or {}).get("right_x_metrology") is not None:
+                            metrology = o.run_right_x_metrology(path, live, stages)   # its executed moves are undone by the normal reverse below
                     approach_observation["insertion"] = _plain(insertion)
                     (o.out / observation_file).write_text(json.dumps(approach_observation, indent=1))
                     if insertion_ready and not observation_only:
@@ -910,7 +913,9 @@ class Scoped:
                            else f"{len(o.contact_insert_history)} insert hops completed; the remaining insert/close was withheld and the actual-state normal return completed" if normal and o.contact_insert_history
                            else "no insert/close was sent; the observation gap was recorded and the healthy planned return completed" if normal
                            else "the contact scope or its normal return lacked an actual motion/readback condition")
-                    return answer(result, why, preparation=preparation, path=path, suffix=suffix, stages=stages,
+                    if metrology is not None:
+                        why += f"; RIGHT_X_FINITE_METROLOGY {metrology['status']}: {metrology.get('why')}"
+                    return answer(result, why, preparation=preparation, path=path, suffix=suffix, stages=stages, right_x_metrology=metrology,
                                   approach_observation=approach_observation, observation_file=observation_file, insertion=insertion,
                                   contact=None if contact_log is None else dict(result=contact_log.get("result"), outcome=contact_log.get("outcome"), candidate=contact_log.get("contact_candidate"), folder=contact_log.get("folder")),
                                   contact_candidate=candidate, grasp_confirmed=False, real_arm_motion=right_motion,
@@ -926,8 +931,12 @@ class Scoped:
             if writes:
                 o.block_owner = "unknown"
                 o.on_stop(type("D", (), dict(reasons=[f"{'RECEIVE_CONTACT' if is_contact else 'RECEIVE_APPROACH'}: {type(exc).__name__}: {exc}"]))(), None)
+            record = getattr(o, "right_x_record", None)
+            if isinstance(record, dict) and record.get("status") == "STARTED":
+                record.update(status="STOPPED_BY_FAULT", why=f"{type(exc).__name__}: {exc}")
+                o._safe(lambda: (o.out / "RIGHT_X_METROLOGY.json").write_text(json.dumps(_plain(record), indent=1, default=str)))
             return answer("FAILED", f"{'receive contact' if is_contact else 'receive approach'} stopped: {type(exc).__name__}: {exc}",
-                          preparation=preparation, path=path, suffix=suffix, stages=stages, approach_observation=approach_observation,
+                          preparation=preparation, path=path, suffix=suffix, stages=stages, approach_observation=approach_observation, right_x_metrology=record,
                           end=dict(returned=False, right_released=False, left_at_lift=False,
                                    state="AS_LEFT_BY_THE_EXECUTOR_A_PERSON_DECIDES"))
 
@@ -2302,6 +2311,11 @@ class Owner:
         if observation_only:
             if self.stopped is not None or Path(str(self.out) + ".STOP").exists():
                 raise RuntimeError("owner STOP; observation branch must not move or recover")
+            metrology = (self.contact_plan or {}).get("right_x_metrology")
+            if isinstance(metrology, dict) and metrology.get("t_pose") == "AFTER_RIGHT_PREGRASP":
+                self.note("right_x_metrology_skips_adopted_view",
+                          why="T is the measured state after RIGHT_APPROACH; the adopted clearance+roll view is not run")
+                return observed, self.last_raw, False
             if getattr(self, "observation_only_candidate_consumed", False):
                 self.note("observation_candidates_exhausted", missing_components=self.observation_deficits(observed),
                           why="the one observation-only receiver-inner-pad proposal was already consumed")
@@ -2411,6 +2425,124 @@ class Owner:
         self.note("observation_candidates_exhausted", missing_components=self.observation_deficits(observed),
                   why="no unused checked view yielded insertion-ready evidence; existing normal-return conditions still apply")
         return observed, self.last_raw, False
+
+    @staticmethod
+    def x_split(T0, T1, basis):
+        """T1 relative to T0, in T0's tool frame, split into the approved X basis, the off-axis remainder and rotation."""
+        D = np.linalg.inv(np.asarray(T0, float)) @ np.asarray(T1, float); t = D[:3, 3]; b = np.asarray(basis, float)
+        along = float(t @ b); off = t - along * b
+        angle = float(np.arccos(np.clip((np.trace(D[:3, :3]) - 1) / 2, -1, 1)))
+        return dict(translation_tool_m=t.tolist(), along_x_m=along, off_axis_tool_m=off.tolist(), off_axis_norm_m=float(np.linalg.norm(off)),
+                    rotation_deg=float(np.degrees(angle)), frame="previous endpoint's right_cube_grasp tool frame (candidate FK)")
+
+    def right_x_endpoint(self, role, observed, raw, frames, cfg, reference, previous, move):
+        """One endpoint: both arms' actual, openings, the three cameras' own identities/clocks, candidate FK of the actual."""
+        model = self.p1.model()
+        sides = ("left", "right")
+        q12 = np.asarray(self.p1.rc.ticks_to_q12(self.mp, {s: raw["ticks"][s] for s in sides}), float)
+        T, _ = tool_pose(model, q12, site="right_cube_grasp")
+        row = dict(role=role, decision_record=observed.get("decision_record"),
+                   actual=dict(ticks={s: dict(raw["ticks"][s]) for s in sides}, goal={s: dict(raw["goal"][s]) for s in sides},
+                               torque={s: dict(raw["torque"][s]) for s in sides}, status={s: dict(raw["status"][s]) for s in sides},
+                               bus_seq=raw.get("bus_seq"), t_bus_monotonic=raw.get("t_bus_monotonic"), cycle_start=raw.get("cycle_start"), q12=q12.tolist()),
+                   opening=dict(right_present_tick=raw["ticks"]["right"]["gripper"], right_goal_tick=raw["goal"]["right"]["gripper"],
+                                left_present_tick=raw["ticks"]["left"]["gripper"], left_goal_tick=raw["goal"]["left"]["gripper"],
+                                basis="raw gripper Present_Position/Goal_Position ticks; jaw gap in mm UNKNOWN"),
+                   cameras={name: camera_identity(f) for name, f in (frames or {}).items()},
+                   observation_missing=dict(observed.get("observation_missing") or {}),
+                   time_basis="each camera keeps its own receipt clock and frame number; the joint read keeps its bus clock; they are not equated",
+                   right_tool_pose_fk=T.tolist(), fk_role="candidate mapping FK of the measured ticks (verified=false), not a physical measurement")
+        if previous is not None:
+            row["actual_fk_from_previous"] = self.x_split(previous["right_tool_pose_fk"], T, cfg["x_basis_tool"])
+            row["actual_fk_from_T"] = self.x_split(reference["right_tool_pose_fk"], T, cfg["x_basis_tool"])
+        if move is not None:
+            start = move["planned_from"]; target = dict(start["ticks"]["right"]); target.update(move["forward"][0]["target_ticks"])
+            q0 = self.p1.rc.ticks_to_q12(self.mp, start["ticks"]); q1 = self.p1.rc.ticks_to_q12(self.mp, dict(start["ticks"], right=target))
+            row["command"] = dict(commanded_tool_displacement_m=move["candidate"]["commanded_tool_displacement_m"], target_ticks=move["forward"][0]["target_ticks"],
+                                  command_fk_from_planning_actual=self.x_split(tool_pose(model, q0, site="right_cube_grasp")[0], tool_pose(model, q1, site="right_cube_grasp")[0], cfg["x_basis_tool"]),
+                                  basis="commanded displacement and the FK of the rounded command ticks; kept apart from the actual FK above")
+            view = move.get("observation_view") or {}
+            row["executor"] = dict(result=move.get("result"), nominal_target_reached=view.get("nominal_target_reached"),
+                                   actual_settled=view.get("actual_settled"), command_state_resolved=view.get("command_state_resolved"), writes=move.get("writes"))
+        return row
+
+    def run_right_x_metrology(self, prefix, live, stages):
+        """RIGHT_X_FINITE_METROLOGY: observe T, then each X move (F, V) planned from the latest actual by the existing view path,
+        explicitly approved, run by segment(purpose=OBSERVATION_VIEW) and observed once. A refused plan, decline or missing view
+        ends the measurement without further motion; STOP, servo/bus fault or unconfirmed left support raise into the existing
+        stop contract. The caller's existing normal reverse undoes every executed move. No correction is generated."""
+        import right_x_metrology as rx
+        cfg = (self.contact_plan or {}).get("right_x_metrology")
+        record = dict(schema="sweepick.right-x-metrology.v1", scope=rx.SCOPE, config=copy.deepcopy(cfg), source_kind=self.record_kind,
+                      endpoints=[], moves=[], status="STARTED",
+                      jacobian=dict(delta_u_px=None, J_uX_px_per_mm=None, REAL_J_VALIDATED=False, validated=False, Correction=None,
+                                    estimated_tool_correction=None, reason="FIELD_VERIFIED_TARGET_IMAGE and its u feature are not defined; endpoints are recorded only"),
+                      correction_command_generated=False)
+        self.right_x_record = record
+
+        def save():
+            (self.out / "RIGHT_X_METROLOGY.json").write_text(json.dumps(_plain(record), indent=1, default=str))
+
+        def end(status, why):
+            record.update(status=status, why=why); self.note("right_x_metrology_ended", status=status, why=why); save()
+            return record
+        errors = rx.config_errors(cfg)
+        if errors:
+            return end("REFUSED_CONFIG", "; ".join(errors))
+        if cfg["t_pose"] == "AFTER_ADOPTED_VIEW" and (getattr(self, "last_observation_view", None) or {}).get("fresh_observation_acquired") is not True:
+            return end("REFUSED_T_POSE", "t_pose=AFTER_ADOPTED_VIEW but no adopted view was executed and freshly observed in this session")
+        reference = previous = None
+        for role in rx.ROLES:
+            if self.stopped is not None or Path(str(self.out) + ".STOP").exists():
+                raise RuntimeError("owner STOP; right X metrology must not move or recover")
+            raw = self._read(); live(raw, f"before right X {role}"); self.last_raw = raw
+            ok, why = self.recovery_ready(f"before right X {role}", observation=raw)
+            if not ok:
+                raise RuntimeError(f"current left hold/bus is unconfirmed before right X {role}; no move: {why}")
+            move = None
+            if role != "T":
+                candidate = rx.move_candidate(role, cfg)
+                plan = self.plan_observation_candidate(candidate, raw, prefix)
+                move = dict(role=role, candidate=candidate, plan_ready=plan.get("ready"), why=plan.get("why"), failure=plan.get("failure"),
+                            planned_from=dict(bus_seq=raw.get("bus_seq"), t_bus_monotonic=raw.get("t_bus_monotonic"),
+                                              ticks={s: dict(raw["ticks"][s]) for s in ("left", "right")}),
+                            forward=[dict(start_ticks=s["start_ticks"], target_ticks=s["target_ticks"], ik=s.get("ik"),
+                                          collision=s["certificate"].get("nominal_verdict"), native_executable=s["native_validation"].get("executable"))
+                                     for s in plan.get("forward", [])],
+                            normal_return_ready=(plan.get("normal_return") or {}).get("ready"))
+                record["moves"].append(move)
+                self.note("right_x_metrology_planned", role=role, plan=plan)
+                if not plan.get("ready") or len(plan.get("forward", [])) != 1:
+                    return end("REFUSED_PLAN", f"{role}: {plan.get('why') or 'not exactly one planned X target'}")
+                authorize = getattr(self, "authorize_right_x_move", None)
+                try:
+                    approved = callable(authorize) and authorize(plan, raw, candidate) is True
+                except Exception as exc:
+                    self.note("right_x_metrology_authorization_failed", role=role, reason=f"{type(exc).__name__}: {exc}"); save()
+                    raise
+                move["approved"] = approved
+                self.note("right_x_metrology_authorization", role=role, approved=approved)
+                if not approved:
+                    return end("DECLINED", f"{role}: no explicit operator approval of this actual-bound move")
+                step = plan["forward"][0]
+                log = self.segment(f"right_x_{role.lower()}", "right", target=step["target_ticks"], purpose="OBSERVATION_VIEW")
+                move.update(result=log.get("result"), writes=log.get("writes"), folder=log.get("folder"), observation_view=log.get("observation_view"))
+                raw = self._read(); live(raw, f"after right X {role}"); self.track_held(raw); self.last_raw = raw
+                supported, why = self.recovery_ready(f"after settled right X {role}", observation=raw)
+                if not supported:
+                    save()
+                    raise RuntimeError(f"left support unconfirmed after right X {role}; no further motion: {why}")
+                stages.append(dict(stage=f"RIGHT_X_{role}", side="right", result=log.get("result")))
+            completed, before = self.clock(), copy.deepcopy(getattr(self, "last_images", None) or {})
+            observed, raw, frames = self.contact_observation(f"RIGHT_X_{role}", after=completed, previous=before)
+            live(raw, f"after right X {role} observation"); self.track_held(raw); self.last_raw = raw
+            endpoint = self.right_x_endpoint(role, observed, raw, frames, cfg, reference, previous, move)
+            record["endpoints"].append(endpoint); save()
+            missing = sorted(k for k in (observed.get("observation_missing") or {}) if k in ("top", "left_wrist", "right_wrist"))
+            if missing:
+                return end("OBSERVATION_MISSING", f"{role}: no new frame for {missing}; no further X move")
+            reference = reference or endpoint; previous = endpoint
+        return end("ENDPOINTS_RECORDED", "T, F and V endpoints recorded; the existing normal reverse follows; no correction is generated")
 
     def contact_close(self):
         """Run the finite right-ID6 close with the baseline-bound early observer; this method never opens or returns."""

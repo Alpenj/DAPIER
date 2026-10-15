@@ -1,0 +1,1093 @@
+{
+ "schema": "sweepick.right-x-metrology-ik-collision-report.v1",
+ "record_id": "DAPIER-2026-10-16-A-right-x-finite-metrology-R0",
+ "status": "OFFLINE_SAVED_REAL_REPLAY_ONLY",
+ "device_access": false,
+ "motor_writes": 0,
+ "REAL_J_VALIDATED": false,
+ "Correction": null,
+ "b_handoff": "37a966832b581de8993a782f7d3b70e67ce47e5e",
+ "a_integration": "pro/sweepick-review-20261015 d527494",
+ "existing_path_findings": {
+  "current_view_candidate": {
+   "function": "propose_receiver_inner_pad_view",
+   "sha256": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db",
+   "targets": [
+    "inv(start) @ clear: general SE(3) to the same-session before-RIGHT_APPROACH tool pose (translation and rotation)",
+    "tool-X roll by a camera-geometry angle"
+   ],
+   "x_only": false,
+   "reclassified": false,
+   "changed": false
+  },
+  "reused_path": [
+   "Owner.plan_observation_candidate: CURRENT_TOOL delta on the measured FK -> HandoverTeacher.plan_move(position, approach=column 0, jaw=column 2)",
+   "jaw command must not change",
+   "sweepick_trajectory.make on rounded ticks",
+   "Owner.segment_check with the held block on every sample",
+   "sweepick_trajectory.validate (native)",
+   "plan_contact_suffix(normal_only): normal reverse including OBSERVATION_BACK of the planned move",
+   "Owner.segment(purpose=OBSERVATION_VIEW): existing executor, settle_trim=(), settled/resolved/Status/Goal checks, settled actual pose collision check"
+  ],
+  "tool_x_definition": "column 0 of the right_cube_grasp site rotation = the approach axis given to A IK",
+  "x_receive_relation": {
+   "model_only": true,
+   "mapping_status": "CANDIDATE (verified=false)",
+   "right_approach_vs_tool_plus_x_deg": 1.5,
+   "right_approach_displacement_in_pregrasp_tool_mm": [
+    24.9,
+    -0.2,
+    0.6
+   ],
+   "held_object_from_right_tool_mm": [
+    [
+     45.4,
+     8.1,
+     -1.1
+    ],
+    [
+     45.3,
+     8.5,
+     -1.0
+    ]
+   ],
+   "statement": "In the A model, tool +X is the planned right approach direction and points at the held block; physical X_receive is unconfirmed and is an operator input (x_basis_tool, x_basis_source)."
+  },
+  "five_dof": {
+   "statement": "All 24 probes planned. Only shoulder_lift, elbow_flex and wrist_flex changed (shoulder_pan within 2 ticks, wrist_roll within 1 tick): the tool X axis lies in the SO101 pan plane, so a translation along it keeps pan and roll. No 5DOF infeasibility at these two start states; other start states are re-planned from the field actual and end REFUSED_PLAN if infeasible."
+  },
+  "nominal_vs_path": "The endpoint is pure X up to tick rounding; the joint-interpolated path is not a straight line (path deviations below). Path deviation is recorded, not gated."
+ },
+ "probe_role": "algebraic feasibility probes of the A IK/collision/native path; not proposed motions, distances or limits",
+ "probe_source_sha256": {
+  "sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+  "sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+  "sweepick_trajectory.py": "7466bfbd0d2243bf66269f5c9f8d8b82efc5288bec0aa38488039b0dc80ad66f",
+  "current_view_candidate.py": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db"
+ },
+ "tool": "review_tools/right_x_ik_collision_probe.py",
+ "tool_sha256": "587c1c063bef0d3ecb07594c4d726221eed5f838e3313c18206c9fa58e871e18",
+ "summary": {
+  "probes": 24,
+  "planned": 24,
+  "collision_clear": 24,
+  "native_executable": 24,
+  "normal_return_ready": 24,
+  "max_command_endpoint_rotation_deg": 0.315,
+  "max_command_endpoint_off_axis_mm": 0.048383881613611776,
+  "max_path_off_axis_mm": 0.62,
+  "max_path_rotation_deg": 0.362,
+  "caveats": [
+   "collision CLEAR is the A model with the coarse held SEARCH_PRIOR, not physical clearance",
+   "+X reduces the model distance to the held block",
+   "both saved sessions started RIGHT_APPROACH from the same planned pose, so the two sessions are not independent start states",
+   "the AFTER_ADOPTED_VIEW start is the settled-short view actual (accepted +23~26 tick elbow shortfall)"
+  ]
+ },
+ "states": [
+  {
+   "session": "20261015_140844_3cc05c",
+   "start_state": "AFTER_RIGHT_PREGRASP_BEFORE_VIEW",
+   "stage": "000005_RECEIVE_CONTACT",
+   "observation_sha256": "6073a096f2c6087971bf9abdc3f14b1453b8b394614f1b1bc33828918836bf8c",
+   "bus_seq": 5,
+   "right_start_ticks": {
+    "shoulder_pan": 1621.0,
+    "shoulder_lift": 1066.0,
+    "elbow_flex": 2741.0,
+    "wrist_flex": 2692.0,
+    "wrist_roll": 1083.0,
+    "gripper": 3010.0
+   },
+   "start_tool_axes_world": {
+    "x_approach": [
+     0.658719050602552,
+     0.6595863250437745,
+     -0.3619876961838899
+    ],
+    "y": [
+     -0.7129017296451435,
+     0.7009781710969942,
+     -0.020018179599431335
+    ],
+    "z_jaw": [
+     0.24054175571454245,
+     0.2712480109802846,
+     0.9319679073321163
+    ]
+   },
+   "prior_view_moves_reversed": 0,
+   "probes": [
+    {
+     "probe_tool_x_mm": 5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 23.0,
+      "elbow_flex": 8.0,
+      "wrist_flex": -29.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      4.923,
+      -0.008,
+      0.014
+     ],
+     "command_endpoint_rotation_deg": 0.191,
+     "path_max_off_axis_mm": 0.069,
+     "path_max_rotation_deg": 0.176,
+     "path_samples": 35,
+     "collision": "CLEAR",
+     "collision_samples": [
+      35,
+      35
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.7000000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": -15.0,
+      "elbow_flex": -15.0,
+      "wrist_flex": 32.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -5.057,
+      -0.005,
+      0.02
+     ],
+     "command_endpoint_rotation_deg": 0.182,
+     "path_max_off_axis_mm": 0.091,
+     "path_max_rotation_deg": 0.176,
+     "path_samples": 36,
+     "collision": "CLEAR",
+     "collision_samples": [
+      36,
+      36
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.72,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 45.0,
+      "elbow_flex": 17.0,
+      "wrist_flex": -59.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      9.928,
+      -0.011,
+      0.026
+     ],
+     "command_endpoint_rotation_deg": 0.228,
+     "path_max_off_axis_mm": 0.115,
+     "path_max_rotation_deg": 0.264,
+     "path_samples": 57,
+     "collision": "CLEAR",
+     "collision_samples": [
+      57,
+      57
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.1400000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": -32.0,
+      "elbow_flex": -28.0,
+      "wrist_flex": 62.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -10.058,
+      -0.003,
+      0.019
+     ],
+     "command_endpoint_rotation_deg": 0.182,
+     "path_max_off_axis_mm": 0.145,
+     "path_max_rotation_deg": 0.176,
+     "path_samples": 60,
+     "collision": "CLEAR",
+     "collision_samples": [
+      60,
+      60
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.2,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": -1.0,
+      "shoulder_lift": 95.0,
+      "elbow_flex": 31.0,
+      "wrist_flex": -122.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      19.927,
+      -0.015,
+      0.046
+     ],
+     "command_endpoint_rotation_deg": 0.315,
+     "path_max_off_axis_mm": 0.474,
+     "path_max_rotation_deg": 0.362,
+     "path_samples": 117,
+     "collision": "CLEAR",
+     "collision_samples": [
+      117,
+      117
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.34,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 1.0,
+      "shoulder_lift": -62.0,
+      "elbow_flex": -56.0,
+      "wrist_flex": 119.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -20.049,
+      0.005,
+      -0.005
+     ],
+     "command_endpoint_rotation_deg": 0.096,
+     "path_max_off_axis_mm": 0.468,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 115,
+     "collision": "CLEAR",
+     "collision_samples": [
+      115,
+      115
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.3000000000000003,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "20261015_140844_3cc05c",
+   "start_state": "AFTER_ADOPTED_OBSERVATION_VIEW",
+   "stage": "000025_OBSERVATION_CANDIDATE",
+   "observation_sha256": "eae6995a66ba72cc51a1415d2cd1c65bd13022736617908ead3778122f92584d",
+   "bus_seq": 25,
+   "right_start_ticks": {
+    "shoulder_pan": 1621.0,
+    "shoulder_lift": 991.0,
+    "elbow_flex": 2689.0,
+    "wrist_flex": 2831.0,
+    "wrist_roll": 503.0,
+    "gripper": 3010.0
+   },
+   "start_tool_axes_world": {
+    "x_approach": [
+     0.6498159471586096,
+     0.6656010446860892,
+     -0.3670347178825784
+    ],
+    "y": [
+     -0.2635102059946344,
+     0.6502091899496925,
+     0.7125941205494388
+    ],
+    "z_jaw": [
+     0.7129527376727174,
+     -0.36633762926806956,
+     0.5979089690138675
+    ]
+   },
+   "prior_view_moves_reversed": 2,
+   "probes": [
+    {
+     "probe_tool_x_mm": 5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 15.0,
+      "elbow_flex": 14.0,
+      "wrist_flex": -28.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      4.965,
+      0.002,
+      0.014
+     ],
+     "command_endpoint_rotation_deg": 0.112,
+     "path_max_off_axis_mm": 0.148,
+     "path_max_rotation_deg": 0.088,
+     "path_samples": 35,
+     "collision": "CLEAR",
+     "collision_samples": [
+      35,
+      35
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.7000000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": -12.0,
+      "elbow_flex": -16.0,
+      "wrist_flex": 28.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -5.003,
+      -0.005,
+      -0.014
+     ],
+     "command_endpoint_rotation_deg": 0.045,
+     "path_max_off_axis_mm": 0.162,
+     "path_max_rotation_deg": 0.0,
+     "path_samples": 35,
+     "collision": "CLEAR",
+     "collision_samples": [
+      35,
+      35
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.7000000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": -1.0,
+      "shoulder_lift": 30.0,
+      "elbow_flex": 28.0,
+      "wrist_flex": -57.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      9.968,
+      0.006,
+      0.027
+     ],
+     "command_endpoint_rotation_deg": 0.155,
+     "path_max_off_axis_mm": 0.262,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 55,
+     "collision": "CLEAR",
+     "collision_samples": [
+      55,
+      55
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.1,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 1.0,
+      "shoulder_lift": -22.0,
+      "elbow_flex": -34.0,
+      "wrist_flex": 55.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -10.004,
+      -0.004,
+      -0.026
+     ],
+     "command_endpoint_rotation_deg": 0.084,
+     "path_max_off_axis_mm": 0.163,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 53,
+     "collision": "CLEAR",
+     "collision_samples": [
+      53,
+      53
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.06,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": -1.0,
+      "shoulder_lift": 64.0,
+      "elbow_flex": 54.0,
+      "wrist_flex": -117.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      19.971,
+      0.004,
+      0.041
+     ],
+     "command_endpoint_rotation_deg": 0.204,
+     "path_max_off_axis_mm": 0.62,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 113,
+     "collision": "CLEAR",
+     "collision_samples": [
+      113,
+      113
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.2600000000000002,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 2.0,
+      "shoulder_lift": -37.0,
+      "elbow_flex": -72.0,
+      "wrist_flex": 109.0,
+      "wrist_roll": 1.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -20.005,
+      0.015,
+      -0.041
+     ],
+     "command_endpoint_rotation_deg": 0.141,
+     "path_max_off_axis_mm": 0.373,
+     "path_max_rotation_deg": 0.166,
+     "path_samples": 105,
+     "collision": "CLEAR",
+     "collision_samples": [
+      105,
+      105
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.1,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "20261015_151937_81d00c",
+   "start_state": "AFTER_RIGHT_PREGRASP_BEFORE_VIEW",
+   "stage": "000005_RECEIVE_CONTACT",
+   "observation_sha256": "c117c845f1f33cf4a821c1fa22c2b59d64a123cecf3c5f6cc83b712f9dc8160e",
+   "bus_seq": 5,
+   "right_start_ticks": {
+    "shoulder_pan": 1621.0,
+    "shoulder_lift": 1068.0,
+    "elbow_flex": 2741.0,
+    "wrist_flex": 2692.0,
+    "wrist_roll": 1083.0,
+    "gripper": 3010.0
+   },
+   "start_tool_axes_world": {
+    "x_approach": [
+     0.6579239923319783,
+     0.658804273743382,
+     -0.3648464734808391
+    ],
+    "y": [
+     -0.7129454679263535,
+     0.7009351483639902,
+     -0.01996691140919346
+    ],
+    "z_jaw": [
+     0.24257943044953859,
+     0.27325234982595237,
+     0.9308535723933015
+    ]
+   },
+   "prior_view_moves_reversed": 0,
+   "probes": [
+    {
+     "probe_tool_x_mm": 5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 23.0,
+      "elbow_flex": 8.0,
+      "wrist_flex": -29.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      4.923,
+      -0.008,
+      0.014
+     ],
+     "command_endpoint_rotation_deg": 0.191,
+     "path_max_off_axis_mm": 0.069,
+     "path_max_rotation_deg": 0.176,
+     "path_samples": 35,
+     "collision": "CLEAR",
+     "collision_samples": [
+      35,
+      35
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.7000000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": -15.0,
+      "elbow_flex": -15.0,
+      "wrist_flex": 32.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -5.057,
+      -0.005,
+      0.02
+     ],
+     "command_endpoint_rotation_deg": 0.182,
+     "path_max_off_axis_mm": 0.091,
+     "path_max_rotation_deg": 0.176,
+     "path_samples": 36,
+     "collision": "CLEAR",
+     "collision_samples": [
+      36,
+      36
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.72,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 45.0,
+      "elbow_flex": 17.0,
+      "wrist_flex": -59.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      9.928,
+      -0.011,
+      0.026
+     ],
+     "command_endpoint_rotation_deg": 0.228,
+     "path_max_off_axis_mm": 0.115,
+     "path_max_rotation_deg": 0.264,
+     "path_samples": 57,
+     "collision": "CLEAR",
+     "collision_samples": [
+      57,
+      57
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.1400000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": -32.0,
+      "elbow_flex": -28.0,
+      "wrist_flex": 62.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -10.058,
+      -0.002,
+      0.019
+     ],
+     "command_endpoint_rotation_deg": 0.181,
+     "path_max_off_axis_mm": 0.145,
+     "path_max_rotation_deg": 0.176,
+     "path_samples": 60,
+     "collision": "CLEAR",
+     "collision_samples": [
+      60,
+      60
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.2,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": -1.0,
+      "shoulder_lift": 95.0,
+      "elbow_flex": 31.0,
+      "wrist_flex": -122.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      19.927,
+      -0.015,
+      0.046
+     ],
+     "command_endpoint_rotation_deg": 0.315,
+     "path_max_off_axis_mm": 0.474,
+     "path_max_rotation_deg": 0.362,
+     "path_samples": 117,
+     "collision": "CLEAR",
+     "collision_samples": [
+      117,
+      117
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.34,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 1.0,
+      "shoulder_lift": -62.0,
+      "elbow_flex": -56.0,
+      "wrist_flex": 119.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -20.048,
+      0.005,
+      -0.005
+     ],
+     "command_endpoint_rotation_deg": 0.096,
+     "path_max_off_axis_mm": 0.468,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 115,
+     "collision": "CLEAR",
+     "collision_samples": [
+      115,
+      115
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.3000000000000003,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    }
+   ]
+  },
+  {
+   "session": "20261015_151937_81d00c",
+   "start_state": "AFTER_ADOPTED_OBSERVATION_VIEW",
+   "stage": "000023_OBSERVATION_CANDIDATE",
+   "observation_sha256": "72a19e7a370218a2bb2d5317c9271ebe8b1b682373cd91f2c39c8f2f9329563c",
+   "bus_seq": 23,
+   "right_start_ticks": {
+    "shoulder_pan": 1621.0,
+    "shoulder_lift": 991.0,
+    "elbow_flex": 2689.0,
+    "wrist_flex": 2831.0,
+    "wrist_roll": 498.0,
+    "gripper": 3010.0
+   },
+   "start_tool_axes_world": {
+    "x_approach": [
+     0.6498291231449873,
+     0.6656624580874199,
+     -0.36689998992318
+    ],
+    "y": [
+     -0.25812033343581675,
+     0.6472916421294794,
+     0.7172080754539111
+    ],
+    "z_jaw": [
+     0.7149097874414634,
+     -0.3713583470481502,
+     0.5924499758613093
+    ]
+   },
+   "prior_view_moves_reversed": 2,
+   "probes": [
+    {
+     "probe_tool_x_mm": 5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": 15.0,
+      "elbow_flex": 14.0,
+      "wrist_flex": -28.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      4.966,
+      0.002,
+      0.014
+     ],
+     "command_endpoint_rotation_deg": 0.111,
+     "path_max_off_axis_mm": 0.148,
+     "path_max_rotation_deg": 0.088,
+     "path_samples": 35,
+     "collision": "CLEAR",
+     "collision_samples": [
+      35,
+      35
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.7000000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -5.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 0.0,
+      "shoulder_lift": -12.0,
+      "elbow_flex": -16.0,
+      "wrist_flex": 28.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -5.002,
+      -0.005,
+      -0.014
+     ],
+     "command_endpoint_rotation_deg": 0.046,
+     "path_max_off_axis_mm": 0.161,
+     "path_max_rotation_deg": 0.0,
+     "path_samples": 35,
+     "collision": "CLEAR",
+     "collision_samples": [
+      35,
+      35
+     ],
+     "native_executable": true,
+     "planned_duration_s": 0.7000000000000001,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": -1.0,
+      "shoulder_lift": 30.0,
+      "elbow_flex": 28.0,
+      "wrist_flex": -57.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      9.969,
+      0.006,
+      0.026
+     ],
+     "command_endpoint_rotation_deg": 0.154,
+     "path_max_off_axis_mm": 0.261,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 55,
+     "collision": "CLEAR",
+     "collision_samples": [
+      55,
+      55
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.1,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -10.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 1.0,
+      "shoulder_lift": -22.0,
+      "elbow_flex": -34.0,
+      "wrist_flex": 55.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -10.004,
+      -0.004,
+      -0.026
+     ],
+     "command_endpoint_rotation_deg": 0.085,
+     "path_max_off_axis_mm": 0.164,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 53,
+     "collision": "CLEAR",
+     "collision_samples": [
+      53,
+      53
+     ],
+     "native_executable": true,
+     "planned_duration_s": 1.06,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": 20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": -1.0,
+      "shoulder_lift": 64.0,
+      "elbow_flex": 54.0,
+      "wrist_flex": -117.0,
+      "wrist_roll": 0.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      19.971,
+      0.004,
+      0.041
+     ],
+     "command_endpoint_rotation_deg": 0.203,
+     "path_max_off_axis_mm": 0.618,
+     "path_max_rotation_deg": 0.124,
+     "path_samples": 113,
+     "collision": "CLEAR",
+     "collision_samples": [
+      113,
+      113
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.2600000000000002,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    },
+    {
+     "probe_tool_x_mm": -20.0,
+     "planned": true,
+     "why": null,
+     "joint_delta_ticks": {
+      "shoulder_pan": 2.0,
+      "shoulder_lift": -37.0,
+      "elbow_flex": -72.0,
+      "wrist_flex": 109.0,
+      "wrist_roll": 1.0
+     },
+     "command_endpoint_fk_tool_mm": [
+      -20.005,
+      0.015,
+      -0.042
+     ],
+     "command_endpoint_rotation_deg": 0.142,
+     "path_max_off_axis_mm": 0.374,
+     "path_max_rotation_deg": 0.166,
+     "path_samples": 105,
+     "collision": "CLEAR",
+     "collision_samples": [
+      105,
+      105
+     ],
+     "native_executable": true,
+     "planned_duration_s": 2.1,
+     "normal_return_ready": true,
+     "normal_return_labels": [
+      "OBSERVATION_BACK_002",
+      "OBSERVATION_BACK_001",
+      "OBSERVATION_BACK_000",
+      "RIGHT_BACK_TO_CARRY",
+      "RIGHT_RETURN_INITIAL",
+      "LEFT_BACK_TO_LIFT"
+     ]
+    }
+   ]
+  }
+ ]
+}

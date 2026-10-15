@@ -415,12 +415,12 @@
       "source_group": "launcher",
       "source_name": "RUN_APPROVED_SESSION.py",
       "component": "A_CONTROL",
-      "source_sha256": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
-      "public_sha256": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
-      "bytes": 28301,
+      "source_sha256": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+      "public_sha256": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+      "bytes": 30527,
       "public_copy_changed": false,
-      "source_location": "A_P0_FINAL_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f"
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581"
     },
     {
       "file": "native/confirmed_wrist_routes.py",
@@ -697,10 +697,12 @@
       "source_group": "native_revision",
       "source_name": "sweepick_full_chain.py",
       "component": "A_CONTROL",
-      "source_sha256": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
-      "public_sha256": "083ab76d4b27925301050d5df3f8796bba6e87bfe0b537fcd396fe822827cfd6",
-      "bytes": 280163,
-      "public_copy_changed": true
+      "source_sha256": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+      "public_sha256": "3a294007f15ec309ea8debe1c23667ca0dc016504b44e1a9b79e3a83c901b04e",
+      "bytes": 291607,
+      "public_copy_changed": true,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE",
+      "active_original_sha256": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e"
     },
     {
       "file": "native/revision/sweepick_gates.py",
@@ -2201,6 +2203,94 @@
       "bytes": 3162,
       "public_copy_changed": false,
       "source_location": "PRIVATE_WORK_RECORD"
+    },
+    {
+      "file": "native/revision/right_x_metrology.py",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "right_x_metrology.py",
+      "component": "A_CONTROL",
+      "source_sha256": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+      "public_sha256": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+      "bytes": 6431,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/test_right_x_metrology.py",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "test_right_x_metrology.py",
+      "component": "A_CONTROL",
+      "source_sha256": "46192b92cdf945d504531529c9ee1bb3bc3f3e7dd64e0565c563458564b66999",
+      "public_sha256": "46192b92cdf945d504531529c9ee1bb3bc3f3e7dd64e0565c563458564b66999",
+      "bytes": 26130,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/tests/test_right_x_launch.py",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "test_right_x_launch.py",
+      "component": "A_CONTROL",
+      "source_sha256": "1e913ce58c9af8aaa437a0fd4d369663f69ff6059888c30d15e79f44d565ab32",
+      "public_sha256": "1e913ce58c9af8aaa437a0fd4d369663f69ff6059888c30d15e79f44d565ab32",
+      "bytes": 6706,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/review_tools/right_x_ik_collision_probe.py",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "right_x_ik_collision_probe.py",
+      "component": "A_CONTROL",
+      "source_sha256": "587c1c063bef0d3ecb07594c4d726221eed5f838e3313c18206c9fa58e871e18",
+      "public_sha256": "587c1c063bef0d3ecb07594c4d726221eed5f838e3313c18206c9fa58e871e18",
+      "bytes": 8871,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_metrology_20261016/RIGHT_X_METROLOGY_EXECUTION_CONTRACT.md",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "RIGHT_X_METROLOGY_EXECUTION_CONTRACT.md",
+      "component": "DOCS",
+      "source_sha256": "20ac044611603314c0ef828410d3ca43ea960db454bc245bf4181f04eb7f4a64",
+      "public_sha256": "20ac044611603314c0ef828410d3ca43ea960db454bc245bf4181f04eb7f4a64",
+      "bytes": 9359,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_metrology_20261016/RIGHT_X_METROLOGY_IK_COLLISION_REPORT.json",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "RIGHT_X_METROLOGY_IK_COLLISION_REPORT.json",
+      "component": "DOCS",
+      "source_sha256": "00a6d0be96650bdc190fad7bd2ebf9d543c0c569e00044998f8ef8a11dd4e796",
+      "public_sha256": "00a6d0be96650bdc190fad7bd2ebf9d543c0c569e00044998f8ef8a11dd4e796",
+      "bytes": 27903,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_metrology_20261016/RIGHT_X_METROLOGY_FAKE_REGRESSION.json",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "RIGHT_X_METROLOGY_FAKE_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "9d42fadaefa46c1f4a5ac7b8249734055cb6ff7fba030fe3e8d976d4cb3f2015",
+      "public_sha256": "9d42fadaefa46c1f4a5ac7b8249734055cb6ff7fba030fe3e8d976d4cb3f2015",
+      "bytes": 12920,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_metrology_20261016/RIGHT_X_FIELD_APPROVAL_REQUIREMENTS.md",
+      "source_group": "right_x_metrology_20261016",
+      "source_name": "RIGHT_X_FIELD_APPROVAL_REQUIREMENTS.md",
+      "component": "DOCS",
+      "source_sha256": "775bc212354c4bdd026a0f81f7fa560cf8ef99ba24c875f185c569f64fb88491",
+      "public_sha256": "775bc212354c4bdd026a0f81f7fa560cf8ef99ba24c875f185c569f64fb88491",
+      "bytes": 6140,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_R0_WORKING_COPY_NOT_ACTIVE"
     }
   ],
   "console17": {
