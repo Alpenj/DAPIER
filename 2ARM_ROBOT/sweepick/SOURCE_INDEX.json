@@ -81,11 +81,11 @@
       "source_group": "console",
       "source_name": "records.py",
       "component": "CONSOLE",
-      "source_sha256": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da",
-      "public_sha256": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da",
-      "bytes": 29724,
+      "source_sha256": "b6f0783ad506a5ca2af6880f1249275708a9772d10e005cc5eb56b44c20c4fb5",
+      "public_sha256": "b6f0783ad506a5ca2af6880f1249275708a9772d10e005cc5eb56b44c20c4fb5",
+      "bytes": 29830,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0"
     },
     {
@@ -93,11 +93,11 @@
       "source_group": "console",
       "source_name": "replay.py",
       "component": "CONSOLE",
-      "source_sha256": "d0e2cb426e0330dc9f016a8341dc68c656411f830532c1a1bd032cb040fbe5b0",
-      "public_sha256": "844b5b54d9088e3bfb7aadbba4085adf6aee3d46452f41b9fb807f04601f1b4d",
-      "bytes": 44496,
+      "source_sha256": "def429833d43e7a3210ee02bd52225e44bf58df485356514ed5ea7b34fd8154d",
+      "public_sha256": "bff033e0fb9a07ca6605f90aa4230ca242ee5190424d2ace791d7b6909878539",
+      "bytes": 46452,
       "public_copy_changed": true,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "95ea406faecaebe4823278996720a4a06287b5d0118f48b853eff920d03b47a4"
     },
     {
@@ -776,11 +776,11 @@
       "source_group": "native_revision",
       "source_name": "sweepick_pick01.py",
       "component": "A_CONTROL",
-      "source_sha256": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
-      "public_sha256": "ca86cb27d309d0900a948001e667afefde5c4902c9eea3cfff942422a1af6223",
-      "bytes": 147757,
+      "source_sha256": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+      "public_sha256": "2b2f9e02ba3b721ff2345617b21550189227658154e5716946f5cf5f2cc0f39a",
+      "bytes": 151196,
       "public_copy_changed": true,
-      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY",
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
     },
     {
@@ -1870,6 +1870,81 @@
       "source_sha256": "6b0ec01598535b70831a89a87cf4cf28226bdd42e7bf8c86a71b076f39931148",
       "public_sha256": "6b0ec01598535b70831a89a87cf4cf28226bdd42e7bf8c86a71b076f39931148",
       "bytes": 4793,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_vservo_shadow.py",
+      "source_group": "observation_reach_20261015",
+      "source_name": "sweepick_vservo_shadow.py",
+      "component": "A_NATIVE",
+      "source_sha256": "02f182e4f4924ce76862ee1a845e043f33b4f9da95e020bc7d97414151d8e530",
+      "public_sha256": "02f182e4f4924ce76862ee1a845e043f33b4f9da95e020bc7d97414151d8e530",
+      "bytes": 3273,
+      "public_copy_changed": false,
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/test_vservo_shadow_interface.py",
+      "source_group": "observation_reach_20261015",
+      "source_name": "test_vservo_shadow_interface.py",
+      "component": "A_NATIVE",
+      "source_sha256": "eb45781de4dbba4dcc1dc2e327b1ced8cab1356560ac71c89aaee8cbe0903c2a",
+      "public_sha256": "eb45781de4dbba4dcc1dc2e327b1ced8cab1356560ac71c89aaee8cbe0903c2a",
+      "bytes": 2334,
+      "public_copy_changed": false,
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/test_vservo_timing_shadow.py",
+      "source_group": "observation_reach_20261015",
+      "source_name": "test_vservo_timing_shadow.py",
+      "component": "A_NATIVE",
+      "source_sha256": "8676949d26c175813ca2e1393c2155847e2572cf88c754c662247f9d8a69a3de",
+      "public_sha256": "8676949d26c175813ca2e1393c2155847e2572cf88c754c662247f9d8a69a3de",
+      "bytes": 2323,
+      "public_copy_changed": false,
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/test_obs_reach_20261015.py",
+      "source_group": "observation_reach_20261015",
+      "source_name": "test_obs_reach_20261015.py",
+      "component": "A_NATIVE",
+      "source_sha256": "d175b32823ac5b0238952d620f8b610240c9718c5f32975a31f235e2f8896390",
+      "public_sha256": "d175b32823ac5b0238952d620f8b610240c9718c5f32975a31f235e2f8896390",
+      "bytes": 4725,
+      "public_copy_changed": false,
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "console/test_obs_settled_short.py",
+      "source_group": "observation_reach_20261015",
+      "source_name": "test_obs_settled_short.py",
+      "component": "CONSOLE",
+      "source_sha256": "acf471f6f33eb7db7076a5e6d96d72a7691c1188f3d5af7286feebc7e8a9a3a0",
+      "public_sha256": "acf471f6f33eb7db7076a5e6d96d72a7691c1188f3d5af7286feebc7e8a9a3a0",
+      "bytes": 3404,
+      "public_copy_changed": false,
+      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/observation_reach_20261015/OBSERVATION_REACH_LATENCY_REVIEW.md",
+      "source_group": "observation_reach_20261015_docs",
+      "source_name": "OBSERVATION_REACH_LATENCY_REVIEW.md",
+      "component": "DOCS",
+      "source_sha256": "aeb6a4c9573261ecb93dcfa237bed279adaa2830cc09efbc2c0080e38d0e2230",
+      "public_sha256": "aeb6a4c9573261ecb93dcfa237bed279adaa2830cc09efbc2c0080e38d0e2230",
+      "bytes": 6503,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/observation_reach_20261015/OBSERVATION_REACH_RESULTS.json",
+      "source_group": "observation_reach_20261015_docs",
+      "source_name": "OBSERVATION_REACH_RESULTS.json",
+      "component": "DOCS",
+      "source_sha256": "0835241beb59b6e23fca3403443dc9a8a6992b6938f9c0f86014370b5e67b8d7",
+      "public_sha256": "0835241beb59b6e23fca3403443dc9a8a6992b6938f9c0f86014370b5e67b8d7",
+      "bytes": 10800,
       "public_copy_changed": false
     }
   ],

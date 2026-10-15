@@ -209,6 +209,14 @@ def depth_png(path_string):
     return output.getvalue(), bounds
 
 
+def settled_short_view(stage):
+    """An OBSERVATION_VIEW that ended TARGET_NOT_REACHED_HOLDING with the same conditions the full-chain owner accepts
+    (sweepick_full_chain Owner.segment missed_view): command completed, actual settled, command state resolved, Status 0."""
+    view, status = stage.get('observation_view'), stage.get('end_status')
+    return bool(isinstance(view, dict) and view.get('command_completed') is True and view.get('actual_settled') is True
+                and view.get('command_state_resolved') is True and isinstance(status, dict) and status and not any(status.values()))
+
+
 class ReplaySession:
     def __init__(self, session_id, root):
         self.id, self.root = session_id, Path(root).resolve()
@@ -223,6 +231,7 @@ class ReplaySession:
         self.stages, self.decisions, self.bookmarks = [], [], []
         self.packet_writes = []
         self.fault = None
+        self.settled_short_views = []                                   # accepted observation views that settled short: recorded, not a fault
         self.untimed_errors = []                                       # Console-17: recorded errors without a host time; never ordered as "first"
         self.index_frames()
         self.index_feedback()
@@ -359,6 +368,9 @@ class ReplaySession:
                 # The terminal record is only made visible at its recorded stage end.
                 if isinstance(move.get('end'), dict) and isinstance(move['end'].get('ticks'), dict):
                     self.sample(side, ended, move['end'], relative + ':end', move.get('last_acknowledged_goal'))
+                record['observation_view'] = move.get('observation_view') if isinstance(move.get('observation_view'), dict) else None
+                record['end_status'] = (move.get('end') or {}).get('status') if isinstance(move.get('end'), dict) else None
+                record['reached'] = move.get('reached') if isinstance(move.get('reached'), dict) else None
                 record.update(last_attempt=move.get('last_goal_write_attempt'),
                               acknowledged=move.get('last_acknowledged_goal', {}),
                               release=move.get('outcome', {}).get('torque_released', UNKNOWN), start=started,
@@ -440,6 +452,13 @@ class ReplaySession:
                         self.fault = error
         # Controller failures after the successful approach are retained in their own scope.
         for stage in self.stages:
+            if stage['result'] == 'TARGET_NOT_REACHED_HOLDING' and settled_short_view(stage):
+                short = {n: r.get('minus_target') for n, r in (stage.get('reached') or {}).items() if isinstance(r, dict) and r.get('within_tolerance') is False}
+                self.settled_short_views.append({'gate': 'OBSERVATION_VIEW_SETTLED_SHORT', 'time_s': stage['end'], 'detail': stage['name'],
+                    'short_ticks': short, 'source': 'episode/EPISODE.json stages + run/move.json observation_view',
+                    'meaning': 'command completed, actual settled and resolved, target not reached; the owner observed from the measured pose'})
+                self.bookmarks.append({'name': '관측 자세 미도달(정착·수용) · ' + stage['name'], 't_s': stage['end']})
+                continue
             if stage['result'] == 'TARGET_NOT_REACHED_HOLDING':
                 error = {'gate': 'TARGET_NOT_REACHED', 'time_s': stage['end'], 'detail': stage['name'],
                          'source': 'episode/EPISODE.json stages'}
@@ -597,7 +616,7 @@ class ReplaySession:
             status = 'NOT_REACHED' if not stages else 'PENDING' if started is None or at < started else 'RUNNING'
             if complete and len(complete) == len(stages):
                 status = complete[-1]['result']
-            errors = [s for s in complete if s['result'] in ('BUS_LOST', 'TARGET_NOT_REACHED_HOLDING')]
+            errors = [s for s in complete if s['result'] in ('BUS_LOST', 'TARGET_NOT_REACHED_HOLDING') and not settled_short_view(s)]
             if errors:
                 status = errors[0]['result']
             detail = '; '.join(s['name'] + ': ' + (s['result'] if s['end'] <= at else 'PENDING/RUNNING') for s in stages)

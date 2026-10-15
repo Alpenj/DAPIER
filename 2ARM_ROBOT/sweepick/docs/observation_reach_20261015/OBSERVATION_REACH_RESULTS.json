@@ -1,0 +1,295 @@
+{
+ "schema": "sweepick.observation-reach-latency.v1",
+ "run_id": "20261015_140844_3cc05c",
+ "device_access": false,
+ "real_start": 0,
+ "real_motor_writes": 0,
+ "real_torque_writes": 0,
+ "stored_evidence": {
+  "observe_0_0": {
+   "result": "TARGET_NOT_REACHED_HOLDING",
+   "start_elbow": 2741.0,
+   "target_elbow": 2671.0,
+   "end_elbow": 2697.0,
+   "goal_register_elbow": 2671.0,
+   "reached_elbow": {
+    "tick": 2697.0,
+    "target": 2671.0,
+    "minus_target": 26.0,
+    "travelled": -44.0,
+    "within_tolerance": false,
+    "settled": true,
+    "reached": false,
+    "load": 116.0,
+    "current": 6.0
+   },
+   "outcome": {
+    "command_completed": true,
+    "target_reached": false,
+    "return_confirmed": null,
+    "torque_released": false
+   },
+   "observation_view": {
+    "nominal_target_reached": false,
+    "command_completed": true,
+    "actual_settled": true,
+    "command_state_resolved": true,
+    "goal_actual_gap_ticks": {
+     "shoulder_pan": 0.0,
+     "shoulder_lift": -2.0,
+     "elbow_flex": -26.0,
+     "wrist_flex": 2.0,
+     "wrist_roll": 3.0
+    },
+    "trim_policy": "observe_actual_settled_pose_without_integral_trim"
+   },
+   "settle_trim": [],
+   "move_sha256": "65db57285555835bd6d97e9aa97d8c5af07c3ca50e86b8e4c142748a6226d634"
+  },
+  "observe_0_1": {
+   "result": "TARGET_NOT_REACHED_HOLDING",
+   "start_elbow": 2697.0,
+   "target_elbow": 2666.0,
+   "end_elbow": 2689.0,
+   "goal_register_elbow": 2666.0,
+   "reached_elbow": {
+    "tick": 2689.0,
+    "target": 2666.0,
+    "minus_target": 23.0,
+    "travelled": -8.0,
+    "within_tolerance": false,
+    "settled": true,
+    "reached": false,
+    "load": 104.0,
+    "current": 5.0
+   },
+   "outcome": {
+    "command_completed": true,
+    "target_reached": false,
+    "return_confirmed": null,
+    "torque_released": false
+   },
+   "observation_view": {
+    "nominal_target_reached": false,
+    "command_completed": true,
+    "actual_settled": true,
+    "command_state_resolved": true,
+    "goal_actual_gap_ticks": {
+     "shoulder_pan": 5.0,
+     "shoulder_lift": 4.0,
+     "elbow_flex": -23.0,
+     "wrist_flex": 3.0,
+     "wrist_roll": -3.0
+    },
+    "trim_policy": "observe_actual_settled_pose_without_integral_trim"
+   },
+   "settle_trim": [],
+   "move_sha256": "54450adfd85673e913e265c9b07654c1300e06a95b331ae76ad404346e403f6f"
+  },
+  "session_18_same_view": "observe_0_0 elbow ended 2695 for target 2671 (24 short) with the same accepted settled-view contract",
+  "flow": "approval consumed -> observe_0_0 TNR (+26) -> observe_0_1 from measured 2697 (+23) -> fresh observation acquired from the measured pose -> insertion not ready (held pose / pad relation missing) -> candidates exhausted -> normal return -> RECEIVE_CONTACT_NOT_READY_RETURNED"
+ },
+ "distinguished": {
+  "command_completed": "every commanded step sent and acknowledged (outcome.command_completed=true)",
+  "settled": "last post-move reads within 1 tick and Moving=0, Velocity=0 (reached.*.settled / observation_view.actual_settled)",
+  "target_reached": "|measured - target| <= reach_tolerance_ticks 14 (progress profile); elbow 26/23 > 14 -> not reached",
+  "command_state_resolved": "Goal register = commanded tick and |Goal - measured| <= following lead; elbow gap 26/23 within it"
+ },
+ "fake_reproduction": {
+  "test": "native/revision/test_obs_reach_20261015.py",
+  "model": "existing Fake 'lag' behaviour set to the stored shortfall (outcome model, not a servo law)",
+  "results": [
+   "03: TARGET_NOT_REACHED_HOLDING, elbow +26, settled, resolved, Goal stays 2671, no trim",
+   "04: starts at measured 2697 (not at the 03 target), travels -8, ends +23",
+   "option B (existing settle_trim on): HOLDING within tolerance, but Goal register ends beyond the view target"
+  ],
+  "passed": 3,
+  "against": "unmodified active source and working copy"
+ },
+ "why_trim_is_off": {
+  "code": "sweepick_full_chain Owner.segment: purpose OBSERVATION_VIEW sets observation_view=True, settle_trim=(); move_a records trim_policy=observe_actual_settled_pose_without_integral_trim",
+  "contract": "after the move the owner requires applied Goal == the uncompensated, collision-checked view target and |Goal - actual| <= following lead, then collision-checks the measured settled pose and observes from it",
+  "reading": "(inference from code and records) the view only needs a settled, measured, model-CLEAR pose; an integral trim would push the loaded elbow Goal past the certified target and add writes next to the held object, so it is excluded for this purpose"
+ },
+ "options": [
+  {
+   "id": "A",
+   "change": "keep the executor contract; classify an accepted settled-short view as a recorded diagnostic in the console (not the run's first error)",
+   "control_change": false,
+   "chosen": true
+  },
+  {
+   "id": "B",
+   "change": "enable the existing settle_trim for OBSERVATION_VIEW",
+   "control_change": true,
+   "chosen": false,
+   "why": "Goal leaves the certified view target; the owner's continuation check and the view certificate binding would have to be redefined; more motion near the held object"
+  },
+  {
+   "id": "C",
+   "change": "pre-compensate the view target by an expected sag",
+   "control_change": true,
+   "chosen": false,
+   "why": "needs a new compensation amount not derived from a calibrated model; changes targets/tolerances, which this task excludes"
+  }
+ ],
+ "next_path_from_measured": {
+  "evidence": [
+   "stored: observe_0_1 start ticks == observe_0_0 end ticks (elbow 2697)",
+   "fake: test_observation_view_04_starts_from_the_latest_actual_and_misses_by_23",
+   "code: move_a rebuilds the trajectory from the read taken immediately before the first write; the owner collision-checks the settled measured pose (settled_actual_pose CLEAR) before the next view"
+  ],
+  "change_needed": false
+ },
+ "console_classification": {
+  "before": {
+   "off_confirmed": true,
+   "state": "ENDED",
+   "category": "partial",
+   "first_error": {
+    "gate": "TARGET_NOT_REACHED",
+    "time_s": 1792041131.7513077,
+    "detail": "handoff_observe_0_0",
+    "source": "episode/EPISODE.json stages"
+   },
+   "normal_return_confirmed": false,
+   "safe_shutdown": "UNKNOWN",
+   "bucket": "success_candidates",
+   "failure_packet": false,
+   "settled_short": null,
+   "inspection_first": {
+    "gate": "TARGET_NOT_REACHED",
+    "time_s": 1792041131.7513077,
+    "detail": "handoff_observe_0_0",
+    "source": "episode/EPISODE.json stages"
+   },
+   "observe_stage": [
+    [
+     "PREGRASP",
+     "HOLDING"
+    ],
+    [
+     "OBSERVE",
+     "NOT_READY"
+    ]
+   ]
+  },
+  "after": {
+   "off_confirmed": true,
+   "state": "ENDED",
+   "category": "success",
+   "first_error": null,
+   "normal_return_confirmed": true,
+   "safe_shutdown": "RECORDED_BOTH_ARMS_OFF",
+   "bucket": "success_candidates",
+   "failure_packet": false,
+   "settled_short": [
+    {
+     "gate": "OBSERVATION_VIEW_SETTLED_SHORT",
+     "time_s": 1792041131.7513077,
+     "detail": "handoff_observe_0_0",
+     "short_ticks": {
+      "elbow_flex": 26.0
+     },
+     "source": "episode/EPISODE.json stages + run/move.json observation_view",
+     "meaning": "command completed, actual settled and resolved, target not reached; the owner observed from the measured pose"
+    },
+    {
+     "gate": "OBSERVATION_VIEW_SETTLED_SHORT",
+     "time_s": 1792041146.4570332,
+     "detail": "handoff_observe_0_1",
+     "short_ticks": {
+      "elbow_flex": 23.0
+     },
+     "source": "episode/EPISODE.json stages + run/move.json observation_view",
+     "meaning": "command completed, actual settled and resolved, target not reached; the owner observed from the measured pose"
+    }
+   ],
+   "inspection_first": null,
+   "observe_stage": [
+    [
+     "PREGRASP",
+     "HOLDING"
+    ],
+    [
+     "OBSERVE",
+     "NOT_READY"
+    ]
+   ]
+  },
+  "note": "'success' after the fix is the console's existing scope rule (RECEIVE_CONTACT observation-only done + normal put-back), not insertion readiness"
+ },
+ "latency_record": {
+  "where": "sweepick_pick01.look() + visual_align()",
+  "clock": "time.monotonic (CLOCK_MONOTONIC; same clock as the recorder's recv_monotonic_s)",
+  "look": [
+   "look_start",
+   "top_frames_done",
+   "joints_read",
+   "wrist_frames_and_analysis_done",
+   "joints_read_again",
+   "look_done"
+  ],
+  "loop": [
+   "look_called",
+   "look_returned",
+   "judged",
+   "correction_computed",
+   "planned"
+  ],
+  "align_stage": [
+   "stage_called",
+   "stage_returned (on the next row)"
+  ],
+  "control_unchanged": "same fake sessions (aligned / corrected) produce byte-identical bus write logs with the unmodified and the changed source (8973 / 8979 writes)"
+ },
+ "b19_shadow_interface": {
+  "record": "VSERVO_SHADOW_INPUT.jsonl per visual-loop look (schema sweepick.vservo-shadow-input.v1)",
+  "module": "native/revision/sweepick_vservo_shadow.py (offline, no device/executor import)",
+  "functions": [
+   "inputs(session_out)",
+   "observation(session_out, row, load_images=False) -> B18-shaped observation",
+   "record_proposal(session_out, proposal) -> refuses unless executable=false and motor_write_authorized=false"
+  ],
+  "not_connected": "no proposal is read by A; B19 remains on its own branch (its scope forbids A native changes)"
+ },
+ "regression": {
+  "new_native": 10,
+  "native_full": {
+   "passed": 481,
+   "failed": 38,
+   "new_failures": 0
+  },
+  "a_gripper": 154,
+  "full_chain_unit": {
+   "failed": 28,
+   "identical": true,
+   "repaired": false
+  },
+  "console": {
+   "ran": 124,
+   "ok": 123,
+   "skipped": 1,
+   "flake": "one run had 1 HTTP read-only test error (urlopen startup timing); passes alone and in 2 full reruns"
+  }
+ },
+ "sources": {
+  "active_unchanged": {
+   "revision/sweepick_pick01.py": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
+   "revision/sweepick_move_a.py": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+   "revision/sweepick_full_chain.py": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e"
+  },
+  "working_copy": {
+   "native/revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+   "native/revision/sweepick_vservo_shadow.py": "02f182e4f4924ce76862ee1a845e043f33b4f9da95e020bc7d97414151d8e530",
+   "console/replay.py": "def429833d43e7a3210ee02bd52225e44bf58df485356514ed5ea7b34fd8154d",
+   "console/records.py": "b6f0783ad506a5ca2af6880f1249275708a9772d10e005cc5eb56b44c20c4fb5"
+  },
+  "live_console_unchanged": {
+   "replay.py": "d0e2cb426e0330dc9f016a8341dc68c656411f830532c1a1bd032cb040fbe5b0",
+   "records.py": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da"
+  },
+  "active_runtime_replaced": false,
+  "console17_gate_note": "adopting the changed pick01 requires refreshing console/CONSOLE17_TESTED_NATIVE_SHA256.json, otherwise LEFT_START_TO_LIFT turns BACKEND_CHANGE_REQUIRED by design"
+ }
+}

@@ -628,12 +628,13 @@ def overlay(scene, bgr, path):
 
 
 def look(out, tag):
-    out = Path(out); d = out / "looks" / tag; d.mkdir(parents=True, exist_ok=True)
-    top = top_frame(d / f"sdk_{int(time.time())}"); t_top = time.time()        # a fresh folder: a stop file left by an earlier reader would end this one at once
-    arms = read_ticks(); t_q1 = time.time()                                    # joints read AFTER the top frames were taken (the reader needs about 13 s to start), not before
+    out = Path(out); d = out / "looks" / tag; d.mkdir(parents=True, exist_ok=True); m_start = time.monotonic()
+    top = top_frame(d / f"sdk_{int(time.time())}"); t_top = time.time(); m_top = time.monotonic()        # a fresh folder: a stop file left by an earlier reader would end this one at once
+    arms = read_ticks(); t_q1 = time.time(); m_q1 = time.monotonic()                                    # joints read AFTER the top frames were taken (the reader needs about 13 s to start), not before
     ticks = {s: arms[s]["ticks"] for s in arms}
     scene = analyse(top["bgr"], top["depth_mm"], top["K"], ticks); scene["_out"] = str(out); scene.update(K=list(top["K"]), tag=tag, arms=arms, stamps=top["stamps"], depth=dict(frames=top["depth_frames"], valid_share=top["valid_share"]), wrist=wrist_frame(d / "left_wrist.jpg"))
-    arms2 = read_ticks(); t_q2 = time.time()                                   # ... and again after the wrist frames: the arm must not have moved in between
+    m_wrist = time.monotonic()                                                 # wrist frames taken and both views analysed
+    arms2 = read_ticks(); t_q2 = time.time(); m_q2 = time.monotonic()                                   # ... and again after the wrist frames: the arm must not have moved in between
     moved = {f"{s_} {n}": arms2[s_]["ticks"][n] - arms[s_]["ticks"][n] for s_ in arms for n in arms[s_]["ticks"] if abs(arms2[s_]["ticks"][n] - arms[s_]["ticks"][n]) > 2}
     scene["joint_reads"] = dict(top_frames_done_host_s=t_top, joints_host_s=t_q1, joints_again_host_s=t_q2, seconds_top_to_joints=t_q1 - t_top, seconds_between_reads=t_q2 - t_q1, moved_more_than_2_ticks=moved, static=not moved,
                                 note="the port is opened read-only for each read; nothing reads the joints while the cameras are being read, so this is two snapshots around the images, not a continuous watch")
@@ -653,6 +654,8 @@ def look(out, tag):
     cv2.imwrite(str(d / "top.png"), top["bgr"]); np.save(d / "depth_mm.npy", top["depth_mm"])
     if scene["ok"]:
         overlay(scene, top["bgr"], d / "overlay.png")
+    scene["timing_monotonic_s"] = dict(look_start=m_start, top_frames_done=m_top, joints_read=m_q1, wrist_frames_and_analysis_done=m_wrist, joints_read_again=m_q2,
+                                       look_done=time.monotonic(), clock="time.monotonic (CLOCK_MONOTONIC, the clock of the recorder's recv_monotonic_s)", role="recording only")
     (d / "SCENE.json").write_text(json.dumps(scene, indent=1, default=str)); return scene
 
 
@@ -1262,6 +1265,30 @@ def put_back_evidence(state, scene):
 LEFT_TO_LIFT = "LEFT_START_TO_LIFT"                                             # Console-17 limited execution scope: the same session up to held_after_lift, then nothing more
 
 
+VSERVO_SHADOW_SCHEMA = "sweepick.vservo-shadow-input.v1"
+
+
+def vservo_shadow_input(out, row, scene):
+    """Shadow-only interface for B18/B19 (2026-10-15): one line per visual-loop look with the inputs A used and the
+    correction A computed, plus the stored frame/scene paths. Nothing reads this file on the control path; a proposal
+    computed from it is never executable (B18 contract: executable=false, motor_write_authorized=false)."""
+    tag = scene.get("tag"); folder = Path(out) / "looks" / str(tag)
+    line = dict(schema=VSERVO_SHADOW_SCHEMA, observation_identity=dict(session_out=str(out), look_tag=tag),
+                files=dict(scene="looks/%s/SCENE.json" % tag, left_wrist="looks/%s/left_wrist.jpg" % tag, top="looks/%s/top.png" % tag,
+                           present={n: (folder / n).exists() for n in ("SCENE.json", "left_wrist.jpg", "top.png")}),
+                height=row.get("height"), k=row.get("k"), gate=row.get("gate"), ok=row.get("ok"), q12=scene.get("q12"), joint_reads=scene.get("joint_reads"),
+                a_feature=dict(offset_px=row.get("offset_px"), offset_mm=row.get("offset_mm"), lateral_error_mm=row.get("lateral_error_mm"),
+                               lateral_target_mm=row.get("lateral_target_mm"), uncertainty_mm=row.get("uncertainty_mm"), reference_confirmed=row.get("reference_confirmed"),
+                               tool_xy_m=row.get("tool_xy_m"), axis=row.get("axis")),
+                a_response=row.get("response"), a_correction=row.get("correction"), a_plan_ok=row.get("plan_ok"), a_end=row.get("end"),
+                timing_monotonic_s=row.get("timing_monotonic_s"), look_timing_monotonic_s=row.get("look_timing_monotonic_s"),
+                previous_align_stage_monotonic_s=row.get("previous_align_stage_monotonic_s"),
+                role="SHADOW_INPUT_ONLY", executable=False, motor_write_authorized=False)
+    with open(Path(out) / "VSERVO_SHADOW_INPUT.jsonl", "a") as stream:
+        stream.write(json.dumps(line, default=str) + "\n")
+    return line
+
+
 def limited_lift_end(out, state, scene, evidence, held, trail):
     """Console-17: the explicit boundary after held_after_lift. Nothing below this is commanded in LEFT_START_TO_LIFT: no
     CARRY/hand-over, no lower/open/retreat/home, no Torque_Enable write. The left arm stays powered and holding as the lift
@@ -1377,11 +1404,16 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
         'ALIGNED', 'NOT_ALIGNED' (go back the planned way) or 'STOPPED' (a controller ended abnormally)."""
         prev, gain, src, k = None, None, "prior", 0
         while True:
-            sc = look_fn(out, f"{prefix}_{k}"); ok, ev = judge(out, S(), gate, sc); off = ev.get("wrist_offset") or {}
+            m = dict(look_called=time.monotonic())                            # 2026-10-15 latency record: recording only, nothing below reads it
+            sc = look_fn(out, f"{prefix}_{k}"); m["look_returned"] = time.monotonic()
+            ok, ev = judge(out, S(), gate, sc); off = ev.get("wrist_offset") or {}; m["judged"] = time.monotonic()
             err_px, err_mm = ev.get("lateral_error_px"), ev.get("lateral_error_mm")
             row = dict(step="visual", loop="STEPWISE_VISUAL_LOOP", height=prefix, k=k, gate=gate, ok=ok, why=ev["why"], frames=(sc.get("wrist") or {}).get("frames"), offset_px=off.get("offset_px"), offset_mm=off.get("offset_mm"), lateral_error_mm=err_mm, lateral_target_mm=ev.get("lateral_target_mm"), uncertainty_mm=off.get("uncertainty_mm"),
                        checks={k_: (c_.get("ok"), c_.get("unknown")) for k_, c_ in (ev.get("checks") or {}).items()},
                        allowed_mm=ev.get("tolerance_mm"), reference_confirmed=off.get("reference_confirmed_in_this_frame"), tool_xy_m=(sc.get("tool_left") or [None, None])[:2], joints_read=sc.get("joint_reads"), not_controlled=["image y (along the pads' width)", "yaw of the block against the jaws", "height (checked, not servoed)"])
+            row["timing_monotonic_s"] = m; row["look_timing_monotonic_s"] = sc.get("timing_monotonic_s")
+            if prev is not None:
+                row["previous_align_stage_monotonic_s"] = prev.get("stage_timing")
             tool_now = sc.get("tool_left"); axis_now = sc.get("jaw_axis_xy")
             if prev is not None and off.get("readable") and tool_now is not None and axis_now is not None:
                 dmm = 1000.0 * float(np.dot(np.array(tool_now[:2]) - np.array(prev["tool"][:2]), np.array(prev["axis"])))     # the tool's displacement projected on the ONE axis the correction was made along
@@ -1400,7 +1432,7 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
             if "unknown" in alignment:
                 row["end"] = alignment["unknown"]; note(**row); return "NOT_ALIGNED"
             if ok:
-                note(**row); return "ALIGNED"
+                note(**row); _rec(lambda: vservo_shadow_input(out, row, sc), "vservo shadow input"); return "ALIGNED"
             if not ev.get("correctable"):
                 row["end"] = "not a lateral offset that a correction along the jaw axis can remove (or not readable)"; note(**row); return "NOT_ALIGNED"
             if prev is not None and abs(err_mm) > abs(prev["err_mm"]) - off["uncertainty_mm"]:
@@ -1409,12 +1441,16 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
             row["correction"] = dict(tool_move_along_jaw_mm=move, px_per_mm=g, relation=src, basis="local 1-axis image response; axis = the jaw axis (image x). Sign from the PICK01 record, checked against every move")
             if tool_now is None or axis_now is None:
                 row["end"] = "the tool position / jaw axis of this look is unknown (no frame chain): no correction is computed"; note(**row); return "NOT_ALIGNED"
-            c = correct(out, move, f"wrist image {sc.get('tag')}: block {err_px:+.1f} px from where the plan puts it against the confirmed jaw midline; {g:.2f} px/mm ({src})", axis_xy=axis_now); row["plan_ok"] = c.get("plan_ok"); note(**row)
+            m["correction_computed"] = time.monotonic()
+            c = correct(out, move, f"wrist image {sc.get('tag')}: block {err_px:+.1f} px from where the plan puts it against the confirmed jaw midline; {g:.2f} px/mm ({src})", axis_xy=axis_now); row["plan_ok"] = c.get("plan_ok"); m["planned"] = time.monotonic(); note(**row)
+            _rec(lambda: vservo_shadow_input(out, row, sc), "vservo shadow input")
             if not c.get("plan_ok"):
                 return "NOT_ALIGNED"
+            stage_timing = dict(stage_called=time.monotonic())
             if not run_stage("align", HOLDING_OK + ("TARGET_NOT_REACHED_HOLDING",)):     # short of the joint target but completed and holding: the next look measures where the hand really is
                 return "STOPPED"
-            prev = dict(off=off, err_px=err_px, err_mm=err_mm, tool=list(tool_now), axis=list(axis_now), commanded=move); k += 1
+            stage_timing["stage_returned"] = time.monotonic()
+            prev = dict(off=off, err_px=err_px, err_mm=err_mm, tool=list(tool_now), axis=list(axis_now), commanded=move, stage_timing=stage_timing); k += 1
 
     r1 = visual_align("01_pregrasp", "ready_to_descend")
     if r1 != "ALIGNED":

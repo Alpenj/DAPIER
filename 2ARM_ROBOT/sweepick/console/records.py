@@ -416,6 +416,7 @@ def save_review(directory, record, evidence):
             archive.native_release_confirmed = record['normal_return_confirmed']
             record['dataset']['recorded_range'] = {'start_s': archive.start, 'end_s': archive.end}
             review['final_snapshot'] = archive.snapshot(archive.end)
+            review['observation_views_settled_short'] = list(getattr(archive, 'settled_short_views', []))
             if archive.warnings:
                 record['recording']['status'] = 'INCOMPLETE'
                 record['recording']['errors'].extend(archive.warnings)
