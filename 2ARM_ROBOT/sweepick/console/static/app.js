@@ -196,6 +196,8 @@ function renderControl() {
   $('rerunRecoveryControl').hidden = control?.can_prepare === true;
   $('rerunRecoveryControl').disabled = !connected || control?.can_confirm_recovery !== true || state.controlBusy;
   $('preparedControl').hidden = !active;
+  $('nextSession').textContent = active?.state === 'PREPARED' && !active.consumed && active.auto_prepared_after
+    ? 'FULL_CHAIN 다음 실물 세션 · 준비됨, 확인 후 START' : 'FULL_CHAIN 다음 실물 세션';
   $('preparedJob').textContent = display(active?.id);
   $('preparedOutput').textContent = display(active?.session_out);
   $('preparedScope').textContent = display(active?.scope ?? control?.scope);
@@ -210,10 +212,15 @@ function renderControl() {
     : active?.consumed ? `${scopeName} 이번 세션 START 이미 전달됨` : `${scopeName} 현장 승인 후 실물 START`;
   $('limitedTerminal').hidden = active?.execution_scope !== 'LEFT_START_TO_LIFT';
   $('limitedTerminal').textContent = limitedTerminalText(active);
-  $('fieldApprovalInfo').textContent = active?.consumed
+  $('fieldApprovalInfo').textContent = active?.consumed && active.auto_next?.error
+    ? `다음 작업 자동 준비 실패: ${active.auto_next.error} · 위의 새 실물 세션 준비로 직접 준비하십시오.`
+    : active?.consumed
     ? `이 작업의 승인은 이미 사용됐습니다. 현재 ${display(control.state)} · 중복 승인/START는 비활성입니다.`
     : !connected ? '제어 연결 확인 전에는 승인할 수 없습니다.'
-      : active?.state === 'PREPARED' ? '이번 세션의 현장 조건을 확인한 뒤 체크하고 START를 누르십시오.' : '새 작업 준비 후에 현장 승인을 입력할 수 있습니다.';
+      : active?.state === 'PREPARED' && active.auto_prepared_after
+        ? `직전 실행(${active.auto_prepared_after})이 정상 종료되어 다음 작업이 자동으로 준비됐습니다. 물체·팔 배치를 다시 확인한 뒤 체크하고 START를 누르십시오.`
+      : active?.state === 'PREPARED' ? '이번 세션의 현장 조건을 확인한 뒤 체크하고 START를 누르십시오.'
+      : '새 작업 준비 후에 현장 승인을 입력할 수 있습니다.';
   renderPlanApproval();
   renderPendingView(active?.pending_view);
   if (state.liveMode && state.snapshot?.mode === 'LIVE') renderCameras(state.snapshot.cameras, 'LIVE');

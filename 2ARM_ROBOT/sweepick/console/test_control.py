@@ -211,6 +211,50 @@ class ControlContract(unittest.TestCase):
         self.assertEqual(self.control.status()['state'], 'ENDED')
         self.assertTrue(self.control.status()['can_prepare'])
 
+    def normal_end(self, job):
+        root = Path(job['session_out']);(root / 'episode').mkdir(parents=True)
+        stages = []
+        for side in ('left', 'right'):
+            folder = root / side;(folder / 'run1').mkdir(parents=True)
+            stages.append({'side': side, 'result': 'RETURNED_RELEASED', 'folder': str(folder)})
+            (folder / 'run1/move.json').write_text(json.dumps({'result': 'RETURNED_RELEASED', 'outcome': {'torque_released': True},
+                'end': {k: {n: 0 for n in JOINTS} for k in ('torque', 'status', 'moving', 'velocity')}}))
+        (root / 'episode/EPISODE.json').write_text(json.dumps({'stages': stages}))
+        self.runner.alive = False
+
+    def test_normal_end_auto_prepares_one_unapproved_next_session(self):
+        job = self.prepare();self.start(job);self.normal_end(job)
+        launches = sum(c[:2] == ['tmux', 'new-session'] for c in self.runner.calls)
+        status = self.control.auto_prepare_next()
+        nxt = status['active']
+        self.assertEqual((status['state'], nxt['auto_prepared_after'], nxt['consumed'], nxt['source_session']), ('PREPARED', job['id'], False, 'session_18'))
+        self.assertFalse(json.loads((Path(nxt['session_out']).parent / 'APPROVAL.json').read_text())['approved'])
+        self.assertEqual(self.control.auto_prepare_next()['active']['id'], nxt['id'])            # polled again: no second job
+        self.assertEqual(len([d for d in Path(self.temporary.name).iterdir() if (d / 'JOB.json').exists()]), 2)
+        self.assertEqual(sum(c[:2] == ['tmux', 'new-session'] for c in self.runner.calls), launches)   # never starts
+        with self.assertRaises(ControlError):
+            self.control.start(nxt['id'], field_ready=False, mounts_unchanged=False, supervised=False)
+        self.start(nxt)
+        self.assertEqual(self.control.status()['active']['id'], nxt['id'])
+
+    def test_no_auto_prepare_after_fault_stop_or_device_problem(self):
+        job = self.prepare();self.start(job);Path(job['session_out']).mkdir();self.runner.alive = False
+        self.assertEqual(self.control.auto_prepare_next()['state'], 'FAULT')                       # no release ledger
+        self.assertEqual(self.control.status()['active']['id'], job['id'])
+        other = Controller(Path(self.temporary.name) / 'b', run=self.runner)
+        job = other.prepare('session_18')['active'];other.start(job['id'], field_ready=True, mounts_unchanged=True, supervised=True)
+        self.runner.alive = True;other.stop(job['id']);self.normal_end(job)
+        self.assertEqual(other.auto_prepare_next()['active']['id'], job['id'])                    # operator STOP: manual path
+        third = Controller(Path(self.temporary.name) / 'c', run=self.runner)
+        job = third.prepare('session_18')['active'];third.start(job['id'], field_ready=True, mounts_unchanged=True, supervised=True);self.normal_end(job)
+        self.runner.foreign = '1234'
+        status = third.auto_prepare_next()
+        self.assertEqual(status['active']['id'], job['id'])
+        self.assertIn('장치 owner', status['active']['auto_next']['error'])
+        self.runner.foreign = ''
+        self.assertEqual(third.auto_prepare_next()['active']['id'], job['id'])                    # failure recorded once, no retry loop
+        self.assertTrue(third.status()['can_prepare'])                                             # manual prepare still possible
+
     def test_extra_view_decision_bound_to_current_request_digest(self):
         job = self.prepare();self.start(job)
         root = Path(job['session_out']);root.mkdir()

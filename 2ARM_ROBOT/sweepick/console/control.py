@@ -452,7 +452,27 @@ class Controller:
             'limited_source_check': native_source_check(),
             'device_access': False}
 
-    def prepare(self, source_session=None, *, execution_scope=FULL_CHAIN):
+    def auto_prepare_next(self):
+        """After a normal FULL_CHAIN end (no error, native ledger: both arms RETURNED_RELEASED with torque/status 0, no
+        operator STOP), prepare the next session once so the operator only re-checks the table and STARTs. The new job is
+        unapproved like any prepared job; nothing is started. FAULT, LIMITED_HOLDING and stopped runs keep the manual path."""
+        status = self.status()
+        job = status['active']
+        if (status['state'] != 'ENDED' or status['owner_alive'] or not status['can_prepare'] or not job or not job.get('consumed')
+                or job.get('execution_scope', FULL_CHAIN) != FULL_CHAIN or job.get('stop_sent') or job.get('auto_next')):
+            return status
+        try:
+            self.prepare(job.get('source_session'), execution_scope=FULL_CHAIN, auto_after=job['id'])
+        except (ControlError, DeviceCheckError, OSError, ValueError, KeyError) as exc:
+            with self.locked():
+                current = read_json(self.state_file) or {}
+                if current.get('id') == job['id'] and not current.get('auto_next'):
+                    current['auto_next'] = {'prepared': None, 'error': f'{type(exc).__name__}: {exc}',
+                                            'at': datetime.now().astimezone().isoformat()}
+                    self.save(current)
+        return self.status()
+
+    def prepare(self, source_session=None, *, execution_scope=FULL_CHAIN, auto_after=None):
         self.require_execution_scope(execution_scope)
         if source_session is not None and (not isinstance(source_session, str)
                 or (source_session not in ROOTS and not self.run_directory(source_session))):
@@ -461,6 +481,9 @@ class Controller:
             status = self.status()
             if not status['can_prepare']:
                 raise ControlError(status['block_reason'] or '동시 세션 준비/실행 불가')
+            if auto_after is not None and ((status['active'] or {}).get('id') != auto_after or status['state'] != 'ENDED'
+                                           or (status['active'] or {}).get('auto_next')):
+                raise ControlError('다음 세션이 이미 준비됐거나 직전 실행이 정상 종료가 아님')
             occupied = self.owners()                                     # raises DeviceCheckError on an unconfirmed node/alias/route
             if occupied:
                 raise ControlError('장치 owner가 이미 존재함: ' + str(occupied))
@@ -508,6 +531,8 @@ class Controller:
                    'execution_scope': execution_scope,
                    'state': 'PREPARED', 'phase': 'awaiting_operator_approval', 'consumed': False,
                    'preparation': 'FRESH_SESSION' if source_session is None else 'ARCHIVE_REFERENCE'}
+            if auto_after is not None:
+                job['auto_prepared_after'] = auto_after
             atomic_json(directory / 'JOB.json', job)
             self.save(job)
         return self.status()

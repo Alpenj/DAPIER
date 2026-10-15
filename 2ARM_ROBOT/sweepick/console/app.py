@@ -39,7 +39,7 @@ ANALYSIS_REVIEWS = {
     'CONSOLE16': {'title': 'Console-16 · LEFT START → LIFT 제한 시험 준비',
             'directory': BASE / 'review/console16_20261015',
             'files': ('CONSOLE16_LIMITED_RUN_CONTRACT.md', 'CONSOLE16_EXISTING_BACKEND_AUDIT.md',
-                      'CONSOLE16_FAKE_RUN_VALIDATION.json', 'CONSOLE16_TEST_REPORT.json', 'CONSOLE16_BACKEND_HANDOFF.md')},
+                      'CONSOLE16_FAKE_RUN_VALIDATION.json', 'CONSOLE16_TEST_REPORT.json', 'CONSOLE16_OPUS_HANDOFF.md')},
     # Console-17: B-16 goal shadow results, read-only. Three result groups are kept apart; nothing here is executable.
     'B16': {'title': 'B-16 · Goal Shadow (A 기존 목표 / ACT FK 진단 / B 목표 제안)',
             'directory': Path('/home/robot/sweepick-sim-client/sweepick_261015_B16_GOAL_SHADOW'),
@@ -103,7 +103,7 @@ def action(method, *args, **kwargs):
 
 @app.get('/api/control')
 def control_status():
-    return controller.status()
+    return controller.auto_prepare_next()                              # normal FULL_CHAIN end -> next unapproved PREPARED, once
 
 
 @app.get('/api/control/plan')
