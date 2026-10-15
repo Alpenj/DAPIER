@@ -110,14 +110,15 @@ class Guard(unittest.TestCase):
     def test_current_confirmation_passes(self):
         resolve_devices(PLAN, self.pairing(), read=self.read(), identity=self.identity(), **fs())
 
-    def test_missing_confirmation_reboot_or_reenumeration_refuses(self):
-        for identity, read, words in ((None and {}, self.read(), 'not confirmed'), ({}, self.read(), 'not confirmed'),
-                                      (self.identity(boot_id='old'), self.read(), 'rebooted'),
-                                      (self.identity(), self.read(**{'/sys/bus/usb/devices/1-1.1/devnum': '40'}), 'right_wrist: camera re-enumerated')):
-            if identity is None:
-                continue
+    def test_replug_on_the_same_port_or_reboot_keeps_the_confirmation(self):
+        resolve_devices(PLAN, self.pairing(), read=self.read(**{'/proc/sys/kernel/random/boot_id': 'new', '/sys/bus/usb/devices/1-1.1/devnum': '40'}),
+                        identity=self.identity(), **fs())
+
+    def test_missing_confirmation_or_route_change_refuses(self):
+        moved = self.identity(); moved['wrists']['right_wrist'] = dict(moved['wrists']['right_wrist'], usb_sysfs='/sys/bus/usb/devices/1-1.4')
+        for identity, words in (({}, 'not confirmed'), (moved, r'right_wrist: USB route /sys/bus/usb/devices/1-1.1 differs from the last cover test')):
             with self.subTest(words=words), self.assertRaisesRegex(DeviceCheckError, words):
-                resolve_devices(PLAN, self.pairing(), read=read, identity=identity, **fs())
+                resolve_devices(PLAN, self.pairing(), read=self.read(), identity=identity, **fs())
 
     def test_arm_alias_on_the_other_arms_adapter_refuses(self):
         with self.assertRaisesRegex(DeviceCheckError, 'left_arm: /dev/ttyACM1 has USB serial R'):

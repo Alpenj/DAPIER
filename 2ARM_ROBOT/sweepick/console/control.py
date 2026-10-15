@@ -131,22 +131,20 @@ def resolve_devices(plan, pairing, *, realpath=os.path.realpath, exists=os.path.
             problems.append(f'{name}: {canonical} is not on the confirmed USB route {usb}')
     if nodes.get('left_wrist') and nodes.get('left_wrist') == nodes.get('right_wrist'):
         problems.append('both wrists resolve to the same capture node')
-    # identical cameras without a serial: a swap between the same two ports cannot be seen in software. Any re-enumeration
-    # (unplug/replug, swap, reboot) since the last operator cover test therefore requires a new cover test.
+    # identical cameras without a serial are told apart by USB port only. The operator cover test confirms which port
+    # carries which camera; it holds while the routes stay the same (replug into the same, marked port or a reboot keeps
+    # it). A route change (port/hub move, discover) needs a new cover test. A swap of the two plugs between the same two
+    # ports cannot be seen in software: the cable/port markings are the guard against that.
     if identity is not None:
-        boot = read('/proc/sys/kernel/random/boot_id')
         confirmed = (identity or {}).get('wrists') or {}
         if not confirmed:
             problems.append('wrist camera identity not confirmed by an operator cover test (run wrist_cover_check.py)')
-        elif identity.get('boot_id') != boot:
-            problems.append('host rebooted since the last wrist cover test; run wrist_cover_check.py')
         else:
             for name in WRIST_NAMES:
                 usb = (pairing.get(name) or {}).get('connection', {}).get('usb_sysfs')
                 row = confirmed.get(name) or {}
-                now = read(f'{usb}/devnum') if usb else None
-                if row.get('usb_sysfs') != usb or row.get('devnum') != now or row.get('capture_node') != nodes.get(name):
-                    problems.append(f'{name}: camera re-enumerated since the last cover test (devnum {row.get("devnum")} -> {now}); run wrist_cover_check.py')
+                if row.get('usb_sysfs') != usb:
+                    problems.append(f'{name}: USB route {usb} differs from the last cover test ({row.get("usb_sysfs")}); run wrist_cover_check.py')
     if problems:
         raise DeviceCheckError('장치 경로 확인 실패: ' + '; '.join(problems))
     return nodes

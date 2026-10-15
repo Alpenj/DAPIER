@@ -39,9 +39,9 @@
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "40dd400b4c64e8086702b938f6827ef8986179bd670e2c2d6c2e68561f388697",
-      "public_sha256": "40dd400b4c64e8086702b938f6827ef8986179bd670e2c2d6c2e68561f388697",
-      "bytes": 48574,
+      "source_sha256": "ff3282396fca23ebefbbd3740dacf8dc302b7dcc90c852b5e18a56b052ab74af",
+      "public_sha256": "ff3282396fca23ebefbbd3740dacf8dc302b7dcc90c852b5e18a56b052ab74af",
+      "bytes": 48445,
       "public_copy_changed": false,
       "source_location": "LIVE_CONSOLE",
       "active_original_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b"
@@ -2141,9 +2141,9 @@
       "source_group": "wrist_udev_20261015",
       "source_name": "test_wrist_cover_check.py",
       "component": "CONSOLE",
-      "source_sha256": "6013cebf15ebb1fef52ffc3c29a4d26630d75812fbaac30d631b8fd9e1cf38b2",
-      "public_sha256": "6013cebf15ebb1fef52ffc3c29a4d26630d75812fbaac30d631b8fd9e1cf38b2",
-      "bytes": 7807,
+      "source_sha256": "4eb7f0b48b764b7874c497ef9fd27c46176b16c7aeb326734bc77b64a29130cf",
+      "public_sha256": "4eb7f0b48b764b7874c497ef9fd27c46176b16c7aeb326734bc77b64a29130cf",
+      "bytes": 7963,
       "public_copy_changed": false,
       "source_location": "LIVE_CONSOLE"
     },
@@ -2196,9 +2196,9 @@
       "source_group": "wrist_udev_20261015",
       "source_name": "FIELD_START_READINESS.md",
       "component": "DOCS",
-      "source_sha256": "68d263cc71fb6091390198be1769b1e0f048c3628706fdcc67f85e831223daa9",
-      "public_sha256": "68d263cc71fb6091390198be1769b1e0f048c3628706fdcc67f85e831223daa9",
-      "bytes": 2899,
+      "source_sha256": "cb1837fcc40e4eba3eb6b416f3dd9e4a2b162d945e4560dbb69ee97b8f8d2c17",
+      "public_sha256": "cb1837fcc40e4eba3eb6b416f3dd9e4a2b162d945e4560dbb69ee97b8f8d2c17",
+      "bytes": 3162,
       "public_copy_changed": false,
       "source_location": "PRIVATE_WORK_RECORD"
     }
