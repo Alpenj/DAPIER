@@ -1,0 +1,84 @@
+{
+  "schema": "sweepick.gripper-initial-range-tests.v1",
+  "device_access": false,
+  "real_motor_writes": 0,
+  "real_torque_writes": 0,
+  "result": "FAKE_REGRESSION_PASS_PHYSICAL_NOT_TESTED",
+  "tests": {
+    "new": 111,
+    "a16_a17_allowlist_postwrite": 36,
+    "other_existing_grip": 7,
+    "passed": 154,
+    "legacy_failed": 1,
+    "legacy_failure": "test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage: KeyError provisional",
+    "legacy_failure_reproduced_with_before_source": true
+  },
+  "python": "existing robot venv Python3.12.3",
+  "pytest_plugin_autoload": false,
+  "commands": [
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q revision/test_gripper_initial_range.py revision/test_a16_close_binding.py review/a17_20261015/test_a17_first_goal.py revision/test_sweepick_hard_gate_allowlist.py revision/test_postwrite_order.py",
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q revision/test_sweepick_grip.py -k \"not test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage\""
+  ],
+  "matrix": {
+    "conditions": 64,
+    "before_and_after": true,
+    "before_empty_phantom_contact_conditions": 8,
+    "after_empty_phantom_contact_conditions": 0,
+    "initial_openings": [
+      3344,
+      3431,
+      3497,
+      3501
+    ],
+    "torque_starts": [
+      "OFF",
+      "ON"
+    ],
+    "delays_s": [
+      0,
+      0.12,
+      0.32,
+      0.4
+    ],
+    "separate_first_closing_motion_delay_cases": 24
+  },
+  "preserved": [
+    "Calibration/EEPROM",
+    "Jaw and preload thresholds",
+    "1tick collision binding",
+    "STOP trigger",
+    "original runs/Source SHA",
+    "single Motor Writer/Owner"
+  ],
+  "changed": [
+    "grip initial Goal/readback and rangeentry-to-contact connection",
+    "rangevalid STOP recovery matching existing arm executor",
+    "FakeJaws follows already-latchedGoal atTorqueON"
+  ],
+  "review": "Independent read-only review accepted known cases; no remaining actionableP1/P2 in requested scope",
+  "limits": [
+    "All device writes are Fake only",
+    "Collision results in stage unit tests are Fake CLEAR",
+    "Initial66/70tick physical force is not measured",
+    "Out-of-range STOP keeps lastvalidGoal; physical stop UNKNOWN/operator required",
+    "Recent ID6 overload root cause remains UNKNOWN"
+  ],
+  "source_sha256": {
+    "sweepick_move_a.py": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+    "sweepick_pick01.py": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
+    "sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+    "sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+    "sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+    "sweepick_HARD_GATE_ALLOWLIST.json": "1f09c3ae199408d637c5ba64b9d620f3d81dfc5e4611594febd874bf49d8397d",
+    "test_gripper_initial_range.py": "4a7b93f50eddecf50d2d36a82122b0471f20efc5ea4e43eb402b955b9aef2691",
+    "test_sweepick_grip.py": "67a42e637c84f72ae6dadd523521c4b5db527c02832e8f9e46faa6df92a96ed5"
+  },
+  "public_copy_verification": {
+    "passed": 154,
+    "deselected_known_legacy": 1,
+    "elapsed_s": 4.45,
+    "source_index_files": 154,
+    "sha_syntax_boundary": "PASS",
+    "device_access": false
+  }
+}

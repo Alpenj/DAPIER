@@ -36,6 +36,8 @@ launcher는 `SWEEPICK_RECEIVE_DIR=<prepared root>/pin`을 설정한다. `sweepic
 
 관련 검사는 [test_a16_close_binding.py](../native/revision/test_a16_close_binding.py), [A-17 최초 Goal 검사](../native/tests/a17/test_a17_first_goal.py)에 있다. fixture의 contact와 ACK는 Fake 결과이며 실물 결과가 아니다.
 
+초기 gripper actual이 상한 밖인 후속 사례는 [초기 범위 진입 검수](gripper_initial_range/GRIPPER_INITIAL_RANGE_REVIEW.md)와 [회귀시험](../native/revision/test_gripper_initial_range.py)을 함께 읽는다. `grip()`은 유효 Goal의 ACK/readback과 actual 추종을 구분하고 초기 보정 표본을 Jaw 접촉 기준에서 제외한다. 초기 구간 뒤 기존 바인딩을 다시 확인하며, 불명확한 적용이나 STOP을 정상 접촉·정지 완료로 바꾸지 않는다.
+
 ## 4. 관측과 종료 증거
 
 `sweepick_full_chain`의 camera validity/freshness, observation approval 대기와 return support 검사를 함께 읽는다. 손목 카메라는 gripper에 고정되어 회전하므로 image slope와 world yaw를 혼동하지 않는다.

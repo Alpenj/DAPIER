@@ -13,18 +13,24 @@ OPEN = dict(MID, gripper=3366)
 class Jaws(Base):
     """the gripper follows its goal 8 ticks behind; `block` = the tick where something is met; `creep` = beyond the block it
     gives way one tick for every `creep` ticks of extra push (a compliant pad / object), never freely"""
+    def follow_goal(self, v):
+        n = 'gripper'
+        p = self.reg['Present_Position'][n]; new = min(p, v + 8) if v < p else max(p, v - 8)
+        if 'block' in self.fail and new < self.fail['block']:
+            b = self.fail['block']; new = b - int((b - 8 - v) / self.fail['creep']) if self.fail.get('creep') and v < b - 8 else b
+            new = min(p, max(new, v + 8))
+        self.reg['Present_Position'][n] = new; self.reg['Load'] = None
+
     def write(self, reg, n, v, normalize=True):
         if reg == "Torque_Enable" and self.fail.get("torque_ack_lost") == int(v):
             self.reg[reg][n] = int(v); self.dead = True; raise ConnectionError("no status packet")
         if reg == "Goal_Position" and n == "gripper" and self.reg["Torque_Enable"][n]:
             self.n_goal += 1; self.writes.append((reg, n, v)); self.reg[reg][n] = v
             if self.fail.get("fault_from") and self.n_goal >= self.fail["fault_from"]: self.reg["Status"]["gripper"] = 32
-            p = self.reg["Present_Position"][n]; new = min(p, v + 8) if v < p else max(p, v - 8)
-            if "block" in self.fail and new < self.fail["block"]:
-                b = self.fail["block"]; new = b - int((b - 8 - v) / self.fail["creep"]) if self.fail.get("creep") and v < b - 8 else b
-                new = min(p, max(new, v + 8))
-            self.reg["Present_Position"][n] = new; self.reg["Load"] = None; return
+            self.follow_goal(v); return
         super(Base, self).write(reg, n, v, normalize)
+        if reg == 'Torque_Enable' and n == 'gripper' and v == 1:
+            self.follow_goal(self.reg['Goal_Position'][n])  # The seeded Goal also drives after torque-on, without another Goal write.
 
 
 def go(tmp_path, fake, **kw):

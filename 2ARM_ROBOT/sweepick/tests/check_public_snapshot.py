@@ -16,7 +16,10 @@ required = ('console/app.py','console/control.py','console/inspection.py','conso
             'docs/console16/CONSOLE16_BACKEND_HANDOFF.md',
             'native/RUN_APPROVED_SESSION.py','native/revision/sweepick_move_a.py',
             'native/revision/sweepick_pick01.py','native/revision/sweepick_full_chain.py',
-            'native/pin/sweepick_261008_receive_entry.py','docs/a17/A17_FIRST_GOAL_FAKE_BUS.json')
+            'native/pin/sweepick_261008_receive_entry.py','docs/a17/A17_FIRST_GOAL_FAKE_BUS.json',
+            'native/revision/test_gripper_initial_range.py',
+            'docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_REVIEW.md',
+            'docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_FAKE_BUS.json')
 assert all((ROOT / path).is_file() for path in required)
 secret = re.compile(r'gh[pousr]_[A-Za-z0-9]{20,}|AKIA[A-Z0-9]{16}|-----BEGIN (?:RSA |OPENSSH )?PRIVATE KEY-----')
 for path in ROOT.rglob('*'):

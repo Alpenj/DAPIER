@@ -1,6 +1,6 @@
 {
   "schema": "sweepick.public-source.v1",
-  "snapshot_at": "2026-10-15T11:51:44.507181+09:00",
+  "snapshot_at": "2026-10-15T12:31:52.541302+09:00",
   "purpose": "current source review; not a portable hardware deployment",
   "transformations": [
     "personal home path replaced by /home/robot",
@@ -338,6 +338,56 @@
       "source_sha256": "0883804d41242b2c1065224c912ca788eb6dd6330e8327ed3d343406942a87ba",
       "public_sha256": "0883804d41242b2c1065224c912ca788eb6dd6330e8327ed3d343406942a87ba",
       "bytes": 509,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_FAKE_BUS.json",
+      "source_group": "technical_review",
+      "source_name": "GRIPPER_INITIAL_RANGE_FAKE_BUS.json",
+      "component": "A_CONTROL",
+      "source_sha256": "3c7a8a914e4bec73103dd4d59d4a99760d941cdf6c01c1a618e70b1441c96590",
+      "public_sha256": "3c7a8a914e4bec73103dd4d59d4a99760d941cdf6c01c1a618e70b1441c96590",
+      "bytes": 214629,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_FIX.diff",
+      "source_group": "technical_review",
+      "source_name": "GRIPPER_INITIAL_RANGE_FIX.diff",
+      "component": "A_CONTROL",
+      "source_sha256": "cfb3ceee075591a1343d9469b03c886e40c96b73b3f5aa3b7807713c3873d36b",
+      "public_sha256": "cfb3ceee075591a1343d9469b03c886e40c96b73b3f5aa3b7807713c3873d36b",
+      "bytes": 10277,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_REVIEW.md",
+      "source_group": "technical_review",
+      "source_name": "GRIPPER_INITIAL_RANGE_REVIEW.md",
+      "component": "A_CONTROL",
+      "source_sha256": "f1469ed88857a89f30b0118953b54121b3a33c5bb7d14d0467e0c88e677c36b1",
+      "public_sha256": "f1469ed88857a89f30b0118953b54121b3a33c5bb7d14d0467e0c88e677c36b1",
+      "bytes": 8772,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_TEST_REPORT.json",
+      "source_group": "technical_review",
+      "source_name": "GRIPPER_INITIAL_RANGE_TEST_REPORT.json",
+      "component": "A_CONTROL",
+      "source_sha256": "b75dc157e5c5100666734cb8313ba24775e6270562460207d41ac4da42cc6f97",
+      "public_sha256": "b75dc157e5c5100666734cb8313ba24775e6270562460207d41ac4da42cc6f97",
+      "bytes": 3340,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/gripper_initial_range/SOURCE_SHA256.json",
+      "source_group": "technical_review",
+      "source_name": "SOURCE_SHA256.json",
+      "component": "A_CONTROL",
+      "source_sha256": "dabd95a2325f303017a294833f17a0b9780dd6674c75246a48ac8634e9ba5ef9",
+      "public_sha256": "dabd95a2325f303017a294833f17a0b9780dd6674c75246a48ac8634e9ba5ef9",
+      "bytes": 912,
       "public_copy_changed": false
     },
     {
@@ -695,9 +745,9 @@
       "source_group": "native_revision",
       "source_name": "sweepick_move_a.py",
       "component": "A_CONTROL",
-      "source_sha256": "9fb399b4042faeda37ddcaf7eff1ac8077270582144e014c4d38be4b45519240",
-      "public_sha256": "a2d1364efc104611e59f3f43e2227d197523403d32b376720fda84cdabe9bd7f",
-      "bytes": 78777,
+      "source_sha256": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+      "public_sha256": "4c820d48f6254cca2f30b22c1127e2c5df139236bd2fce2a6b6b1a2409cb39ac",
+      "bytes": 85536,
       "public_copy_changed": true
     },
     {
@@ -791,6 +841,16 @@
       "public_copy_changed": false
     },
     {
+      "file": "native/revision/test_gripper_initial_range.py",
+      "source_group": "native_revision",
+      "source_name": "test_gripper_initial_range.py",
+      "component": "A_CONTROL",
+      "source_sha256": "4a7b93f50eddecf50d2d36a82122b0471f20efc5ea4e43eb402b955b9aef2691",
+      "public_sha256": "4a7b93f50eddecf50d2d36a82122b0471f20efc5ea4e43eb402b955b9aef2691",
+      "bytes": 16700,
+      "public_copy_changed": false
+    },
+    {
       "file": "native/revision/test_observation_approval_wait.py",
       "source_group": "native_revision",
       "source_name": "test_observation_approval_wait.py",
@@ -855,9 +915,9 @@
       "source_group": "native_revision",
       "source_name": "test_sweepick_grip.py",
       "component": "A_CONTROL",
-      "source_sha256": "5d30bbf2bc61e3c96f5d4602d3be14e6fa38288ed7207c70cd9b62e223b9709e",
-      "public_sha256": "5d30bbf2bc61e3c96f5d4602d3be14e6fa38288ed7207c70cd9b62e223b9709e",
-      "bytes": 7385,
+      "source_sha256": "67a42e637c84f72ae6dadd523521c4b5db527c02832e8f9e46faa6df92a96ed5",
+      "public_sha256": "67a42e637c84f72ae6dadd523521c4b5db527c02832e8f9e46faa6df92a96ed5",
+      "bytes": 7650,
       "public_copy_changed": false
     },
     {

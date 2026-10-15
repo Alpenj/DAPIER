@@ -1,0 +1,127 @@
+--- before/sweepick_move_a.py
++++ after/sweepick_move_a.py
+@@ -950,12 +950,26 @@
+                 log["goal_seed_normalization"] = dict(actual_tick=actual0, command_tick=cmd, configured_range=[lo, hi], outside_by_ticks=actual0 - cmd,
+                                                       source="fresh Present_Position plus the calibrated servo range; preflight confirmed the EEPROM Min/Max matches it",
+                                                       basis="an initial Goal_Position write must be inside the actual configured range; the nearest endpoint is used with no margin")
+-            if J not in on:
++            if J not in on or now['goal'][J] != round(cmd):
+                 write("Goal_Position", cmd); back = read()
+                 if back["goal"][J] != round(cmd):
+                     raise Stop(G.hard("bus_lost", "the Goal_Position read-back differs from what was written"))
++                if any(back['status'].values()):
++                    raise Stop(G.hard('servo_fault', f'Status register non-zero after initial grip Goal: {back["status"]}'))
++            if J not in on:
+                 write("Torque_Enable", 1)
+             jaw.start_close(); step, t_hold, contact = 0.0, None, None
++            pg = PG.load()
++            close_start_actual, close_start_mon, close_start_best = None, None, None
++            close_started = False
++            entry = cmd != actual0
++            if entry:
++                # Range entry is a free positioning move; the arm's following lead is not a gripper contact baseline.
++                entry_mon = PG.Joint(dict(pg, follow=pg['lead']), actual0, float(np.sign(cmd - actual0)), clock())
++                entry_best_lead = abs(actual0 - cmd)
++                log['range_entry'] = dict(status='WAITING_FOR_ACTUAL', goal_tick=cmd, actual_tick=actual0,
++                    progress_profile_sha256=pg['sha256'], contact_samples_used=0,
++                    basis='Hold the acknowledged range-valid seed; start Jaw only inside its existing no-load residual floor.')
+             while True:
+                 t0 = clock()
+                 if stop_requested():
+@@ -963,17 +977,81 @@
+                 r = read()
+                 if any(r["status"].values()):
+                     raise Stop(G.hard("servo_fault", f"Status register non-zero: {({n: v for n, v in r['status'].items() if v})}"))
+-                state = jaw.update(r["t"] + r["read_s"], op(cmd), op(r["present"][J]), torque_enabled=bool(r["torque"][J]))
++                if entry:
++                    residual = r['present'][J] - cmd
++                    entry_lead = abs(residual)
++                    entry_best_lead = min(entry_best_lead, entry_lead)
++                    progress = entry_mon.update(r['t'] + r['read_s'], r['present'][J], entry_best_lead)
++                    if r['goal'][J] != round(cmd):
++                        raise Stop(G.hard('bus_lost', 'The initial grip Goal readback changed before actual range entry was confirmed.'))
++                    if r['torque'][J] and entry_lead <= dev.residual_floor * R:
++                        if {n for n in rc.JOINTS if r['torque'][n]} != set(on) | {J}:
++                            raise Stop(G.hard('torque_state', 'Torque ownership changed during initial grip range entry.'))
++                        now = r
++                        if level == 'model' and not bound():
++                            raise Stop(G.provisional('certificate_binding', 'The closing-sweep certificate no longer matches after initial grip range entry.'))
++                        if residual < 0:
++                            previous = cmd
++                            cmd = r['present'][J]
++                            write('Goal_Position', cmd)
++                            back = read()
++                            if back['goal'][J] != round(cmd):
++                                raise Stop(G.hard('bus_lost', 'The fresh actual grip seed was not read back after range-entry overshoot.'))
++                            if any(back['status'].values()):
++                                raise Stop(G.hard('servo_fault', f'Status register non-zero after fresh actual grip seed: {back["status"]}'))
++                            log['range_entry']['fresh_hold_reseed'] = dict(previous_goal=previous, goal_tick=cmd,
++                                actual_tick=r['present'][J], readback_tick=back['goal'][J], acknowledgement='ACK')
++                            r = back
++                            now = r
++                            if {n for n in rc.JOINTS if r['torque'][n]} != set(on) | {J}:
++                                raise Stop(G.hard('torque_state', 'Torque ownership changed during fresh actual grip seeding.'))
++                            if level == 'model' and not bound():
++                                raise Stop(G.provisional('certificate_binding', 'The closing-sweep certificate changed during fresh actual grip seeding.'))
++                        entry = False
++                        log['range_entry'].update(status='ACTUAL_CONFIRMED', confirmed_at=r['t'], actual_tick=r['present'][J],
++                            current_goal_tick=cmd, residual_ticks=r['present'][J] - cmd)
++                    else:
++                        r.update(commanded={J: cmd}, residual_ticks=residual, jaw_state=tg.UNAVAILABLE,
++                                 jaw_mode='range_entry', phase='range_entry', progress=progress)
++                        log['rows'].append(r)
++                        if not r['torque'][J] or progress == PG.NO_PROGRESS:
++                            log['range_entry']['status'] = 'UNCONFIRMED_HOLDING'
++                            log['needs_a_person'] = 'Range entry was not confirmed; no closing, contact claim, automatic retry, return or OFF.'
++                            return done('GRIP_UNAVAILABLE_HOLDING')
++                        sleep(max(0.0, prof['dt'] - (clock() - t0)))
++                        continue
++                freeze_start = False
++                if not close_started:
++                    if close_start_actual is None:
++                        close_start_actual = r['present'][J]
++                        close_start_mon = PG.Joint(dict(pg, follow=pg['lead']), close_start_actual, -1, clock())
++                    closing_residual = r['present'][J] - cmd
++                    advanced = close_start_actual - r['present'][J] >= pg['resolution']
++                    close_started = (advanced and 0 <= closing_residual <= dev.residual_floor * R) or cmd <= tk(dev.end_stop_opening)
++                    if close_started:
++                        log['close_start'] = dict(actual_confirmed=True, t=r['t'], actual_tick=r['present'][J], goal_tick=cmd)
++                    else:
++                        freeze_start = closing_residual > dev.residual_floor * R
++                        close_start_best = min(close_start_best if close_start_best is not None else closing_residual,
++                                               closing_residual) if freeze_start else None
++                        progress = close_start_mon.update(r['t'] + r['read_s'], r['present'][J],
++                            close_start_best if freeze_start else max(0., closing_residual))
++                        if not r['torque'][J] or progress == PG.NO_PROGRESS:
++                            log['close_start'] = dict(actual_confirmed=False, actual_tick=r['present'][J], goal_tick=cmd)
++                            log['needs_a_person'] = 'Initial closing motion was not confirmed; no contact claim, retry, return or OFF.'
++                            return done('GRIP_UNAVAILABLE_HOLDING')
++                state = jaw.update(r["t"] + r["read_s"], op(cmd), op(r["present"][J]), torque_enabled=bool(r["torque"][J])) if close_started else tg.UNAVAILABLE
+                 if state == tg.CONTACT_CANDIDATE and contact is None:
+                     contact = dict(t=r["t"], commanded=cmd, present=r["present"][J], residual_ticks=r["present"][J] - cmd, load_raw=r["load"][J], current_raw=r["current"][J])
+-                want = tk(jaw.next_command(op(cmd)))                          # the primitive decides: close / squeeze / hold
++                want = cmd if freeze_start else tk(jaw.next_command(op(cmd)))  # the primitive decides: close / squeeze / hold
+                 if jaw.mode == "close":
+                     step = min(cmd - want, vmax, step + amax); want = cmd - max(step, 0.0)       # within the selected profile (speed and its rate of change)
+                 else:
+                     step = 0.0
+                 if want != cmd:
+                     cmd = want; write("Goal_Position", cmd)
+-                r.update(commanded={J: cmd}, residual_ticks=r["present"][J] - cmd, jaw_state=state, jaw_mode=jaw.mode, phase="grip")
++                r.update(commanded={J: cmd}, residual_ticks=r["present"][J] - cmd, jaw_state=state, jaw_mode=jaw.mode,
++                         phase="grip" if close_started else 'close_start')
+                 log["rows"].append(r)
+                 if jaw.mode == "hold":
+                     t_hold = t_hold or clock()
+@@ -1002,6 +1080,11 @@
+             log["end"] = dict(error="no read possible", torque="UNKNOWN"); log["outcome"]["torque_released"] = "UNKNOWN"; return finish("BUS_LOST")
+         try:
+             cur = read()
++            if not lo <= cur['present'][J] <= hi:
++                log['recovery'] = dict(range_entry_interrupted=True, actual=cur['present'], goal_register=cur['goal'],
++                    moving=cur['moving'], additional_goal_writes=0, motion_stop_confirmed='UNKNOWN')
++                log['needs_a_person'] = 'Range entry interrupted: retain the last valid Goal; no out-of-range hold, automatic opening/OFF or retry. Physical stop is not confirmed.'
++                return done('FAULT_HOLDING' if kind == 'servo_fault' else 'STOPPED_STATE_RECORDED')
+             if kind != "operator_stop" or (cur["torque"][J] and not any(cur["status"].values())):
+                 write("Goal_Position", cur["present"][J], stop_hold=kind == "operator_stop")  # stop an already-powered healthy jaw; never re-enable an OFF jaw
+             log["needs_a_person"] = ("the grip was stopped; an already-powered healthy gripper holds fresh Present_Position, with no automatic opening or OFF"
