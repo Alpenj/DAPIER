@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from replay import depth_png, execution_plan, session, ROOTS
-from control import Controller, ControlError
+from control import Controller, ControlError, FULL_CHAIN
 from live import LiveView
 from zipfile import ZipFile
 from replay import read_json
@@ -36,6 +36,10 @@ ANALYSIS_REVIEWS = {
             'directory': Path('/home/robot/sweepick_261013_receive_alignment_restore/review/a17_20261015'),
             'files': ('A17_CODE_AUDIT.md', 'A17_FIRST_GOAL_FAKE_BUS.json', 'A17_LEGACY_FAILURE_TRIAGE.md',
                       'A17_REAL_TEST_READINESS.md', 'NATIVE_TESTS.txt', 'INITIAL_SOURCE_SHA256.json', 'VALIDATION.json')},
+    'CONSOLE16': {'title': 'Console-16 · LEFT START → LIFT 제한 시험 준비',
+            'directory': BASE / 'review/console16_20261015',
+            'files': ('CONSOLE16_LIMITED_RUN_CONTRACT.md', 'CONSOLE16_EXISTING_BACKEND_AUDIT.md',
+                      'CONSOLE16_FAKE_RUN_VALIDATION.json', 'CONSOLE16_TEST_REPORT.json', 'CONSOLE16_BACKEND_HANDOFF.md')},
 }
 
 
@@ -74,6 +78,11 @@ def control_status():
 def next_session_plan():
     return {**execution_plan(), 'execution_connected': True,
             'approval_state': 'CONNECTED_AWAITING_NEW_SESSION_FIELD_APPROVAL'}
+
+
+@app.get('/api/control/scopes')
+def operation_scopes():
+    return action(controller.operation_contract)
 
 
 @app.get('/api/runs')
@@ -213,14 +222,15 @@ def run_data(run_id: str):
 @app.post('/api/control/prepare')
 def prepare(request: Request, body: dict = Body(...)):
     operator_request(request)
-    return action(controller.prepare, body.get('source_session'))
+    return action(controller.prepare, body.get('source_session'), execution_scope=body.get('execution_scope', FULL_CHAIN))
 
 
 @app.post('/api/control/start')
 def start(request: Request, body: dict = Body(...)):
     operator_request(request)
     return action(controller.start, body.get('job_id'), field_ready=body.get('field_ready'),
-                  mounts_unchanged=body.get('mounts_unchanged'), supervised=body.get('supervised'))
+                  mounts_unchanged=body.get('mounts_unchanged'), supervised=body.get('supervised'),
+                  execution_scope=body.get('execution_scope'))
 
 
 @app.post('/api/control/stop')

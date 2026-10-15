@@ -12,6 +12,8 @@ for item in index['files']:
     assert hashlib.sha256(path.read_bytes()).hexdigest() == item['public_sha256'], item['file']
 
 required = ('console/app.py','console/control.py','console/inspection.py','console/static/review.js',
+            'console/static/field.js','console/test_console16.py','docs/WORKFLOW.md',
+            'docs/console16/CONSOLE16_BACKEND_HANDOFF.md',
             'native/RUN_APPROVED_SESSION.py','native/revision/sweepick_move_a.py',
             'native/revision/sweepick_pick01.py','native/revision/sweepick_full_chain.py',
             'native/pin/sweepick_261008_receive_entry.py','docs/a17/A17_FIRST_GOAL_FAKE_BUS.json')

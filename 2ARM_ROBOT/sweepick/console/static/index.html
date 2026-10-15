@@ -5,9 +5,10 @@
   <link rel="icon" href="data:,">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sweepick 저장 시연 콘솔</title>
-  <link rel="stylesheet" href="/static/style.css?v=20261015-inspection">
+  <link rel="stylesheet" href="/static/style.css?v=20261015-console16">
   <script src="/static/review.js?v=20261015-inspection" defer></script>
-  <script src="/static/app.js?v=20261015-inspection" defer></script>
+  <script src="/static/field.js?v=20261015-console16" defer></script>
+  <script src="/static/app.js?v=20261015-console16" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -44,8 +45,8 @@
 
       <div id="errorBanner" class="banner error" role="alert" hidden></div>
       <div class="next-session-launch">
-        <div><span class="meta-label">CURRENT INPUT · PHYSICAL RUN</span><strong>저장 기록 선택과 무관한 새 실물 세션</strong><p>현재 카메라·로봇 입력으로 새 작업을 준비합니다. 저장 성공 기록 재생과는 별도입니다.</p></div>
-        <button id="nextSession" class="button primary" type="button">다음 실물 세션</button>
+        <div><span class="meta-label">CURRENT INPUT · FULL_CHAIN PHYSICAL RUN</span><strong>FULL_CHAIN_RECEIVE_CONTACT 새 실물 세션</strong><p>현재 카메라·로봇 입력으로 기존 full-chain 작업을 준비합니다. 저장 성공 기록 재생과는 별도입니다.</p></div>
+        <button id="nextSession" class="button primary" type="button">FULL_CHAIN 다음 실물 세션</button>
       </div>
       <div class="session-controls">
         <label class="field grow" for="sessionSelect">
@@ -53,7 +54,7 @@
           <select id="sessionSelect" disabled><option>세션 불러오는 중…</option></select>
         </label>
         <button id="successReplay" class="button secondary" type="button" disabled>성공 시연 다시 재생</button>
-        <button id="rerunPlan" class="button primary" type="button" disabled>실물 재실행 준비</button>
+        <button id="rerunPlan" class="button primary" type="button" disabled>FULL_CHAIN 실물 재실행 준비</button>
       </div>
 
       <div class="outcome-grid">
@@ -74,7 +75,7 @@
           <div><span class="meta-label" id="execution-heading">실물 실행 상태</span><span id="executionState" class="badge neutral">확인 중</span></div>
           <div><span class="meta-label">실행 범위</span><strong id="executionScope">UNKNOWN</strong></div>
           <div><span class="meta-label">활성 작업</span><strong id="activeJob">없음</strong><small id="activePhase">—</small></div>
-          <div class="control-actions"><button id="liveView" class="button secondary" type="button" disabled>현재 실물 세션 보기</button><button id="archiveView" class="button secondary" type="button" hidden>저장 기록으로 돌아가기</button><button id="recoveryControl" class="button secondary" type="button" hidden>수동 복구 처리 확인</button></div>
+          <div class="control-actions"><button id="liveView" class="button secondary" type="button" disabled>FULL_CHAIN 현재 실물 세션 보기</button><button id="archiveView" class="button secondary" type="button" hidden>저장 기록으로 돌아가기</button><button id="recoveryControl" class="button secondary" type="button" hidden>FULL_CHAIN 수동 복구 처리 확인</button></div>
         </div>
         <div id="controlError" class="banner error" role="alert" hidden></div>
         <p id="blockReason" class="block-reason" hidden></p>
@@ -103,6 +104,60 @@
         </label>
       </div>
       <div class="bookmarks"><span class="meta-label">북마크</span><div id="bookmarkList" class="bookmark-list"><span class="muted">없음</span></div></div>
+    </section>
+
+    <section id="fieldPanel" class="panel field-panel" aria-labelledby="field-heading">
+      <div class="section-title">
+        <div><p class="eyebrow">FIELD OPERATION · SCOPE CONTRACT</p><h2 id="field-heading">실물 실행 범위 선택·증거</h2></div>
+        <button id="fieldRefresh" class="button secondary" type="button">범위 정보 새로고침</button>
+      </div>
+      <p id="fieldCatalogState" class="field-context" role="status">실행 범위 정보를 불러오는 중…</p>
+      <div id="fieldError" class="banner error" role="alert" hidden></div>
+
+      <div class="field-launch">
+        <label class="field" for="fieldScopeSelect"><span>요청 실행 범위</span>
+          <select id="fieldScopeSelect">
+            <option value="LEFT_START_TO_LIFT" selected>LEFT_START_TO_LIFT · 제한 실행</option>
+            <option value="FULL_CHAIN_RECEIVE_CONTACT">FULL_CHAIN_RECEIVE_CONTACT · 기존 실행</option>
+          </select>
+        </label>
+        <button id="fieldPrepare" class="button primary" type="button" disabled>현재 제한 범위는 준비할 수 없음</button>
+      </div>
+      <p id="fieldScopeMessage" class="field-scope-message">LEFT_START_TO_LIFT는 현재 backend가 지원하지 않으므로 실행·준비할 수 없습니다.</p>
+
+      <div class="field-scope-grid">
+        <article class="field-card"><span class="meta-label">선택 범위 · backend</span><strong id="fieldScopeStatus">BACKEND_CHANGE_REQUIRED</strong><p id="fieldScopeReason">범위 계약 확인 중</p><p id="fieldTermination">종료 의미 UNKNOWN</p></article>
+        <article class="field-card"><span class="meta-label">포함 / 제외 단계</span><strong>Included</strong><ul id="fieldIncluded"><li>UNKNOWN</li></ul><strong>Excluded</strong><ul id="fieldExcluded"><li>UNKNOWN</li></ul></article>
+        <article class="field-card"><span class="meta-label">검증 범위</span><strong id="fieldDeviceAccess">Device access UNKNOWN</strong><p id="fieldObservation">Observation UNKNOWN</p><p id="fieldCalibration">Calibration UNKNOWN</p></article>
+        <article class="field-card"><span class="meta-label">기존 owner</span><strong id="fieldOwner">UNKNOWN</strong><p id="fieldOccupancy">Device occupancy UNKNOWN</p><p id="fieldOwnerError">Device query error UNKNOWN</p></article>
+      </div>
+
+      <details class="field-sources">
+        <summary>범위 계약 원본 SHA-256</summary>
+        <div class="table-wrap"><table><thead><tr><th>File</th><th>SHA-256</th><th>Bytes</th></tr></thead><tbody id="fieldSources"><tr><td colspan="3">UNKNOWN</td></tr></tbody></table></div>
+      </details>
+
+      <section class="field-evidence" aria-labelledby="field-evidence-heading">
+        <div class="section-title compact"><div><p class="eyebrow">PROVIDED CONTROL + SNAPSHOT ONLY</p><h3 id="field-evidence-heading">현재 제어·스냅샷 증거</h3></div><strong id="fieldEvidenceContext" class="mono">표시 snapshot 없음</strong></div>
+        <p class="field-evidence-note">LIVE는 기존 owner가 제공한 현재 run 파일 증거입니다. REPLAY는 선택한 저장 run이며 현재 실물 actual이 아닙니다.</p>
+        <div class="field-evidence-grid">
+          <article class="field-card"><span class="meta-label">Stage</span><strong id="fieldCurrentStage">UNKNOWN</strong><p id="fieldLastCompleted">Last completed stage UNKNOWN</p></article>
+          <article class="field-card"><span class="meta-label">Raw controller</span><strong id="fieldControllerStatus">UNKNOWN</strong><p id="fieldLastAttempt">Last attempt UNKNOWN</p></article>
+          <article class="field-card"><span class="meta-label">First failure</span><strong id="fieldFirstFailure">UNKNOWN</strong><p id="fieldTorqueGrasp">Torque UNKNOWN · Grasp UNKNOWN</p></article>
+          <article class="field-card"><span class="meta-label">종료 판정 · 서로 별개</span><strong id="fieldNormalReturn">Normal return UNKNOWN</strong><p id="fieldSafeShutdown">Safe shutdown UNKNOWN</p></article>
+        </div>
+        <div class="field-two-column">
+          <section><h3>ACK · readback actual</h3><div class="table-wrap field-readback"><table><thead><tr><th>축</th><th>Last attempt</th><th>ACK</th><th>Readback actual</th><th>Goal</th></tr></thead><tbody id="fieldReadback"><tr><td colspan="5">Snapshot 증거 없음</td></tr></tbody></table></div></section>
+          <section><h3>카메라 요약</h3><ul id="fieldCameras" class="field-camera-summary"><li>Snapshot 증거 없음</li></ul></section>
+        </div>
+        <nav class="field-links" aria-label="기존 실물 제어로 이동">
+          <button type="button" class="button secondary" data-field-target="liveView">기존 LIVE 보기</button>
+          <button type="button" class="button secondary" data-field-target="controlStop">기존 STOP</button>
+          <button type="button" class="button secondary" data-field-target="recoveryControl">기존 복구 확인</button>
+          <a class="button secondary" href="#inspectionPanel">저장 Run 검사로 이동</a>
+        </nav>
+        <p class="field-safety-copy">LIFT/HOLDING은 HOME·release가 아닙니다. STOP 요청은 torque OFF 확인이 아닙니다.</p>
+      </section>
     </section>
 
     <section class="panel run-history" aria-labelledby="run-history-heading">
@@ -231,8 +286,8 @@
 
         <section class="panel readonly-card" aria-labelledby="control-heading">
           <div><span class="meta-label" id="control-heading">실물 제어</span><strong id="controlOwnership">브라우저 장치 직접 접근 없음 · 기존 owner만 실행</strong></div>
-          <button type="button" disabled title="START는 준비 창의 현장 승인 뒤에만 가능합니다">START: 준비 창</button>
-          <button id="controlStop" type="button" disabled>실물 STOP</button>
+          <button type="button" disabled title="START는 준비 창의 현장 승인 뒤에만 가능합니다">FULL_CHAIN START: 준비 창</button>
+          <button id="controlStop" type="button" disabled>FULL_CHAIN 실물 STOP</button>
         </section>
       </aside>
     </div>
@@ -286,7 +341,7 @@
       </div>
       <section class="prepare-section" aria-labelledby="prepare-heading">
         <div><span class="meta-label" id="prepare-heading">기존 owner 실물 세션</span><p id="prepareDescription">현재 입력으로 새 출력 디렉터리와 실행 작업만 준비합니다.</p></div>
-        <button id="prepareControl" class="button secondary" type="button" disabled>새 실물 세션 준비</button>
+          <button id="prepareControl" class="button secondary" type="button" disabled>FULL_CHAIN 새 실물 세션 준비</button>
         <div id="rerunRecovery" class="banner error" role="status" hidden>
           <p id="rerunBlockReason"></p>
           <button id="rerunRecoveryControl" class="button secondary" type="button" disabled>수동 복구 처리 확인 열기</button>
@@ -296,7 +351,7 @@
           <p class="notice">STOP은 기존 실행기의 중단 절차를 요청합니다. BUS_LOST·적용 불명 상태에서는 후속 목표·재전송·자동 OFF/복귀를 추가하지 않습니다. 상태를 확인할 수 없으면 UNKNOWN으로 남기고 작업자가 팔·물체를 지지한 뒤 필요한 전원 차단을 수행합니다.</p>
           <label class="field-check"><input id="fieldReady" type="checkbox"><span>현재 배치·카메라 결합·케이블/주변공간 확인 · 실행 감독 · 위 범위와 실패 복구 절차에 대한 이번 세션 현장 승인</span></label>
           <p id="fieldApprovalInfo" role="status">새 작업 준비 후에 현장 승인을 입력할 수 있습니다.</p>
-          <button id="startControl" class="button primary start-control" type="button" disabled>현장 승인 후 실물 START</button>
+          <button id="startControl" class="button primary start-control" type="button" disabled>FULL_CHAIN 현장 승인 후 실물 START</button>
         </div>
       </section>
       <footer><button id="downloadJson" class="button secondary" type="button" disabled>JSON 저장</button><button id="downloadText" class="button secondary" type="button" disabled>텍스트 저장</button><button class="button" value="close">닫기</button></footer>

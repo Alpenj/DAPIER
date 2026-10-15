@@ -103,6 +103,31 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .camera-meta div { min-width: 0; }.camera-meta dt { color: var(--muted); font-size: .63rem; }.camera-meta dd { margin: .15rem 0 0; overflow: hidden; text-overflow: ellipsis; font: 700 .69rem ui-monospace, monospace; }
 .lower-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(24rem, 1fr); align-items: start; gap: 1.2rem; }
 .run-history { padding: 1rem; }
+.field-panel { padding: 1rem; }
+.field-context { margin: -.35rem 0 .8rem; color: var(--muted); font: .68rem ui-monospace, monospace; overflow-wrap: anywhere; }
+.field-launch { display: grid; grid-template-columns: minmax(18rem, 1fr) auto; align-items: end; gap: .65rem; }
+.field-scope-message, .field-evidence-note, .field-safety-copy { margin: .7rem 0 0; padding: .6rem .7rem; color: var(--warning); border-left: 3px solid var(--warning); background: rgba(255,194,102,.06); font-size: .73rem; overflow-wrap: anywhere; }
+.field-scope-grid, .field-evidence-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; margin-top: .8rem; }
+.field-card { min-width: 0; padding: .7rem; border: 1px solid var(--line); background: #0c1219; }
+.field-card strong { display: block; overflow-wrap: anywhere; }
+.field-card p { margin: .4rem 0 0; color: var(--muted); font: .68rem ui-monospace, monospace; overflow-wrap: anywhere; }
+.field-card ul { margin: .35rem 0 .6rem; padding-left: 1.1rem; color: var(--muted); font-size: .7rem; overflow-wrap: anywhere; }
+.field-sources { margin-top: .8rem; border: 1px solid var(--line); }
+.field-sources summary { padding: .65rem .75rem; cursor: pointer; color: var(--blue); font-size: .74rem; font-weight: 800; }
+.field-sources .table-wrap { border-top: 1px solid var(--line); }
+.field-sources table { min-width: 42rem; }
+.field-sources td { white-space: normal; overflow-wrap: anywhere; }
+.field-evidence { margin-top: .8rem; padding: .8rem; border: 1px solid var(--line); background: rgba(12,18,25,.52); }
+.field-evidence .section-title { margin-bottom: 0; }
+.field-two-column { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(16rem, .8fr); gap: .8rem; margin-top: .8rem; }
+.field-two-column > section { min-width: 0; }
+.field-two-column h3 { margin-bottom: .5rem; font-size: .78rem; }
+.field-readback table { min-width: 38rem; }
+.field-readback td { white-space: normal; overflow-wrap: anywhere; }
+.field-camera-summary { min-height: 3rem; max-height: 14rem; margin: 0; padding: .65rem .65rem .65rem 1.8rem; overflow: auto; border: 1px solid var(--line); color: var(--muted); font: .68rem/1.55 ui-monospace, monospace; }
+.field-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+.field-links .button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.6rem; text-decoration: none; font-size: .72rem; }
+.field-safety-copy { border-left-color: var(--danger); color: var(--danger); background: rgba(255,111,120,.06); }
 .history-note { margin: -.35rem 0 .8rem; color: var(--muted); font-size: .74rem; }
 .run-table { table-layout: fixed; }
 .run-table th, .run-table td { vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
@@ -147,6 +172,7 @@ dialog::backdrop { background: rgba(0,0,0,.75); backdrop-filter: blur(3px); }
   .lower-grid { grid-template-columns: 1fr; }
   .outcome-grid { grid-template-columns: 1fr 1fr; }.scope-warning { grid-column: 1 / -1; }
   .control-summary { grid-template-columns: 1fr 1fr; }
+  .field-scope-grid, .field-evidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
   .topbar { align-items: start; flex-wrap: wrap; }.system-state span:last-child { display: none; }
@@ -165,6 +191,8 @@ dialog::backdrop { background: rgba(0,0,0,.75); backdrop-filter: blur(3px); }
   .run-table td { border: 0; padding: .35rem 0; }
   .run-table td::before { content: attr(data-label); display: block; margin-bottom: .3rem; color: var(--muted); font: 700 .65rem system-ui, sans-serif; }
   .run-table .history-actions { display: flex; }.history-actions::before { flex-basis: 100%; }
+  .field-launch, .field-scope-grid, .field-evidence-grid, .field-two-column { grid-template-columns: 1fr; }
+  .field-launch .button, .field-links .button { width: 100%; }
 }
 
 #dataReviewDialog .field { margin: .8rem 0; }

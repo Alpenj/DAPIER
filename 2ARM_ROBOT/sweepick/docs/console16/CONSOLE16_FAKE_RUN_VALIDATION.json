@@ -1,0 +1,62 @@
+{
+  "schema": "sweepick.console16-fake.v1",
+  "status": "PASS",
+  "test_type": "FAKE_RUNNER_AND_SAVED_RECORDS_ONLY",
+  "physical_success": false,
+  "test_command": ".venv/bin/python -m unittest -q test_console16 test_a16 test_records test_control test_replay test_open_console test_inspection",
+  "aggregate_passed": 103,
+  "console16_cases": [
+    {
+      "test": "test_console16.LimitedScope.test_candidate_and_malformed_scopes_cannot_prepare_or_touch_state",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_capability_is_read_only_and_never_promotes_live_readiness",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_explicit_candidate_start_cannot_consume_full_approval",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_forged_persisted_candidate_is_rejected_before_launcher",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_full_scope_uses_same_single_launcher_and_duplicate_owner_blocks",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_legacy_job_without_scope_preserves_full_chain_contract",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_scope_endpoint_returns_controller_contract_without_launch",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.LimitedScope.test_unknown_device_occupancy_disables_preparation_without_claiming_empty",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.StoredOperationEvidence.test_close_refused_is_not_completed_and_cannot_report_lift",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.StoredOperationEvidence.test_stale_control_frame_keeps_raw_clock_and_unknown_object_bus",
+      "result": "PASS"
+    },
+    {
+      "test": "test_console16.StoredOperationEvidence.test_stopped_holding_never_becomes_home_or_safe_shutdown",
+      "result": "PASS"
+    }
+  ],
+  "unsupported_scope": "BACKEND_CHANGE_REQUIRED",
+  "limited_native_execution": "NOT_IMPLEMENTED_NOT_TESTED",
+  "boundary_proof": "Unsupported prepare and start cannot dispatch a launcher; no claim about a future limited native lifecycle.",
+  "full_chain_dispatch": "Existing single launcher argv, field approval and owner guards preserved with FakeRunner.",
+  "device_access": false,
+  "motor_writes": 0,
+  "torque_writes": 0,
+  "real_sessions_started": 0
+}

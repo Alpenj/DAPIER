@@ -4,7 +4,7 @@ record_id: `DAPIER-2026-10-15-sweepick-source-review`
 
 SO-101 양팔의 실제 관측·집기·오른팔 접근을 기존 실행기로 연결하고, 실패 원인과 종료 상태를 저장 기록으로 대조하고 있다. 이 폴더는 2026-10-15 현재 로컬 실행 소스를 읽기 위한 공개 사본이다. 저장소 밖에 흩어져 있던 콘솔, launcher, native executor, 선택된 receive 모듈과 프로젝트 support 코드를 한곳에 모았다.
 
-**검토 시작점: [코드 호출 지도](docs/CODE_MAP.md), [A-16 원인·수정](docs/A16_CLOSE_REVIEW.md), [A-17 검수](docs/a17/A17_CODE_AUDIT.md).**
+**검토 시작점: [코드 호출 지도](docs/CODE_MAP.md), [A-16 원인·수정](docs/A16_CLOSE_REVIEW.md), [A-17 검수](docs/a17/A17_CODE_AUDIT.md), [Console-16 계약](docs/console16/CONSOLE16_LIMITED_RUN_CONTRACT.md).**
 
 | 확인할 내용 | 파일 |
 |---|---|
@@ -15,8 +15,10 @@ SO-101 양팔의 실제 관측·집기·오른팔 접근을 기존 실행기로 
 | Goal/ACK/readback·gripper 바인딩 | [native/revision/sweepick_move_a.py](native/revision/sweepick_move_a.py) |
 | 선택된 receive 구현 | [native/pin](native/pin) |
 | 저장 run 검수·소형 Export | [console/inspection.py](console/inspection.py), [console/records.py](console/records.py), [console/static/review.js](console/static/review.js) |
+| 제한 실물 시험 준비·미지원 경계 | [console/static/field.js](console/static/field.js), [감사](docs/console16/CONSOLE16_EXISTING_BACKEND_AUDIT.md), [필요한 백엔드 변경](docs/console16/CONSOLE16_BACKEND_HANDOFF.md) |
 | 원본과 공개 사본의 파일 SHA | [SOURCE_INDEX.json](SOURCE_INDEX.json) |
 | 의존성·공개하지 않은 입력 | [DEPENDENCIES.md](docs/DEPENDENCIES.md) |
+| A/B/Console 구분·브랜치 작업 규칙 | [WORKFLOW.md](docs/WORKFLOW.md) |
 
 ## 현재 확인한 범위
 
@@ -25,10 +27,11 @@ SO-101 양팔의 실제 관측·집기·오른팔 접근을 기존 실행기로 
 - A-16 수정: 같은 scene의 closing sweep을 한 번 재검사하고, 이후 fresh actual에 기존 1-tick 바인딩을 다시 적용한다. 정상 인증에는 재검사를 추가하지 않는다.
 - A-17 무장치 시험: gripper actual 3344에서는 최초 Goal 3344, actual 3501에서는 최초 Goal 3431을 보냈고 Fake Bus readback이 일치했다. 3501은 수동 개방으로 가능한 actual이며 고장 증거로 취급하지 않는다.
 - 수정본 실물 CLOSE/LIFT 재현은 아직 수행하지 않았다. 현재 웹 launcher는 `full_chain=True`, `scope='RECEIVE_CONTACT'`를 고정하므로 LIFT 한정 종료를 지원한다고 표시하지 않는다.
+- Console-16은 두 실행 범위를 구분하고 `LEFT_START_TO_LIFT`를 `BACKEND_CHANGE_REQUIRED`로 표시한다. 준비·START API도 이를 거부한다. 기존 Full-chain 실행 계약을 보존하며 제한 범위의 native 종료 기능은 추가하지 않았다. 기존 검수 패널에서 10월 14일 control frame의 267.946ms/reader 기준 64.082ms, 직전 8회 및 전체 115회 PASS 뒤 FAIL, 물체 이탈 UNKNOWN을 확인할 수 있다.
 
 ## 공개 사본과 실제 실행본
 
-`SOURCE_INDEX.json`의 `source_sha256`는 게시 시점 실제 로컬 원본, `public_sha256`는 이 브랜치 파일의 SHA다. 사용자 홈 경로, 고유 장치 식별값과 불필요한 작성자 표기는 공개 사본에서 정리했다. 기존 API/함수명은 호출 관계 비교를 위해 유지했다. 로컬 실행 소스·기존 원본 기록·이전 Source SHA는 변경하지 않았다.
+`SOURCE_INDEX.json`의 `source_sha256`는 게시 시점 실제 로컬 원본, `public_sha256`는 이 브랜치 파일의 SHA다. `component`는 A_CONTROL / CONSOLE / SHARED_SUPPORT를 구분한다. 사용자 홈 경로, 고유 장치 식별값과 불필요한 작성자 표기는 공개 사본에서 정리했고 검토용 인수인계 문서명은 중립적인 이름으로 바꿨다. 기존 API/함수명은 호출 관계 비교를 위해 유지했다. Console-16 콘솔 수정만 로컬 실행본에 적용했고, native 제어 소스·기존 원본 기록·이전 Source SHA는 보존했다.
 
 실물 영상, 세션 전체, 장치별 EEPROM/Calibration, camera pairing/extrinsic, 승인 파일, 계정 설정, 모델 바이너리는 이 폴더에 없다. 동작 profile JSON은 출처와 분류가 있는 기존 알고리즘 파라미터이며 새 물리 한계를 선언하지 않는다. 이 폴더를 장비에 덮어쓰거나 과거 승인·tick을 재생하는 배포 절차로 사용하지 않는다.
 

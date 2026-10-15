@@ -178,7 +178,7 @@ function renderControl() {
   $('blockReason').hidden = !control?.block_reason;
   $('liveView').hidden = !liveAvailable || state.liveMode;
   $('liveView').disabled = !connected || !liveAvailable || state.controlBusy;
-  $('liveView').textContent = terminal ? '마지막 실물 세션 기록 보기' : '현재 실물 세션 보기';
+  $('liveView').textContent = terminal ? 'FULL_CHAIN 마지막 실물 세션 기록 보기' : 'FULL_CHAIN 현재 실물 세션 보기';
   $('archiveView').hidden = !state.liveMode;
   $('controlStop').disabled = !connected || control?.can_stop !== true || !active || state.controlBusy;
   $('recoveryControl').hidden = control?.can_confirm_recovery !== true;
@@ -202,8 +202,8 @@ function renderControl() {
   $('fieldReady').disabled = !connected || !active || active.state !== 'PREPARED' || control?.can_start !== true || state.controlBusy;
   if (active?.consumed === true) $('fieldReady').checked = true;
   $('startControl').disabled = $('fieldReady').disabled || !$('fieldReady').checked;
-  $('startControl').textContent = control?.state === 'FAULT' ? '중단됨 · 새 실행 차단'
-    : active?.consumed ? '이번 세션 START 이미 전달됨' : '현장 승인 후 실물 START';
+  $('startControl').textContent = control?.state === 'FAULT' ? 'FULL_CHAIN 중단됨 · 새 실행 차단'
+    : active?.consumed ? 'FULL_CHAIN 이번 세션 START 이미 전달됨' : 'FULL_CHAIN 현장 승인 후 실물 START';
   $('fieldApprovalInfo').textContent = active?.consumed
     ? `이 작업의 승인은 이미 사용됐습니다. 현재 ${display(control.state)} · 중복 승인/START는 비활성입니다.`
     : !connected ? '제어 연결 확인 전에는 승인할 수 없습니다.'
@@ -211,6 +211,7 @@ function renderControl() {
   renderPlanApproval();
   renderPendingView(active?.pending_view);
   if (state.liveMode && state.snapshot?.mode === 'LIVE') renderCameras(state.snapshot.cameras, 'LIVE');
+  window.fieldPanel?.update(state.control, state.snapshot, state.liveSnapshotError);
 }
 
 function renderPlanApproval() {
@@ -222,7 +223,7 @@ function renderPlanApproval() {
 }
 
 function sourceLabel(source) {
-  return source === null ? '현재 입력 · 새 실물 세션' : display(source);
+  return source === null ? '현재 입력 · FULL_CHAIN 새 실물 세션' : display(source);
 }
 
 function renderPendingView(pending) {
@@ -618,6 +619,7 @@ async function fetchLiveSnapshot() {
     if (!state.liveMode || generation !== state.snapshotGeneration) return;
     state.liveSnapshotError = `LIVE snapshot을 불러오지 못했습니다: ${error.message}`;
     if (state.snapshot?.mode === 'LIVE') renderCameras(state.snapshot.cameras, 'LIVE');
+    window.fieldPanel?.update(state.control, state.snapshot, state.liveSnapshotError);
     renderControlErrors();
   } finally {
     const retryForCurrentView = state.liveMode && state.control?.execution_connected === true && liveViewAvailable()
@@ -880,6 +882,7 @@ function renderSnapshot(snapshot) {
   $('collisionDetails').textContent = jsonText(snapshot.collision?.details);
   renderCommand(snapshot.command);
   renderWarnings(snapshot.warnings);
+  window.fieldPanel?.update(state.control, snapshot, state.liveSnapshotError);
 }
 
 function clearSnapshot() {
@@ -887,6 +890,7 @@ function clearSnapshot() {
   $('jointTime').textContent = '스냅샷 기준 —'; $('currentStage').textContent = 'UNKNOWN';
   $('ikStatus').textContent = 'UNKNOWN'; $('ikDetails').textContent = '—';
   $('collisionStatus').textContent = 'UNKNOWN'; $('collisionClass').textContent = '—'; $('collisionDetails').textContent = '—';
+  window.fieldPanel?.update(state.control, null);
 }
 
 function listItems(target, items) {
@@ -906,10 +910,10 @@ async function openRerunPlan(sourceSession = state.session?.id) {
   state.planController = new AbortController();
   state.plan = null;
   state.prepareSource = sourceSession;
-  $('rerunTitle').textContent = sourceSession === null ? '다음 실물 세션 준비' : '저장 세션 기반 재실행 준비';
+  $('rerunTitle').textContent = sourceSession === null ? 'FULL_CHAIN 다음 실물 세션 준비' : 'FULL_CHAIN 저장 세션 기반 재실행 준비';
   $('prepareDescription').textContent = sourceSession === null
-    ? '저장 기록과 독립된 현재 입력으로 새 출력 디렉터리와 실행 작업만 준비합니다.'
-    : `저장 세션 ${sourceSession}을 원본으로 새 출력 디렉터리와 실행 작업만 준비합니다.`;
+    ? 'FULL_CHAIN_RECEIVE_CONTACT · 저장 기록과 독립된 현재 입력으로 새 출력 디렉터리와 실행 작업만 준비합니다.'
+    : `FULL_CHAIN_RECEIVE_CONTACT · 저장 세션 ${sourceSession}을 원본으로 새 출력 디렉터리와 실행 작업만 준비합니다.`;
   dialog.showModal();
   renderControl();
   void refreshControl();
@@ -1104,6 +1108,8 @@ $('rerunDialog').addEventListener('close', () => {
   state.plan = null;
   state.prepareSource = undefined;
 });
+
+window.fieldPanel?.setOnPrepare(() => openRerunPlan(null));
 
 window.inspectionPanel?.setReplaySelector((run) => {
   const session = state.sessions.find((item) => item.id === run?.replay_session_id);

@@ -1,0 +1,111 @@
+{
+  "schema": "sweepick.console16-test-report.v1",
+  "status": "PASS_WEB_PREPARATION_BACKEND_CHANGE_REQUIRED",
+  "at": "2026-10-15T11:47:37.911684+09:00",
+  "unit_http": {
+    "passed": 103,
+    "failed": 0,
+    "console16_cases": 11,
+    "seconds": 33.623
+  },
+  "browser": {
+    "passed": 39,
+    "suites": [
+      {
+        "file": "CONSOLE16_BROWSER_QA.json",
+        "passed": 18,
+        "sha256": "c9baaec87977d68cb2ed7a54ded2e6fe9b367bed80d8b0ade022458c2adbf653"
+      },
+      {
+        "file": "BROWSER_A16_REGRESSION.json",
+        "passed": 6,
+        "sha256": "c7382ee6db64cbf0d96c2200144e50d3f49135017358f58b136c60423aba2cbf"
+      },
+      {
+        "file": "BROWSER_EXISTING_REGRESSION.json",
+        "passed": 15,
+        "sha256": "974e73c35f4a0a92cf2544b885d6bc333ad26dd9c9516ade78a21bb891d5870f"
+      }
+    ],
+    "real_control_posts": 0,
+    "real_data_review_posts": 0,
+    "viewports": [
+      420,
+      960,
+      1366,
+      1848
+    ],
+    "screenshots_inspected": [
+      "field_contract_1366.png",
+      "field_contract_420.png"
+    ],
+    "additional_assertions": [
+      "New panel clears on failed backwards seek",
+      "New camera summary reuses existing cameraDisplayEvidence and becomes STALE on failed LIVE response"
+    ]
+  },
+  "native_a17_source_files_unchanged": 4,
+  "original_record_files_sha_unchanged": 32,
+  "old14": {
+    "classification": "CAMERA_STALE",
+    "frame_age_ms": 267.945648,
+    "reader_freshness_ms": 64.082262,
+    "last_eight_prior_checks": "PASS",
+    "total_consecutive_passes": 115,
+    "final_check": "FAIL",
+    "object_departure": "UNKNOWN",
+    "bus_fault_at_check": "UNKNOWN",
+    "motor_samples_preceding_3s": 0
+  },
+  "preserved_current_control": {
+    "run_id": "20261015_112218_f0d866",
+    "state": "FAULT",
+    "owner_alive": false
+  },
+  "device_access": false,
+  "real_sessions_started": 0,
+  "unchanged": [
+    "native writer/Owner/Mapping/Calibration/STOP",
+    "original run and Source SHA",
+    "B training/Shadow"
+  ],
+  "not_verified": [
+    "LEFT_START_TO_LIFT native held termination is not implemented",
+    "No physical test or current device preflight performed",
+    "Legacy native failures already triaged in A17; no claim every native test passes"
+  ],
+  "outputs": [
+    "CONSOLE16_LIMITED_RUN_CONTRACT.md",
+    "CONSOLE16_EXISTING_BACKEND_AUDIT.md",
+    "CONSOLE16_FAKE_RUN_VALIDATION.json",
+    "CONSOLE16_TEST_REPORT.json",
+    "CONSOLE16_BACKEND_HANDOFF.md"
+  ],
+  "saved_exports": [
+    {
+      "run_id": "20261014_155824_d4017e",
+      "bytes": 252279,
+      "real_images": 5,
+      "member_hashes_verified": true
+    },
+    {
+      "run_id": "20261015_092942_a4628c",
+      "bytes": 291740,
+      "real_images": 4,
+      "member_hashes_verified": true
+    }
+  ],
+  "analysis_http_documents_sha_verified": 19,
+  "console_source_sha256": {
+    "app.py": "1969a2c72326741a59ae3353dbf9f529af0114563672362cde94ac0d218dc1c2",
+    "control.py": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b",
+    "records.py": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0",
+    "inspection.py": "bae2e3fba587a1675752d940f2f52b19c8228bb6b7ee88bffe4180ca0bd68128",
+    "static/app.js": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5",
+    "static/field.js": "5ab37164bd5250af9c6813e713077405efb2d66a9772e7f915718d870a580e9e",
+    "static/review.js": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3",
+    "static/index.html": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee",
+    "static/style.css": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9",
+    "test_console16.py": "8b16f370bb2148bf7dace7fc3cedecf91d829ea83cb9ebd5ff98e93986fca1f6"
+  }
+}

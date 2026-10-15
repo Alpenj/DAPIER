@@ -20,6 +20,8 @@ A = HOME / 'sweepick_261013_receive_alignment_restore'
 PYTHON = HOME / 'DAPIER/so101_imitation_learning/.venv/bin/python'
 SCOPE = 'Fresh LEFT PICK/LIFT/CARRY/RIGHT PREGRASP → 비접촉 관측 → 조건이 충족된 put-back/home/OFF'
 MANAGED = 'sweepick_console_field'
+FULL_CHAIN = 'FULL_CHAIN_RECEIVE_CONTACT'
+LEFT_TO_LIFT = 'LEFT_START_TO_LIFT'
 
 
 class ControlError(Exception):
@@ -259,7 +261,53 @@ class Controller:
                     return False
         return True
 
-    def prepare(self, source_session=None):
+    @staticmethod
+    def require_execution_scope(execution_scope):
+        if execution_scope == LEFT_TO_LIFT:
+            raise ControlError('BACKEND_CHANGE_REQUIRED: existing launcher has no LEFT_START_TO_LIFT termination/owner contract')
+        if execution_scope != FULL_CHAIN:
+            raise ControlError('지원되지 않는 execution_scope')
+        return execution_scope
+
+    def operation_contract(self):
+        status = self.status()
+        try:
+            occupancy, query_error = self.owners(), None
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            occupancy, query_error = 'UNKNOWN', f'{type(exc).__name__}: {exc}'
+        sources = []
+        for name in ('RUN_APPROVED_SESSION.py', 'revision/sweepick_pick01.py', 'revision/sweepick_full_chain.py',
+                     'revision/sweepick_move_a.py', 'revision/sweepick_episode.py'):
+            path = A / name
+            sources.append({'file': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else 'UNKNOWN',
+                            'bytes': path.stat().st_size if path.is_file() else None})
+        launcher_available = (A / 'RUN_APPROVED_SESSION.py').is_file()
+        return {'schema': 'sweepick.operation-contract.v1', 'checked_at': datetime.now().astimezone().isoformat(),
+            'scopes': [
+                {'id': FULL_CHAIN, 'label': '기존 Full-chain 실행', 'supported': launcher_available,
+                 'backend_status': 'SUPPORTED_EXISTING_BACKEND' if launcher_available else 'BACKEND_NOT_AVAILABLE',
+                 'can_prepare': launcher_available and status['can_prepare'] and occupancy == {},
+                 'included_stages': ['START/OBSERVE', 'PICK/ALIGN/DESCEND', 'CLOSE', 'LIFT', 'CARRY', 'RIGHT PREGRASP',
+                                     '승인 범위의 비접촉 관측', '조건이 충족된 기존 put-back/home/OFF'],
+                 'excluded_stages': ['승인 없는 추가 관측 이동', 'RIGHT INSERT/CLOSE', '하중 이전/LEFT RELEASE/ACT'],
+                 'reason': '기존 launcher의 full_chain=True, scope=RECEIVE_CONTACT 및 현재 비접촉 승인 범위를 유지합니다.',
+                 'termination': '기존 정상 회수 또는 기존 중단·운영자 복구 계약'},
+                {'id': LEFT_TO_LIFT, 'label': '왼팔 START → CLOSE → LIFT 제한 후보', 'supported': False,
+                 'backend_status': 'BACKEND_CHANGE_REQUIRED', 'can_prepare': False,
+                 'included_stages': ['현재 관측/계획', 'START/PREGRASP', 'ALIGN', 'DESCEND', 'CLOSE', 'LIFT'],
+                 'excluded_stages': ['CARRY', 'RIGHT PREGRASP/INSERT/CLOSE', '하중 이전', 'LEFT RELEASE',
+                                     '자동 LOWER/OPEN/HOME/Torque OFF', 'ACT'],
+                 'reason': '현재 launcher와 native session에 LIFT 한정 종료·연속 Owner/recorder·물체 보유 종료 계약이 없습니다.',
+                 'termination': '미지원: LIFT HOLDING은 정상 HOME/RELEASE/safe shutdown이 아닙니다.'}],
+            'owner': {'state': status['state'], 'owner_alive': status['owner_alive'],
+                      'active_run_id': (status['active'] or {}).get('id'), 'device_occupancy': occupancy,
+                      'device_query_error': query_error}, 'sources': sources,
+            'observation': {'status': 'NOT_CHECKED', 'basis': '새 reader/관절 조회 없음. 기존 owner의 실측 화면과 시각을 별도로 확인합니다.'},
+            'calibration': {'status': 'NOT_CHECKED', 'basis': '장치 identity/EEPROM 및 Calibration 실측 대조 미수행. 기존 실행기 검사는 유지합니다.'},
+            'device_access': False}
+
+    def prepare(self, source_session=None, *, execution_scope=FULL_CHAIN):
+        self.require_execution_scope(execution_scope)
         if source_session is not None and (not isinstance(source_session, str)
                 or (source_session not in ROOTS and not self.run_directory(source_session))):
             raise ControlError('알 수 없는 저장 세션')
@@ -285,17 +333,19 @@ class Controller:
                 atomic_json(directory / 'MANIFEST.json', prepared)
                 console = Path(__file__).resolve().parent
                 display_sources = {str(console / name): hashlib.sha256((console / name).read_bytes()).hexdigest()
-                    for name in ('app.py', 'control.py', 'records.py', 'replay.py', 'inspection.py', 'live.py', 'static/app.js', 'static/review.js', 'static/index.html', 'static/style.css')}
+                    for name in ('app.py', 'control.py', 'records.py', 'replay.py', 'inspection.py', 'live.py', 'static/app.js', 'static/review.js', 'static/field.js', 'static/index.html', 'static/style.css')}
                 snapshot = capture_sources({**prepared['files'], **display_sources}, self.directory / 'source_store')
                 atomic_json(directory / 'SOURCE_SNAPSHOT.json', {'files': snapshot})
             except (OSError, ValueError) as exc:
                 raise ControlError(f'실행본 저장 준비 실패; START하지 않음: {exc}') from exc
             approval = read_json(A / 'NONCONTACT_START_APPROVAL.json')
             approval.update(approved=False, permission_to_execute=False, field_ready=False, session_out=str(out),
+                            execution_scope=execution_scope,
                             prepared_manifest_sha256=hashlib.sha256((directory / 'MANIFEST.json').read_bytes()).hexdigest(),
                             approval_question_id='local_operator:' + job_id, current_instruction='fresh noncontact session via local operator console')
             (directory / 'APPROVAL.json').write_text(json.dumps(approval, ensure_ascii=False, indent=2))
             job = {'id': job_id, 'source_session': source_session, 'session_out': str(out),
+                   'execution_scope': execution_scope,
                    'state': 'PREPARED', 'phase': 'awaiting_operator_approval', 'consumed': False,
                    'preparation': 'FRESH_SESSION' if source_session is None else 'ARCHIVE_REFERENCE'}
             atomic_json(directory / 'JOB.json', job)
@@ -460,11 +510,14 @@ class Controller:
                 owners[path] = result.stdout.strip()
         return owners
 
-    def start(self, job_id, *, field_ready=False, mounts_unchanged=False, supervised=False):
+    def start(self, job_id, *, field_ready=False, mounts_unchanged=False, supervised=False, execution_scope=None):
+        if execution_scope is not None:
+            self.require_execution_scope(execution_scope)
         if not all(value is True for value in (field_ready, mounts_unchanged, supervised)):
             raise ControlError('배치/지지·감독·장치 결합에 대한 현장 승인 필요')
         with self.locked():
             job = self.selected(job_id)
+            self.require_execution_scope(job.get('execution_scope', FULL_CHAIN))
             if job['consumed'] or not self.status()['can_start']:
                 raise ControlError('승인이 소비되었거나 owner/종료 상태 때문에 START 불가')
             owners = self.owners()

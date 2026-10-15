@@ -234,6 +234,10 @@
       const wristFrame = lastCheck.last_left_wrist_frame ?? lastCheck.left_wrist_frame;
       text('inspectionControlCheck', `last check ${time(lastCheck.t_host_s ?? lastCheck.time_s ?? lastCheck.timestamp_s)} · source ${shown(lastCheck.source ?? observation.source)}`);
       text('inspectionControlCheckDetail', `display frame source ${shown(lastCheck.display_frame_source ?? observation.display_frame_source)} · ok ${shown(lastCheck.ok)} · why ${objectText(lastCheck.why)} · left wrist frame ${objectText(wristFrame)}`);
+      const evidence = observation.evidence || {};
+      const prior = evidence.last_eight_prior_checks || [];
+      const detail = `분류 ${shown(evidence.classification)} · Left Wrist RGB ${shown(evidence.left_wrist_status)} · 최종 프레임 경과 ${number(evidence.frame_age_s * 1000)} ms · 해당 Reader Freshness ${number(evidence.reader_freshness_limit_s * 1000)} ms · 직전 ${prior.length}회 ${prior.map(v => v === true ? 'PASS' : v === false ? 'FAIL' : 'UNKNOWN').join(', ')} (전체 연속 PASS ${shown(evidence.preceding_consecutive_passes)}) · 최종 검증 ${evidence.final_check === false ? 'FAIL' : evidence.final_check === true ? 'PASS' : 'UNKNOWN'} · 물체 이탈 ${shown(evidence.object_departure)} · BUS_ERROR 근거 ${shown(evidence.bus_error_evidence)} · 실패 직전 3초 관절 샘플 ${shown(data.window?.motor_before_count)}개`;
+      byId('inspectionControlCheckDetail').append(document.createElement('br'), document.createTextNode(detail));
     }
     renderShutdown(data.shutdown || {});
     renderReadiness(data.readiness || {});

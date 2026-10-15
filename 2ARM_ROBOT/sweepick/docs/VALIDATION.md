@@ -10,6 +10,10 @@
 | 핵심 기존 원본 SHA 대조 | 32개 일치 | 원본 세션·이전 Source SHA 보존 |
 | 최신 수정본 실물 재현 | 미실행 | 실제 CLOSE/LIFT 성공으로 해석하지 않음 |
 
+Console-16 후속 변경은 콘솔 단위·HTTP 검사 **103개**와 브라우저 **39개**를 통과했다. 신규 제한 범위 거부·서버 capability·보유/STOP·시각 근거 검사와 기존 replay/승인/Export 회귀를 포함한다. 실제 브라우저 제어·데이터 검수 POST는 0회다. 핵심 원본 32개 및 A17 native 소스 4개의 SHA가 유지됐다. [시험 보고서](console16/CONSOLE16_TEST_REPORT.json), [Fake 검증](console16/CONSOLE16_FAKE_RUN_VALIDATION.json)을 참고한다.
+
+소형 검수 ZIP의 모든 member SHA와 실제 원본 이미지를 다시 대조했다. 10월 14일 패키지는 252,279바이트/실제 이미지 5개, A16 실패 패키지는 291,740바이트/4개다. A16/A17/Console16의 분석 문서 19개를 HTTP로 조회할 수 있다. 원시 이미지와 ZIP 자체는 이 공개 브랜치에 포함하지 않는다.
+
 native 실행 인터프리터는 기존 로봇 Python 3.12 venv, console은 기존 FastAPI venv다. ROS pytest plugin의 무관한 lark 의존성 수집 오류가 있어 native 시험은 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`로 실행했다. 패키지나 시스템 설정은 바꾸지 않았다.
 
 구형 native suite의 9개 실패는 그대로 남는다. fixture의 fresh other-arm reader 누락, 현재 관측/yaw 정책과 다른 assertion, 과거 Scene fixture 누락을 [A17_LEGACY_FAILURE_TRIAGE.md](a17/A17_LEGACY_FAILURE_TRIAGE.md)에 분류했다. 모든 native 시험이 green이라고 표시하지 않는다.

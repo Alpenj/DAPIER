@@ -191,6 +191,7 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
     record = {'schema': 'sweepick.console-run.v1', 'id': directory.name, 'state': state, 'category': category,
               'verified_at': datetime.now().astimezone().isoformat(),
               'outcome': outcome, 'scope': approval.get('scope', UNKNOWN), 'source_session': job.get('source_session'),
+              'execution_scope': job.get('execution_scope', 'FULL_CHAIN_RECEIVE_CONTACT'),
               'session_out': str(root), 'first_error': error, 'normal_return_confirmed': off_confirmed and error is None,
               'safe_shutdown': 'RECORDED_BOTH_ARMS_OFF' if off_confirmed and error is None else UNKNOWN,
               'recording': {'status': data_status, 'files': len(originals), 'bytes': sum(row['bytes'] for row in originals),

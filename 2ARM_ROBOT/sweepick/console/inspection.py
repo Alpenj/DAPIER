@@ -27,6 +27,31 @@ def reference_time(record, archive):
     return first, first['time_s'] if first and finite(first.get('time_s')) else archive.trial_end
 
 
+def observation_evidence(checks):
+    if not checks:
+        return {'classification': UNKNOWN}
+    last = checks[-1]
+    frame = last.get('left_wrist_frame', {})
+    frame = frame if isinstance(frame, dict) else {}
+    checked, received = last.get('checked_monotonic_s'), frame.get('recv_monotonic_s')
+    age = checked - received if finite(checked) and finite(received) else UNKNOWN
+    stale = last.get('ok') is False and frame.get('fresh') is False
+    preceding = 0
+    for check in reversed(checks[:-1]):
+        if check.get('ok') is not True:
+            break
+        preceding += 1
+    return {'classification': 'CAMERA_STALE' if stale else UNKNOWN,
+            'left_wrist_status': 'STALE' if stale else UNKNOWN,
+            'frame_age_s': age, 'reader_freshness_limit_s': frame.get('freshness_limit_s', UNKNOWN),
+            'preceding_consecutive_passes': preceding,
+            'last_eight_prior_checks': [check.get('ok', UNKNOWN) for check in checks[:-1][-8:]],
+            'final_check': last.get('ok', UNKNOWN), 'object_departure': UNKNOWN,
+            'bus_error_evidence': 'NOT_RECORDED' if last.get('register_identity') == {} and last.get('why') ==
+                ['no valid fresh left wrist frame showing the block between the left jaws'] else UNKNOWN,
+            'basis': 'Recorded control check only; a stale frame is not evidence of object departure or bus failure.'}
+
+
 def inspect_run(directory, record, archive=None):
     # Import after records is loaded: both download formats share the same frame selector.
     from records import _failure_frames, load, lines
@@ -174,6 +199,7 @@ def inspect_run(directory, record, archive=None):
                'joints': joints, 'cameras': cameras,
                'control_observation': {'source': 'episode/events.jsonl observation_return_check',
                    'last_check': control_checks[-1] if control_checks else UNKNOWN,
+                   'evidence': observation_evidence(control_checks),
                    'display_frame_source': 'episode/frames.jsonl; displayed nearest frame is not a new control judgment'},
                'time_alignment': {'basis': 'host receipt timestamps; not hardware exposure synchronization',
                  'host_receipt_spread_s': max(receipts) - min(receipts) if len(receipts) == 3 else UNKNOWN,
