@@ -53,7 +53,7 @@ class CoverTest(Fixture):
         rec = wc.confirm(SimpleNamespace(out=str(self.root / 'ev')), grab=g, ask=self.answers(st, ['y', 'y']), say=lambda *a: None, run=self.run)
         saved = json.loads((self.root / control.IDENTITY).read_text())
         self.assertEqual(saved['wrists']['left_wrist']['capture_node'], '/dev/video10'); self.assertEqual(saved['wrists']['left_wrist']['devnum'], '34')
-        self.assertEqual(saved['boot_id'], BOOT); self.assertEqual(rec['motor_writes'], 0); self.assertEqual(len(saved['evidence']['images']), 4)
+        self.assertEqual(saved['boot_id'], BOOT); self.assertEqual(rec['motor_writes'], 0); self.assertEqual(len(saved['evidence']['images']), 5); self.assertIn('compare', saved['evidence']['images'])
 
     def test_swapped_cameras_are_refused_without_a_record(self):
         g, st = self.grab('/dev/video8')                                  # the LEFT lens is physically on the camera mapped to RIGHT

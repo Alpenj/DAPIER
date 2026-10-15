@@ -75,8 +75,25 @@ def cover_test(candidates, out, *, grab=capture, ask=input, say=print):
         for tag, image in (('base', base[k]), ('covered', covered[k])):
             path = out / f'{k}_{tag}.png'; Image.fromarray(image[..., ::-1]).save(path); files[f'{k}_{tag}'] = dict(path=str(path), sha256=hashlib.sha256(path.read_bytes()).hexdigest())
     drop = {k: 1.0 - float(covered[k].mean()) / max(float(base[k].mean()), 1e-6) for k in candidates}
+    # one labelled picture for the operator (before | while covering, one row per camera), opened on the desktop
+    from PIL import ImageDraw
+    rows = []
+    for k in candidates:
+        pair = [Image.fromarray(img[..., ::-1]) for img in (base[k], covered[k])]
+        w, h = pair[0].size; row = Image.new('RGB', (2 * w + 10, h + 22), 'white')
+        for c, (img, tag) in enumerate(zip(pair, ('BEFORE', 'WHILE COVERING LEFT LENS'))):
+            row.paste(img, (c * (w + 10), 22)); ImageDraw.Draw(row).text((c * (w + 10) + 4, 4), f'{k} ({candidates[k]}) - {tag}', fill='black')
+        rows.append(row)
+    sheet = Image.new('RGB', (rows[0].width, sum(r.height for r in rows) + 10 * (len(rows) - 1)), 'gray'); y = 0
+    for r in rows:
+        sheet.paste(r, (0, y)); y += r.height + 10
+    compare = out / 'COMPARE.png'; sheet.save(compare); files['compare'] = dict(path=str(compare), sha256=hashlib.sha256(compare.read_bytes()).hexdigest())
+    try:
+        subprocess.Popen(['xdg-open', str(compare)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
     darkest = max(drop, key=drop.get)
-    say(f'저장한 영상: {out}  (밝기 감소 비율 {json.dumps({k: round(v, 3) for k, v in drop.items()})})')
+    say(f'비교 영상을 열었습니다: {out / "COMPARE.png"}  (밝기 감소 비율 {json.dumps({k: round(v, 3) for k, v in drop.items()})})')
     ordered = sorted(drop.values())
     if len(ordered) < 2 or ordered[-1] == ordered[-2]:
         raise SystemExit('두 카메라의 밝기 변화가 구분되지 않음; 기록하지 않음')
