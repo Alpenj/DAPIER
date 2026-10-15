@@ -1,0 +1,111 @@
+{
+  "status": "FIELD_VALIDATION_REQUIRED",
+  "source_kind": "REAL",
+  "transform_direction": "T_world_camera=T_world_tool@T_tool_camera; camera to tool; raw optical x right/y down/z forward",
+  "route_rebind_unchanged_K_D_T": true,
+  "calibration_solver_calls": 0,
+  "saved_point_PnP_calls": 8,
+  "calibration_changed": false,
+  "new_capture_count": 0,
+  "live_execution_permitted": false,
+  "reference_is_independent_metric_ground_truth": false,
+  "per_observation_exact_calibration_path_recorded": false,
+  "physical_TCP_error_bound_m": null,
+  "rows": [
+    {
+      "sample": "train_00",
+      "split": "train",
+      "PnP_reprojection_rmse_px": 0.2101437649961823,
+      "fixed_reference_projection_rmse_px": 0.21014376499619358,
+      "translation_consistency_residual_mm": 6.206335383118183e-14,
+      "rotation_consistency_residual_deg": 0.0,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "train_01",
+      "split": "train",
+      "PnP_reprojection_rmse_px": 0.2992580873893525,
+      "fixed_reference_projection_rmse_px": 13.508721057069618,
+      "translation_consistency_residual_mm": 8.237487834118042,
+      "rotation_consistency_residual_deg": 2.3550464088251855,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "train_02",
+      "split": "train",
+      "PnP_reprojection_rmse_px": 0.2720637412329812,
+      "fixed_reference_projection_rmse_px": 20.54972146786718,
+      "translation_consistency_residual_mm": 15.846651519900679,
+      "rotation_consistency_residual_deg": 3.2612129160352294,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "train_03",
+      "split": "train",
+      "PnP_reprojection_rmse_px": 0.17624835017618629,
+      "fixed_reference_projection_rmse_px": 17.636036277278397,
+      "translation_consistency_residual_mm": 27.29302982028718,
+      "rotation_consistency_residual_deg": 4.726932060271967,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "train_04",
+      "split": "train",
+      "PnP_reprojection_rmse_px": 0.28139759088013155,
+      "fixed_reference_projection_rmse_px": 32.79703744287857,
+      "translation_consistency_residual_mm": 25.327945734009322,
+      "rotation_consistency_residual_deg": 3.263816264624301,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "train_05",
+      "split": "train",
+      "PnP_reprojection_rmse_px": 0.2250979183396726,
+      "fixed_reference_projection_rmse_px": 10.377498668910857,
+      "translation_consistency_residual_mm": 11.898569328408845,
+      "rotation_consistency_residual_deg": 1.6027434463432648,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "holdout_00",
+      "split": "holdout",
+      "PnP_reprojection_rmse_px": 0.1903085693140581,
+      "fixed_reference_projection_rmse_px": 25.290185401900253,
+      "translation_consistency_residual_mm": 23.356856756698747,
+      "rotation_consistency_residual_deg": 2.977697104480555,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    },
+    {
+      "sample": "holdout_01",
+      "split": "holdout",
+      "PnP_reprojection_rmse_px": 0.2493245245476797,
+      "fixed_reference_projection_rmse_px": 32.87062831573888,
+      "translation_consistency_residual_mm": 33.01104423841691,
+      "rotation_consistency_residual_deg": 3.7430265441866886,
+      "recorded_FK_vs_existing_model_max_abs_difference": 0.0,
+      "q_mapping_verified": false,
+      "model_verified": false
+    }
+  ],
+  "cause_assessment": {
+    "software_transform_convention": "consistent across solve and runtime",
+    "file_q_FK_reproduction": "all eight recorded/model matrices equal; physical mapping still unverified",
+    "physical_cause": "UNRESOLVED: FK/q physical mapping, pose-dependent optics/PnP bias, mounting, target stability, exposure/state timing"
+  },
+  "physical_pad_identity_verified": false,
+  "interpretation": "small PnP RMS is not fixed-world consistency or physical TCP accuracy"
+}

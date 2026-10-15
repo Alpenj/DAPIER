@@ -1,0 +1,220 @@
+{
+  "status": "PASS",
+  "base": "3be52c88d84a86e15f1284683fb86fc7f7dbbfee",
+  "B19_82_preserved": true,
+  "newly_executed_tests": 31,
+  "inherited_PASS_tests": 59,
+  "total_test_evidence": 90,
+  "inheritance": {
+    "B17": 29,
+    "B18": 30,
+    "unchanged_execution_dependency_files": 67,
+    "unchanged_input_SHA_checks": 217,
+    "changes": 0,
+    "scope": "prior PASS reused because those execution paths and inputs are unchanged"
+  },
+  "current_execution": {
+    "B19": 23,
+    "B20_unit": 6,
+    "B20_stored_REAL": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "REAL_samples": 14,
+  "REAL_clipped_negative_samples": 2,
+  "REAL_Jacobian": null,
+  "REAL_X_sign_verified": false,
+  "REAL_success": false,
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "input_source_changes": [],
+  "new_numeric_physical_limits": 0,
+  "samples": [
+    {
+      "sample": "real_01",
+      "raw_visible": false,
+      "frame_clipped": false,
+      "centroid_usable_for_control": false,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_02",
+      "raw_visible": false,
+      "frame_clipped": false,
+      "centroid_usable_for_control": false,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_03",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_04",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_05",
+      "raw_visible": true,
+      "frame_clipped": true,
+      "centroid_usable_for_control": false,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_06",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_07",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_08",
+      "raw_visible": false,
+      "frame_clipped": false,
+      "centroid_usable_for_control": false,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_09",
+      "raw_visible": false,
+      "frame_clipped": false,
+      "centroid_usable_for_control": false,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_10",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_11",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_12",
+      "raw_visible": true,
+      "frame_clipped": true,
+      "centroid_usable_for_control": false,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_13",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    },
+    {
+      "sample": "real_14",
+      "raw_visible": true,
+      "frame_clipped": false,
+      "centroid_usable_for_control": true,
+      "fast_detailed_control_equal": true,
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null,
+      "executable": false,
+      "motor_write_authorized": false
+    }
+  ],
+  "native_outcomes": [
+    {
+      "run": "previous",
+      "state": "ENDED",
+      "category": "success",
+      "normal_return_confirmed": true,
+      "task_alignment_success": false
+    },
+    {
+      "run": "additional",
+      "state": "FAULT",
+      "category": "partial",
+      "normal_return_confirmed": false,
+      "first_error": "BUS_LOST",
+      "task_alignment_success": false
+    }
+  ],
+  "limitations": [
+    "physical Pad/task correspondence unavailable",
+    "verified noncontact reference-pose target unavailable",
+    "no comparable REAL right-X fit pair or independent sign observation",
+    "clipped centroid rejected as a control feature; raw pixel diagnostic retained",
+    "hidden/partial-edge physical identity not synthesized"
+  ]
+}

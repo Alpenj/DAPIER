@@ -1,6 +1,6 @@
 {
   "schema": "sweepick.public-source.v1",
-  "snapshot_at": "2026-10-15T15:31:05.019257+09:00",
+  "snapshot_at": "2026-10-15T16:16:59.567539+09:00",
   "purpose": "current source review; not a portable hardware deployment",
   "transformations": [
     "personal home path replaced by /home/robot",
@@ -11,7 +11,8 @@
     "B17 public reports retain anonymized technical findings; private recording values, source paths, model binaries and calibration are excluded",
     "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately",
     "B18 technical summaries exclude original images, q12/ticks, camera parameters, machine paths and recording timestamps; REAL and MODEL evidence remain distinct",
-    "B19 adds right-relative pure calculations and anonymized timing/accuracy reports; raw frames, feedback, optical parameters, device identities and original timestamps stay private"
+    "B19 adds right-relative pure calculations and anonymized timing/accuracy reports; raw frames, feedback, optical parameters, device identities and original timestamps stay private",
+    "B20 anonymized reference/optical/feature/CPU findings exclude original images, feedback, optical parameters, device identity and recording timestamps"
   ],
   "files": [
     {
@@ -1806,12 +1807,12 @@
     },
     {
       "file": "visual_servo/right_relative.py",
-      "source_group": "B19",
+      "source_group": "B20",
       "source_name": "right_relative.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "f9cd98b70e9e68b14a3aa7efbe0da55f87a54da6601a998f150a1be6e6aa00c7",
-      "public_sha256": "f9cd98b70e9e68b14a3aa7efbe0da55f87a54da6601a998f150a1be6e6aa00c7",
-      "bytes": 7716,
+      "source_sha256": "ff9bd90deb82c5ffddd8d6a57f022cabf184d85cd85c6d336b173a59ea8403ef",
+      "public_sha256": "ff9bd90deb82c5ffddd8d6a57f022cabf184d85cd85c6d336b173a59ea8403ef",
+      "bytes": 8681,
       "public_copy_changed": false
     },
     {
@@ -1922,6 +1923,106 @@
       "source_sha256": "cec3efedcb4ffb830a9badc42ea4e0800a38015672cfaf39e924bb20c4b0d8a2",
       "public_sha256": "7aaaea555113d827452ad84d110ef76c3836442358dea165f62e0d7bcc88628a",
       "bytes": 18847,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/a_shadow.py",
+      "source_group": "B20",
+      "source_name": "a_shadow.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "61a1463a5879bffa10ff3d85d96a22d8dea9e2017dd868a4409c48454e197017",
+      "public_sha256": "61a1463a5879bffa10ff3d85d96a22d8dea9e2017dd868a4409c48454e197017",
+      "bytes": 3967,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/run_b20.py",
+      "source_group": "B20",
+      "source_name": "run_b20.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "ec9fb29331904d1bf5f1545521505ab12d9171e63ec7ebc34ab55d586ae93405",
+      "public_sha256": "ec9fb29331904d1bf5f1545521505ab12d9171e63ec7ebc34ab55d586ae93405",
+      "bytes": 13969,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/test_b20.py",
+      "source_group": "B20",
+      "source_name": "test_b20.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "23ef922ecede2f726845deb908fde03c7c47368be8ace1e0c03d4d42733b5dd4",
+      "public_sha256": "23ef922ecede2f726845deb908fde03c7c47368be8ace1e0c03d4d42733b5dd4",
+      "bytes": 5428,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/README_B20.md",
+      "source_group": "B20",
+      "source_name": "README_B20.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "825737de316fa96bd9e43d3fea03012c2f357a6f8dcdd1c2ec36ad50cc03b280",
+      "public_sha256": "825737de316fa96bd9e43d3fea03012c2f357a6f8dcdd1c2ec36ad50cc03b280",
+      "bytes": 4500,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/B20_RIGHT_REFERENCE_DECISION.md",
+      "source_group": "B20",
+      "source_name": "B20_RIGHT_REFERENCE_DECISION.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "aabaf0346046cd43a9c9d1bd2f10dacd90abe58168a3f3ea0e30db8b24833f74",
+      "public_sha256": "90e4e197dd88347c35272e23281167e6de032fa772366f3dfcac47552d2f88f0",
+      "bytes": 5408,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/B20_RIGHT_X_MEASUREMENT_CONTRACT.md",
+      "source_group": "B20",
+      "source_name": "B20_RIGHT_X_MEASUREMENT_CONTRACT.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "a619b3aca5df7f2047e9d5aea7d3390920be0d851f21853d37eafeb5c8f8255d",
+      "public_sha256": "a619b3aca5df7f2047e9d5aea7d3390920be0d851f21853d37eafeb5c8f8255d",
+      "bytes": 3707,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/B20_A_SHADOW_INTERFACE.md",
+      "source_group": "B20",
+      "source_name": "B20_A_SHADOW_INTERFACE.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "61c211a38efd953e488086d29a149f694371edeb04fb600127234ff646be97b0",
+      "public_sha256": "a6f381374ceda14c129c53c0bbbfd96c0e368386d444ee8b8ece3022d3ef4975",
+      "bytes": 3933,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B20_OPTICAL_HOLDOUT_AUDIT.json",
+      "source_group": "B20",
+      "source_name": "B20_OPTICAL_HOLDOUT_AUDIT.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "8a3debcfe55a81fce1e0d91fbd78ebb6b36b9f99d63698aa1da480b753522936",
+      "public_sha256": "69295dabe24c20ff724d9d1a1f455395c5e318ed77915f4508aed8911b9a2466",
+      "bytes": 4554,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B20_FEATURE_VALIDITY_REGRESSION.json",
+      "source_group": "B20",
+      "source_name": "B20_FEATURE_VALIDITY_REGRESSION.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "99ab43ede606bfbff63274ea99678f94ecfa2df0428e5165e307f86007a4b188",
+      "public_sha256": "1e24fe52518391a25bd85487b85f06c0f2476feae0a3dbeafaa779bc56e19192",
+      "bytes": 6416,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B20_FAST_PATH_BENCHMARK.json",
+      "source_group": "B20",
+      "source_name": "B20_FAST_PATH_BENCHMARK.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "0a19afd4ed94c37d4a48a71feab094eb0de6b0bc5c8cc4bbefd6e6f920eaa9ab",
+      "public_sha256": "74b5c183a28919bf95b4d8d1309104a937ebbe5bad8ba436082e9facd11b8c80",
+      "bytes": 20540,
       "public_copy_changed": true
     }
   ]
