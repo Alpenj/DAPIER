@@ -1,0 +1,94 @@
+{
+  "privacy": "anonymized technical review; original frames, q12/ticks, camera/calibration parameters, source paths and timestamps stay private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "NEEDS_EVIDENCE",
+  "REAL_samples": 7,
+  "observed_control_dimensions": 0,
+  "relative_feature_error_px": {
+    "u": null,
+    "v": null
+  },
+  "estimated_tool_correction": null,
+  "expected_image_error_change": null,
+  "reference_provenance": {
+    "physically_identified_current_Pad_reference": false,
+    "held_target_to_right_component_correspondence_verified": false,
+    "validated_REAL_relative_Jacobian": false
+  },
+  "missing_evidence": [
+    "CURRENT_LEFT_HELD_TARGET_ASSOCIATION_UNVERIFIED",
+    "JACOBIAN_UNIDENTIFIED",
+    "RIGHT_OBJECT_FEATURE_UNOBSERVED",
+    "RIGHT_PAD_REFERENCE_UNOBSERVED_OR_UNIDENTIFIED",
+    "RIGHT_U_REFERENCE_UNOBSERVED",
+    "RIGHT_V_REFERENCE_UNOBSERVED",
+    "VALIDATED_REAL_RIGHT_JACOBIAN_UNAVAILABLE"
+  ],
+  "per_stage": [
+    {
+      "observation_identity": {
+        "stage": "000001_AFTER_LIFT_BEFORE_CARRY",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    },
+    {
+      "observation_identity": {
+        "stage": "000002_AFTER_CARRY_RIGHT",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    },
+    {
+      "observation_identity": {
+        "stage": "000003_AFTER_CARRY_LEFT",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    },
+    {
+      "observation_identity": {
+        "stage": "000004_BEFORE_RIGHT_PREGRASP",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    },
+    {
+      "observation_identity": {
+        "stage": "000005_RECEIVE_CONTACT",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    },
+    {
+      "observation_identity": {
+        "stage": "000025_OBSERVATION_CANDIDATE",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    },
+    {
+      "observation_identity": {
+        "stage": "000026_BEFORE_NORMAL_RETURN",
+        "source_kind": "REAL"
+      },
+      "validity": "NEEDS_EVIDENCE",
+      "observed_control_dimensions": 0,
+      "estimated_tool_correction": null
+    }
+  ],
+  "A_final_actual_pose_IK_path_collision_authority": true
+}

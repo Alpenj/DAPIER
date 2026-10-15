@@ -1,0 +1,471 @@
+{
+  "privacy": "anonymized technical review; original frames, q12/ticks, camera/calibration parameters, source paths and timestamps stay private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "OFFLINE_COUNTERFACTUAL_ONLY",
+  "methods": {
+    "A": "A initial prior fixed: 0.8 / first image mm_per_px; native A can later replace it with local feedback",
+    "B": "mean local px/FK-mm response from other stored contexts; diagnostic transfer only",
+    "C": "scalar DLS with numerical lambda=abs(initial prior gain)",
+    "D": "error-dependent gain = prior * (1 + abs(current error)/abs(initial error))",
+    "E": "A correction law with separately benchmarked global-scan/ROI feature candidate"
+  },
+  "response_model": "delta error = measured local px/FK-mm * recorded FK-mm/command-mm * hypothetical command-mm",
+  "fit_scope": "same-pair post-outcome response defines the plant; local controller gain uses other contexts",
+  "limitations": [
+    "not an independent prediction or calibrated REAL Jacobian",
+    "height, rotation, scale and target changes are absorbed into the local scalar fit",
+    "no future image sequence, actuator dynamics, IK feasibility or physical duration is simulated"
+  ],
+  "comparisons": [
+    {
+      "pair_id": "left_reference_A",
+      "candidate": "A",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 2,
+      "final_absolute_error_px": 0.01526762205660881,
+      "first_step_absolute_error_reduction_fraction": 0.9728911570124703,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 3.8934251901108703,
+      "response_per_actual_FK_mm": 4.374146455034638,
+      "actual_FK_per_commanded_mm": 0.7250843574773579,
+      "fitted_response_per_commanded_mm": 3.1716251718606534,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_A",
+      "candidate": "B",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 3,
+      "final_absolute_error_px": 0.13237458122730472,
+      "first_step_absolute_error_reduction_fraction": 0.8146105336546449,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 3.8934251901108703,
+      "response_per_actual_FK_mm": 4.374146455034638,
+      "actual_FK_per_commanded_mm": 0.7250843574773579,
+      "fitted_response_per_commanded_mm": 3.1716251718606534,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_A",
+      "candidate": "C",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 7,
+      "final_absolute_error_px": 0.1957288051808253,
+      "first_step_absolute_error_reduction_fraction": 0.4864455785062354,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 3.8934251901108703,
+      "response_per_actual_FK_mm": 4.374146455034638,
+      "actual_FK_per_commanded_mm": 0.7250843574773579,
+      "fitted_response_per_commanded_mm": 3.1716251718606534,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_A",
+      "candidate": "D",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 4,
+      "final_absolute_error_px": 0.039233804347729384,
+      "first_step_absolute_error_reduction_fraction": 0.48644557850623515,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 3.8934251901108703,
+      "response_per_actual_FK_mm": 4.374146455034638,
+      "actual_FK_per_commanded_mm": 0.7250843574773579,
+      "fitted_response_per_commanded_mm": 3.1716251718606534,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_A",
+      "candidate": "E",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 2,
+      "final_absolute_error_px": 0.01526762205660881,
+      "first_step_absolute_error_reduction_fraction": 0.9728911570124703,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 3.8934251901108703,
+      "response_per_actual_FK_mm": 4.374146455034638,
+      "actual_FK_per_commanded_mm": 0.7250843574773579,
+      "fitted_response_per_commanded_mm": 3.1716251718606534,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_B",
+      "candidate": "A",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 3,
+      "final_absolute_error_px": 0.1264966849525362,
+      "first_step_absolute_error_reduction_fraction": 0.8273851735337034,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 4.076773170699822,
+      "response_per_actual_FK_mm": 4.007450493856735,
+      "actual_FK_per_commanded_mm": 0.6730652493036888,
+      "fitted_response_per_commanded_mm": 2.6972756657198738,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_B",
+      "candidate": "B",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 5,
+      "final_absolute_error_px": 0.10911054167412712,
+      "first_step_absolute_error_reduction_fraction": 0.6616202454199476,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 4.076773170699822,
+      "response_per_actual_FK_mm": 4.007450493856735,
+      "actual_FK_per_commanded_mm": 0.6730652493036888,
+      "fitted_response_per_commanded_mm": 2.6972756657198738,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_B",
+      "candidate": "C",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 10,
+      "final_absolute_error_px": 0.11805889402017225,
+      "first_step_absolute_error_reduction_fraction": 0.41369258676685194,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 4.076773170699822,
+      "response_per_actual_FK_mm": 4.007450493856735,
+      "actual_FK_per_commanded_mm": 0.6730652493036888,
+      "fitted_response_per_commanded_mm": 2.6972756657198738,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_B",
+      "candidate": "D",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 5,
+      "final_absolute_error_px": 0.11619035460342586,
+      "first_step_absolute_error_reduction_fraction": 0.4136925867668517,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 4.076773170699822,
+      "response_per_actual_FK_mm": 4.007450493856735,
+      "actual_FK_per_commanded_mm": 0.6730652493036888,
+      "fitted_response_per_commanded_mm": 2.6972756657198738,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_reference_B",
+      "candidate": "E",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 3,
+      "final_absolute_error_px": 0.1264966849525362,
+      "first_step_absolute_error_reduction_fraction": 0.8273851735337034,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.2600000000000002,
+      "local_gain_from_other_contexts_px_per_mm": 4.076773170699822,
+      "response_per_actual_FK_mm": 4.007450493856735,
+      "actual_FK_per_commanded_mm": 0.6730652493036888,
+      "fitted_response_per_commanded_mm": 2.6972756657198738,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_current_session",
+      "candidate": "A",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 5,
+      "final_absolute_error_px": 0.10704749324353022,
+      "first_step_absolute_error_reduction_fraction": 0.6622325690263658,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.22,
+      "local_gain_from_other_contexts_px_per_mm": 4.190798474445686,
+      "response_per_actual_FK_mm": 3.779399886365006,
+      "actual_FK_per_commanded_mm": 0.5642136149598637,
+      "fitted_response_per_commanded_mm": 2.132388872264898,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_current_session",
+      "candidate": "B",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 7,
+      "final_absolute_error_px": 0.16793174558804974,
+      "first_step_absolute_error_reduction_fraction": 0.5088263931724722,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.22,
+      "local_gain_from_other_contexts_px_per_mm": 4.190798474445686,
+      "response_per_actual_FK_mm": 3.779399886365006,
+      "actual_FK_per_commanded_mm": 0.5642136149598637,
+      "fitted_response_per_commanded_mm": 2.132388872264898,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_current_session",
+      "candidate": "C",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 12,
+      "final_absolute_error_px": 0.1952967978186172,
+      "first_step_absolute_error_reduction_fraction": 0.33111628451318276,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.22,
+      "local_gain_from_other_contexts_px_per_mm": 4.190798474445686,
+      "response_per_actual_FK_mm": 3.779399886365006,
+      "actual_FK_per_commanded_mm": 0.5642136149598637,
+      "fitted_response_per_commanded_mm": 2.132388872264898,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_current_session",
+      "candidate": "D",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 7,
+      "final_absolute_error_px": 0.11727065338952591,
+      "first_step_absolute_error_reduction_fraction": 0.33111628451318287,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.22,
+      "local_gain_from_other_contexts_px_per_mm": 4.190798474445686,
+      "response_per_actual_FK_mm": 3.779399886365006,
+      "actual_FK_per_commanded_mm": 0.5642136149598637,
+      "fitted_response_per_commanded_mm": 2.132388872264898,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    },
+    {
+      "pair_id": "left_current_session",
+      "candidate": "E",
+      "status": "FITTED_SCALAR_MODEL_TARGET_REACHED",
+      "predicted_corrections": 5,
+      "final_absolute_error_px": 0.10704749324353022,
+      "first_step_absolute_error_reduction_fraction": 0.6622325690263658,
+      "sign_crossings": 0,
+      "oscillatory_trace": false,
+      "controller_prior_px_per_mm": 3.22,
+      "local_gain_from_other_contexts_px_per_mm": 4.190798474445686,
+      "response_per_actual_FK_mm": 3.779399886365006,
+      "actual_FK_per_commanded_mm": 0.5642136149598637,
+      "fitted_response_per_commanded_mm": 2.132388872264898,
+      "independent_REAL_validation": false,
+      "constant_context_validated": false,
+      "IK_or_collision_certified": false,
+      "physical_time_saved_s": null,
+      "REAL_success": false
+    }
+  ],
+  "test_target_px": 0.2,
+  "iteration_budget": 20,
+  "criterion_role": "numerical comparison fixture only; no task tolerance or physical gate",
+  "visual_reference_loss": {
+    "samples": 18,
+    "baseline_image_only_unavailable": 3,
+    "ROI_image_only_unavailable": 3,
+    "baseline_A_contract_unconfirmed": 0,
+    "ROI_A_contract_unconfirmed": 0,
+    "scope": "saved frames only; A confirmation may use unchanged measured opening, separately from image-tip matching"
+  },
+  "ROI_feature_agreement": {
+    "saved_frames": 18,
+    "maximum_centre_difference_px": 0.0,
+    "all_widths_equal": true,
+    "global_scan_retained": true
+  },
+  "precision_pairs": [
+    {
+      "id": "left_reference_A",
+      "commanded_tool_move_mm": 6.372822702866487,
+      "actual_model_FK_projected_tool_move_mm": 4.620834054825066,
+      "actual_tool_rotation_deg": 1.8793085119156123,
+      "actual_model_FK_translation_xyz_mm": [
+        -2.5931467543411078,
+        4.421279382025724,
+        -2.6940487421240054
+      ],
+      "before_image_error_px": -20.77540201134475,
+      "after_image_error_px": -0.5631971111283554,
+      "absolute_error_reduction_fraction": 0.9728911570124702,
+      "scale_mm_per_px": [
+        0.24539877300613497,
+        0.23121387283236994
+      ],
+      "target_shift_mm": -0.28418513968398795,
+      "JPEG_replay_minus_recorded_centre_px": [
+        0.0,
+        0.0
+      ],
+      "physical_object_stationarity_verified": false,
+      "comparability": "SEPARATE_LOCAL_RESPONSE_WITH_HEIGHT_CAMERA_SCALE_AND_TARGET_CHANGE"
+    },
+    {
+      "id": "left_reference_B",
+      "commanded_tool_move_mm": 7.544444295043435,
+      "actual_model_FK_projected_tool_move_mm": 5.077903280301203,
+      "actual_tool_rotation_deg": 1.7929980931294605,
+      "actual_model_FK_translation_xyz_mm": [
+        -2.0917498318484276,
+        4.916258148181162,
+        -2.876964766680812
+      ],
+      "before_image_error_px": -24.5948884018416,
+      "after_image_error_px": -4.245442393441813,
+      "absolute_error_reduction_fraction": 0.8273851735337037,
+      "scale_mm_per_px": [
+        0.24539877300613497,
+        0.23391812865497075
+      ],
+      "target_shift_mm": -0.07709081416983829,
+      "JPEG_replay_minus_recorded_centre_px": [
+        -0.5,
+        -0.5
+      ],
+      "physical_object_stationarity_verified": false,
+      "comparability": "SEPARATE_LOCAL_RESPONSE_WITH_HEIGHT_CAMERA_SCALE_AND_TARGET_CHANGE"
+    },
+    {
+      "id": "left_current_session",
+      "commanded_tool_move_mm": 7.561914745979775,
+      "actual_model_FK_projected_tool_move_mm": 4.266535254847548,
+      "actual_tool_rotation_deg": 1.6209783583898132,
+      "actual_model_FK_translation_xyz_mm": [
+        -1.905760543050472,
+        4.152047504876625,
+        -2.9104018952109403
+      ],
+      "before_image_error_px": -24.349365482054875,
+      "after_image_error_px": -8.224422624711762,
+      "absolute_error_reduction_fraction": 0.6622325690263657,
+      "scale_mm_per_px": [
+        0.2484472049689441,
+        0.24242424242424243
+      ],
+      "target_shift_mm": 0.4584780546426346,
+      "JPEG_replay_minus_recorded_centre_px": [
+        0.5,
+        0.5
+      ],
+      "physical_object_stationarity_verified": false,
+      "comparability": "SEPARATE_LOCAL_RESPONSE_WITH_HEIGHT_CAMERA_SCALE_AND_TARGET_CHANGE"
+    }
+  ],
+  "encoded_burst_variability": [
+    {
+      "observation": {
+        "run_id": "left_reference_A",
+        "observation_id": "01_pregrasp_0"
+      },
+      "std_px": 0.0,
+      "physical_noise_bound": false
+    },
+    {
+      "observation": {
+        "run_id": "left_reference_A",
+        "observation_id": "01_pregrasp_1"
+      },
+      "std_px": 0.2886751345948129,
+      "physical_noise_bound": false
+    },
+    {
+      "observation": {
+        "run_id": "left_reference_B",
+        "observation_id": "01_pregrasp_0"
+      },
+      "std_px": 0.0,
+      "physical_noise_bound": false
+    },
+    {
+      "observation": {
+        "run_id": "left_reference_B",
+        "observation_id": "01_pregrasp_1"
+      },
+      "std_px": 0.0,
+      "physical_noise_bound": false
+    },
+    {
+      "observation": {
+        "run_id": "left_current_session",
+        "observation_id": "01_pregrasp_0"
+      },
+      "std_px": 0.0,
+      "physical_noise_bound": false
+    },
+    {
+      "observation": {
+        "run_id": "left_current_session",
+        "observation_id": "01_pregrasp_1"
+      },
+      "std_px": 0.0,
+      "physical_noise_bound": false
+    }
+  ],
+  "Jaw_reference_uncertainty": "current tip candidates may be hidden or disagree with reference; unchanged motor opening confirmation is separate from visible image evidence",
+  "physical_TCP_accuracy": null,
+  "physical_time_saved_s": null,
+  "physical_overshoot_or_oscillation_risk": "UNKNOWN; fitted scalar traces omit time-varying response, new images and actuator dynamics",
+  "recommendation": "retain existing A algorithm; these stored fits and CPU measurements do not demonstrate a faster or more accurate REAL controller"
+}

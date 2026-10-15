@@ -1,0 +1,132 @@
+{
+  "privacy": "anonymized technical review; original frames, q12/ticks, camera/calibration parameters, source paths and timestamps stay private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "INSUFFICIENT_PAIRED_OBSERVATIONS",
+  "candidate_consecutive_pairs": [
+    {
+      "before": "000001_AFTER_LIFT_BEFORE_CARRY",
+      "after": "000002_AFTER_CARRY_RIGHT",
+      "actual_candidate_FK_translation_norm_mm": 141.97126731415,
+      "actual_candidate_FK_rotation_deg": 91.77295396780362,
+      "raw_component_centroid_change_px": {
+        "u": null,
+        "v": null
+      },
+      "observed_Pad_relative_track": false,
+      "valid_REAL_Jacobian_pair": false,
+      "exclusion": "no physically identified same object/Pad feature; zero excitation, target/pose changes or missing target remain explicit"
+    },
+    {
+      "before": "000002_AFTER_CARRY_RIGHT",
+      "after": "000003_AFTER_CARRY_LEFT",
+      "actual_candidate_FK_translation_norm_mm": 0.0,
+      "actual_candidate_FK_rotation_deg": 1.7075472925031877e-06,
+      "raw_component_centroid_change_px": {
+        "u": null,
+        "v": null
+      },
+      "observed_Pad_relative_track": false,
+      "valid_REAL_Jacobian_pair": false,
+      "exclusion": "no physically identified same object/Pad feature; zero excitation, target/pose changes or missing target remain explicit"
+    },
+    {
+      "before": "000003_AFTER_CARRY_LEFT",
+      "after": "000004_BEFORE_RIGHT_PREGRASP",
+      "actual_candidate_FK_translation_norm_mm": 0.0,
+      "actual_candidate_FK_rotation_deg": 1.7075472925031877e-06,
+      "raw_component_centroid_change_px": {
+        "u": -0.2684702782133712,
+        "v": 0.2696463839356795
+      },
+      "observed_Pad_relative_track": false,
+      "valid_REAL_Jacobian_pair": false,
+      "exclusion": "no physically identified same object/Pad feature; zero excitation, target/pose changes or missing target remain explicit"
+    },
+    {
+      "before": "000004_BEFORE_RIGHT_PREGRASP",
+      "after": "000005_RECEIVE_CONTACT",
+      "actual_candidate_FK_translation_norm_mm": 25.165995146533426,
+      "actual_candidate_FK_rotation_deg": 1.3069058939618485,
+      "raw_component_centroid_change_px": {
+        "u": -1.1479257754762386,
+        "v": 17.58212557265628
+      },
+      "observed_Pad_relative_track": false,
+      "valid_REAL_Jacobian_pair": false,
+      "exclusion": "no physically identified same object/Pad feature; zero excitation, target/pose changes or missing target remain explicit"
+    },
+    {
+      "before": "000005_RECEIVE_CONTACT",
+      "after": "000025_OBSERVATION_CANDIDATE",
+      "actual_candidate_FK_translation_norm_mm": 21.512110242885385,
+      "actual_candidate_FK_rotation_deg": 50.99919732012279,
+      "raw_component_centroid_change_px": {
+        "u": 30.83070461917366,
+        "v": 10.815837048462782
+      },
+      "observed_Pad_relative_track": false,
+      "valid_REAL_Jacobian_pair": false,
+      "exclusion": "no physically identified same object/Pad feature; zero excitation, target/pose changes or missing target remain explicit"
+    },
+    {
+      "before": "000025_OBSERVATION_CANDIDATE",
+      "after": "000026_BEFORE_NORMAL_RETURN",
+      "actual_candidate_FK_translation_norm_mm": 0.0,
+      "actual_candidate_FK_rotation_deg": 4.182619578303747e-06,
+      "raw_component_centroid_change_px": {
+        "u": 0.06576327622457256,
+        "v": 3.3414725635248885
+      },
+      "observed_Pad_relative_track": false,
+      "valid_REAL_Jacobian_pair": false,
+      "exclusion": "no physically identified same object/Pad feature; zero excitation, target/pose changes or missing target remain explicit"
+    }
+  ],
+  "valid_relative_pairs": 0,
+  "independent_relative_directions": 0,
+  "REAL_Jacobian": null,
+  "rank": null,
+  "condition_number": null,
+  "measurement_noise_px": null,
+  "right_X_response": "UNIDENTIFIED_RELATIVE_TO_OBSERVED_PAD",
+  "Y_depth_rotation": "UNOBSERVED_AS_RELATIVE_TASK_ERRORS",
+  "commanded_and_actual_motion": [
+    {
+      "name": "observe_0_0",
+      "terminal_result": "TARGET_NOT_REACHED_HOLDING",
+      "actual_candidate_FK_translation_mm": [
+        -14.44605990573565,
+        -14.216626506491359,
+        2.2630044318992515
+      ],
+      "commanded_arm_Goal_candidate_FK_translation_mm": [
+        -16.015850331146247,
+        -15.771098477453338,
+        11.441191702465131
+      ],
+      "actual_candidate_FK_rotation_deg": 1.2432635219975037,
+      "geometry_role": "existing A model/candidate calibration FK; not measured Cartesian ground truth",
+      "relative_alignment_success": false
+    },
+    {
+      "name": "observe_0_1",
+      "terminal_result": "TARGET_NOT_REACHED_HOLDING",
+      "actual_candidate_FK_translation_mm": [
+        -1.245504560971375,
+        0.27907453827404755,
+        2.458259892672454
+      ],
+      "commanded_arm_Goal_candidate_FK_translation_mm": [
+        -1.5337569117974543,
+        -1.5768684988617319,
+        9.266176201109506
+      ],
+      "actual_candidate_FK_rotation_deg": 51.165116242739636,
+      "geometry_role": "existing A model/candidate calibration FK; not measured Cartesian ground truth",
+      "relative_alignment_success": false
+    }
+  ],
+  "raw_centroid_change_is_relative_Pad_response": false,
+  "MODEL_response_used_to_fill_REAL": false
+}

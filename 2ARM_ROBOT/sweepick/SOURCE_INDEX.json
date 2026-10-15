@@ -1,6 +1,6 @@
 {
   "schema": "sweepick.public-source.v1",
-  "snapshot_at": "2026-10-15T14:26:42.373672+09:00",
+  "snapshot_at": "2026-10-15T15:31:05.019257+09:00",
   "purpose": "current source review; not a portable hardware deployment",
   "transformations": [
     "personal home path replaced by /home/robot",
@@ -10,7 +10,8 @@
     "review handoff filename normalized",
     "B17 public reports retain anonymized technical findings; private recording values, source paths, model binaries and calibration are excluded",
     "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately",
-    "B18 technical summaries exclude original images, q12/ticks, camera parameters, machine paths and recording timestamps; REAL and MODEL evidence remain distinct"
+    "B18 technical summaries exclude original images, q12/ticks, camera parameters, machine paths and recording timestamps; REAL and MODEL evidence remain distinct",
+    "B19 adds right-relative pure calculations and anonymized timing/accuracy reports; raw frames, feedback, optical parameters, device identities and original timestamps stay private"
   ],
   "files": [
     {
@@ -1705,12 +1706,12 @@
     },
     {
       "file": "visual_servo/features.py",
-      "source_group": "B18",
+      "source_group": "B19",
       "source_name": "features.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "42a58bf5503daf5830979512752e677c3ab792fab5cd586511879c83d9b5e373",
-      "public_sha256": "42a58bf5503daf5830979512752e677c3ab792fab5cd586511879c83d9b5e373",
-      "bytes": 8706,
+      "source_sha256": "f8d74920e7bda0e5cb7a39cc58a7477d9d5d83fda9483554bdd343ef58a07573",
+      "public_sha256": "f8d74920e7bda0e5cb7a39cc58a7477d9d5d83fda9483554bdd343ef58a07573",
+      "bytes": 8866,
       "public_copy_changed": false
     },
     {
@@ -1785,12 +1786,12 @@
     },
     {
       "file": "visual_servo/servo_proposal.py",
-      "source_group": "B18",
+      "source_group": "B19",
       "source_name": "servo_proposal.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "8524e7cb242cfc9f9817ccec8b097f8c947df5f661e18f00ec64bf60b482eb0a",
-      "public_sha256": "8524e7cb242cfc9f9817ccec8b097f8c947df5f661e18f00ec64bf60b482eb0a",
-      "bytes": 8587,
+      "source_sha256": "3989f2fcb6c9902d0708b4a790a1c1652bee90f1712936965f0d75f6a85d9dcc",
+      "public_sha256": "3989f2fcb6c9902d0708b4a790a1c1652bee90f1712936965f0d75f6a85d9dcc",
+      "bytes": 10214,
       "public_copy_changed": false
     },
     {
@@ -1802,6 +1803,126 @@
       "public_sha256": "ef8fbad4d49bae047d88b6619a98d6b999aad99779ddf4e81a99e074316bc4df",
       "bytes": 17727,
       "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/right_relative.py",
+      "source_group": "B19",
+      "source_name": "right_relative.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "f9cd98b70e9e68b14a3aa7efbe0da55f87a54da6601a998f150a1be6e6aa00c7",
+      "public_sha256": "f9cd98b70e9e68b14a3aa7efbe0da55f87a54da6601a998f150a1be6e6aa00c7",
+      "bytes": 7716,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/performance.py",
+      "source_group": "B19",
+      "source_name": "performance.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "7a6d80bf6cb5bff6af6006f9f7d6fa65bec65cd4dc2a501c3681911b2b48f5cf",
+      "public_sha256": "7a6d80bf6cb5bff6af6006f9f7d6fa65bec65cd4dc2a501c3681911b2b48f5cf",
+      "bytes": 6879,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/test_b19.py",
+      "source_group": "B19",
+      "source_name": "test_b19.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "11c7af630ebeb886cf04eacea3beb7562a2eea693158215c242cdda0f75b7e51",
+      "public_sha256": "11c7af630ebeb886cf04eacea3beb7562a2eea693158215c242cdda0f75b7e51",
+      "bytes": 12277,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/run_b19.py",
+      "source_group": "B19",
+      "source_name": "run_b19.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "9b6480fa3d63a61796f276e31d185165d2a6907a32f676dbba4c1e25e0cd0856",
+      "public_sha256": "9b6480fa3d63a61796f276e31d185165d2a6907a32f676dbba4c1e25e0cd0856",
+      "bytes": 20459,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/B19_A_INTEGRATION_CONTRACT.md",
+      "source_group": "B19",
+      "source_name": "B19_A_INTEGRATION_CONTRACT.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "a64e9ecc82c7f73ccdb328b4eb237b56dd5f0f185f3e34286e0353736cf57909",
+      "public_sha256": "a64e9ecc82c7f73ccdb328b4eb237b56dd5f0f185f3e34286e0353736cf57909",
+      "bytes": 9757,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/README_B19.md",
+      "source_group": "B19",
+      "source_name": "README_B19.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "7ec4a05e6c55a13dddb53d92aafe27c8d3d75da05c9d91f210087885174eb737",
+      "public_sha256": "7ec4a05e6c55a13dddb53d92aafe27c8d3d75da05c9d91f210087885174eb737",
+      "bytes": 8922,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/B19_LATENCY_PROFILE.json",
+      "source_group": "B19",
+      "source_name": "reports/B19_LATENCY_PROFILE.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "84a79cac95a7c855c8a0bf7afde765ade782ba6aa29e6748a053ea020e8a5497",
+      "public_sha256": "bbb7cdb1927c70d198ee72f42a989e0fb1cb05622a38f235309a2a8c5d73db48",
+      "bytes": 16829,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B19_REGRESSION.json",
+      "source_group": "B19",
+      "source_name": "reports/B19_REGRESSION.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "0cd23e86f0479f44fddb7e1c0f104b98b3bc2d92447eb11bb8f2ca4e0e260ea9",
+      "public_sha256": "cd9730c731fdcdb1b8130238de86fafcf5e74b1a513e44b605eba7f60550cf8a",
+      "bytes": 1562,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B19_RIGHT_FEATURE_EVIDENCE.json",
+      "source_group": "B19",
+      "source_name": "reports/B19_RIGHT_FEATURE_EVIDENCE.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "7c5b31f61b22ee070ae928d753bad6a08e327598ba92c5021080706674ae4460",
+      "public_sha256": "9a25426956afcdb2e1e206288bda8b7bcf4797417967bc29eeaa0fe73f1c374e",
+      "bytes": 6098,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B19_RIGHT_JACOBIAN_IDENTIFIABILITY.json",
+      "source_group": "B19",
+      "source_name": "reports/B19_RIGHT_JACOBIAN_IDENTIFIABILITY.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "62394f65e7dd45e7c216f691f7e3a406a67f89f4aa0cde29b6b2e91243723d33",
+      "public_sha256": "c11133f73eb72acb31587b8cafbf298cd36f3677b363212d0c8b2432c61afc05",
+      "bytes": 5300,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B19_RIGHT_SERVO_PROPOSAL.json",
+      "source_group": "B19",
+      "source_name": "reports/B19_RIGHT_SERVO_PROPOSAL.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "68488f02cd7bd40e469d8d80ca4fb7695a167e0eac31f2775fca0cd6ed14aefc",
+      "public_sha256": "a5a4cc00793cfea1291cfa203cdc68963ea61b70c68f9d3bbc18c4d1a277f9c0",
+      "bytes": 2777,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/reports/B19_SPEED_ACCURACY_COMPARISON.json",
+      "source_group": "B19",
+      "source_name": "reports/B19_SPEED_ACCURACY_COMPARISON.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "cec3efedcb4ffb830a9badc42ea4e0800a38015672cfaf39e924bb20c4b0d8a2",
+      "public_sha256": "7aaaea555113d827452ad84d110ef76c3836442358dea165f62e0d7bcc88628a",
+      "bytes": 18847,
+      "public_copy_changed": true
     }
   ]
 }

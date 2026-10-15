@@ -1,4 +1,4 @@
-"""Left-wrist image measurements; target references must have their own evidence."""
+"""Camera/state binding shared by separate PICK and RECEIVE image measurements."""
 import ast
 import copy
 import hashlib
@@ -31,7 +31,7 @@ def a_image_functions(source=None):
     return functions,sha256(source/'sweepick_pick01.py')
 
 
-def observation_binding(observation):
+def observation_binding(observation, *, camera_key='left_wrist'):
     identity = observation.get('observation_identity')
     if (not isinstance(identity,dict) or any(not isinstance(identity.get(k),str) or not identity[k]
                                            for k in ('run_id','observation_id'))):
@@ -49,11 +49,13 @@ def observation_binding(observation):
             raise ValueError('camera/observation source mismatch')
         if view.get('observation_identity') != identity:
             raise ValueError(f'{key} camera/state observation identity mismatch')
-    left=views['left_wrist'];image=np.asarray(left.get('image_bgr'))
+    if camera_key not in ('left_wrist','right_wrist'):
+        raise ValueError('explicit wrist camera required')
+    view=views[camera_key];image=np.asarray(view.get('image_bgr'))
     return dict(observation_identity=copy.deepcopy(identity),
         feedback_sha256=hashlib.sha256(q.astype('<f8').tobytes()).hexdigest(),
-        camera_state_binding=dict(source_kind=observation['source_kind'],
-            image_identity=copy.deepcopy(left.get('image_identity')),source_sha256=left.get('source_sha256'),
+        camera_state_binding=dict(source_kind=observation['source_kind'],camera_key=camera_key,
+            image_identity=copy.deepcopy(view.get('image_identity')),source_sha256=view.get('source_sha256'),
             image_shape=list(image.shape),image_dtype=str(image.dtype),
             image_array_sha256=hashlib.sha256(image.tobytes()).hexdigest()
                 if image.dtype==np.uint8 and image.ndim==3 else None),

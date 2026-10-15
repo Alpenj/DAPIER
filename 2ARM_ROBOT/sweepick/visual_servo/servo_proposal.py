@@ -8,7 +8,7 @@ from .image_jacobian import jacobian_record,solve_correction
 
 
 def propose_servo(observation,features,target_features,jacobian,*,previous_features=None,
-                  previous_response=None,damping=0.0):
+                  previous_response=None,damping=0.0,camera_key='left_wrist'):
     result=dict(schema='sweepick.b18.visual-servo-proposal/1',type='VisualServoProposal',
         observation_identity=copy.deepcopy(observation.get('observation_identity')),
         feature_error_px=dict(u=None,v=None),observed_control_dimensions=0,
@@ -17,7 +17,7 @@ def propose_servo(observation,features,target_features,jacobian,*,previous_featu
         validity='NEEDS_EVIDENCE',source_sha256=copy.deepcopy(features.get('source_sha256',{})),
         model_only=True,executable=False,motor_write_authorized=False)
     try:
-        binding=observation_binding(observation)
+        binding=observation_binding(observation,camera_key=camera_key)
     except (ValueError,TypeError) as exc:
         result.update(validity='INVALID_OBSERVATION',missing_evidence=[str(exc)]);return result
     result['temporal_alignment']=binding['temporal_alignment']
@@ -99,10 +99,21 @@ def evaluate_response(previous_features,current_features,proposal,actual_control
         return dict(status='NO_NEW_IMAGE',jacobian_revalidation_required=True)
     if previous_features.get('target')!=current_features.get('target'):
         return dict(status='TARGET_CHANGED_NOT_COMPARABLE',jacobian_revalidation_required=True)
+    if any(previous_features.get(k)!=current_features.get(k) for k in
+           ('source_kind','camera_key','feature_definitions')):
+        return dict(status='FEATURE_RESPONSE_CONTEXT_MISMATCH',jacobian_revalidation_required=True)
     if proposal.get('estimated_tool_correction') is None:
         return dict(status='NO_PREVIOUS_CORRECTION',jacobian_revalidation_required=True)
-    j=proposal['jacobian'];axes=[a for a in j['feature_axes'] if
-        previous_features['values_px'].get(a) is not None and current_features['values_px'].get(a) is not None]
+    j=proposal['jacobian']
+    used=proposal.get('expected_image_error_change')
+    axes=[a for a in j['feature_axes'] if used is None or a in used]
+    target=previous_features['target'].get('values_px',{})
+    task_axes=[a for a in ('u','v') if target.get(a) is not None]
+    missing=[a for a in set(axes)|set(task_axes) if any(
+        f['values_px'].get(a) is None for f in (previous_features,current_features))]
+    if missing or not task_axes:
+        return dict(status='RESPONSE_FEATURE_UNOBSERVED',missing_response_axes=sorted(missing),
+                    jacobian_revalidation_required=True,physical_stop_requested=False,physical_success=False)
     actual=np.asarray(actual_control_displacement_mm,float)
     matrix=np.asarray(j['matrix_px_per_mm'],float)
     if actual.shape!=(matrix.shape[1],) or not np.isfinite(actual).all():
@@ -114,7 +125,20 @@ def evaluate_response(previous_features,current_features,proposal,actual_control
     if not np.isfinite(predicted).all() or not np.isfinite(observed).all() or not np.isfinite(dot):
         return dict(status='INVALID_IMAGE_RESPONSE',jacobian_revalidation_required=True,
                     physical_stop_requested=False,physical_success=False)
-    return dict(status='REVERSED_IMAGE_RESPONSE' if dot<0 else 'DIRECTION_CONSISTENT' if dot>0 else 'DIRECTION_UNRESOLVED',
+    products=predicted*observed
+    errors=[[f['values_px'][a]-target[a] for a in task_axes] for f in (previous_features,current_features)]
+    norms=[float(np.linalg.norm(e)) for e in errors]
+    if not np.isfinite(norms).all():
+        return dict(status='INVALID_IMAGE_RESPONSE',jacobian_revalidation_required=True,
+                    physical_stop_requested=False,physical_success=False)
+    increased=norms[1]>norms[0]
+    reversed_axis=bool(np.any(products<0))
+    unresolved=not len(axes) or bool(np.any((predicted==0)!=(observed==0))) or not np.any(products>0)
+    status=('REVERSED_IMAGE_RESPONSE' if reversed_axis else 'IMAGE_ERROR_INCREASED' if increased else
+            'DIRECTION_UNRESOLVED' if unresolved else 'DIRECTION_CONSISTENT')
+    return dict(status=status,
         feature_axes=axes,predicted_image_change_px=predicted.tolist(),observed_image_change_px=observed.tolist(),
-        direction_dot_px_squared=dot,jacobian_revalidation_required=dot<=0,
+        axis_direction_products_px_squared=dict(zip(axes,products.tolist())),
+        image_error_norm_px=norms,image_error_norm_axes=task_axes,image_error_increased=increased,
+        direction_dot_px_squared=dot,jacobian_revalidation_required=reversed_axis or unresolved or increased,
         physical_stop_requested=False,physical_success=False)

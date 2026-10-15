@@ -1,0 +1,41 @@
+{
+  "privacy": "anonymized technical review; original frames, q12/ticks, camera/calibration parameters, source paths and timestamps stay private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "PASS",
+  "B17_tests_retained": 29,
+  "B18_tests_retained": 30,
+  "B19_tests": 23,
+  "total_required_tests": 82,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "REAL_samples": 7,
+  "REAL_proposals_with_correction": 0,
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "input_source_changes": [],
+  "independent_review": {
+    "status": "PASS_AFTER_CORRECTIONS",
+    "original_finding": "Jacobian row selection hid lost/extra task response axes",
+    "followup": "preserve valid X-only proposal when unused Y row exists",
+    "fix": "prediction axes from actual proposal; whole norm from defined task axes",
+    "final_counterexamples_verified": true,
+    "remaining_actionable_findings": 0,
+    "reviewer_write_scope": "none"
+  },
+  "response_validation": "directions on the actual proposal axes; whole norm on every defined task target; required lost axes rejected, originally unobserved Y not required",
+  "baseline_test_sources_unchanged": true,
+  "A_Native_or_Console_changed": false,
+  "ACT_or_calibration_changed": false,
+  "physical_numeric_limits_added": 0,
+  "execution_revision": "R5",
+  "earlier_environment_failure_preserved_privately": true
+}

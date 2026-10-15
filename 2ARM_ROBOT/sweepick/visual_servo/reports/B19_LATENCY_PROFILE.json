@@ -1,0 +1,498 @@
+{
+  "privacy": "anonymized technical review; original frames, q12/ticks, camera/calibration parameters, source paths and timestamps stay private",
+  "executable": false,
+  "motor_write_authorized": false,
+  "status": "RECORDED_SCOPES_AND_UNKNOWN_COMPONENTS",
+  "recorded_stages": {
+    "camera_acquisition": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "native exposure and acquisition start/end are not recorded"
+    },
+    "camera_receipt": {
+      "status": "RECORDED",
+      "duration_s": null,
+      "meaning": "per-view host receipt timestamps; no exposure mapping"
+    },
+    "feature_extraction": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "PICK feature duration is absent; held/pad producer spans below are combined workloads"
+    },
+    "feature_error_computation": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "no isolated error-computation duration"
+    },
+    "Jacobian_calculation": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "no validated REAL relative Jacobian calculation or timing"
+    },
+    "IK_planning": {
+      "status": "RECORDED_NESTED_SCOPES",
+      "outer": {
+        "stage": "fresh_lift_receive_prepare",
+        "planner_call_s": 3.485106399995857,
+        "prepare_to_planner_return_s": 4.260284342992236,
+        "basis": "actual call durations; separate from camera producer time and event gaps"
+      },
+      "planner_internal_s": null,
+      "meaning": "nested call/preparation/internal scopes, not additive stages"
+    },
+    "collision_certification": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "certificate trajectory duration is a planned motion duration, not cert CPU time"
+    },
+    "actuator_command_duration": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "no isolated measured command duration; planned trajectory and feedback row spans differ"
+    },
+    "measured_settling": {
+      "status": "UNKNOWN",
+      "duration_s": null,
+      "reason": "settled flags/read counts are recorded without isolated settling start/end"
+    },
+    "fresh_image_reacquisition": {
+      "status": "PARTIALLY_RECORDED",
+      "duration_s": null,
+      "meaning": "native decision frame_wait_s is the three-view fresh-frame wait, not exposure latency or complete PICK look time"
+    }
+  },
+  "native_observation_production": [
+    {
+      "stage": "000001_AFTER_LIFT_BEFORE_CARRY",
+      "timings_s": {
+        "frame_wait_s": 0.2986300670017954,
+        "held_production_s": 0.15239988900430035,
+        "pad_production_total_s": 0.17034661199431866,
+        "q_dependent_fk_s": 0.00012953599798493087,
+        "pad_image_prepare_s": 0.02551772400329355,
+        "pad_face_production_s": 0.1404455500014592,
+        "record_s": 0.11473896499956027,
+        "observation_total_s": 0.7423993319971487
+      }
+    },
+    {
+      "stage": "000002_AFTER_CARRY_RIGHT",
+      "timings_s": {
+        "frame_wait_s": 0.2937763910013018,
+        "held_production_s": 0.07702603300276678,
+        "pad_production_total_s": 0.13536857700091787,
+        "q_dependent_fk_s": 0.00014396400365512818,
+        "pad_image_prepare_s": 0.027309433004120365,
+        "pad_face_production_s": 0.1062441289977869,
+        "record_s": 0.10392298900114838,
+        "observation_total_s": 0.6153257709956961
+      }
+    },
+    {
+      "stage": "000003_AFTER_CARRY_LEFT",
+      "timings_s": {
+        "frame_wait_s": 0.2795732630038401,
+        "held_production_s": 0.20680782198905945,
+        "pad_production_total_s": 0.09132020300603472,
+        "q_dependent_fk_s": 0.0002583719906397164,
+        "pad_image_prepare_s": 0.020738388993777335,
+        "pad_face_production_s": 0.0689200909982901,
+        "record_s": 0.1589819780056132,
+        "observation_total_s": 0.9099173750000773
+      }
+    },
+    {
+      "stage": "000004_BEFORE_RIGHT_PREGRASP",
+      "timings_s": {
+        "frame_wait_s": 0.2863096210057847,
+        "held_production_s": 0.13439372800348792,
+        "pad_production_total_s": 0.11812145900330506,
+        "q_dependent_fk_s": 0.00023080999380908906,
+        "pad_image_prepare_s": 0.01974864400108345,
+        "pad_face_production_s": 0.09635366100701503,
+        "record_s": 0.13862275599967688,
+        "observation_total_s": 1.0126771200011717
+      }
+    },
+    {
+      "stage": "000005_RECEIVE_CONTACT",
+      "timings_s": {
+        "frame_wait_s": 0.2815105329937069,
+        "held_production_s": 0.3401273709896486,
+        "pad_production_total_s": 0.03174386400496587,
+        "q_dependent_fk_s": 0.00043969700345769525,
+        "pad_image_prepare_s": 0.02260354600730352,
+        "pad_face_production_s": 0.006825091011705808,
+        "record_s": 0.13599709200207144,
+        "observation_total_s": 1.1339804139861371
+      }
+    },
+    {
+      "stage": "000025_OBSERVATION_CANDIDATE",
+      "timings_s": {
+        "frame_wait_s": 0.300133728000219,
+        "held_production_s": 0.16875748100574128,
+        "pad_production_total_s": 0.13568802100780886,
+        "q_dependent_fk_s": 0.00022421700123231858,
+        "pad_image_prepare_s": 0.02112702198792249,
+        "pad_face_production_s": 0.11291780100145843,
+        "record_s": 0.13711394400161225,
+        "observation_total_s": 1.0555007579969242
+      }
+    },
+    {
+      "stage": "000026_BEFORE_NORMAL_RETURN",
+      "timings_s": {
+        "frame_wait_s": 0.2900109459878877,
+        "held_production_s": null,
+        "pad_production_total_s": 1.3820099411532283e-06,
+        "record_s": 0.04995156099903397,
+        "observation_total_s": 0.34018613399530295
+      }
+    }
+  ],
+  "CPU_benchmarks": {
+    "module_initialization": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 63.428134,
+      "repeats": 7,
+      "median_ms": 62.459633,
+      "p95_ms": 76.40829489999999,
+      "min_ms": 49.219734,
+      "max_ms": 80.101213,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "baseline_object_and_Jaw": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 2.825195,
+      "repeats": 31,
+      "median_ms": 2.226906,
+      "p95_ms": 2.4425644999999996,
+      "min_ms": 2.209142,
+      "max_ms": 2.821217,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "ROI_object_and_Jaw": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 2.349535,
+      "repeats": 31,
+      "median_ms": 2.338295,
+      "p95_ms": 2.3713705000000003,
+      "min_ms": 2.326693,
+      "max_ms": 2.70469,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "feature_error": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 1.625091,
+      "repeats": 31,
+      "median_ms": 1.609711,
+      "p95_ms": 1.750369,
+      "min_ms": 1.591186,
+      "max_ms": 1.761055,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "isolated_error_arithmetic": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 0.003046,
+      "repeats": 101,
+      "median_ms": 8e-05,
+      "p95_ms": 0.00012,
+      "min_ms": 7e-05,
+      "max_ms": 0.00039,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "numerical_Jacobian_fixture": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 0.285243,
+      "repeats": 31,
+      "median_ms": 0.088355,
+      "p95_ms": 0.1040645,
+      "min_ms": 0.082975,
+      "max_ms": 0.12303,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "right_incomplete_shadow_request": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 227.589408,
+      "repeats": 7,
+      "median_ms": 190.934399,
+      "p95_ms": 195.42674,
+      "min_ms": 187.455008,
+      "max_ms": 195.944762,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "candidate_FK": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 0.248795,
+      "repeats": 31,
+      "median_ms": 0.073798,
+      "p95_ms": 0.08566,
+      "min_ms": 0.071985,
+      "max_ms": 0.099827,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "right_RGB_surface": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 1.319448,
+      "repeats": 31,
+      "median_ms": 1.196999,
+      "p95_ms": 1.3180405,
+      "min_ms": 1.181701,
+      "max_ms": 24.783933,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "right_RGB_face_graph": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 140.972897,
+      "repeats": 7,
+      "median_ms": 156.201247,
+      "p95_ms": 161.0091042,
+      "min_ms": 146.652362,
+      "max_ms": 162.088077,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "existing_A_pure_IK_model_fixture": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 2.354154,
+      "repeats": 5,
+      "median_ms": 2.083698,
+      "p95_ms": 2.2741804,
+      "min_ms": 2.047671,
+      "max_ms": 2.306515,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    },
+    "existing_A_pure_path_collision_model_fixture": {
+      "clock": "perf_counter_ns",
+      "unit": "ms",
+      "first_call_ms": 14.056416,
+      "repeats": 5,
+      "median_ms": 13.65237,
+      "p95_ms": 13.9670492,
+      "min_ms": 13.475949,
+      "max_ms": 14.031119,
+      "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+    }
+  },
+  "CPU_left_per_observation": [
+    {
+      "observation": {
+        "run_id": "left_reference_A",
+        "observation_id": "01_pregrasp_0"
+      },
+      "baseline": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.562995,
+        "repeats": 31,
+        "median_ms": 2.467044,
+        "p95_ms": 2.7727515,
+        "min_ms": 2.33577,
+        "max_ms": 3.102564,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.749864,
+        "repeats": 31,
+        "median_ms": 2.612988,
+        "p95_ms": 3.1517555,
+        "min_ms": 2.456726,
+        "max_ms": 3.427783,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI_median_ratio_to_baseline": 1.0591574369974754
+    },
+    {
+      "observation": {
+        "run_id": "left_reference_A",
+        "observation_id": "01_pregrasp_1"
+      },
+      "baseline": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.97176,
+        "repeats": 31,
+        "median_ms": 2.575959,
+        "p95_ms": 3.675932,
+        "min_ms": 2.446055,
+        "max_ms": 3.937957,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.678191,
+        "repeats": 31,
+        "median_ms": 2.826157,
+        "p95_ms": 3.2853805,
+        "min_ms": 2.618287,
+        "max_ms": 3.370305,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI_median_ratio_to_baseline": 1.0971280987003287
+    },
+    {
+      "observation": {
+        "run_id": "left_reference_B",
+        "observation_id": "01_pregrasp_0"
+      },
+      "baseline": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.45353,
+        "repeats": 31,
+        "median_ms": 2.38931,
+        "p95_ms": 2.4855894999999997,
+        "min_ms": 2.325741,
+        "max_ms": 2.575488,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.58229,
+        "repeats": 31,
+        "median_ms": 2.563466,
+        "p95_ms": 2.672805,
+        "min_ms": 2.478176,
+        "max_ms": 2.692186,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI_median_ratio_to_baseline": 1.0728896627059694
+    },
+    {
+      "observation": {
+        "run_id": "left_reference_B",
+        "observation_id": "01_pregrasp_1"
+      },
+      "baseline": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.514403,
+        "repeats": 31,
+        "median_ms": 2.515786,
+        "p95_ms": 2.654376,
+        "min_ms": 2.445765,
+        "max_ms": 2.684462,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.781563,
+        "repeats": 31,
+        "median_ms": 2.714879,
+        "p95_ms": 2.9766985,
+        "min_ms": 2.593502,
+        "max_ms": 3.170402,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI_median_ratio_to_baseline": 1.079137494206582
+    },
+    {
+      "observation": {
+        "run_id": "left_current_session",
+        "observation_id": "01_pregrasp_0"
+      },
+      "baseline": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.413976,
+        "repeats": 31,
+        "median_ms": 2.352852,
+        "p95_ms": 2.645714,
+        "min_ms": 2.296145,
+        "max_ms": 3.011844,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.57671,
+        "repeats": 31,
+        "median_ms": 2.513623,
+        "p95_ms": 2.7454105,
+        "min_ms": 2.420027,
+        "max_ms": 2.963554,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI_median_ratio_to_baseline": 1.0683302647170327
+    },
+    {
+      "observation": {
+        "run_id": "left_current_session",
+        "observation_id": "01_pregrasp_1"
+      },
+      "baseline": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.443431,
+        "repeats": 31,
+        "median_ms": 2.371407,
+        "p95_ms": 2.633271,
+        "min_ms": 2.326942,
+        "max_ms": 2.719417,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI": {
+        "clock": "perf_counter_ns",
+        "unit": "ms",
+        "first_call_ms": 2.521787,
+        "repeats": 31,
+        "median_ms": 2.49625,
+        "p95_ms": 2.5984815,
+        "min_ms": 2.437329,
+        "max_ms": 3.242736,
+        "scope": "CPU function call only; no camera, actuator, settling or physical cycle time"
+      },
+      "ROI_median_ratio_to_baseline": 1.052645117434502
+    }
+  ],
+  "CPU_environment": {
+    "python": "3.12.3",
+    "numpy": "2.2.6",
+    "opencv": "4.13.0",
+    "mujoco": "3.3.7",
+    "platform": "linux",
+    "OpenCV_threads": 1
+  },
+  "CPU_scope": "single process, same interpreter and inputs; current CPU timings are separate from historical REAL timings",
+  "CPU_components_additive": false,
+  "CPU_component_scope_note": "separate repeated function workloads; right graph fixture resets its RNG, full shadow uses normal extraction; medians must not be summed",
+  "left_pre_post_receipt_gap_s": [
+    {
+      "pair_id": "left_reference_A",
+      "seconds": 6.6518578549994345,
+      "clock": "within the same saved run HOST_MONOTONIC receipt",
+      "meaning": "complete observed image gap, not computation or actuator duration"
+    },
+    {
+      "pair_id": "left_reference_B",
+      "seconds": 6.584057913998549,
+      "clock": "within the same saved run HOST_MONOTONIC receipt",
+      "meaning": "complete observed image gap, not computation or actuator duration"
+    },
+    {
+      "pair_id": "left_current_session",
+      "seconds": 6.7881380719918525,
+      "clock": "within the same saved run HOST_MONOTONIC receipt",
+      "meaning": "complete observed image gap, not computation or actuator duration"
+    }
+  ],
+  "event_gap_interpretation": "pre/post-image receipt gap includes uninstrumented work; never CPU time or motor duration",
+  "physical_time_savings_measured": false,
+  "model_timing_fixture": "existing B18 seed and model; 1mm numerical IK target only, no hardware write"
+}
