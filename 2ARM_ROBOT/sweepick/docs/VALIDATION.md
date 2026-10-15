@@ -1,0 +1,19 @@
+# 확인한 범위와 재현 제한
+
+2026-10-15 로컬 실행 소스에서 직접 확인한 결과다. 공개 경로·식별값 정리 이후 이 폴더에서 수행한 구문/SHA 검사는 아래 결과와 별개다.
+
+| 검사 | 결과 | 의미 |
+|---|---:|---|
+| 기존 콘솔 + Console-15 단위 시험 | 92 pass | parser/replay/승인 relay/검수 export·원본 보존 |
+| A-16/A-17 native 관련 시험 | 36 pass | Fake Bus 바인딩·최초 Goal·STOP·기존 allowlist/postwrite |
+| 콘솔 브라우저 검사 | 32 시나리오 pass | 실제 제어 POST 0, viewport/저장 근거/문서 SHA 확인 |
+| 핵심 기존 원본 SHA 대조 | 32개 일치 | 원본 세션·이전 Source SHA 보존 |
+| 최신 수정본 실물 재현 | 미실행 | 실제 CLOSE/LIFT 성공으로 해석하지 않음 |
+
+native 실행 인터프리터는 기존 로봇 Python 3.12 venv, console은 기존 FastAPI venv다. ROS pytest plugin의 무관한 lark 의존성 수집 오류가 있어 native 시험은 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`로 실행했다. 패키지나 시스템 설정은 바꾸지 않았다.
+
+구형 native suite의 9개 실패는 그대로 남는다. fixture의 fresh other-arm reader 누락, 현재 관측/yaw 정책과 다른 assertion, 과거 Scene fixture 누락을 [A17_LEGACY_FAILURE_TRIAGE.md](a17/A17_LEGACY_FAILURE_TRIAGE.md)에 분류했다. 모든 native 시험이 green이라고 표시하지 않는다.
+
+공개 폴더에는 private Calibration·현재 모델 바이너리·원시 세션이 없다. 관련 fixture가 이 로컬 자원을 요구하므로 공개본만으로 원래 92/36 시험을 전부 재현할 수 있다고 주장하지 않는다. `tests/check_public_snapshot.py`는 외부 자원 없이 소스 파일 SHA/구문/공개 경계를 확인한다.
+
+게시 전 공개 사본에서도 native A-16/A-17/allowlist/postwrite 36개를 다시 실행해 통과했다. 이 검사는 이 PC에 있던 로컬 입력을 읽고 Fake Bus만 사용했다. 필요한 archived 모듈 한 개는 기존 Fake 클래스의 import 의존성으로 포함했으며 현재 live executor로 선택한 것이 아니다. 공개 사본 140개 파일의 SHA·구문·상대 문서 링크·공개 경계 검사도 통과했다.

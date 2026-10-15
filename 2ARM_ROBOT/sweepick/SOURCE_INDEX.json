@@ -1,0 +1,1273 @@
+{
+  "schema": "sweepick.public-source.v1",
+  "snapshot_at": "2026-10-15T11:32:38.485946+09:00",
+  "purpose": "current source review; not a portable hardware deployment",
+  "transformations": [
+    "personal home path replaced by /home/robot",
+    "authorship prose removed",
+    "unique device identifiers redacted where present",
+    "support sensor whitespace-only lines normalized"
+  ],
+  "files": [
+    {
+      "file": "console/OPEN_INSTRUCTOR_DEMO.sh",
+      "source_group": "console",
+      "source_name": "OPEN_INSTRUCTOR_DEMO.sh",
+      "source_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
+      "public_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
+      "bytes": 186,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/app.py",
+      "source_group": "console",
+      "source_name": "app.py",
+      "source_sha256": "96def403add1e5d5a64e04582e96f565ac4715f8e77cd7c807278e530521b14c",
+      "public_sha256": "125046a7464eed844a0948076a13e53d03b69d0c642317bff80b95b98b2265bb",
+      "bytes": 14283,
+      "public_copy_changed": true
+    },
+    {
+      "file": "console/control.py",
+      "source_group": "console",
+      "source_name": "control.py",
+      "source_sha256": "7e4a51e3551ff297947691437669c40fa6eeab7e9c6ab5fc004d4a247fae360f",
+      "public_sha256": "7e4a51e3551ff297947691437669c40fa6eeab7e9c6ab5fc004d4a247fae360f",
+      "bytes": 30281,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/inspection.py",
+      "source_group": "console",
+      "source_name": "inspection.py",
+      "source_sha256": "2d4f4324d115945bfc1779bcfff6a0cda0638b9e08bfc9df340c44de0a68e746",
+      "public_sha256": "2d4f4324d115945bfc1779bcfff6a0cda0638b9e08bfc9df340c44de0a68e746",
+      "bytes": 17062,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/live.py",
+      "source_group": "console",
+      "source_name": "live.py",
+      "source_sha256": "85106b742a25dce0c4d59b1dc7e22e0723a54d58e6a5f9d21b4ef5e016791f2d",
+      "public_sha256": "85106b742a25dce0c4d59b1dc7e22e0723a54d58e6a5f9d21b4ef5e016791f2d",
+      "bytes": 15778,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/open_console.py",
+      "source_group": "console",
+      "source_name": "open_console.py",
+      "source_sha256": "1cd28a38d34c78efc990463cb4818c1590993993d53b8cb03a039f679d7094a8",
+      "public_sha256": "c3ad8bd5d09624250964c93c4e3378a3d6c7cb3cf6da4346ac48561f2ccad3a2",
+      "bytes": 3802,
+      "public_copy_changed": true
+    },
+    {
+      "file": "console/records.py",
+      "source_group": "console",
+      "source_name": "records.py",
+      "source_sha256": "bcd9d4fed068da66454eb97c417cb7882e5e401c592fe31e9f1af94a73104d66",
+      "public_sha256": "bcd9d4fed068da66454eb97c417cb7882e5e401c592fe31e9f1af94a73104d66",
+      "bytes": 26913,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/replay.py",
+      "source_group": "console",
+      "source_name": "replay.py",
+      "source_sha256": "95ea406faecaebe4823278996720a4a06287b5d0118f48b853eff920d03b47a4",
+      "public_sha256": "c22e731cba70a93975614773b8f86461124e0245197619097f916a92fb88dda4",
+      "bytes": 43883,
+      "public_copy_changed": true
+    },
+    {
+      "file": "console/requirements.txt",
+      "source_group": "console",
+      "source_name": "requirements.txt",
+      "source_sha256": "1eecc0756aa144e83dbd4c5676b62b2a31dac0c7d9b1ec957ae68747504add67",
+      "public_sha256": "1eecc0756aa144e83dbd4c5676b62b2a31dac0c7d9b1ec957ae68747504add67",
+      "bytes": 61,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/run.sh",
+      "source_group": "console",
+      "source_name": "run.sh",
+      "source_sha256": "39675d9d4e8f05c4e7f57fd79dfcf9eb95e72395864b08d40924e22b1e04afd2",
+      "public_sha256": "39675d9d4e8f05c4e7f57fd79dfcf9eb95e72395864b08d40924e22b1e04afd2",
+      "bytes": 109,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/static/app.js",
+      "source_group": "console",
+      "source_name": "app.js",
+      "source_sha256": "e4628203b10b8cb2f3a3f3948f9642635fcfc978b0e816cfe205af11b5c0e6fc",
+      "public_sha256": "e4628203b10b8cb2f3a3f3948f9642635fcfc978b0e816cfe205af11b5c0e6fc",
+      "bytes": 58530,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/static/index.html",
+      "source_group": "console",
+      "source_name": "index.html",
+      "source_sha256": "7e87d469dfe9c8cfbfd349dd96caeb8ade2d26124f062fb6422cfbbfd998b47d",
+      "public_sha256": "7e87d469dfe9c8cfbfd349dd96caeb8ade2d26124f062fb6422cfbbfd998b47d",
+      "bytes": 25800,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/static/instructor.html",
+      "source_group": "console",
+      "source_name": "instructor.html",
+      "source_sha256": "12fe2875d01967c8de01716857c0b2b53261622abbb01ca72595d8be3d44f713",
+      "public_sha256": "12fe2875d01967c8de01716857c0b2b53261622abbb01ca72595d8be3d44f713",
+      "bytes": 9622,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/static/review.js",
+      "source_group": "console",
+      "source_name": "review.js",
+      "source_sha256": "8304c1d5909c9e92d1bc0844528595370a4fc766fa8e9f8c8f2588643e233471",
+      "public_sha256": "8304c1d5909c9e92d1bc0844528595370a4fc766fa8e9f8c8f2588643e233471",
+      "bytes": 22711,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/static/style.css",
+      "source_group": "console",
+      "source_name": "style.css",
+      "source_sha256": "3f18b21e38d65eb0ce7d8e7eeef1f82fd877372690888d1cd7a4fcdc26ac1071",
+      "public_sha256": "3f18b21e38d65eb0ce7d8e7eeef1f82fd877372690888d1cd7a4fcdc26ac1071",
+      "bytes": 24171,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/test_a16.py",
+      "source_group": "console",
+      "source_name": "test_a16.py",
+      "source_sha256": "f53d545157a6ae513cbb9192b5872bdcb129e59c35d6eda16b55a21c5539ae10",
+      "public_sha256": "f53d545157a6ae513cbb9192b5872bdcb129e59c35d6eda16b55a21c5539ae10",
+      "bytes": 12421,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/test_control.py",
+      "source_group": "console",
+      "source_name": "test_control.py",
+      "source_sha256": "2301bf44cab97d15d050b544e78bd390f1cc7265e68ea1e69f213a0e5fc563c8",
+      "public_sha256": "2301bf44cab97d15d050b544e78bd390f1cc7265e68ea1e69f213a0e5fc563c8",
+      "bytes": 29092,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/test_inspection.py",
+      "source_group": "console",
+      "source_name": "test_inspection.py",
+      "source_sha256": "dfa63fee7ecc1f54e381fb8406a866f50dddd1fd5afdfd1996ef9673e266e29c",
+      "public_sha256": "dfa63fee7ecc1f54e381fb8406a866f50dddd1fd5afdfd1996ef9673e266e29c",
+      "bytes": 8302,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/test_open_console.py",
+      "source_group": "console",
+      "source_name": "test_open_console.py",
+      "source_sha256": "c769012dbec7be8e24c46018b1f4facccdfe017231c9e3e42488fa816b46436f",
+      "public_sha256": "c769012dbec7be8e24c46018b1f4facccdfe017231c9e3e42488fa816b46436f",
+      "bytes": 2156,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/test_records.py",
+      "source_group": "console",
+      "source_name": "test_records.py",
+      "source_sha256": "1364a0d4adb147aae32fd714c2c6ce1f658666289c4b320f00801e5abfd6e682",
+      "public_sha256": "1364a0d4adb147aae32fd714c2c6ce1f658666289c4b320f00801e5abfd6e682",
+      "bytes": 16343,
+      "public_copy_changed": false
+    },
+    {
+      "file": "console/test_replay.py",
+      "source_group": "console",
+      "source_name": "test_replay.py",
+      "source_sha256": "bd990a4c6c88323ca7bd98841dab96084457611ad650228071483ba0243218f8",
+      "public_sha256": "87bdf36564af84759c5c52a9ac870cf8b611756b242a8896ec7e5c5cd750b71d",
+      "bytes": 16250,
+      "public_copy_changed": true
+    },
+    {
+      "file": "docs/a17/A17_CODE_AUDIT.md",
+      "source_group": "technical_review",
+      "source_name": "A17_CODE_AUDIT.md",
+      "source_sha256": "2dcb9a30e7852dce72e67a807cc96ae4c7e4019931297181d9be9333d4752b29",
+      "public_sha256": "c10e7c9737079d11880be49ec71837ae921b1d6532989a4fd0974630a80ec3ed",
+      "bytes": 4595,
+      "public_copy_changed": true
+    },
+    {
+      "file": "docs/a17/A17_FIRST_GOAL_FAKE_BUS.json",
+      "source_group": "technical_review",
+      "source_name": "A17_FIRST_GOAL_FAKE_BUS.json",
+      "source_sha256": "a36d1dc7c35ac1ddd17750d67445fc376fb1a36b4b3eafff374f4cd2276c59a0",
+      "public_sha256": "4ec951cd02b0c880fec450b34f4206373783963dce4d6e7c6982bfdf325dc397",
+      "bytes": 71939,
+      "public_copy_changed": true
+    },
+    {
+      "file": "docs/a17/A17_LEGACY_FAILURE_TRIAGE.md",
+      "source_group": "technical_review",
+      "source_name": "A17_LEGACY_FAILURE_TRIAGE.md",
+      "source_sha256": "34bbf86ba5e392abaf40a7c0e90ad0646ef7df8c716d4f888bffaf9f4459a2f0",
+      "public_sha256": "34bbf86ba5e392abaf40a7c0e90ad0646ef7df8c716d4f888bffaf9f4459a2f0",
+      "bytes": 5212,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/a17/A17_REAL_TEST_READINESS.md",
+      "source_group": "technical_review",
+      "source_name": "A17_REAL_TEST_READINESS.md",
+      "source_sha256": "b8e3d8c1cf5f82e28ed1a23dc9d591e44a4ba8bcd9996a4cd51ce3b356837960",
+      "public_sha256": "b8e3d8c1cf5f82e28ed1a23dc9d591e44a4ba8bcd9996a4cd51ce3b356837960",
+      "bytes": 3936,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/RUN_APPROVED_SESSION.py",
+      "source_group": "launcher",
+      "source_name": "RUN_APPROVED_SESSION.py",
+      "source_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f",
+      "public_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f",
+      "bytes": 17530,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/confirmed_wrist_routes.py",
+      "source_group": "launcher",
+      "source_name": "confirmed_wrist_routes.py",
+      "source_sha256": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+      "public_sha256": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+      "bytes": 2673,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/pin/sweepick_261008_full_episode.py",
+      "source_group": "receive_pin",
+      "source_name": "sweepick_261008_full_episode.py",
+      "source_sha256": "ea111f8ce7a0b01e3429744a76dcc6c520e2b9fe5066627e80ef8620b9fdfed5",
+      "public_sha256": "ea111f8ce7a0b01e3429744a76dcc6c520e2b9fe5066627e80ef8620b9fdfed5",
+      "bytes": 19270,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/pin/sweepick_261008_receive_entry.py",
+      "source_group": "receive_pin",
+      "source_name": "sweepick_261008_receive_entry.py",
+      "source_sha256": "6d5baa76974d0912125955bec13b05f9f918c1e17fab2c7968cc1f45c9131bec",
+      "public_sha256": "6d5baa76974d0912125955bec13b05f9f918c1e17fab2c7968cc1f45c9131bec",
+      "bytes": 15637,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/pin/sweepick_261008_receive_plan.py",
+      "source_group": "receive_pin",
+      "source_name": "sweepick_261008_receive_plan.py",
+      "source_sha256": "1b8284283005b94b027eb7a08d4dfd6f6d81773a8f2757e25cbec36885b83e9c",
+      "public_sha256": "1b8284283005b94b027eb7a08d4dfd6f6d81773a8f2757e25cbec36885b83e9c",
+      "bytes": 30940,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/pin/sweepick_261008_receive_real_adapter.py",
+      "source_group": "receive_pin",
+      "source_name": "sweepick_261008_receive_real_adapter.py",
+      "source_sha256": "a7343c232bfdd70c855b3dd8a0772c2a418e21d66cf9ddf776ea7a7df96256c0",
+      "public_sha256": "a7343c232bfdd70c855b3dd8a0772c2a418e21d66cf9ddf776ea7a7df96256c0",
+      "bytes": 8737,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/pin/sweepick_261008_receive_runtime.py",
+      "source_group": "receive_pin",
+      "source_name": "sweepick_261008_receive_runtime.py",
+      "source_sha256": "619c58fd0abbd71af7faa5539f3593f596c5629e82039d6921b2056296c18b1d",
+      "public_sha256": "619c58fd0abbd71af7faa5539f3593f596c5629e82039d6921b2056296c18b1d",
+      "bytes": 966,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/pin/sweepick_261008_receive_session.py",
+      "source_group": "receive_pin",
+      "source_name": "sweepick_261008_receive_session.py",
+      "source_sha256": "0c535445b1275b80f3a6fa93fbd2f0aeecd551dbc494f76793a2a3f60f0ff0fd",
+      "public_sha256": "0c535445b1275b80f3a6fa93fbd2f0aeecd551dbc494f76793a2a3f60f0ff0fd",
+      "bytes": 42422,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/bus_packet_ring.py",
+      "source_group": "native_revision",
+      "source_name": "bus_packet_ring.py",
+      "source_sha256": "675ef389f7fbc2463017656991f72ba345a9d0115b4ecac36b5127217561d7d8",
+      "public_sha256": "675ef389f7fbc2463017656991f72ba345a9d0115b4ecac36b5127217561d7d8",
+      "bytes": 28331,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/console_feedback.py",
+      "source_group": "native_revision",
+      "source_name": "console_feedback.py",
+      "source_sha256": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+      "public_sha256": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+      "bytes": 4847,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/current_rgbd_faces.py",
+      "source_group": "native_revision",
+      "source_name": "current_rgbd_faces.py",
+      "source_sha256": "f07a22d3a1bfbd7f4a8c9ef47391093c98f23f884bd4abca29415d17f3a319f0",
+      "public_sha256": "f07a22d3a1bfbd7f4a8c9ef47391093c98f23f884bd4abca29415d17f3a319f0",
+      "bytes": 20667,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/current_view_candidate.py",
+      "source_group": "native_revision",
+      "source_name": "current_view_candidate.py",
+      "source_sha256": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db",
+      "public_sha256": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db",
+      "bytes": 10408,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/inner_pad_face_contract.py",
+      "source_group": "native_revision",
+      "source_name": "inner_pad_face_contract.py",
+      "source_sha256": "364907919869135d0d47ab473f59f5884e6e6ff3cbd3a199fa17de2a65d7797f",
+      "public_sha256": "364907919869135d0d47ab473f59f5884e6e6ff3cbd3a199fa17de2a65d7797f",
+      "bytes": 9582,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/model_assisted_receive_plan.py",
+      "source_group": "native_revision",
+      "source_name": "model_assisted_receive_plan.py",
+      "source_sha256": "c6c24b46bd7684ccafd2b280ba039f3f68aec6d5464254802763ffdf596bad74",
+      "public_sha256": "c6c24b46bd7684ccafd2b280ba039f3f68aec6d5464254802763ffdf596bad74",
+      "bytes": 27325,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/native_surface_candidates.py",
+      "source_group": "native_revision",
+      "source_name": "native_surface_candidates.py",
+      "source_sha256": "9827f60dbfd4f3c4f7f3c5a3c26c3f3057cc8aa27a1fedcf575fc64daf717f56",
+      "public_sha256": "9827f60dbfd4f3c4f7f3c5a3c26c3f3057cc8aa27a1fedcf575fc64daf717f56",
+      "bytes": 1157,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/right_wrist_optical_calibration.py",
+      "source_group": "native_revision",
+      "source_name": "right_wrist_optical_calibration.py",
+      "source_sha256": "6fafbe65c84a1db0baf87a632bb016108fd439250cd970c5c5bd721093631b61",
+      "public_sha256": "6fafbe65c84a1db0baf87a632bb016108fd439250cd970c5c5bd721093631b61",
+      "bytes": 25990,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/right_wrist_relative_geometry.py",
+      "source_group": "native_revision",
+      "source_name": "right_wrist_relative_geometry.py",
+      "source_sha256": "e43218e75b9aafd6c64f33a0c1f1af5e06b3052d8df87d14c9cf8a3908c5e275",
+      "public_sha256": "e43218e75b9aafd6c64f33a0c1f1af5e06b3052d8df87d14c9cf8a3908c5e275",
+      "bytes": 34243,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_261009_offsite_relative_features.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_261009_offsite_relative_features.py",
+      "source_sha256": "5c921147b523869deceeb3234e42dff7e243fcfc6e12d00d9d3f9e2981d80719",
+      "public_sha256": "5c921147b523869deceeb3234e42dff7e243fcfc6e12d00d9d3f9e2981d80719",
+      "bytes": 56723,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_261010_observed_robot_mask.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_261010_observed_robot_mask.py",
+      "source_sha256": "87064fb1a6cbef01fef627af1afb8c5aec69cb5f05339fcdbca0d92670d681b8",
+      "public_sha256": "87064fb1a6cbef01fef627af1afb8c5aec69cb5f05339fcdbca0d92670d681b8",
+      "bytes": 8828,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_HARD_GATE_ALLOWLIST.json",
+      "source_group": "behavior_profile",
+      "source_name": "sweepick_HARD_GATE_ALLOWLIST.json",
+      "source_sha256": "1f09c3ae199408d637c5ba64b9d620f3d81dfc5e4611594febd874bf49d8397d",
+      "public_sha256": "1f09c3ae199408d637c5ba64b9d620f3d81dfc5e4611594febd874bf49d8397d",
+      "bytes": 4053,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_PROGRESS_EVIDENCE.json",
+      "source_group": "behavior_profile",
+      "source_name": "sweepick_PROGRESS_EVIDENCE.json",
+      "source_sha256": "b222476c68806f946664ba103705a0e0eece7c20a0a3142425079032dbc20cbc",
+      "public_sha256": "b222476c68806f946664ba103705a0e0eece7c20a0a3142425079032dbc20cbc",
+      "bytes": 4688,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_collision_cert.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_collision_cert.py",
+      "source_sha256": "cf6225efc25fb6812cfaca6b46ae35521815830664e9077b26c6724076ba17f8",
+      "public_sha256": "cf6225efc25fb6812cfaca6b46ae35521815830664e9077b26c6724076ba17f8",
+      "bytes": 8474,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_commission.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_commission.py",
+      "source_sha256": "617e125990bbac75de7a00d281f955f1127adc14c5bf6a80d12d297f05bc34d3",
+      "public_sha256": "617e125990bbac75de7a00d281f955f1127adc14c5bf6a80d12d297f05bc34d3",
+      "bytes": 4287,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_commission_v2_archived.py",
+      "source_group": "fixture_import_dependency",
+      "source_name": "sweepick_commission_v2_archived.py",
+      "source_sha256": "622fcf637bc29ebb499999541ee5c0b7092a05b2bdcb0793ad746f94064e6d0c",
+      "public_sha256": "622fcf637bc29ebb499999541ee5c0b7092a05b2bdcb0793ad746f94064e6d0c",
+      "bytes": 15741,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_contact01.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_contact01.py",
+      "source_sha256": "c7a8bd4a151b4a8fa19ad901c1f23e5896701947731f1c277615742dc2aa9d02",
+      "public_sha256": "c7a8bd4a151b4a8fa19ad901c1f23e5896701947731f1c277615742dc2aa9d02",
+      "bytes": 19113,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_episode.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_episode.py",
+      "source_sha256": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+      "public_sha256": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+      "bytes": 29942,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_field.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_field.py",
+      "source_sha256": "29fe262ab3f930684c067a11a8523e4c8997db930534f8eaa3ebbb285f8c3aa2",
+      "public_sha256": "29fe262ab3f930684c067a11a8523e4c8997db930534f8eaa3ebbb285f8c3aa2",
+      "bytes": 36385,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_field_r6.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_field_r6.py",
+      "source_sha256": "1a86ec4240dba5ae7a9d95d662aacd31e1519c4436dea94be31e5d88958aed9b",
+      "public_sha256": "1a86ec4240dba5ae7a9d95d662aacd31e1519c4436dea94be31e5d88958aed9b",
+      "bytes": 56399,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_full_chain.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_full_chain.py",
+      "source_sha256": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+      "public_sha256": "083ab76d4b27925301050d5df3f8796bba6e87bfe0b537fcd396fe822827cfd6",
+      "bytes": 280163,
+      "public_copy_changed": true
+    },
+    {
+      "file": "native/revision/sweepick_gates.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_gates.py",
+      "source_sha256": "e48b9a7284ac6e51d96f2f611f6e1e73d5277f55c08108cc700fb8c7282216a4",
+      "public_sha256": "e48b9a7284ac6e51d96f2f611f6e1e73d5277f55c08108cc700fb8c7282216a4",
+      "bytes": 1506,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_grasp.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_grasp.py",
+      "source_sha256": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+      "public_sha256": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+      "bytes": 17576,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_jaw_profile_left.json",
+      "source_group": "behavior_profile",
+      "source_name": "sweepick_jaw_profile_left.json",
+      "source_sha256": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+      "public_sha256": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+      "bytes": 2478,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_kin.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_kin.py",
+      "source_sha256": "cda0df99d5362cbe6c2ad0174771da7926c10a929aa4a03b0154b7d68e5d7dd1",
+      "public_sha256": "cda0df99d5362cbe6c2ad0174771da7926c10a929aa4a03b0154b7d68e5d7dd1",
+      "bytes": 1671,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_local_loop.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_local_loop.py",
+      "source_sha256": "3f142202ccc2d9a10ad658e52d648430c20068916db8bc1532c794c103d1ac18",
+      "public_sha256": "9f207a23c650154edd8d0b976b61d33b859e9abc3f3f8a10a38145045cb12675",
+      "bytes": 49548,
+      "public_copy_changed": true
+    },
+    {
+      "file": "native/revision/sweepick_motion_profile.json",
+      "source_group": "behavior_profile",
+      "source_name": "sweepick_motion_profile.json",
+      "source_sha256": "f11c05c42016fbe455e08d9a5baf16fe671f47e56e03be722503f0007a0935d3",
+      "public_sha256": "f11c05c42016fbe455e08d9a5baf16fe671f47e56e03be722503f0007a0935d3",
+      "bytes": 1288,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_move_a.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_move_a.py",
+      "source_sha256": "9fb399b4042faeda37ddcaf7eff1ac8077270582144e014c4d38be4b45519240",
+      "public_sha256": "a2d1364efc104611e59f3f43e2227d197523403d32b376720fda84cdabe9bd7f",
+      "bytes": 78777,
+      "public_copy_changed": true
+    },
+    {
+      "file": "native/revision/sweepick_pick01.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_pick01.py",
+      "source_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
+      "public_sha256": "12186a231f7719acd4b9f2c833828b104940efb1390062683cccec391459a23d",
+      "bytes": 138191,
+      "public_copy_changed": true
+    },
+    {
+      "file": "native/revision/sweepick_progress.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_progress.py",
+      "source_sha256": "b248eea611b6b477f6ac3597c6d21b192208b92dad31a7cb8fe60d91e1588223",
+      "public_sha256": "b248eea611b6b477f6ac3597c6d21b192208b92dad31a7cb8fe60d91e1588223",
+      "bytes": 3527,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_progress_profile.json",
+      "source_group": "behavior_profile",
+      "source_name": "sweepick_progress_profile.json",
+      "source_sha256": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+      "public_sha256": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+      "bytes": 6143,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_read03_capture.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_read03_capture.py",
+      "source_sha256": "c7c1dde7370dc6ea49a7c4210f11a0222c9bba230b9360138dcfdbe0a07b7349",
+      "public_sha256": "230eecb6754066ed6b5332feb7092d89cc65c0347395a1074515d501c2f386ce",
+      "bytes": 7265,
+      "public_copy_changed": true
+    },
+    {
+      "file": "native/revision/sweepick_real_command.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_real_command.py",
+      "source_sha256": "995765c14e6a4303c2b71b7e0ee836d1880608f4558b93bf9187a6aeac022408",
+      "public_sha256": "995765c14e6a4303c2b71b7e0ee836d1880608f4558b93bf9187a6aeac022408",
+      "bytes": 10752,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_real_exec.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_real_exec.py",
+      "source_sha256": "2c9d9f14199fd9276a6437ac07d01852c61e86401533ce83929eef8027b915c8",
+      "public_sha256": "2c9d9f14199fd9276a6437ac07d01852c61e86401533ce83929eef8027b915c8",
+      "bytes": 14159,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_sdk_top.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_sdk_top.py",
+      "source_sha256": "d8c6d280825f17883069f74e992d65af3f14e1a57fbede265c6379a91dabd589",
+      "public_sha256": "d8c6d280825f17883069f74e992d65af3f14e1a57fbede265c6379a91dabd589",
+      "bytes": 9812,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/sweepick_trajectory.py",
+      "source_group": "native_revision",
+      "source_name": "sweepick_trajectory.py",
+      "source_sha256": "7466bfbd0d2243bf66269f5c9f8d8b82efc5288bec0aa38488039b0dc80ad66f",
+      "public_sha256": "7466bfbd0d2243bf66269f5c9f8d8b82efc5288bec0aa38488039b0dc80ad66f",
+      "bytes": 10712,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_a16_close_binding.py",
+      "source_group": "native_revision",
+      "source_name": "test_a16_close_binding.py",
+      "source_sha256": "5a4ab9a076ea36fb9653dffef34641ec4cdaefdf50fd73dc8788309d98bb39a7",
+      "public_sha256": "5a4ab9a076ea36fb9653dffef34641ec4cdaefdf50fd73dc8788309d98bb39a7",
+      "bytes": 6321,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_observation_approval_wait.py",
+      "source_group": "native_revision",
+      "source_name": "test_observation_approval_wait.py",
+      "source_sha256": "8c19d364a38ab243cd7d2a54de99317f402faff328a593772bb3bc248fa54df7",
+      "public_sha256": "8c19d364a38ab243cd7d2a54de99317f402faff328a593772bb3bc248fa54df7",
+      "bytes": 9216,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_postwrite_order.py",
+      "source_group": "native_revision",
+      "source_name": "test_postwrite_order.py",
+      "source_sha256": "77c62528e2277e351695f6a616e2eeff44a1606643755fcfe02c67054259765b",
+      "public_sha256": "77c62528e2277e351695f6a616e2eeff44a1606643755fcfe02c67054259765b",
+      "bytes": 3442,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_receive_observation_only.py",
+      "source_group": "native_revision",
+      "source_name": "test_receive_observation_only.py",
+      "source_sha256": "dfbece3eb87394503a19959494d17e5ab83c9316319aa967b9a7e04fb1623abb",
+      "public_sha256": "dfbece3eb87394503a19959494d17e5ab83c9316319aa967b9a7e04fb1623abb",
+      "bytes": 17957,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_signal_stop_boundary.py",
+      "source_group": "native_revision",
+      "source_name": "test_signal_stop_boundary.py",
+      "source_sha256": "027d9386e7d472e1ed2eca57416afae3aa7bb9e59de69849c2c81223c22fe44d",
+      "public_sha256": "027d9386e7d472e1ed2eca57416afae3aa7bb9e59de69849c2c81223c22fe44d",
+      "bytes": 5108,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_261014_read_after_loss.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_261014_read_after_loss.py",
+      "source_sha256": "3cbe8880996dd0faf97b9cee0edb3d6fdd3a3b295475450cc836c616f5999e3f",
+      "public_sha256": "3cbe8880996dd0faf97b9cee0edb3d6fdd3a3b295475450cc836c616f5999e3f",
+      "bytes": 6354,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_commission.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_commission.py",
+      "source_sha256": "3984321f659ecb928b3c04074ce4b3bee3945981bee47c2beda942ada84036a2",
+      "public_sha256": "3984321f659ecb928b3c04074ce4b3bee3945981bee47c2beda942ada84036a2",
+      "bytes": 7687,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_grip.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_grip.py",
+      "source_sha256": "5d30bbf2bc61e3c96f5d4602d3be14e6fa38288ed7207c70cd9b62e223b9709e",
+      "public_sha256": "5d30bbf2bc61e3c96f5d4602d3be14e6fa38288ed7207c70cd9b62e223b9709e",
+      "bytes": 7385,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_hard_gate_allowlist.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_hard_gate_allowlist.py",
+      "source_sha256": "f32716791422cbb7b10ff70303a9712fe88d97c05d7413d333f7b1403be63ea9",
+      "public_sha256": "f32716791422cbb7b10ff70303a9712fe88d97c05d7413d333f7b1403be63ea9",
+      "bytes": 6744,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_move_a.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_move_a.py",
+      "source_sha256": "567158b719da137092630cd843d7606cbeecc6b2027cb9825ce34ef5f0babfc8",
+      "public_sha256": "567158b719da137092630cd843d7606cbeecc6b2027cb9825ce34ef5f0babfc8",
+      "bytes": 27700,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_real_command.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_real_command.py",
+      "source_sha256": "b26bf50c7ec06154b456628923061964927eed523de8659b0deb950910605d6d",
+      "public_sha256": "b26bf50c7ec06154b456628923061964927eed523de8659b0deb950910605d6d",
+      "bytes": 4833,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_real_exec.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_real_exec.py",
+      "source_sha256": "623c6ae182285106905aaadf77fc839c2b80e2c68c075c568c63a6e90c82a0f4",
+      "public_sha256": "623c6ae182285106905aaadf77fc839c2b80e2c68c075c568c63a6e90c82a0f4",
+      "bytes": 11933,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/revision/test_sweepick_trajectory.py",
+      "source_group": "native_revision",
+      "source_name": "test_sweepick_trajectory.py",
+      "source_sha256": "6e7f954ffbb09532d154fe9bc672dc0e5fe584c2d7811573f6c381ede497a1ae",
+      "public_sha256": "6e7f954ffbb09532d154fe9bc672dc0e5fe584c2d7811573f6c381ede497a1ae",
+      "bytes": 6495,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/tests/a17/capture_first_goals.py",
+      "source_group": "native_tests",
+      "source_name": "capture_first_goals.py",
+      "source_sha256": "5a0457570a8cf4a8e17b51ac106126e3d7972e2bdffd9108bebcffe3b9ac1e7a",
+      "public_sha256": "5a0457570a8cf4a8e17b51ac106126e3d7972e2bdffd9108bebcffe3b9ac1e7a",
+      "bytes": 4146,
+      "public_copy_changed": false
+    },
+    {
+      "file": "native/tests/a17/test_a17_first_goal.py",
+      "source_group": "native_tests",
+      "source_name": "test_a17_first_goal.py",
+      "source_sha256": "618cfdef187aa0e88c6e8e7835f081fa4ea2a30e14a08076ed216714d40dcfd0",
+      "public_sha256": "618cfdef187aa0e88c6e8e7835f081fa4ea2a30e14a08076ed216714d40dcfd0",
+      "bytes": 2670,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_field.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_field.py",
+      "source_sha256": "29fe262ab3f930684c067a11a8523e4c8997db930534f8eaa3ebbb285f8c3aa2",
+      "public_sha256": "29fe262ab3f930684c067a11a8523e4c8997db930534f8eaa3ebbb285f8c3aa2",
+      "bytes": 36385,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_field_r6.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_field_r6.py",
+      "source_sha256": "1a86ec4240dba5ae7a9d95d662aacd31e1519c4436dea94be31e5d88958aed9b",
+      "public_sha256": "1a86ec4240dba5ae7a9d95d662aacd31e1519c4436dea94be31e5d88958aed9b",
+      "bytes": 56399,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_gates.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_gates.py",
+      "source_sha256": "e48b9a7284ac6e51d96f2f611f6e1e73d5277f55c08108cc700fb8c7282216a4",
+      "public_sha256": "e48b9a7284ac6e51d96f2f611f6e1e73d5277f55c08108cc700fb8c7282216a4",
+      "bytes": 1506,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_kin.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_kin.py",
+      "source_sha256": "cda0df99d5362cbe6c2ad0174771da7926c10a929aa4a03b0154b7d68e5d7dd1",
+      "public_sha256": "cda0df99d5362cbe6c2ad0174771da7926c10a929aa4a03b0154b7d68e5d7dd1",
+      "bytes": 1671,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_local_loop.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_local_loop.py",
+      "source_sha256": "3f142202ccc2d9a10ad658e52d648430c20068916db8bc1532c794c103d1ac18",
+      "public_sha256": "9f207a23c650154edd8d0b976b61d33b859e9abc3f3f8a10a38145045cb12675",
+      "bytes": 49548,
+      "public_copy_changed": true
+    },
+    {
+      "file": "support/field_tools/sweepick_progress.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_progress.py",
+      "source_sha256": "b248eea611b6b477f6ac3597c6d21b192208b92dad31a7cb8fe60d91e1588223",
+      "public_sha256": "b248eea611b6b477f6ac3597c6d21b192208b92dad31a7cb8fe60d91e1588223",
+      "bytes": 3527,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_real_command.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_real_command.py",
+      "source_sha256": "995765c14e6a4303c2b71b7e0ee836d1880608f4558b93bf9187a6aeac022408",
+      "public_sha256": "995765c14e6a4303c2b71b7e0ee836d1880608f4558b93bf9187a6aeac022408",
+      "bytes": 10752,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_real_exec.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_real_exec.py",
+      "source_sha256": "2c9d9f14199fd9276a6437ac07d01852c61e86401533ce83929eef8027b915c8",
+      "public_sha256": "2c9d9f14199fd9276a6437ac07d01852c61e86401533ce83929eef8027b915c8",
+      "bytes": 14159,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/field_tools/sweepick_trajectory.py",
+      "source_group": "canonical_field_tools",
+      "source_name": "sweepick_trajectory.py",
+      "source_sha256": "4e9ba7ae2122fd5f3021067e7b677fa055bc87d87501ddbde0c6ce6d6288ede2",
+      "public_sha256": "4e9ba7ae2122fd5f3021067e7b677fa055bc87d87501ddbde0c6ce6d6288ede2",
+      "bytes": 8651,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/constraint_causal_c0.py",
+      "source_group": "project_runtime_support",
+      "source_name": "constraint_causal_c0.py",
+      "source_sha256": "5afd825eac1314a13a148630ef9a87b8ca12da8888978262b0be2faed7497f56",
+      "public_sha256": "5afd825eac1314a13a148630ef9a87b8ca12da8888978262b0be2faed7497f56",
+      "bytes": 54422,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/live_release_check.py",
+      "source_group": "project_runtime_support",
+      "source_name": "live_release_check.py",
+      "source_sha256": "e56781e313c6b002747a682f1b77933e8d61df2d02fe399349e9dcdbfb9e79da",
+      "public_sha256": "e56781e313c6b002747a682f1b77933e8d61df2d02fe399349e9dcdbfb9e79da",
+      "bytes": 19001,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/post_c0_pilot_r1.py",
+      "source_group": "project_runtime_support",
+      "source_name": "post_c0_pilot_r1.py",
+      "source_sha256": "9f978974de1ea8f00fe67bb83cc3a878feb37b215c9bd5102135a16e327afb07",
+      "public_sha256": "9f978974de1ea8f00fe67bb83cc3a878feb37b215c9bd5102135a16e327afb07",
+      "bytes": 48733,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/r5_reconcile.py",
+      "source_group": "project_runtime_support",
+      "source_name": "r5_reconcile.py",
+      "source_sha256": "55fc2c3f665742f42800f03b50ac2a3654f996b596898ae861dcf6517c2a8ce5",
+      "public_sha256": "63a3c646acba3093d8c1a2cd8db32443bb923c0289cae70eefaf47e67cc68fc8",
+      "bytes": 30122,
+      "public_copy_changed": true
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_boundary_repair.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_boundary_repair.py",
+      "source_sha256": "2f3406b2eed1b91de56200b9c3e524497c91388259749329b231c7122b75bda6",
+      "public_sha256": "2f3406b2eed1b91de56200b9c3e524497c91388259749329b231c7122b75bda6",
+      "bytes": 33509,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_bridge_r1.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_bridge_r1.py",
+      "source_sha256": "277b8c6ef183ad87141cbe8ab2479c504be5b59e70a6b164e25d517a0c049944",
+      "public_sha256": "277b8c6ef183ad87141cbe8ab2479c504be5b59e70a6b164e25d517a0c049944",
+      "bytes": 52667,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_candidate.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_candidate.py",
+      "source_sha256": "1dbb3315d8d2470e798458ba2fb88efa82a43222360f7fd8e92fbad0b92b87a1",
+      "public_sha256": "1dbb3315d8d2470e798458ba2fb88efa82a43222360f7fd8e92fbad0b92b87a1",
+      "bytes": 56513,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_entry_r2.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_entry_r2.py",
+      "source_sha256": "ab4c2e168719769a47111ee16e8b998e68e5aedc2f4ea55e0c20c8cf8910567d",
+      "public_sha256": "ab4c2e168719769a47111ee16e8b998e68e5aedc2f4ea55e0c20c8cf8910567d",
+      "bytes": 49101,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_expand_r1.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_expand_r1.py",
+      "source_sha256": "893e519ff5e2dad83b842b8a73418c419c710c5680e4d94fdd7b502f595eea48",
+      "public_sha256": "893e519ff5e2dad83b842b8a73418c419c710c5680e4d94fdd7b502f595eea48",
+      "bytes": 45772,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_fit_check.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_fit_check.py",
+      "source_sha256": "81a7a88e1f5f9530c9116ba4a1353ba1ef23e62ab4ce7e4fd6b13abca3d1b6b8",
+      "public_sha256": "81a7a88e1f5f9530c9116ba4a1353ba1ef23e62ab4ce7e4fd6b13abca3d1b6b8",
+      "bytes": 38067,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_onset_r3.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_onset_r3.py",
+      "source_sha256": "f1ea4fb454eeecf2eccea6280f682a744411d4039342c38afa430aed31390d9c",
+      "public_sha256": "f1ea4fb454eeecf2eccea6280f682a744411d4039342c38afa430aed31390d9c",
+      "bytes": 48415,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_r3_recheck.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_r3_recheck.py",
+      "source_sha256": "77656d397d30effd90ee6bab1e24743fb29047b46d2fb2ca1fbd6027df6f85fb",
+      "public_sha256": "77656d397d30effd90ee6bab1e24743fb29047b46d2fb2ca1fbd6027df6f85fb",
+      "bytes": 29242,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/receive_r3_val.py",
+      "source_group": "project_runtime_support",
+      "source_name": "receive_r3_val.py",
+      "source_sha256": "fec076c0e67c0c690dbc64c7a60b26a65033a45a2f57e80895cd6b129edc8114",
+      "public_sha256": "fec076c0e67c0c690dbc64c7a60b26a65033a45a2f57e80895cd6b129edc8114",
+      "bytes": 28288,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/server_s0.py",
+      "source_group": "project_runtime_support",
+      "source_name": "server_s0.py",
+      "source_sha256": "a4ef90de3a45ca791b5473df02f3dc9074c89acfeaed1a1e3c065b06066145c5",
+      "public_sha256": "a4ef90de3a45ca791b5473df02f3dc9074c89acfeaed1a1e3c065b06066145c5",
+      "bytes": 17379,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/start_pick_d1.py",
+      "source_group": "project_runtime_support",
+      "source_name": "start_pick_d1.py",
+      "source_sha256": "d1519b4899efced2aed47cf2077d401e5aae3cb9c5dd7a5991c2df18d4137e6c",
+      "public_sha256": "d1519b4899efced2aed47cf2077d401e5aae3cb9c5dd7a5991c2df18d4137e6c",
+      "bytes": 50511,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/start_pick_r1.py",
+      "source_group": "project_runtime_support",
+      "source_name": "start_pick_r1.py",
+      "source_sha256": "8470ee94290e07071dbbdedbfadcdc1e28f2a7a397c9c5df2e24a32ec9053322",
+      "public_sha256": "8470ee94290e07071dbbdedbfadcdc1e28f2a7a397c9c5df2e24a32ec9053322",
+      "bytes": 57430,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/tjj_alignment_r1.py",
+      "source_group": "project_runtime_support",
+      "source_name": "tjj_alignment_r1.py",
+      "source_sha256": "a569ef453ce2f9e2632cc4b55eeb9a821b6bac2369c93234f361f72fb6172f9d",
+      "public_sha256": "a569ef453ce2f9e2632cc4b55eeb9a821b6bac2369c93234f361f72fb6172f9d",
+      "bytes": 54225,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/tjj_mvp_r2.py",
+      "source_group": "project_runtime_support",
+      "source_name": "tjj_mvp_r2.py",
+      "source_sha256": "e7551ce9197f6225163efae2aeeec2a12210aaf49adc5d42a1d76c5ba716f5e2",
+      "public_sha256": "e7551ce9197f6225163efae2aeeec2a12210aaf49adc5d42a1d76c5ba716f5e2",
+      "bytes": 48509,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/tjj_mvp_r2_train.py",
+      "source_group": "project_runtime_support",
+      "source_name": "tjj_mvp_r2_train.py",
+      "source_sha256": "75c51a1d0a7e31713aeff6827ad0f75904fa20a9ea65272028e0fae1daef6c9e",
+      "public_sha256": "75c51a1d0a7e31713aeff6827ad0f75904fa20a9ea65272028e0fae1daef6c9e",
+      "bytes": 14170,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/tjj_perception.py",
+      "source_group": "project_runtime_support",
+      "source_name": "tjj_perception.py",
+      "source_sha256": "1927aeb9dfae6b279dd4e21b5ff321918a08cf514bd5688c77d17a9ecb24d8e1",
+      "public_sha256": "1927aeb9dfae6b279dd4e21b5ff321918a08cf514bd5688c77d17a9ecb24d8e1",
+      "bytes": 17871,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/tjj_task_manager.py",
+      "source_group": "project_runtime_support",
+      "source_name": "tjj_task_manager.py",
+      "source_sha256": "9cdf72f76f41db7f2b2cc2c2cbabddac3c65ad74d60d5841057699eb05a4505f",
+      "public_sha256": "9cdf72f76f41db7f2b2cc2c2cbabddac3c65ad74d60d5841057699eb05a4505f",
+      "bytes": 17414,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/factory/v1/train_rollout_diagnostic.py",
+      "source_group": "project_runtime_support",
+      "source_name": "train_rollout_diagnostic.py",
+      "source_sha256": "82c1f50ed3ffbf24cc453115bb1e4d8a0acf78fccc2228aed357ebecbf0a24a9",
+      "public_sha256": "9d69de7dab7a540dd3557f46a3c50a5bda4737b605c23aab3134f350d4099947",
+      "bytes": 72092,
+      "public_copy_changed": true
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/camera_stand_cad.py",
+      "source_group": "project_runtime_support",
+      "source_name": "camera_stand_cad.py",
+      "source_sha256": "7cfacf24c1667bc0226e98c28ef00b02d06e6b6665aff9f2d4350c7976dcc757",
+      "public_sha256": "7cfacf24c1667bc0226e98c28ef00b02d06e6b6665aff9f2d4350c7976dcc757",
+      "bytes": 4088,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/collision_guard.py",
+      "source_group": "project_runtime_support",
+      "source_name": "collision_guard.py",
+      "source_sha256": "47979c8471b34238614a55a18e02fcb562ecd151539726c55d0850fa32d95728",
+      "public_sha256": "47979c8471b34238614a55a18e02fcb562ecd151539726c55d0850fa32d95728",
+      "bytes": 93894,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/dapier_act_policy.py",
+      "source_group": "project_runtime_support",
+      "source_name": "dapier_act_policy.py",
+      "source_sha256": "7c2a92e27d763017e377bd87b267b5776a89fa0e9accb69a80a4c20ab6ea524a",
+      "public_sha256": "7c2a92e27d763017e377bd87b267b5776a89fa0e9accb69a80a4c20ab6ea524a",
+      "bytes": 45506,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/integration_scenes.py",
+      "source_group": "project_runtime_support",
+      "source_name": "integration_scenes.py",
+      "source_sha256": "2c2e2f94d7cc75cb4286d3797577e1a3770685724d2f39ae9af7584c61e2f133",
+      "public_sha256": "2c2e2f94d7cc75cb4286d3797577e1a3770685724d2f39ae9af7584c61e2f133",
+      "bytes": 17563,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/mobile_dual_so101.py",
+      "source_group": "project_runtime_support",
+      "source_name": "mobile_dual_so101.py",
+      "source_sha256": "0a0314b505831fe3a0cfe12f76d7ffd109f4540d8a139dbdd94b996f60a41b25",
+      "public_sha256": "0a0314b505831fe3a0cfe12f76d7ffd109f4540d8a139dbdd94b996f60a41b25",
+      "bytes": 46228,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/pgripper.py",
+      "source_group": "project_runtime_support",
+      "source_name": "pgripper.py",
+      "source_sha256": "67eb45c359bd1948977770a16ada56bb5302146ce7cd4722771af206b2ef1684",
+      "public_sha256": "67eb45c359bd1948977770a16ada56bb5302146ce7cd4722771af206b2ef1684",
+      "bytes": 13275,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/pgripper_dataset.py",
+      "source_group": "project_runtime_support",
+      "source_name": "pgripper_dataset.py",
+      "source_sha256": "9d8bda1f21e0405c6709234701ec39ffd6869ae1ee2173cbd5f31903e75524e8",
+      "public_sha256": "9d8bda1f21e0405c6709234701ec39ffd6869ae1ee2173cbd5f31903e75524e8",
+      "bytes": 8676,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/pgripper_execution.py",
+      "source_group": "project_runtime_support",
+      "source_name": "pgripper_execution.py",
+      "source_sha256": "822246f06d09c64c95fe25f2419f2de6b0eae6b6483aa463941e9bd7414ce6fc",
+      "public_sha256": "822246f06d09c64c95fe25f2419f2de6b0eae6b6483aa463941e9bd7414ce6fc",
+      "bytes": 7643,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/pgripper_handover.py",
+      "source_group": "project_runtime_support",
+      "source_name": "pgripper_handover.py",
+      "source_sha256": "000a004ea4537e5129a4dd1fef7b325ca72a8c2232fef753c6b6a950da048bf6",
+      "public_sha256": "000a004ea4537e5129a4dd1fef7b325ca72a8c2232fef753c6b6a950da048bf6",
+      "bytes": 29887,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/pgripper_learning.py",
+      "source_group": "project_runtime_support",
+      "source_name": "pgripper_learning.py",
+      "source_sha256": "0c7c321e9216a62c054d87cc1a37076024b2767c8f668d43706b828bbe878e35",
+      "public_sha256": "0c7c321e9216a62c054d87cc1a37076024b2767c8f668d43706b828bbe878e35",
+      "bytes": 24893,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/physics_ik.py",
+      "source_group": "project_runtime_support",
+      "source_name": "physics_ik.py",
+      "source_sha256": "ce91d2781094d3de7d6dd5c5560ac579ade4b78cc6d225724b6ace98deb7be45",
+      "public_sha256": "ce91d2781094d3de7d6dd5c5560ac579ade4b78cc6d225724b6ace98deb7be45",
+      "bytes": 25674,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/replay_recorded_episode.py",
+      "source_group": "project_runtime_support",
+      "source_name": "replay_recorded_episode.py",
+      "source_sha256": "60ad3afa8c5f0b26ed5d7966170247a77f42e19fe7486c72186ccd67c2fa8b2d",
+      "public_sha256": "60ad3afa8c5f0b26ed5d7966170247a77f42e19fe7486c72186ccd67c2fa8b2d",
+      "bytes": 24469,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/shoe_task.py",
+      "source_group": "project_runtime_support",
+      "source_name": "shoe_task.py",
+      "source_sha256": "5a2ae1ebb757a677d2c7a8dbdf83589d87d62af2a2803a405deea35097b772f4",
+      "public_sha256": "5a2ae1ebb757a677d2c7a8dbdf83589d87d62af2a2803a405deea35097b772f4",
+      "bytes": 40807,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/__init__.py",
+      "source_group": "project_runtime_support",
+      "source_name": "__init__.py",
+      "source_sha256": "4cd1cf3f4bfd0a25ee611e5fb8fb7e8779e31de9ace22ad9447f2dd4c1be3e33",
+      "public_sha256": "4cd1cf3f4bfd0a25ee611e5fb8fb7e8779e31de9ace22ad9447f2dd4c1be3e33",
+      "bytes": 54,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/core.py",
+      "source_group": "project_runtime_support",
+      "source_name": "core.py",
+      "source_sha256": "263048c6eb2a3e73d5f30b9130cf560fc2ac4c70398305e8e26799a23bcebf44",
+      "public_sha256": "263048c6eb2a3e73d5f30b9130cf560fc2ac4c70398305e8e26799a23bcebf44",
+      "bytes": 6324,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/r2_data.py",
+      "source_group": "project_runtime_support",
+      "source_name": "r2_data.py",
+      "source_sha256": "8c6ef33f0373e08e3f449588e739fb79d3b6a752ae76854812846cbef065e3ff",
+      "public_sha256": "8c6ef33f0373e08e3f449588e739fb79d3b6a752ae76854812846cbef065e3ff",
+      "bytes": 12379,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/recorder.py",
+      "source_group": "project_runtime_support",
+      "source_name": "recorder.py",
+      "source_sha256": "d675b9b8510fed666175acc4a7e8d96819300208fd1574ce09867ea41e6fd47e",
+      "public_sha256": "d675b9b8510fed666175acc4a7e8d96819300208fd1574ce09867ea41e6fd47e",
+      "bytes": 6948,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/reset_sampler.py",
+      "source_group": "project_runtime_support",
+      "source_name": "reset_sampler.py",
+      "source_sha256": "2529364250eec801c24cbf0d676e6ea1fe3b108d9a842389978dc7c4cb2a7406",
+      "public_sha256": "2529364250eec801c24cbf0d676e6ea1fe3b108d9a842389978dc7c4cb2a7406",
+      "bytes": 5674,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/sensor.py",
+      "source_group": "project_runtime_support",
+      "source_name": "sensor.py",
+      "source_sha256": "c98a32767121906fe1005a0661f8131d369934f4a241fb70c6766466ab9801de",
+      "public_sha256": "6fa77e46d530bbe86a3c3b695ac4641c077710d56833f1a667079ee1902b6b91",
+      "bytes": 9549,
+      "public_copy_changed": true
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/smoke.py",
+      "source_group": "project_runtime_support",
+      "source_name": "smoke.py",
+      "source_sha256": "ca20f650abeb7e76966f3e0192f89061d32e45b7c68ba993aac5d84a12b98833",
+      "public_sha256": "ca20f650abeb7e76966f3e0192f89061d32e45b7c68ba993aac5d84a12b98833",
+      "bytes": 4549,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/student_eval.py",
+      "source_group": "project_runtime_support",
+      "source_name": "student_eval.py",
+      "source_sha256": "efc70a2954b070854a8cdd8404e3cb8337e08e601e0b059988c74c10050a97c4",
+      "public_sha256": "efc70a2954b070854a8cdd8404e3cb8337e08e601e0b059988c74c10050a97c4",
+      "bytes": 21530,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/task_success.py",
+      "source_group": "project_runtime_support",
+      "source_name": "task_success.py",
+      "source_sha256": "e28c9520bc9b3fc9f506394e76b8f0d8ab6b6dfa26dadaeda0121dd141e6a71f",
+      "public_sha256": "e28c9520bc9b3fc9f506394e76b8f0d8ab6b6dfa26dadaeda0121dd141e6a71f",
+      "bytes": 13150,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_data_factory/teacher.py",
+      "source_group": "project_runtime_support",
+      "source_name": "teacher.py",
+      "source_sha256": "5e9454ba4cc16c3393b860fc21dc75e62d8fe1629520e84e297c26d94a620369",
+      "public_sha256": "e0b97611750b8002ebf79ff79333cd1d366a4020b73065a943d176f2af6f69e9",
+      "bytes": 56370,
+      "public_copy_changed": true
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/sim_policy.py",
+      "source_group": "project_runtime_support",
+      "source_name": "sim_policy.py",
+      "source_sha256": "fe81b53215c69dd28ea4aaa8a749c2b4266c3e49864404747f5babdf9f029f10",
+      "public_sha256": "fe81b53215c69dd28ea4aaa8a749c2b4266c3e49864404747f5babdf9f029f10",
+      "bytes": 12194,
+      "public_copy_changed": false
+    },
+    {
+      "file": "support/tjj_runtime/source/production_source_g000/waffle_reference.py",
+      "source_group": "project_runtime_support",
+      "source_name": "waffle_reference.py",
+      "source_sha256": "ea977b1fb8974d20a8e5c40d237bcf6065b52c153c0eed13197c93c438b1a5bf",
+      "public_sha256": "ea977b1fb8974d20a8e5c40d237bcf6065b52c153c0eed13197c93c438b1a5bf",
+      "bytes": 5598,
+      "public_copy_changed": false
+    }
+  ]
+}

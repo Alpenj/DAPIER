@@ -1,0 +1,54 @@
+{
+ "schema": "tjj.progress-profile.v1",
+ "what": "Execution contract of the closed-loop executor: how it tells a normal start delay / lag from a joint that is not moving, and when a target counts as reached. Derived from this robot's own traces. These are NOT ratings of the servo and they do not limit how far a move may go.",
+ "evidence": "sweepick_PROGRESS_EVIDENCE.json: the 13 single-joint moves of 2026-10-07 (both arms, torque on, 1 tick per 20 ms)",
+ "resolution_ticks": {
+  "value": 1,
+  "basis": "encoder resolution: one tick is the smallest change the readback can show; progress = at least this much further in the commanded direction than ever before in this move"
+ },
+ "start_delay_s": {
+  "value": 0.321,
+  "basis": "longest time from the first command to the first tick of motion in the 13 moves (range 0.10 .. 0.32 s; the command had run 6 .. 17 ticks ahead by then). The longest stretch without progress in any normal move was this start delay"
+ },
+ "stationary_lead_ticks": {
+  "value": 17,
+  "basis": "largest distance between the command and a joint that was still standing in the 13 moves: 6 .. 17 ticks of lead when motion began, 1 .. 14 ticks settled behind a resting command. A joint standing within this lead is normal (dead zone, static friction, load) and is not timed; the no-progress clock runs only while the command is further ahead than this"
+ },
+ "reach_tolerance_ticks": {
+  "value": 14,
+  "basis": "largest settled |measured - commanded| with the command at rest in the 13 moves (1 .. 7 on lightly loaded joints, 11 .. 14 on the elbows and one wrist under their own weight)"
+ },
+ "reaction": {
+  "lead <= stationary_lead_ticks": "not timed",
+  "lead <= following_lead_ticks": "not timed (loaded standing / following); reach is judged after the command",
+  "lead > following_lead_ticks for start_delay_s without the lead coming down": "FREEZE: the command waits",
+  "a further start_delay_s like that": "NO_PROGRESS: goal = measured, stop handling",
+  "after the last command": "target_reached only if |measured - target| <= reach_tolerance_ticks and the readback has stopped changing"
+ },
+ "scope": "these two arms and grippers, the selected slow profile (sweepick_motion_profile.json), no payload beyond the arm's own links. A different load or speed needs its own traces. Not a manufacturer value.",
+ "settle_trim": {
+  "rule": "after the last command, a settled arm joint that stands short of its target by more than reach_tolerance_ticks gets its goal moved by the measured shortfall (repeated while the joint advances); it ends when the joint is within tolerance, or as not reached when a trim brings no progress",
+  "basis": "the servo's position loop has no integral term (I coefficient 0 in the device registers): under a constant load it rests short of the goal (11 .. 14 ticks in the small moves, 21 .. 23 on the elbow in PICK01). The trim is the missing integral action; the target itself does not change",
+  "scope": "arm joints of a stage that asks for it. Never the gripper closing on an object"
+ },
+ "withdrawn": {
+  "following_lead": {
+   "rule": "the no-progress clock also does not run while the command is no further ahead than it was when this joint last advanced (the largest such lead of the move)",
+   "basis": "PICK01 approach of 2026-10-08 (pick01_run/pregrasp/run1/move.json): the left elbow carried the forearm 1578 ticks at a lead of 20 .. 40 ticks (median 32, raw load about 100 .. 176) and advanced all the way; at the slow end of the command it stood 21 ticks behind a command that had stopped moving, which the 17-tick rule alone read as a stall",
+   "scope": "a loaded joint that is following. A joint that stops while the command runs further ahead is still timed",
+   "withdrawn": "2026-10-08 PICK02 review: 'following_lead' let the allowed lead grow with every tick of progress (a creeping gripper was pushed to a lead of 125 ticks, load 500 raw); 'effort_floor' treated everything below the servo's overload setting as normal, so a joint that never moves was never timed. Neither is used any more"
+  },
+  "effort_floor": {
+   "rule": "the no-progress clock runs only while the joint's Present_Load is at or above its own Overload_Torque register (percent x 10, the raw scale of Present_Load); below that the command keeps advancing",
+   "basis": "PICK01 lift of 2026-10-08 (pick01_run2/lift/run1): the left shoulder_lift stood still at a lead of 31 ticks with Present_Load 136 raw - the load reading rises about 4.4 raw per tick of position error, i.e. it is the servo's proportional effort, and at 31 ticks it was not enough to raise the extended arm; the command was frozen there and the move ended as 'no progress' although nothing blocked the arm. The same joint followed at leads up to 50 in the return of the first attempt. Device registers: Overload_Torque 80 (arm joints), 25 (gripper)",
+   "status": "PROVISIONAL: the raw scale of Present_Load (0.1 % per count) is the manufacturer's documented scale and is not verified through the pinned driver; the gripper contact of the same session (load 184 -> 332 -> 500 raw at a standstill) is consistent with it",
+   "scope": "reads the register of each moving joint at the start of the move; when it cannot be read the rule is not applied",
+   "withdrawn": "2026-10-08 PICK02 review: 'following_lead' let the allowed lead grow with every tick of progress (a creeping gripper was pushed to a lead of 125 ticks, load 500 raw); 'effort_floor' treated everything below the servo's overload setting as normal, so a joint that never moves was never timed. Neither is used any more"
+  }
+ },
+ "following_lead_ticks": {
+  "value": 50,
+  "basis": "largest lead at which a loaded ARM joint was seen following or standing before it moved, in the PICK01 traces of 2026-10-08: elbow 40 (approach), shoulder_lift 50 (return of attempt 1), settled shortfalls 21 .. 43. Up to here a joint is not timed; beyond it the clock runs unless the lead comes down again",
+  "scope": "left arm joints, the selected slow profile, the arm's own links and a 20 g block. PROVISIONAL (one session). Not used for a gripper closing on an object"
+ }
+}

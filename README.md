@@ -10,6 +10,7 @@ DAPIER 국비교육에서 배운 내용을 코드와 실험으로 확인하고, 
 
 | 확인할 내용 | 코드와 문서 |
 |---|---|
+| Sweepick 현재 실행 소스·콘솔·CLOSE 검수 | [Sweepick 소스 검토](2ARM_ROBOT/sweepick/README.md) |
 | 프로젝트 목표, 담당 범위, 구현과 검증 상태 | [TJJ / 2ARM_ROBOT](2ARM_ROBOT/README.md) |
 | 파지 실패·끝점 오차·미끄러짐을 조사한 과정 | [양팔 조작 연구 기록](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md) |
 | 양팔 모델, 접촉과 경로 검사 | [MuJoCo 모델](2ARM_ROBOT/sim/mobile_dual_so101/README.md) |

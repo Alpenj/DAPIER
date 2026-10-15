@@ -1,0 +1,167 @@
+{
+ "per_move": {
+  "left_01_wrist_roll:wrist_roll": {
+   "first_progress_cycle": 8,
+   "start_delay_s": 0.161,
+   "command_lead_when_motion_began_ticks": 9.0,
+   "longest_no_progress_cycles_while_commanding": 8,
+   "longest_no_progress_s": 0.161,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 2.0,
+   "return_error_ticks": 4.0,
+   "total_progress": 8.0
+  },
+  "left_02_all:shoulder_pan": {
+   "first_progress_cycle": 9,
+   "start_delay_s": 0.181,
+   "command_lead_when_motion_began_ticks": 10.0,
+   "longest_no_progress_cycles_while_commanding": 9,
+   "longest_no_progress_s": 0.181,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 3.0,
+   "return_error_ticks": 2.0,
+   "total_progress": 17.0
+  },
+  "left_02_all:shoulder_lift": {
+   "first_progress_cycle": 6,
+   "start_delay_s": 0.12,
+   "command_lead_when_motion_began_ticks": 7.0,
+   "longest_no_progress_cycles_while_commanding": 6,
+   "longest_no_progress_s": 0.12,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 1.0,
+   "return_error_ticks": 7.0,
+   "total_progress": 19.0
+  },
+  "left_02_all:elbow_flex": {
+   "first_progress_cycle": 7,
+   "start_delay_s": 0.141,
+   "command_lead_when_motion_began_ticks": 8.0,
+   "longest_no_progress_cycles_while_commanding": 7,
+   "longest_no_progress_s": 0.141,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 14.0,
+   "return_error_ticks": 2.0,
+   "total_progress": 6.0
+  },
+  "left_02_all:wrist_flex": {
+   "first_progress_cycle": 16,
+   "start_delay_s": 0.321,
+   "command_lead_when_motion_began_ticks": 17.0,
+   "longest_no_progress_cycles_while_commanding": 16,
+   "longest_no_progress_s": 0.321,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 14.0,
+   "return_error_ticks": 1.0,
+   "total_progress": 6.0
+  },
+  "left_02_all:wrist_roll": {
+   "first_progress_cycle": 7,
+   "start_delay_s": 0.14,
+   "command_lead_when_motion_began_ticks": 8.0,
+   "longest_no_progress_cycles_while_commanding": 7,
+   "longest_no_progress_s": 0.14,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 3.0,
+   "return_error_ticks": 4.0,
+   "total_progress": 17.0
+  },
+  "left_02_all:gripper": {
+   "first_progress_cycle": 8,
+   "start_delay_s": 0.161,
+   "command_lead_when_motion_began_ticks": 9.0,
+   "longest_no_progress_cycles_while_commanding": 8,
+   "longest_no_progress_s": 0.161,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 3.0,
+   "return_error_ticks": 4.0,
+   "total_progress": 17.0
+  },
+  "right_01_all:shoulder_pan": {
+   "first_progress_cycle": 10,
+   "start_delay_s": 0.201,
+   "command_lead_when_motion_began_ticks": 11.0,
+   "longest_no_progress_cycles_while_commanding": 10,
+   "longest_no_progress_s": 0.201,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 3.0,
+   "return_error_ticks": 4.0,
+   "total_progress": 18.0
+  },
+  "right_01_all:shoulder_lift": {
+   "first_progress_cycle": 7,
+   "start_delay_s": 0.141,
+   "command_lead_when_motion_began_ticks": 8.0,
+   "longest_no_progress_cycles_while_commanding": 7,
+   "longest_no_progress_s": 0.141,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 2.0,
+   "return_error_ticks": 8.0,
+   "total_progress": 18.0
+  },
+  "right_01_all:elbow_flex": {
+   "first_progress_cycle": 9,
+   "start_delay_s": 0.181,
+   "command_lead_when_motion_began_ticks": 10.0,
+   "longest_no_progress_cycles_while_commanding": 9,
+   "longest_no_progress_s": 0.181,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 11.0,
+   "return_error_ticks": 5.0,
+   "total_progress": 9.0
+  },
+  "right_01_all:wrist_flex": {
+   "first_progress_cycle": 5,
+   "start_delay_s": 0.1,
+   "command_lead_when_motion_began_ticks": 6.0,
+   "longest_no_progress_cycles_while_commanding": 5,
+   "longest_no_progress_s": 0.1,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 1.0,
+   "return_error_ticks": 9.0,
+   "total_progress": 19.0
+  },
+  "right_01_all:wrist_roll": {
+   "first_progress_cycle": 7,
+   "start_delay_s": 0.141,
+   "command_lead_when_motion_began_ticks": 8.0,
+   "longest_no_progress_cycles_while_commanding": 7,
+   "longest_no_progress_s": 0.141,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 2.0,
+   "return_error_ticks": 6.0,
+   "total_progress": 18.0
+  },
+  "right_01_all:gripper": {
+   "first_progress_cycle": 6,
+   "start_delay_s": 0.12,
+   "command_lead_when_motion_began_ticks": 7.0,
+   "longest_no_progress_cycles_while_commanding": 6,
+   "longest_no_progress_s": 0.12,
+   "cycle_s": 0.0201,
+   "hold_error_ticks": 7.0,
+   "return_error_ticks": 11.0,
+   "total_progress": 13.0
+  }
+ },
+ "summary": {
+  "moves": 13,
+  "start_delay_s": {
+   "max": 0.321,
+   "median": 0.141
+  },
+  "lead_when_motion_began_ticks": {
+   "max": 17.0
+  },
+  "longest_no_progress_s": {
+   "max": 0.321
+  },
+  "hold_error_ticks": {
+   "max": 14.0
+  },
+  "return_error_ticks": {
+   "max": 11.0
+  },
+  "cycle_s": 0.0201
+ }
+}

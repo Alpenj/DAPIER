@@ -1,0 +1,3192 @@
+{
+  "schema": "sweepick.a17-first-goal.v1",
+  "device_access": false,
+  "python": "/home/robot/DAPIER/so101_imitation_learning/.venv/bin/python",
+  "configured_range": [
+    2001,
+    3431
+  ],
+  "interpretation": "3501 is a possible manual opening; 3431 is software calibration upper bound, not a proven physical opening limit",
+  "source_sha256": {
+    "/home/robot/sweepick_261013_receive_alignment_restore/revision/sweepick_move_a.py": "9fb399b4042faeda37ddcaf7eff1ac8077270582144e014c4d38be4b45519240",
+    "/home/robot/sweepick_261013_receive_alignment_restore/revision/sweepick_pick01.py": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
+  },
+  "CASE_A": {
+    "input": {
+      "gripper_actual": 3344.0,
+      "wrist_certificate": 2837.0,
+      "wrist_actual": 2835.0
+    },
+    "initial_actual": {
+      "shoulder_pan": 2352.0,
+      "shoulder_lift": 2304.0,
+      "elbow_flex": 2123.0,
+      "wrist_flex": 2835.0,
+      "wrist_roll": 2376.0,
+      "gripper": 3344.0
+    },
+    "binding": {
+      "rechecked": true,
+      "matched": true,
+      "arm_delta_ticks": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0
+      },
+      "certificate": {
+        "nominal_verdict": "CLEAR",
+        "arm_ticks": {
+          "shoulder_pan": 2352.0,
+          "shoulder_lift": 2304.0,
+          "elbow_flex": 2123.0,
+          "wrist_flex": 2835.0,
+          "wrist_roll": 2376.0
+        },
+        "sweep": [
+          3344.0,
+          2018.0
+        ]
+      },
+      "actual": {
+        "shoulder_pan": 2352.0,
+        "shoulder_lift": 2304.0,
+        "elbow_flex": 2123.0,
+        "wrist_flex": 2835.0,
+        "wrist_roll": 2376.0,
+        "gripper": 3344.0
+      },
+      "feedback_time_s": 1000.0,
+      "read_s": 0.0,
+      "initial": {
+        "rechecked": false,
+        "matched": false,
+        "arm_delta_ticks": {
+          "shoulder_pan": 0.0,
+          "shoulder_lift": 0.0,
+          "elbow_flex": 0.0,
+          "wrist_flex": -2.0,
+          "wrist_roll": 0.0
+        },
+        "certificate": {
+          "nominal_verdict": "CLEAR",
+          "arm_ticks": {
+            "shoulder_pan": 2352.0,
+            "shoulder_lift": 2304.0,
+            "elbow_flex": 2123.0,
+            "wrist_flex": 2837.0,
+            "wrist_roll": 2376.0
+          },
+          "sweep": [
+            3344.0,
+            2018.0
+          ]
+        },
+        "actual": {
+          "shoulder_pan": 2352.0,
+          "shoulder_lift": 2304.0,
+          "elbow_flex": 2123.0,
+          "wrist_flex": 2835.0,
+          "wrist_roll": 2376.0,
+          "gripper": 3344.0
+        },
+        "feedback_time_s": 1000.0,
+        "read_s": 0.0
+      }
+    },
+    "rechecks": [
+      {
+        "actual_six_axes": {
+          "shoulder_pan": 2352.0,
+          "shoulder_lift": 2304.0,
+          "elbow_flex": 2123.0,
+          "wrist_flex": 2835.0,
+          "wrist_roll": 2376.0,
+          "gripper": 3344.0
+        },
+        "write_count_before_check": 0,
+        "sweep_from_tick": 3344.0,
+        "sweep_to_tick": 2018.0,
+        "samples": 1327,
+        "range_entry_3501_to_3431_in_whole_sweep": true,
+        "command_start_present": false,
+        "result": "FAKE_CLEAR",
+        "duration_s": 0.00014154599921312183
+      }
+    ],
+    "first_goal_write": {
+      "kind": "write",
+      "register": "Goal_Position",
+      "joint": "gripper",
+      "value": 3344,
+      "ack": "ACK",
+      "clock": "FAKE"
+    },
+    "first_goal_register_readback": 3344,
+    "all_goal_writes_with_ack": [
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3344,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3344,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3343,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3342,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3340,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3338,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3336,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3334,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3332,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3330,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3328,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3326,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3324,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3322,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3321,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3319,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3317,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3315,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3313,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3311,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3309,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3307,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3305,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3303,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3301,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3299,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3297,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3295,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3293,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3291,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3289,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3287,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3285,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3283,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3281,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3279,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3278,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3276,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3274,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3272,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3270,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3268,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3266,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3264,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3262,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3260,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3258,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3256,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3254,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3252,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3250,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3248,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3246,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3244,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3242,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3240,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3238,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3236,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3234,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3233,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3231,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3229,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3227,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3225,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3223,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3221,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3219,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3217,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3215,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3213,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3211,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3209,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3207,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3205,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3203,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3201,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3199,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3197,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3195,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3193,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3191,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3190,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3188,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3186,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3184,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3182,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3180,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3178,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3176,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3174,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3172,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3170,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3168,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3166,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3164,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3162,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3160,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3158,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3156,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3154,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3152,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3150,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3148,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3146,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3145,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3143,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3141,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3139,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3137,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3135,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3133,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3131,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3129,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3127,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3125,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3123,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3121,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3119,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3117,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3115,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3113,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3111,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3109,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3107,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3105,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3103,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3101,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3100,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3098,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3096,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3094,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3092,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3090,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3088,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3086,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3084,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3082,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3080,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3078,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3076,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3074,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3072,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3070,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3068,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3066,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3064,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3062,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3060,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3058,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3057,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3055,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3053,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3051,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3049,
+        "ack": "ACK",
+        "clock": "FAKE"
+      }
+    ],
+    "all_goal_writes_in_configured_range": true,
+    "write_attempts": {
+      "Goal_Position": 154,
+      "Torque_Enable": 1
+    },
+    "acknowledged_writes": {
+      "Goal_Position": 154,
+      "Torque_Enable": 1
+    },
+    "normalization": null,
+    "result": "GRIP_CONTACT_HOLDING",
+    "exit_code": 0,
+    "fake_end": {
+      "ticks": {
+        "shoulder_pan": 2352.0,
+        "shoulder_lift": 2304.0,
+        "elbow_flex": 2123.0,
+        "wrist_flex": 2835.0,
+        "wrist_roll": 2376.0,
+        "gripper": 3075.0
+      },
+      "torque": {
+        "shoulder_pan": 1.0,
+        "shoulder_lift": 1.0,
+        "elbow_flex": 1.0,
+        "wrist_flex": 1.0,
+        "wrist_roll": 1.0,
+        "gripper": 1.0
+      },
+      "status": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 0.0
+      },
+      "goal_register": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 3049.0
+      },
+      "torque_on": [
+        "shoulder_pan",
+        "shoulder_lift",
+        "elbow_flex",
+        "wrist_flex",
+        "wrist_roll",
+        "gripper"
+      ]
+    },
+    "hardware_result": "NOT_TESTED",
+    "meaning": "fake contact resistance; not real grasp proof; no physical collision simulation in this capture"
+  },
+  "CASE_B": {
+    "input": {
+      "gripper_actual": 3501.0,
+      "wrist_certificate": 2837.0,
+      "wrist_actual": 2835.0
+    },
+    "initial_actual": {
+      "shoulder_pan": 2352.0,
+      "shoulder_lift": 2304.0,
+      "elbow_flex": 2123.0,
+      "wrist_flex": 2835.0,
+      "wrist_roll": 2376.0,
+      "gripper": 3501.0
+    },
+    "binding": {
+      "rechecked": true,
+      "matched": true,
+      "arm_delta_ticks": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0
+      },
+      "certificate": {
+        "nominal_verdict": "CLEAR",
+        "arm_ticks": {
+          "shoulder_pan": 2352.0,
+          "shoulder_lift": 2304.0,
+          "elbow_flex": 2123.0,
+          "wrist_flex": 2835.0,
+          "wrist_roll": 2376.0
+        },
+        "sweep": [
+          3501.0,
+          2018.0
+        ]
+      },
+      "actual": {
+        "shoulder_pan": 2352.0,
+        "shoulder_lift": 2304.0,
+        "elbow_flex": 2123.0,
+        "wrist_flex": 2835.0,
+        "wrist_roll": 2376.0,
+        "gripper": 3501.0
+      },
+      "feedback_time_s": 1000.0,
+      "read_s": 0.0,
+      "initial": {
+        "rechecked": false,
+        "matched": false,
+        "arm_delta_ticks": {
+          "shoulder_pan": 0.0,
+          "shoulder_lift": 0.0,
+          "elbow_flex": 0.0,
+          "wrist_flex": -2.0,
+          "wrist_roll": 0.0
+        },
+        "certificate": {
+          "nominal_verdict": "CLEAR",
+          "arm_ticks": {
+            "shoulder_pan": 2352.0,
+            "shoulder_lift": 2304.0,
+            "elbow_flex": 2123.0,
+            "wrist_flex": 2837.0,
+            "wrist_roll": 2376.0
+          },
+          "sweep": [
+            3501.0,
+            2018.0
+          ]
+        },
+        "actual": {
+          "shoulder_pan": 2352.0,
+          "shoulder_lift": 2304.0,
+          "elbow_flex": 2123.0,
+          "wrist_flex": 2835.0,
+          "wrist_roll": 2376.0,
+          "gripper": 3501.0
+        },
+        "feedback_time_s": 1000.0,
+        "read_s": 0.0
+      }
+    },
+    "rechecks": [
+      {
+        "actual_six_axes": {
+          "shoulder_pan": 2352.0,
+          "shoulder_lift": 2304.0,
+          "elbow_flex": 2123.0,
+          "wrist_flex": 2835.0,
+          "wrist_roll": 2376.0,
+          "gripper": 3501.0
+        },
+        "write_count_before_check": 0,
+        "sweep_from_tick": 3501.0,
+        "sweep_to_tick": 2018.0,
+        "samples": 1484,
+        "range_entry_3501_to_3431_in_whole_sweep": true,
+        "command_start_present": false,
+        "result": "FAKE_CLEAR",
+        "duration_s": 0.00018707200069911778
+      }
+    ],
+    "first_goal_write": {
+      "kind": "write",
+      "register": "Goal_Position",
+      "joint": "gripper",
+      "value": 3431,
+      "ack": "ACK",
+      "clock": "FAKE"
+    },
+    "first_goal_register_readback": 3431,
+    "all_goal_writes_with_ack": [
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3431,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3431,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3430,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3429,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3427,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3425,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3423,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3421,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3419,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3417,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3415,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3413,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3411,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3409,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3408,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3406,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3404,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3402,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3400,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3398,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3396,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3394,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3392,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3390,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3388,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3386,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3384,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3382,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3380,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3378,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3376,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3374,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3372,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3370,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3368,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3366,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3365,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3363,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3361,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3359,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3357,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3355,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3353,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3351,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3349,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3347,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3345,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3343,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3341,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3339,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3337,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3335,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3333,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3331,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3329,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3327,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3325,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3323,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3321,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3320,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3318,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3316,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3314,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3312,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3310,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3308,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3306,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3304,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3302,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3300,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3298,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3296,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3294,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3292,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3290,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3288,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3286,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3284,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3282,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3280,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3278,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3277,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3275,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3273,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3271,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3269,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3267,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3265,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3263,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3261,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3259,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3257,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3255,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3253,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3251,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3249,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3247,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3245,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3243,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3241,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3239,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3237,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3235,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3233,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3232,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3230,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3228,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3226,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3224,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3222,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3220,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3218,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3216,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3214,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3212,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3210,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3208,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3206,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3204,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3202,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3200,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3198,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3196,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3194,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3192,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3190,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3188,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3187,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3185,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3183,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3181,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3179,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3177,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3175,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3173,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3171,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3169,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3167,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3165,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3163,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3161,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3159,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3157,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3155,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3153,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3151,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3149,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3147,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3145,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3144,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3142,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3140,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3138,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3136,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3134,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3132,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3130,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3128,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3126,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3124,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3122,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3120,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3118,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3116,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3114,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3112,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3110,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3108,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3106,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3104,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3102,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3100,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3099,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3097,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3095,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3093,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3091,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3089,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3087,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3085,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3083,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3081,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3079,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3077,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3075,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3073,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3071,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3069,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3067,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3065,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3063,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3061,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3059,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3057,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3056,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3054,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3052,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3050,
+        "ack": "ACK",
+        "clock": "FAKE"
+      },
+      {
+        "kind": "write",
+        "register": "Goal_Position",
+        "joint": "gripper",
+        "value": 3048,
+        "ack": "ACK",
+        "clock": "FAKE"
+      }
+    ],
+    "all_goal_writes_in_configured_range": true,
+    "write_attempts": {
+      "Goal_Position": 199,
+      "Torque_Enable": 1
+    },
+    "acknowledged_writes": {
+      "Goal_Position": 199,
+      "Torque_Enable": 1
+    },
+    "normalization": {
+      "actual_tick": 3501.0,
+      "command_tick": 3431.0,
+      "configured_range": [
+        2001.0,
+        3431.0
+      ],
+      "outside_by_ticks": 70.0,
+      "source": "fresh Present_Position plus the calibrated servo range; preflight confirmed the EEPROM Min/Max matches it",
+      "basis": "an initial Goal_Position write must be inside the actual configured range; the nearest endpoint is used with no margin"
+    },
+    "result": "GRIP_CONTACT_HOLDING",
+    "exit_code": 0,
+    "fake_end": {
+      "ticks": {
+        "shoulder_pan": 2352.0,
+        "shoulder_lift": 2304.0,
+        "elbow_flex": 2123.0,
+        "wrist_flex": 2835.0,
+        "wrist_roll": 2376.0,
+        "gripper": 3075.0
+      },
+      "torque": {
+        "shoulder_pan": 1.0,
+        "shoulder_lift": 1.0,
+        "elbow_flex": 1.0,
+        "wrist_flex": 1.0,
+        "wrist_roll": 1.0,
+        "gripper": 1.0
+      },
+      "status": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 0.0
+      },
+      "goal_register": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 3048.0
+      },
+      "torque_on": [
+        "shoulder_pan",
+        "shoulder_lift",
+        "elbow_flex",
+        "wrist_flex",
+        "wrist_roll",
+        "gripper"
+      ]
+    },
+    "hardware_result": "NOT_TESTED",
+    "meaning": "fake contact resistance; not real grasp proof; no physical collision simulation in this capture"
+  }
+}
