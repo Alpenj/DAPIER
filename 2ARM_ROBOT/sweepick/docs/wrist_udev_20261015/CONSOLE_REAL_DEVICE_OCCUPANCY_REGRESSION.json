@@ -1,0 +1,79 @@
+{
+ "schema": "sweepick.console-real-device-occupancy-regression.v1",
+ "device_access": false,
+ "change": {
+  "file": "console/control.py",
+  "functions": [
+   "resolve_devices()",
+   "Controller.owners()",
+   "Controller.prepare() (occupancy check added)",
+   "operation_contract() (DeviceCheckError -> UNKNOWN)"
+  ],
+  "rule": "canonical nodes from the native plan + WRIST_PAIRING; alias missing/wrong, route change, same node, fuser error -> DeviceCheckError (never {}); occupancy or mismatch refuses PREPARE/START",
+  "unchanged": [
+   "single owner",
+   "port lease",
+   "STOP",
+   "motor writer",
+   "native sources"
+  ],
+  "live_sha256": "40dd400b4c64e8086702b938f6827ef8986179bd670e2c2d6c2e68561f388697"
+ },
+ "new_tests": {
+  "ran": 20,
+  "ok": 20,
+  "tests": [
+   "test_fuser_error_or_permission_problem_is_not_free (test_wrist_device_check.Occupancy.test_fuser_error_or_permission_problem_is_not_free)",
+   "test_normal_mapping_matches_the_existing_behaviour (test_wrist_device_check.Occupancy.test_normal_mapping_matches_the_existing_behaviour)",
+   "test_real_right_camera_occupancy_is_reported_on_its_canonical_node (test_wrist_device_check.Occupancy.test_real_right_camera_occupancy_is_reported_on_its_canonical_node)",
+   "test_unconfirmed_mapping_refuses_prepare_and_start (test_wrist_device_check.Occupancy.test_unconfirmed_mapping_refuses_prepare_and_start)",
+   "test_both_routes_resolve_to_the_same_node (test_wrist_device_check.Resolution.test_both_routes_resolve_to_the_same_node)",
+   "test_left_alias_missing (test_wrist_device_check.Resolution.test_left_alias_missing)",
+   "test_missing_arm_node (test_wrist_device_check.Resolution.test_missing_arm_node)",
+   "test_normal_left_right_mapping (test_wrist_device_check.Resolution.test_normal_left_right_mapping)",
+   "test_pairing_differs_from_plan (test_wrist_device_check.Resolution.test_pairing_differs_from_plan)",
+   "test_right_alias_points_to_the_left_camera (test_wrist_device_check.Resolution.test_right_alias_points_to_the_left_camera)",
+   "test_usb_route_changed (test_wrist_device_check.Resolution.test_usb_route_changed)",
+   "test_discover_after_a_port_change_writes_only_a_proposal (test_wrist_cover_check.CoverTest.test_discover_after_a_port_change_writes_only_a_proposal)",
+   "test_indistinguishable_change_is_refused (test_wrist_cover_check.CoverTest.test_indistinguishable_change_is_refused)",
+   "test_left_cover_confirms_and_records_the_current_connection (test_wrist_cover_check.CoverTest.test_left_cover_confirms_and_records_the_current_connection)",
+   "test_occupied_camera_or_owner_session_stops_before_opening (test_wrist_cover_check.CoverTest.test_occupied_camera_or_owner_session_stops_before_opening)",
+   "test_operator_must_confirm_images_and_workspace (test_wrist_cover_check.CoverTest.test_operator_must_confirm_images_and_workspace)",
+   "test_swapped_cameras_are_refused_without_a_record (test_wrist_cover_check.CoverTest.test_swapped_cameras_are_refused_without_a_record)",
+   "test_arm_alias_on_the_other_arms_adapter_refuses (test_wrist_cover_check.Guard.test_arm_alias_on_the_other_arms_adapter_refuses)",
+   "test_current_confirmation_passes (test_wrist_cover_check.Guard.test_current_confirmation_passes)",
+   "test_missing_confirmation_reboot_or_reenumeration_refuses (test_wrist_cover_check.Guard.test_missing_confirmation_reboot_or_reenumeration_refuses)"
+  ]
+ },
+ "required_cases": {
+  "normal mapping": "test_normal_left_right_mapping, test_normal_mapping_matches_the_existing_behaviour",
+  "left link missing": "test_left_alias_missing",
+  "right link -> left": "test_right_alias_points_to_the_left_camera",
+  "same node": "test_both_routes_resolve_to_the_same_node",
+  "real right camera occupied": "test_real_right_camera_occupancy_is_reported_on_its_canonical_node",
+  "fuser error / permission": "test_fuser_error_or_permission_problem_is_not_free",
+  "USB route change": "test_usb_route_changed",
+  "mismatch refuses prepare/start": "test_unconfirmed_mapping_refuses_prepare_and_start"
+ },
+ "console_all": {
+  "ran": 150,
+  "ok": 150,
+  "skipped": 1,
+  "note": "one earlier run had the known HTTP start-up timing error; clean on rerun"
+ },
+ "native": "unchanged by this task (A gripper 154 / native lists as in FINAL_A_P0_REGRESSION)",
+ "live_before_udev_fix": "occupancy UNKNOWN: left alias missing; right alias -> /dev/video10 (paired node /dev/video8); both scopes can_prepare=false",
+ "live_after_udev_fix": "occupancy {} with the alias/route checks; after the identity guard: UNKNOWN until a cover test is recorded (devnum 31->34 / 33->32 since 10/13)",
+ "usb_change_robustness": {
+  "arms": "udev binds by adapter serial; console now also checks each arm alias resolves to the adapter whose serial WRIST_PAIRING records for that arm (port/hub independent)",
+  "top_camera": "udev binds by serial (unchanged)",
+  "wrist_cameras": "identical, no serial: bound by USB route (ID_PATH). Moving to another port/hub -> alias missing / route mismatch -> PREPARE/START refused (fail closed)",
+  "swap_between_the_same_ports": "not visible in software; any re-enumeration (unplug/replug, swap, reboot) since the last operator cover test now refuses PREPARE/START until wrist_cover_check.py confirm records a new cover test",
+  "after_a_port_or_hub_change": "wrist_cover_check.py discover finds both cameras, runs the cover test and writes udev lines + plan routes as a proposal only (no system or native file change)",
+  "tool": {
+   "file": "console/wrist_cover_check.py",
+   "sha256": "c99c0ea5ae266d8bab11647f2ad19b927f92bb0c2deaa53694df18e8a734151d",
+   "run_with": "~/DAPIER/so101_imitation_learning/.venv/bin/python (cv2)"
+  }
+ }
+}

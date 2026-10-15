@@ -74,6 +74,84 @@ class ControlError(Exception):
     pass
 
 
+class DeviceCheckError(ControlError):
+    """The real device nodes could not be confirmed (alias missing/wrong, route changed, occupancy unknown)."""
+
+
+WRIST_NAMES = ('left_wrist', 'right_wrist')
+
+
+IDENTITY = 'WRIST_IDENTITY_CONFIRMATION.json'                      # written by wrist_cover_check.py after an operator cover test
+
+
+def read_text(path):
+    try:
+        return Path(path).read_text().strip()
+    except OSError:
+        return None
+
+
+def resolve_devices(plan, pairing, *, realpath=os.path.realpath, exists=os.path.exists, alias_root='/dev/dapier', sysfs_root='/sys/class/video4linux',
+                    tty_root='/sys/class/tty', read=read_text, identity=None):
+    """{role: canonical device node} for the arms, the top camera and both wrists, from the native plan and the
+    operator-confirmed wrist pairing. Every wrist alias must resolve to its paired capture node on its paired USB route;
+    anything else raises DeviceCheckError. Nothing is opened."""
+    problems, nodes = [], {}
+    routes = plan['device_routes']
+    for role, route in routes.items():
+        if role in WRIST_NAMES:
+            continue
+        if not exists(route):
+            problems.append(f'{role}: {route} missing')
+        else:
+            nodes[role] = realpath(route)
+    # arms: the alias must resolve to the USB adapter whose serial the pairing records for that arm (port/hub independent)
+    for side in ('left', 'right'):
+        expected = (pairing.get(f'{side}_wrist') or {}).get('paired_arm_serial')
+        node = nodes.get(f'{side}_arm')
+        if node and expected:
+            serial = read(f"{realpath(f'{tty_root}/{Path(node).name}/device')}/../serial")
+            if serial != expected:
+                problems.append(f'{side}_arm: {node} has USB serial {serial}, the {side} arm is {expected}')
+    for name in WRIST_NAMES:
+        route, paired = routes.get(name), (pairing.get(name) or {})
+        if paired.get('device') != route:
+            problems.append(f'{name}: plan route {route} differs from the confirmed pairing {paired.get("device")}'); continue
+        if not exists(route):
+            problems.append(f'{name}: paired capture node {route} missing'); continue
+        canonical = realpath(route); nodes[name] = canonical
+        alias = f'{alias_root}/{name}_rgb'
+        if not exists(alias):
+            problems.append(f'{name}: alias {alias} missing')
+        elif realpath(alias) != canonical:
+            problems.append(f'{name}: alias {alias} -> {realpath(alias)}, paired node is {canonical}')
+        usb = (paired.get('connection') or {}).get('usb_sysfs')
+        device = realpath(f'{sysfs_root}/{Path(canonical).name}/device')
+        if not usb or not device.startswith(realpath(usb).rstrip('/') + '/'):
+            problems.append(f'{name}: {canonical} is not on the confirmed USB route {usb}')
+    if nodes.get('left_wrist') and nodes.get('left_wrist') == nodes.get('right_wrist'):
+        problems.append('both wrists resolve to the same capture node')
+    # identical cameras without a serial: a swap between the same two ports cannot be seen in software. Any re-enumeration
+    # (unplug/replug, swap, reboot) since the last operator cover test therefore requires a new cover test.
+    if identity is not None:
+        boot = read('/proc/sys/kernel/random/boot_id')
+        confirmed = (identity or {}).get('wrists') or {}
+        if not confirmed:
+            problems.append('wrist camera identity not confirmed by an operator cover test (run wrist_cover_check.py)')
+        elif identity.get('boot_id') != boot:
+            problems.append('host rebooted since the last wrist cover test; run wrist_cover_check.py')
+        else:
+            for name in WRIST_NAMES:
+                usb = (pairing.get(name) or {}).get('connection', {}).get('usb_sysfs')
+                row = confirmed.get(name) or {}
+                now = read(f'{usb}/devnum') if usb else None
+                if row.get('usb_sysfs') != usb or row.get('devnum') != now or row.get('capture_node') != nodes.get(name):
+                    problems.append(f'{name}: camera re-enumerated since the last cover test (devnum {row.get("devnum")} -> {now}); run wrist_cover_check.py')
+    if problems:
+        raise DeviceCheckError('장치 경로 확인 실패: ' + '; '.join(problems))
+    return nodes
+
+
 class Controller:
     def __init__(self, directory=None, run=subprocess.run):
         self.directory = Path(directory or HOME / 'sweepick_console_runs')
@@ -338,7 +416,7 @@ class Controller:
         status = self.status()
         try:
             occupancy, query_error = self.owners(), None
-        except (OSError, ValueError, KeyError, TypeError) as exc:
+        except (OSError, ValueError, KeyError, TypeError, DeviceCheckError) as exc:
             occupancy, query_error = 'UNKNOWN', f'{type(exc).__name__}: {exc}'
         sources = []
         for name in ('RUN_APPROVED_SESSION.py', 'revision/sweepick_pick01.py', 'revision/sweepick_full_chain.py',
@@ -385,6 +463,9 @@ class Controller:
             status = self.status()
             if not status['can_prepare']:
                 raise ControlError(status['block_reason'] or '동시 세션 준비/실행 불가')
+            occupied = self.owners()                                     # raises DeviceCheckError on an unconfirmed node/alias/route
+            if occupied:
+                raise ControlError('장치 owner가 이미 존재함: ' + str(occupied))
             previous = status['active']
             if previous:
                 final = Path(previous['session_out']).parent / 'CONTROL_FINAL.json'
@@ -578,15 +659,23 @@ class Controller:
         return job
 
     def owners(self):
+        """{canonical node: pids} of the real device nodes. Raises DeviceCheckError when a node, alias or route cannot be
+        confirmed or fuser cannot answer; that is never reported as {} (free)."""
         plan = read_json(A / 'RECEIVE_FIELD_PLAN.json')
-        paths = set(plan['device_routes'].values())
-        paths.update(('/dev/dapier/left_wrist_rgb', '/dev/dapier/right_wrist_rgb'))
+        pairing = read_json(A / 'WRIST_PAIRING.json').get('wrists') or {}
+        try:
+            identity = read_json(A / IDENTITY)
+        except (OSError, ValueError):
+            identity = {}
+        paths = set(resolve_devices(plan, pairing, identity=identity or {}).values())
         top_sysfs = Path(plan['accepted_usb_topology']['top_usb_sysfs'])
         if (top_sysfs / 'busnum').exists() and (top_sysfs / 'devnum').exists():
             paths.add(f'/dev/bus/usb/{int((top_sysfs / "busnum").read_text()):03d}/{int((top_sysfs / "devnum").read_text()):03d}')
         owners = {}
-        for path in paths:
+        for path in sorted(paths):
             result = self.run(['fuser', path], capture_output=True, text=True)
+            if result.returncode not in (0, 1) or (result.returncode == 1 and (result.stderr or '').strip()):
+                raise DeviceCheckError(f'점유 확인 불가: fuser {path} rc={result.returncode} {(result.stderr or "").strip()}')
             if result.stdout.strip():
                 owners[path] = result.stdout.strip()
         return owners

@@ -1,0 +1,53 @@
+{
+ "schema": "sweepick.new-prepared-camera-preflight.v1",
+ "at": "2026-10-15",
+ "devices_opened": false,
+ "new_prepared": {
+  "job": "20261015_175106_f5aabc",
+  "manifest_sha256": "0dbdaf61ae69d7623e6b4cb7626bc5a632ba0732f39ae391b4b86349ad0457df",
+  "bound": {
+   "RUN_APPROVED_SESSION.py": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+   "revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+   "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db"
+  },
+  "approval": {
+   "approved": false,
+   "permission_to_execute": false,
+   "field_ready": false,
+   "scope": "RIGHT_RECEIVE_NONCONTACT_OBSERVATION",
+   "execution_scope": "FULL_CHAIN_RECEIVE_CONTACT"
+  },
+  "preapproval_present": false
+ },
+ "superseded": {
+  "job": "20261015_172337_7b36aa",
+  "started": false,
+  "control_final": true,
+  "originals_equal_backup": true,
+  "backup": "/home/robot/sweepick_261015_wrist_udev/prepared_20261015_172337_7b36aa"
+ },
+ "console": {
+  "state": "PREPARED",
+  "active": "20261015_175106_f5aabc",
+  "occupancy": {},
+  "query_error": null,
+  "all_match": true,
+  "scopes": [
+   [
+    "FULL_CHAIN_RECEIVE_CONTACT",
+    "SUPPORTED_EXISTING_BACKEND",
+    true
+   ],
+   [
+    "LEFT_START_TO_LIFT",
+    "SUPPORTED_CONSOLE17_LIMITED_BACKEND",
+    true
+   ]
+  ]
+ },
+ "camera_nodes": {
+  "left": "/dev/video10 (USB 1-1.3, capture, alias left_wrist_rgb)",
+  "right": "/dev/video8 (USB 1-1.1, capture, alias right_wrist_rgb)",
+  "note": "cameras were not opened; image identity was not re-checked (the 10/13 operator cover test remains the physical evidence)"
+ }
+}

@@ -1,0 +1,97 @@
+{
+ "schema": "sweepick.wrist-udev-mapping-audit.v1",
+ "at": "2026-10-15",
+ "devices_opened": false,
+ "nodes": {
+  "video8": {
+   "sysfs": "/sys/devices/pci0000:00/0000:00:08.1/0000:65:00.3/usb1/1-1/1-1.1/1-1.1:1.0",
+   "index": "0",
+   "udev": {
+    "ID_PATH": "pci-0000:65:00.3-usb-0:1.1:1.0",
+    "ID_V4L_CAPABILITIES": ":capture:",
+    "DEVLINKS": "/dev/v4l/by-id/usb-Image_Processor_USB_2.0_PC_Cam-video-index0 /dev/v4l/by-path/pci-0000:65:00.3-usbv2-0:1.1:1.0-video-index0 /dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.1:1.0-video-index0",
+    "ID_SERIAL": "Image_Processor_USB_2.0_PC_Cam"
+   }
+  },
+  "video9": {
+   "sysfs": "/sys/devices/pci0000:00/0000:00:08.1/0000:65:00.3/usb1/1-1/1-1.1/1-1.1:1.0",
+   "index": "1",
+   "udev": {
+    "ID_PATH": "pci-0000:65:00.3-usb-0:1.1:1.0",
+    "ID_V4L_CAPABILITIES": ":",
+    "DEVLINKS": "/dev/v4l/by-path/pci-0000:65:00.3-usbv2-0:1.1:1.0-video-index1 /dev/v4l/by-id/usb-Image_Processor_USB_2.0_PC_Cam-video-index1 /dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.1:1.0-video-index1",
+    "ID_SERIAL": "Image_Processor_USB_2.0_PC_Cam"
+   }
+  },
+  "video10": {
+   "sysfs": "/sys/devices/pci0000:00/0000:00:08.1/0000:65:00.3/usb1/1-1/1-1.3/1-1.3:1.0",
+   "index": "0",
+   "udev": {
+    "ID_PATH": "pci-0000:65:00.3-usb-0:1.3:1.0",
+    "ID_V4L_CAPABILITIES": ":capture:",
+    "DEVLINKS": "/dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.3:1.0-video-index0 /dev/dapier/right_wrist_rgb /dev/v4l/by-id/usb-Image_Processor_USB_2.0_PC_Cam-video-index0 /dev/v4l/by-path/pci-0000:65:00.3-usbv2-0:1.3:1.0-video-index0",
+    "ID_SERIAL": "Image_Processor_USB_2.0_PC_Cam"
+   }
+  },
+  "video11": {
+   "sysfs": "/sys/devices/pci0000:00/0000:00:08.1/0000:65:00.3/usb1/1-1/1-1.3/1-1.3:1.0",
+   "index": "1",
+   "udev": {
+    "ID_PATH": "pci-0000:65:00.3-usb-0:1.3:1.0",
+    "ID_V4L_CAPABILITIES": ":",
+    "DEVLINKS": "/dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.3:1.0-video-index1 /dev/v4l/by-id/usb-Image_Processor_USB_2.0_PC_Cam-video-index1 /dev/v4l/by-path/pci-0000:65:00.3-usbv2-0:1.3:1.0-video-index1",
+    "ID_SERIAL": "Image_Processor_USB_2.0_PC_Cam"
+   }
+  }
+ },
+ "pairing": {
+  "left_wrist": {
+   "device": "/dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.3:1.0-video-index0",
+   "usb_sysfs": "/sys/bus/usb/devices/1-1.3",
+   "stored_devnum": "31",
+   "stored_boot_id": "b9974e56-fb39-4162-b06e-211a059599df",
+   "status": "OPERATOR_LEFT_COVER_AND_SAME_EPOCH_IMAGE_CONFIRMED",
+   "evidence_file": "/home/robot/sweepick_261013_receive_alignment_restore/review/usb_rebind/PHYSICAL_WRIST_IDENTITY.json"
+  },
+  "right_wrist": {
+   "device": "/dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.1:1.0-video-index0",
+   "usb_sysfs": "/sys/bus/usb/devices/1-1.1",
+   "stored_devnum": "33",
+   "stored_boot_id": "b9974e56-fb39-4162-b06e-211a059599df",
+   "status": "OPERATOR_LEFT_COVER_AND_SAME_EPOCH_IMAGE_CONFIRMED",
+   "evidence_file": "/home/robot/sweepick_261013_receive_alignment_restore/review/usb_rebind/PHYSICAL_WRIST_IDENTITY.json"
+  }
+ },
+ "plan_routes": {
+  "left_wrist": "/dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.3:1.0-video-index0",
+  "right_wrist": "/dev/v4l/by-path/pci-0000:65:00.3-usb-0:1.1:1.0-video-index0"
+ },
+ "current_usb": {
+  "1-1.1": {
+   "devnum": "32",
+   "serial": null
+  },
+  "1-1.3": {
+   "devnum": "34",
+   "serial": null
+  }
+ },
+ "current_boot_id": "2288c2d5-55d8-4848-ade0-51d7a146eb93",
+ "udev_rule": {
+  "file": "/etc/udev/rules.d/99-dapier-hardware.rules",
+  "sha256": "7844964af87f13b46f57eb6801bc3972157b84cbd42fb85e8a49ab128a9ffe46",
+  "wrist_lines": [
+   "SUBSYSTEM==\"video4linux\", ATTR{index}==\"0\", ATTRS{idVendor}==\"090c\", ATTRS{idProduct}==\"b371\", KERNELS==\"*-*.4\", SYMLINK+=\"dapier/left_wrist_rgb\"",
+   "SUBSYSTEM==\"video4linux\", ATTR{index}==\"0\", ATTRS{idVendor}==\"090c\", ATTRS{idProduct}==\"b371\", KERNELS==\"*-*.3\", SYMLINK+=\"dapier/right_wrist_rgb\""
+  ]
+ },
+ "findings": [
+  "video8 = USB 1-1.1 index0 capture; video10 = USB 1-1.3 index0 capture; video9/video11 are non-capture index1",
+  "stored pairing and plan: LEFT = by-path 1.3 index0, RIGHT = by-path 1.1 index0 -> consistent with the current USB routes",
+  "camera has no unique serial (ID_SERIAL is the model string for both)",
+  "stored devnum/boot_id are the 10/13 connection; the launcher refreshes them per session (confirmed_wrist_routes) - route unchanged",
+  "the udev rule still maps *-*.4 -> left and *-*.3 -> right (older hub layout): right_wrist_rgb -> video10 (physical LEFT), left_wrist_rgb missing"
+ ],
+ "physical_correspondence": "CONSISTENT_WITH_STORED_OPERATOR_PAIRING (no cable/route change detected)",
+ "decision": "udev correction of the two wrist lines is justified"
+}

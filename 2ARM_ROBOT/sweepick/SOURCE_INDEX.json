@@ -39,11 +39,11 @@
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "6e13e17d2994b42f6e4abd4a2d6da576270266e1a84d68d9907dd07c36647f8d",
-      "public_sha256": "6e13e17d2994b42f6e4abd4a2d6da576270266e1a84d68d9907dd07c36647f8d",
-      "bytes": 43379,
+      "source_sha256": "40dd400b4c64e8086702b938f6827ef8986179bd670e2c2d6c2e68561f388697",
+      "public_sha256": "40dd400b4c64e8086702b938f6827ef8986179bd670e2c2d6c2e68561f388697",
+      "bytes": 48574,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LIVE_CONSOLE",
       "active_original_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b"
     },
     {
@@ -214,10 +214,11 @@
       "source_group": "console",
       "source_name": "test_control.py",
       "component": "CONSOLE",
-      "source_sha256": "2301bf44cab97d15d050b544e78bd390f1cc7265e68ea1e69f213a0e5fc563c8",
-      "public_sha256": "2301bf44cab97d15d050b544e78bd390f1cc7265e68ea1e69f213a0e5fc563c8",
-      "bytes": 29092,
-      "public_copy_changed": false
+      "source_sha256": "f583b79a8e9c3da40ca7421a6737a9e2a2c51e2b64522b92e69bb63ae769bf82",
+      "public_sha256": "f583b79a8e9c3da40ca7421a6737a9e2a2c51e2b64522b92e69bb63ae769bf82",
+      "bytes": 29553,
+      "public_copy_changed": false,
+      "source_location": "LIVE_CONSOLE"
     },
     {
       "file": "console/test_inspection.py",
@@ -2112,6 +2113,94 @@
       "public_sha256": "a2424825879459af94c58991d71b7738fe86425db662b5b211170a712f8adf64",
       "bytes": 5922,
       "public_copy_changed": false
+    },
+    {
+      "file": "console/wrist_cover_check.py",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "wrist_cover_check.py",
+      "component": "CONSOLE",
+      "source_sha256": "c99c0ea5ae266d8bab11647f2ad19b927f92bb0c2deaa53694df18e8a734151d",
+      "public_sha256": "c99c0ea5ae266d8bab11647f2ad19b927f92bb0c2deaa53694df18e8a734151d",
+      "bytes": 8330,
+      "public_copy_changed": false,
+      "source_location": "LIVE_CONSOLE"
+    },
+    {
+      "file": "console/test_wrist_device_check.py",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "test_wrist_device_check.py",
+      "component": "CONSOLE",
+      "source_sha256": "a287943a9ac351e2dd907b6e6db73204377a8b864ee054f5774da31f946501e8",
+      "public_sha256": "a287943a9ac351e2dd907b6e6db73204377a8b864ee054f5774da31f946501e8",
+      "bytes": 6302,
+      "public_copy_changed": false,
+      "source_location": "LIVE_CONSOLE"
+    },
+    {
+      "file": "console/test_wrist_cover_check.py",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "test_wrist_cover_check.py",
+      "component": "CONSOLE",
+      "source_sha256": "bda0620c81ab837099162a6d637706a0fbcb5df36ad3c1d8dfce96544078810e",
+      "public_sha256": "bda0620c81ab837099162a6d637706a0fbcb5df36ad3c1d8dfce96544078810e",
+      "bytes": 7752,
+      "public_copy_changed": false,
+      "source_location": "LIVE_CONSOLE"
+    },
+    {
+      "file": "docs/wrist_udev_20261015/WRIST_UDEV_MAPPING_AUDIT.json",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "WRIST_UDEV_MAPPING_AUDIT.json",
+      "component": "DOCS",
+      "source_sha256": "8526eb006a117233729572e57795ba189f5f131254d6613651a3d58a16f957b4",
+      "public_sha256": "c569ab81cc3ed451634ee264ceaea0f3c6c87c6d9e372288daf434d88a7ae735",
+      "bytes": 4620,
+      "public_copy_changed": true,
+      "source_location": "PRIVATE_WORK_RECORD"
+    },
+    {
+      "file": "docs/wrist_udev_20261015/WRIST_UDEV_CHANGE_RESULT.json",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "WRIST_UDEV_CHANGE_RESULT.json",
+      "component": "DOCS",
+      "source_sha256": "09752b7738033fd2dc0bac799d7234f7be560bf55b697ea15cde49d89c18d56d",
+      "public_sha256": "107c94a4f472534051bd6dfd304f21b91a1d04ba2e1be4dba2511ab67d390c1f",
+      "bytes": 1196,
+      "public_copy_changed": true,
+      "source_location": "PRIVATE_WORK_RECORD"
+    },
+    {
+      "file": "docs/wrist_udev_20261015/CONSOLE_REAL_DEVICE_OCCUPANCY_REGRESSION.json",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "CONSOLE_REAL_DEVICE_OCCUPANCY_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "4b655034f1ee43cec51bb56e900c422530c04b4c5807c98e56b364085635c8c9",
+      "public_sha256": "4b655034f1ee43cec51bb56e900c422530c04b4c5807c98e56b364085635c8c9",
+      "bytes": 5662,
+      "public_copy_changed": false,
+      "source_location": "PRIVATE_WORK_RECORD"
+    },
+    {
+      "file": "docs/wrist_udev_20261015/NEW_PREPARED_CAMERA_PREFLIGHT.json",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "NEW_PREPARED_CAMERA_PREFLIGHT.json",
+      "component": "DOCS",
+      "source_sha256": "73a607064ef765c9f64d3c24bdbd7d8f03ee16fe25878bbc4a874caf87f35bf0",
+      "public_sha256": "d98f4eddfaddb9508ff59ed6c536697f059907750684cbc3dce8ede452e6b2a6",
+      "bytes": 1660,
+      "public_copy_changed": true,
+      "source_location": "PRIVATE_WORK_RECORD"
+    },
+    {
+      "file": "docs/wrist_udev_20261015/FIELD_START_READINESS.md",
+      "source_group": "wrist_udev_20261015",
+      "source_name": "FIELD_START_READINESS.md",
+      "component": "DOCS",
+      "source_sha256": "2b384f83a639411f5f1a073a0be4aac6c21e5d4eef634d1bbe19e9878066b6a4",
+      "public_sha256": "2b384f83a639411f5f1a073a0be4aac6c21e5d4eef634d1bbe19e9878066b6a4",
+      "bytes": 2327,
+      "public_copy_changed": false,
+      "source_location": "PRIVATE_WORK_RECORD"
     }
   ],
   "console17": {

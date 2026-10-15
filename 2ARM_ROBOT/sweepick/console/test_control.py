@@ -43,6 +43,10 @@ class ControlContract(unittest.TestCase):
         captured = patch('control.capture_sources', return_value={'fixture.py': {'sha256': 'fixture'}})
         self.capture = captured.start()
         self.addCleanup(captured.stop)
+        # Device topology is a fixture here (test_wrist_device_check covers the real resolution); fuser stays the FakeRunner.
+        devices = patch('control.resolve_devices', return_value={'left_arm': '/dev/ttyACM1', 'right_arm': '/dev/ttyACM0', 'top': '/dev/bus/usb/005/002',
+                                                                  'left_wrist': '/dev/video10', 'right_wrist': '/dev/video8'})
+        devices.start(); self.addCleanup(devices.stop)
 
     def prepare(self):
         return self.control.prepare('session_18')['active']
