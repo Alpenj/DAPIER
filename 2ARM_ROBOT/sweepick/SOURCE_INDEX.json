@@ -13,7 +13,8 @@
     "B18 technical summaries exclude original images, q12/ticks, camera parameters, machine paths and recording timestamps; REAL and MODEL evidence remain distinct",
     "B19 adds right-relative pure calculations and anonymized timing/accuracy reports; raw frames, feedback, optical parameters, device identities and original timestamps stay private",
     "B20 anonymized reference/optical/feature/CPU findings exclude original images, feedback, optical parameters, device identity and recording timestamps",
-    "B20 archive recovery summaries omit original frames, actual q/ticks, calibration, device identities, machine paths and receipt timestamps; original evidence remains local"
+    "B20 archive recovery summaries omit original frames, actual q/ticks, calibration, device identities, machine paths and receipt timestamps; original evidence remains local",
+    "B20 Right X handoff publishes three technical contracts only; actual RGB review PNG, measured feedback and source receipt metadata remain local"
   ],
   "files": [
     {
@@ -2085,6 +2086,36 @@
       "public_sha256": "ee0babb522dd6bf8a77ddbaa68799606d2a42de0f3973865254388fd595a015e",
       "bytes": 22195,
       "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/RIGHT_REFERENCE_FINAL_SHORTLIST.md",
+      "source_group": "B20_RIGHT_X_HANDOFF",
+      "source_name": "RIGHT_REFERENCE_FINAL_SHORTLIST.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "b2bfcce8c8272e48179990abe3dc13ab1258ce8ccc1530dc1c69a1391e84828d",
+      "public_sha256": "735fb451a1f70e1b4096b939c77fcbf062fa492d437a8bdc62da7a49a04d0706",
+      "bytes": 6289,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/RIGHT_X_FIELD_MEASUREMENT_PLAN.md",
+      "source_group": "B20_RIGHT_X_HANDOFF",
+      "source_name": "RIGHT_X_FIELD_MEASUREMENT_PLAN.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "8229d9cd252a58464d5ac7c4da7b5a012c52587cee0ad9643cbefa696abb0224",
+      "public_sha256": "8d04f0e183db684d0d908bc9b964ee86197b274d2a3eb23fc851324d367a12a9",
+      "bytes": 13477,
+      "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/FIELD_VERIFIED_TARGET_IMAGE_CONTRACT.md",
+      "source_group": "B20_RIGHT_X_HANDOFF",
+      "source_name": "FIELD_VERIFIED_TARGET_IMAGE_CONTRACT.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "ff77682e648c3ccb3618a1084904e6480d02b250c0836a60f05db8a37594486a",
+      "public_sha256": "ff77682e648c3ccb3618a1084904e6480d02b250c0836a60f05db8a37594486a",
+      "bytes": 8427,
+      "public_copy_changed": false
     }
   ]
 }
