@@ -1,0 +1,121 @@
+{
+  "schema": "sweepick.b20.a-metrology-bridge-regression/1",
+  "status": "PASS",
+  "A_schema_contract_commit": "0cb3ad4141ea2dcab970daed30235ed0f6e84567",
+  "B_consumer_commit": "29cdf06a457274553cbcb85f76231ff43fc2fa3c",
+  "bridge_tests": {
+    "run": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "preserved_B20_tests": {
+    "run": 57,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total_tests": {
+    "run": 74,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "preserved_B20_receipt_sha256": "52f476bad61131a36cfc481f9458535ac3cd01a836e5afa61373e62c31133ec7",
+  "REAL_original_feedback_and_image_packets_validated": 14,
+  "all_REAL_target_errors_and_corrections_null": true,
+  "synthetic_TFV": {
+    "source_kind": "TEST_FIXTURE",
+    "physical_measurement": false,
+    "target_image_X_error_px": {
+      "T": 0.0,
+      "F": 4.0,
+      "V": 6.0
+    },
+    "T_to_F": {
+      "actual_delta_ARM5_ticks": [
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "observed_delta_u_px": 4.0
+    },
+    "F_to_V": {
+      "purpose": "FIT_EXCLUDED_RESPONSE_CHECK",
+      "observed_delta_u_px": 2.0
+    },
+    "encoder_diagnostic": {
+      "role": "ENCODER_PROJECTION_DIAGNOSTIC_NOT_CARTESIAN_CONTROL",
+      "ARM5_order": [
+        "shoulder_pan",
+        "shoulder_lift",
+        "elbow_flex",
+        "wrist_flex",
+        "wrist_roll"
+      ],
+      "encoder_basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "unit": "pixel per Euclidean raw ARM5 tick-norm",
+      "fit_px_per_encoder_tick_norm": 0.4,
+      "fit_coordinate_tick_norm": 10.0,
+      "independent_status": "DIAGNOSTIC_SIGN_CONSISTENT_NO_NOISE_BOUND",
+      "physical_axis_verified": false,
+      "validated": false,
+      "may_enter_REAL_px_per_mm_Jacobian": false,
+      "observable_for_control": false,
+      "independent_coordinate_tick_norm": 5.0,
+      "independent_off_basis_tick_norm": 0.0,
+      "independent_observed_delta_u_px": 2.0,
+      "independent_predicted_delta_u_px": 2.0
+    }
+  },
+  "actual_A_TFV": "REAL_TFV_UNAVAILABLE_NOT_EXECUTED",
+  "observation_limit": "No stationary detector-noise bound; moving T/F/V alone cannot establish control observability.",
+  "required_cases": [
+    "original SHA and endpoint actual/camera/opening/command source mismatch",
+    "Stage command-target mismatch and separate later endpoint actual",
+    "missing source and path escape",
+    "A zero-command STATIC_VIEW_READS source without move.json",
+    "malformed PNG header decoder error",
+    "occlusion, clipping, scale/area and rotation confounds",
+    "left actual motion confound",
+    "fit-independent V capture reuse and encoder off-basis confound",
+    "missing target and copied reference evidence",
+    "small response without detector-jitter bound",
+    "partial/fault/malformed source",
+    "candidate FK and command are never physical X evidence"
+  ],
+  "physical_X_mm": null,
+  "MEASURED_PHYSICAL_X_RESPONSE_created": false,
+  "target_reference_created": false,
+  "REAL_J_VALIDATED": false,
+  "Correction": null,
+  "executable": false,
+  "motor_write_authorized": false,
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "original_source_changes": [],
+  "code_sha256": {
+    "metrology_bridge.py": "1a57f7d6689e9c2c06a8d67b522d1f24e311ca1c7e47a9e3ad06f63b26f47654",
+    "test_metrology_bridge.py": "c08723efa535ea2d7ee5f1ba370b6a92c7e676c0d61a8edc474a5eecb7c17465",
+    "run_metrology_bridge.py": "0a456d3e45eabd239eb6d992976beed949c8f7b2582f3d42fcde51465eefb1eb"
+  },
+  "raw_REAL_images_ticks_calibration_device_identity_in_public_report": false,
+  "environment": {
+    "python": "3.12.3"
+  }
+}

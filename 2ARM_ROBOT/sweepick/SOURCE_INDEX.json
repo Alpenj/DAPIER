@@ -2167,6 +2167,56 @@
       "public_sha256": "01d823d1c0a892307098a36b00c60eb1f021024f4df02b1626a25a56ff1266d5",
       "bytes": 2159,
       "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/metrology_bridge.py",
+      "source_group": "B20_A_METROLOGY_TARGET_IMAGE_BRIDGE",
+      "source_name": "metrology_bridge.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "1a57f7d6689e9c2c06a8d67b522d1f24e311ca1c7e47a9e3ad06f63b26f47654",
+      "public_sha256": "1a57f7d6689e9c2c06a8d67b522d1f24e311ca1c7e47a9e3ad06f63b26f47654",
+      "bytes": 19138,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/test_metrology_bridge.py",
+      "source_group": "B20_A_METROLOGY_TARGET_IMAGE_BRIDGE",
+      "source_name": "test_metrology_bridge.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "c08723efa535ea2d7ee5f1ba370b6a92c7e676c0d61a8edc474a5eecb7c17465",
+      "public_sha256": "c08723efa535ea2d7ee5f1ba370b6a92c7e676c0d61a8edc474a5eecb7c17465",
+      "bytes": 18729,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/run_metrology_bridge.py",
+      "source_group": "B20_A_METROLOGY_TARGET_IMAGE_BRIDGE",
+      "source_name": "run_metrology_bridge.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "0a456d3e45eabd239eb6d992976beed949c8f7b2582f3d42fcde51465eefb1eb",
+      "public_sha256": "0a456d3e45eabd239eb6d992976beed949c8f7b2582f3d42fcde51465eefb1eb",
+      "bytes": 5914,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/A_METROLOGY_TARGET_IMAGE_FIELD_MAP.md",
+      "source_group": "B20_A_METROLOGY_TARGET_IMAGE_BRIDGE",
+      "source_name": "A_METROLOGY_TARGET_IMAGE_FIELD_MAP.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "0c398d201180300c36bb3a3af8355fda6a017ae7cc04af2aea0f57653da47a8b",
+      "public_sha256": "0c398d201180300c36bb3a3af8355fda6a017ae7cc04af2aea0f57653da47a8b",
+      "bytes": 8585,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/A_METROLOGY_TARGET_IMAGE_REGRESSION.json",
+      "source_group": "B20_A_METROLOGY_TARGET_IMAGE_BRIDGE",
+      "source_name": "A_METROLOGY_TARGET_IMAGE_REGRESSION.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_sha256": "f464053154f76615ae92f6356342684fe4db1fb0e739799286e1001a889fa456",
+      "public_sha256": "f464053154f76615ae92f6356342684fe4db1fb0e739799286e1001a889fa456",
+      "bytes": 3874,
+      "public_copy_changed": false
     }
   ]
 }
