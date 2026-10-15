@@ -4,7 +4,7 @@ record_id: `DAPIER-2026-10-15-sweepick-source-review`
 
 SO-101 양팔의 실제 관측·집기·오른팔 접근을 기존 실행기로 연결하고, 실패 원인과 종료 상태를 저장 기록으로 대조하고 있다. 이 폴더는 2026-10-15 현재 로컬 실행 소스를 읽기 위한 공개 사본이다. 저장소 밖에 흩어져 있던 콘솔, launcher, native executor, 선택된 receive 모듈과 프로젝트 support 코드를 한곳에 모았다.
 
-**검토 시작점: [코드 호출 지도](docs/CODE_MAP.md), [A-16 원인·수정](docs/A16_CLOSE_REVIEW.md), [A-17 검수](docs/a17/A17_CODE_AUDIT.md), [Gripper 초기 범위 진입 수정](docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_REVIEW.md), [Console-16 계약](docs/console16/CONSOLE16_LIMITED_RUN_CONTRACT.md), [10/15 ID6 과부하 진단](docs/ID6_OVERLOAD_20261015.md), [Console-17 LEFT_START_TO_LIFT 제한 실행 설계](docs/console17/CONSOLE17_NATIVE_SCOPE_DESIGN.md) · [현장 준비 상태](docs/console17/CONSOLE17_FIELD_READINESS.md).**
+**검토 시작점: [코드 호출 지도](docs/CODE_MAP.md), [A-16 원인·수정](docs/A16_CLOSE_REVIEW.md), [A-17 검수](docs/a17/A17_CODE_AUDIT.md), [Gripper 초기 범위 진입 수정](docs/gripper_initial_range/GRIPPER_INITIAL_RANGE_REVIEW.md), [Console-16 계약](docs/console16/CONSOLE16_LIMITED_RUN_CONTRACT.md), [10/15 ID6 과부하 진단](docs/ID6_OVERLOAD_20261015.md), [Console-17 LEFT_START_TO_LIFT 제한 실행 설계](docs/console17/CONSOLE17_NATIVE_SCOPE_DESIGN.md) · [현장 준비 상태](docs/console17/CONSOLE17_FIELD_READINESS.md) · [FIELD_READY 판정](docs/console17/FIELD_READY_DECISION.md).**
 
 | 확인할 내용 | 파일 |
 |---|---|

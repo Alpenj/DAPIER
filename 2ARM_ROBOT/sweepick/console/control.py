@@ -32,8 +32,26 @@ LIMITED_TERMINALS = ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN', 'LEFT
                      'OPERATOR_STOPPED', 'BUS_OR_SERVO_FAULT', 'ENDED_BEFORE_LIFT', 'NOT_STARTED')
 
 
+TESTED_NATIVE = Path(__file__).resolve().parent / 'CONSOLE17_TESTED_NATIVE_SHA256.json'
+
+
+def native_source_check():
+    """Console-17: the active native files against the SHA of the source that passed the Fake regression. Read-only."""
+    try:
+        tested = read_json(TESTED_NATIVE).get('files') or {}
+    except (OSError, ValueError, AttributeError):
+        tested = {}
+    rows = {}
+    for name in LIMITED_BOUND_SOURCES:
+        path = A / name
+        active = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+        rows[name] = {'active_sha256': active, 'tested_sha256': tested.get(name), 'match': bool(active and active == tested.get(name))}
+    return {'tested_record': str(TESTED_NATIVE), 'tested_record_present': bool(tested), 'files': rows,
+            'all_match': bool(tested) and all(row['match'] for row in rows.values())}
+
+
 def limited_backend():
-    """(supported, reason) for LEFT_START_TO_LIFT in the CURRENT native files. Static text check only."""
+    """(supported, reason) for LEFT_START_TO_LIFT: the contract markers AND the active native SHA equal to the tested source."""
     missing = []
     for name, markers in LIMITED_BACKEND_MARKERS.items():
         try:
@@ -42,8 +60,14 @@ def limited_backend():
             missing.append(f'{name}: not readable')
             continue
         missing.extend(f'{name}: {marker}' for marker in markers if marker not in text)
-    return (not missing, 'native LEFT_START_TO_LIFT boundary/terminal contract present' if not missing
-            else 'native 실행본에 Console-17 제한 종료 계약이 없음: ' + '; '.join(missing))
+    if missing:
+        return False, 'native 실행본에 Console-17 제한 종료 계약이 없음: ' + '; '.join(missing)
+    check = native_source_check()
+    if not check['all_match']:
+        differs = [name for name, row in check['files'].items() if not row['match']]
+        return False, ('시험 기록이 없음' if not check['tested_record_present'] else '활성 native SHA가 시험한 소스와 다름: ' + ', '.join(differs))
+    return True, 'native 계약 표식 + 활성 native SHA = 시험한 소스 SHA'
+
 
 
 class ControlError(Exception):
@@ -161,9 +185,11 @@ class Controller:
                 if not alive and job.get('execution_scope') == LEFT_TO_LIFT:
                     # Console-17: the native terminal decides the class; holding is never HOME/OFF and never allows the next run by itself
                     kind = (limited or {}).get('terminal')
-                    job['state'] = 'LIMITED_HOLDING' if kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN') else 'FAULT'
+                    # a recorded servo/bus/executor error of the same session wins over a holding terminal (same rule as records.run_record)
+                    recorded_error = job.get('first_error') or job.get('error') or feed.get('first_error')
+                    job['state'] = 'LIMITED_HOLDING' if kind in ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN') and not recorded_error else 'FAULT'
                     reason = (f"LEFT_START_TO_LIFT 종료 {kind or 'UNKNOWN(종료 기록 없음)'} · 정상 HOME/OFF 아님 · 물체·팔 지지 후 수동 복구 확인 필요"
-                              + (f" · {(job.get('first_error') or {}).get('detail')}" if isinstance(job.get('first_error'), dict) and job['first_error'].get('detail') else ''))
+                              + (f" · 같은 세션 오류 우선: {((job.get('first_error') or feed.get('first_error') or {}) if isinstance(job.get('first_error') or feed.get('first_error'), dict) else {}).get('detail') or job.get('error')}" if recorded_error else ''))
                     job['block_reason'] = reason
                 elif not alive and (job.get('first_error') or job.get('error') or feed.get('first_error') or not self.off_confirmed(job)):
                     job['state'] = 'FAULT'
@@ -347,6 +373,7 @@ class Controller:
                       'device_query_error': query_error}, 'sources': sources,
             'observation': {'status': 'NOT_CHECKED', 'basis': '새 reader/관절 조회 없음. 기존 owner의 실측 화면과 시각을 별도로 확인합니다.'},
             'calibration': {'status': 'NOT_CHECKED', 'basis': '장치 identity/EEPROM 및 Calibration 실측 대조 미수행. 기존 실행기 검사는 유지합니다.'},
+            'limited_source_check': native_source_check(),
             'device_access': False}
 
     def prepare(self, source_session=None, *, execution_scope=FULL_CHAIN):
@@ -582,9 +609,15 @@ class Controller:
             directory = Path(job['session_out']).parent
             approval = read_json(directory / 'APPROVAL.json')
             expected = LEFT_TO_LIFT if scope == LEFT_TO_LIFT else 'RIGHT_RECEIVE_NONCONTACT_OBSERVATION'
-            manifest_scope = (read_json(directory / 'MANIFEST.json') or {}).get('scope')
+            prepared_manifest = read_json(directory / 'MANIFEST.json') or {}
+            manifest_scope = prepared_manifest.get('scope')
             if approval.get('scope') != expected or approval.get('execution_scope', FULL_CHAIN) != scope or manifest_scope != expected:
                 raise ControlError('준비된 승인/Manifest 범위가 실행 범위와 다름; START하지 않음')
+            if scope == LEFT_TO_LIFT:                                    # the approved manifest must bind exactly the tested native bytes
+                tested = native_source_check()['files']
+                bound = prepared_manifest.get('files') or {}
+                if any(bound.get(str(A / name)) != row['tested_sha256'] for name, row in tested.items()):
+                    raise ControlError('승인 Manifest가 시험한 native 소스 SHA와 다름; START하지 않음')
             approval.update(approved=True, field_ready=True, permission_to_execute=True, permission_to_open_devices=True,
                             unchanged_wrist_mount_and_routes=True, timestamp=datetime.now().astimezone().isoformat(),
                             field_confirmation='operator START click: setup/routes/support/supervision confirmed')

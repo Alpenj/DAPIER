@@ -776,6 +776,17 @@ def finish_collision_diagnostics():
             RECORDING_ERRORS.append(dict(kind="collision_diagnostic", file=command[6], error=r.stderr[-400:]))
 
 
+def defer_collision_diagnostics(out):
+    """Console-17: a limited session ends holding the object, so the post-session tube diagnostics are not run inline.
+    Their exact commands and trajectory snapshots are kept for offline review; the nominal checks already gated every stage."""
+    commands = list(DEFERRED_COLLISION_DIAGNOSTICS); DEFERRED_COLLISION_DIAGNOSTICS.clear()
+    if commands:
+        (Path(out) / "COLLISION_DIAGNOSTICS_PENDING.json").write_text(json.dumps(dict(
+            schema="sweepick.collision-diagnostics-pending.v1", count=len(commands), commands=commands, env=dict(MUJOCO_GL="egl"),
+            role="post-session diagnostic only; not a gate. Run offline with the same argv; each writes its DIAGNOSTIC*.json"), indent=1))
+    return len(commands)
+
+
 def object_check(doc, block, *, carried, right_ticks, grasp_arm_ticks=None):
     """Collision result of a commanded path WITH the object in the scene, by the SIM teacher's own check: robot self
     contact, robot - desk and any robot part on the block are contacts; only left pad - block and block - desk are allowed.
@@ -1540,7 +1551,7 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
     return dict(result=scoped, **scope_note, held_after_lift=held, placed_back=placed, put_back_evidence=pb, human_assistance="none recorded by the tool; a person's report overrides this", trail=trail)
 
 
-def write_limited_terminal(out, r, recorder=None):
+def write_limited_terminal(out, r, recorder=None, pending_diagnostics=0):
     """Console-17: LIMITED_SCOPE_TERMINAL.json, written after the recorder released its readers and polling. It records what
     was read; process exit afterwards is not a motor stop and not a torque-off."""
     out = Path(out)
@@ -1572,6 +1583,8 @@ def write_limited_terminal(out, r, recorder=None):
                left_returned_released=released, normal_home=released, torque_off_confirmed=released, safe_shutdown="LEFT_HOME_RELEASED_BY_EXISTING_RETURN" if released else "NOT_PERFORMED",
                motion_stop_confirmed="NO_MOTION_COMMANDED" if not order else "UNKNOWN",
                operator_required=not released and bool(order), next_run_allowed=False,
+               collision_diagnostics=dict(nominal_checks="ran before every stage write (unchanged)", post_session_tube_diagnostics="DEFERRED_OFFLINE",
+                                          pending=pending_diagnostics, file="COLLISION_DIAGNOSTICS_PENDING.json" if pending_diagnostics else None),
                meaning="process exit is not a motor stop or torque-off; HOLDING != RETURNED_RELEASED != safe_shutdown != torque_off_confirmed")
     (out / "LIMITED_SCOPE_TERMINAL.json").write_text(json.dumps(doc, indent=1, default=str))
     return doc
@@ -1613,11 +1626,15 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
                                            notes=[f"mode {mode}", "a baseline run is START / partial, not a full-task success" if not full_done else "full chain"])
             if r is not None:
                 r["episode"] = dict(session_id=doc["session_id"], cameras=doc["cameras"], joints=doc["joints"], data_quality=doc["data_quality"])
-        finish_collision_diagnostics()
+        if limit is None:
+            finish_collision_diagnostics()
+        else:
+            pending_diagnostics = len(DEFERRED_COLLISION_DIAGNOSTICS)
         if r is not None:
             r["recording_errors"] = list(RECORDING_ERRORS)                       # the record's quality, next to (not instead of) what the robot did
         if limit is not None:
-            _rec(lambda: write_limited_terminal(out, r, recorder=None if ep is None else dict(released=True, session_id=doc.get("session_id"), readers_closed=doc.get("readers_closed"), task_outcome=doc.get("task_outcome"))), "limited terminal")
+            _rec(lambda: write_limited_terminal(out, r, pending_diagnostics=pending_diagnostics, recorder=None if ep is None else dict(released=True, session_id=doc.get("session_id"), readers_closed=doc.get("readers_closed"), task_outcome=doc.get("task_outcome"))), "limited terminal")
+            _rec(lambda: defer_collision_diagnostics(out), "collision diagnostics queue")   # after the terminal record, also on an exception: kept for offline review, never run here
     if limit is not None:
         print(json.dumps(r, indent=1, default=str))
         return 0 if (r or {}).get("limited_terminal") == "LEFT_LIFT_HELD_CONFIRMED" and not RECORDING_ERRORS else 3

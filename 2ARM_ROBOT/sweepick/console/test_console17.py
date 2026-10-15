@@ -1,5 +1,6 @@
 """Console-17: LEFT_START_TO_LIFT is offered only when the native files carry the limited contract, prepares its own
 approval/manifest, starts the same single launcher, and its holding terminal blocks the next run. FakeRunner only."""
+import hashlib
 import importlib.util
 import json
 import os
@@ -24,8 +25,39 @@ def native_launcher():
 class LimitedBackend(unittest.TestCase):
     setUp = test_control.ControlContract.setUp
 
-    def native(self):
+    def native(self, tested=None):
         patcher = patch.object(control, 'A', NATIVE); patcher.start(); self.addCleanup(patcher.stop)
+        record = Path(self.temporary.name) / 'TESTED_NATIVE.json'
+        files = {name: hashlib.sha256((NATIVE / name).read_bytes()).hexdigest() for name in control.LIMITED_BOUND_SOURCES}
+        files.update(tested or {})
+        atomic_json(record, {'files': files})
+        tp = patch.object(control, 'TESTED_NATIVE', record); tp.start(); self.addCleanup(tp.stop)
+        return record
+
+    def test_marker_alone_is_not_readiness_active_sha_must_equal_tested_source(self):
+        self.native(tested={'revision/sweepick_pick01.py': '0' * 64})
+        supported, reason = limited_backend()
+        self.assertFalse(supported); self.assertIn('revision/sweepick_pick01.py', reason)
+        by = {s['id']: s for s in self.control.operation_contract()['scopes']}
+        self.assertFalse(by[LEFT_TO_LIFT]['supported'])
+        check = self.control.operation_contract()['limited_source_check']
+        self.assertFalse(check['all_match']); self.assertFalse(check['files']['revision/sweepick_pick01.py']['match'])
+        with self.assertRaisesRegex(ControlError, 'BACKEND_CHANGE_REQUIRED'):
+            self.control.prepare(execution_scope=LEFT_TO_LIFT)
+
+    def test_missing_tested_record_is_not_ready(self):
+        record = self.native(); record.unlink()
+        self.assertFalse(limited_backend()[0]); self.assertIn('시험 기록이 없음', limited_backend()[1])
+
+    def test_start_refuses_a_manifest_that_does_not_bind_the_tested_bytes(self):
+        record = self.native()
+        job = self.control.prepare(execution_scope=LEFT_TO_LIFT)['active']
+        manifest = Path(job['session_out']).parent / 'MANIFEST.json'
+        doc = json.loads(manifest.read_text()); doc['files'][str(NATIVE / 'revision/sweepick_pick01.py')] = '1' * 64; manifest.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(ControlError, '시험한 native 소스 SHA와 다름'):
+            self.start(job)
+        self.assertFalse(any(c[:2] == ['tmux', 'new-session'] for c in self.runner.calls))
+        self.assertTrue(self.control.operation_contract()['limited_source_check']['all_match'])
 
     def start(self, job, **k):
         return self.control.start(job['id'], field_ready=True, mounts_unchanged=True, supervised=True, **k)
@@ -122,6 +154,24 @@ class LimitedBackend(unittest.TestCase):
             self.control.prepare(execution_scope=LEFT_TO_LIFT)
         self.control.confirm_recovery(job['id'], power_isolated=True, workspace_reset=True)
         self.assertTrue(self.control.status()['can_prepare'])
+
+    def test_servo_or_bus_error_wins_over_a_held_terminal_in_status_and_record(self):
+        self.native()
+        cases = (('none', None, 'LIMITED_HOLDING'),
+                 ('feed', {'first_error': {'gate': 'BUS_LOST', 'side': 'left', 'detail': 'ID=6 error=0x20 Overload', 'time_s': 101.0}}, 'FAULT'))
+        for name, feed, expected in cases:
+            with self.subTest(case=name):
+                self.setUp(); self.native()
+                job = self.control.prepare(execution_scope=LEFT_TO_LIFT)['active']; self.start(job)
+                self.ended(job, 'LEFT_LIFT_HELD_CONFIRMED')
+                if feed:
+                    atomic_json(Path(job['session_out']) / 'CURRENT_FEEDBACK.json', feed)
+                status = self.control.status()
+                record, _ = run_record(Path(job['session_out']).parent, current=status['active'], owner_alive=False, off_confirmed=False)
+                self.assertEqual(status['state'], expected); self.assertEqual(record['state'], expected)
+                self.assertFalse(status['can_prepare']); self.assertNotEqual(record['category'], 'success')
+                if feed:
+                    self.assertIn('같은 세션 오류 우선', status['block_reason']); self.assertEqual(record['first_error']['gate'], 'BUS_LOST')
 
     def test_missing_or_fault_terminal_is_a_fault_not_a_hold(self):
         self.native()

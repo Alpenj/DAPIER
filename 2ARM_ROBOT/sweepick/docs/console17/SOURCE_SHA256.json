@@ -14,15 +14,15 @@
    "public": "native/revision/sweepick_pick01.py",
    "component": "A_NATIVE",
    "original_active_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
-   "console17_working_copy_sha256": "51936b43be64123bd6a328b708476b70c49b351d46321b44533bb95405df24d9",
-   "public_sha256": "627155863842d992fd4f077e7ef34a8d3571974bde805520be69f8bcd64533e8"
+   "console17_working_copy_sha256": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
+   "public_sha256": "ca86cb27d309d0900a948001e667afefde5c4902c9eea3cfff942422a1af6223"
   },
   {
    "public": "native/revision/test_console17_limited_session.py",
    "component": "A_NATIVE",
    "original_active_sha256": null,
-   "console17_working_copy_sha256": "4d5600265c44da79bae040ed2dfc798d9d42d5a60b955d2d99646e6fc6194f79",
-   "public_sha256": "4d5600265c44da79bae040ed2dfc798d9d42d5a60b955d2d99646e6fc6194f79"
+   "console17_working_copy_sha256": "c10647b5c5c4d3c17e33652e90c2e3f2ce9fe470ff295fb10241ce7bd160ded4",
+   "public_sha256": "c10647b5c5c4d3c17e33652e90c2e3f2ce9fe470ff295fb10241ce7bd160ded4"
   },
   {
    "public": "native/revision/test_console17_trim_other_arm.py",
@@ -42,8 +42,8 @@
    "public": "console/control.py",
    "component": "CONSOLE",
    "original_active_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b",
-   "console17_working_copy_sha256": "efe3378bef3dca409a557a6237af92c02a9bebcd6b7d1109cabf4878d72684c1",
-   "public_sha256": "efe3378bef3dca409a557a6237af92c02a9bebcd6b7d1109cabf4878d72684c1"
+   "console17_working_copy_sha256": "325ce77a98900b6c424bb5f366e5e7eb8214c690bdf3b285afd55cc6c963d1e3",
+   "public_sha256": "325ce77a98900b6c424bb5f366e5e7eb8214c690bdf3b285afd55cc6c963d1e3"
   },
   {
    "public": "console/records.py",
@@ -98,8 +98,22 @@
    "public": "console/test_console17.py",
    "component": "CONSOLE",
    "original_active_sha256": null,
-   "console17_working_copy_sha256": "ed45b37b5c6464b3bde81becdaea4098a7f41ba8c524d7befe6fe75d5f689bb3",
-   "public_sha256": "ed45b37b5c6464b3bde81becdaea4098a7f41ba8c524d7befe6fe75d5f689bb3"
+   "console17_working_copy_sha256": "29859f6c5f694daf5604cdd884758c7943bfda64412ad425496d6ad30fb45a43",
+   "public_sha256": "29859f6c5f694daf5604cdd884758c7943bfda64412ad425496d6ad30fb45a43"
+  },
+  {
+   "public": "console/test_console16.py",
+   "component": "CONSOLE",
+   "original_active_sha256": null,
+   "console17_working_copy_sha256": "2a97c63b9e7eadc6924e07c5d05e0a5728160b9073ed3c9f3974cb89a274e736",
+   "public_sha256": "2a97c63b9e7eadc6924e07c5d05e0a5728160b9073ed3c9f3974cb89a274e736"
+  },
+  {
+   "public": "console/CONSOLE17_TESTED_NATIVE_SHA256.json",
+   "component": "CONSOLE",
+   "original_active_sha256": null,
+   "console17_working_copy_sha256": "303f60d1d4d0872c72148db2eb677a66a10fda891e92de70eac0433e76de5d23",
+   "public_sha256": "4c69c35b61a614e93a3614ed9d8a2a1610ea817e7acd42036fb624d7d83ae4ed"
   }
  ],
  "unchanged_native_sha256": {
@@ -110,5 +124,6 @@
   "sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
   "sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
  },
- "active_runtime_replaced": false
+ "active_runtime_replaced": true,
+ "applied": "2026-10-15: active native + local console patched to the tested working copies (see CONSOLE17_APPLY_SOURCE_SHA256.json)"
 }

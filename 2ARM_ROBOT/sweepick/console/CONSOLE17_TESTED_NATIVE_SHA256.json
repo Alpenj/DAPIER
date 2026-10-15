@@ -1,0 +1,23 @@
+{
+ "schema": "sweepick.console17-tested-native.v1",
+ "tested_at": "2026-10-15",
+ "tested_source": "/home/robot/sweepick_261015_console17_native",
+ "files": {
+  "RUN_APPROVED_SESSION.py": "59a33f1abbdb43445f93c5aded1b38405d03224a33137a034c9d54bfa6568e8e",
+  "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+  "revision/sweepick_pick01.py": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
+  "revision/sweepick_move_a.py": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+  "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+  "revision/sweepick_episode.py": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+  "revision/sweepick_full_chain.py": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+  "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+  "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+  "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0"
+ },
+ "regression": {
+  "a_gripper": 154,
+  "console17_native": 28,
+  "native_full_failures_same_as_pristine": 38,
+  "full_chain_failures_same_as_pristine": 28
+ }
+}

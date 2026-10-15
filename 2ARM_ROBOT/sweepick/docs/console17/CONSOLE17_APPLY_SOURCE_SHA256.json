@@ -1,0 +1,96 @@
+{
+ "schema": "sweepick.console17-apply-sha.v1",
+ "applied_at": "2026-10-15",
+ "method": "unified diff (original active -> tested working copy) applied with patch; each result compared byte-equal to the tested source. GitHub public copies were NOT copied onto the device folders",
+ "active_native": "/home/robot/sweepick_261013_receive_alignment_restore",
+ "local_console": "/home/robot/sweepick_local_robot_console",
+ "backup": "/home/robot/sweepick_261015_console17_apply_backup (originals + diffs)",
+ "changed": [
+  {
+   "file": "local_console/app.py",
+   "before_sha256": "1969a2c72326741a59ae3353dbf9f529af0114563672362cde94ac0d218dc1c2",
+   "after_sha256": "c5cff84c118d521b81fb9ecd3df144fee4db3cbd16bc4bd28c00cb7bf853a2f1"
+  },
+  {
+   "file": "local_console/control.py",
+   "before_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b",
+   "after_sha256": "325ce77a98900b6c424bb5f366e5e7eb8214c690bdf3b285afd55cc6c963d1e3"
+  },
+  {
+   "file": "local_console/records.py",
+   "before_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0",
+   "after_sha256": "8fc19b5912928c20cf29a8728746e8c43a8035c9c0d4d33ae1ed5ac6d9cb53da"
+  },
+  {
+   "file": "local_console/replay.py",
+   "before_sha256": "95ea406faecaebe4823278996720a4a06287b5d0118f48b853eff920d03b47a4",
+   "after_sha256": "d0e2cb426e0330dc9f016a8341dc68c656411f830532c1a1bd032cb040fbe5b0"
+  },
+  {
+   "file": "local_console/static/app.js",
+   "before_sha256": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5",
+   "after_sha256": "9e5137a7d8586a99ed3a6f895c5d6b8f96611680234e8e18f3732341736dfb3f"
+  },
+  {
+   "file": "local_console/static/field.js",
+   "before_sha256": "5ab37164bd5250af9c6813e713077405efb2d66a9772e7f915718d870a580e9e",
+   "after_sha256": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1"
+  },
+  {
+   "file": "local_console/static/index.html",
+   "before_sha256": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee",
+   "after_sha256": "8508bc6c1a43d5583f7badec180d9269c49508ed14b7ea9cc9977fb5f2098bbe"
+  },
+  {
+   "file": "local_console/static/review.js",
+   "before_sha256": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3",
+   "after_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253"
+  },
+  {
+   "file": "active_native/RUN_APPROVED_SESSION.py",
+   "before_sha256": "8df62bf9e95d311d345c99218843cc78976c016bdf328a68035ab67afc1bb56f",
+   "after_sha256": "59a33f1abbdb43445f93c5aded1b38405d03224a33137a034c9d54bfa6568e8e"
+  },
+  {
+   "file": "active_native/revision/sweepick_pick01.py",
+   "before_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
+   "after_sha256": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867"
+  }
+ ],
+ "added_or_test_changed": [
+  {
+   "file": "active_native/revision/test_console17_limited_session.py",
+   "after_sha256": "c10647b5c5c4d3c17e33652e90c2e3f2ce9fe470ff295fb10241ce7bd160ded4"
+  },
+  {
+   "file": "active_native/revision/test_console17_trim_other_arm.py",
+   "after_sha256": "81b3fb0aa921c098ff76f2562490f35b7be239e6b68a618eacac569041a62b9b"
+  },
+  {
+   "file": "active_native/test_console17_launch_scope.py",
+   "after_sha256": "f508ecfeb073129e467233a68b08be40449f5fd729089f1c01eba594e085b9f3"
+  },
+  {
+   "file": "local_console/test_console17.py",
+   "after_sha256": "29859f6c5f694daf5604cdd884758c7943bfda64412ad425496d6ad30fb45a43"
+  },
+  {
+   "file": "local_console/test_console16.py",
+   "after_sha256": "2a97c63b9e7eadc6924e07c5d05e0a5728160b9073ed3c9f3974cb89a274e736"
+  },
+  {
+   "file": "local_console/CONSOLE17_TESTED_NATIVE_SHA256.json",
+   "after_sha256": "303f60d1d4d0872c72148db2eb677a66a10fda891e92de70eac0433e76de5d23"
+  }
+ ],
+ "unchanged_native": {
+  "sweepick_move_a.py": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
+  "sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+  "sweepick_full_chain.py": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+  "sweepick_episode.py": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+  "sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+  "sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
+ },
+ "a_gripper_fix_sha_preserved": true,
+ "note_test_console16": "test fixture pins 'backend absent' for the Console-16 class (its precondition no longer holds once the active native carries the contract)"
+}

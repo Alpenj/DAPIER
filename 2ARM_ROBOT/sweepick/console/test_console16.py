@@ -14,7 +14,11 @@ from records import atomic_json, run_record
 
 
 class LimitedScope(unittest.TestCase):
-    setUp = test_control.ControlContract.setUp
+    """Console-16 contract with the native limited backend ABSENT (pinned; since Console-17 the active native may carry it)."""
+    def setUp(self):
+        test_control.ControlContract.setUp(self)
+        unsupported = patch('control.limited_backend', return_value=(False, 'native 실행본에 Console-17 제한 종료 계약이 없음 (test pin)'))
+        unsupported.start(); self.addCleanup(unsupported.stop)
 
     def test_candidate_and_malformed_scopes_cannot_prepare_or_touch_state(self):
         for scope in (LEFT_TO_LIFT, 'LEFT_START', None, {}, []):

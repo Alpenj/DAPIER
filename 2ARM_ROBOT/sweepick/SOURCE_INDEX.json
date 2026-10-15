@@ -39,11 +39,11 @@
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "efe3378bef3dca409a557a6237af92c02a9bebcd6b7d1109cabf4878d72684c1",
-      "public_sha256": "efe3378bef3dca409a557a6237af92c02a9bebcd6b7d1109cabf4878d72684c1",
-      "bytes": 39828,
+      "source_sha256": "325ce77a98900b6c424bb5f366e5e7eb8214c690bdf3b285afd55cc6c963d1e3",
+      "public_sha256": "325ce77a98900b6c424bb5f366e5e7eb8214c690bdf3b285afd55cc6c963d1e3",
+      "bytes": 41993,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY",
       "active_original_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b"
     },
     {
@@ -203,10 +203,11 @@
       "source_group": "console",
       "source_name": "test_console16.py",
       "component": "CONSOLE",
-      "source_sha256": "8b16f370bb2148bf7dace7fc3cedecf91d829ea83cb9ebd5ff98e93986fca1f6",
-      "public_sha256": "8b16f370bb2148bf7dace7fc3cedecf91d829ea83cb9ebd5ff98e93986fca1f6",
-      "bytes": 8927,
-      "public_copy_changed": false
+      "source_sha256": "2a97c63b9e7eadc6924e07c5d05e0a5728160b9073ed3c9f3974cb89a274e736",
+      "public_sha256": "2a97c63b9e7eadc6924e07c5d05e0a5728160b9073ed3c9f3974cb89a274e736",
+      "bytes": 9294,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY"
     },
     {
       "file": "console/test_control.py",
@@ -775,11 +776,11 @@
       "source_group": "native_revision",
       "source_name": "sweepick_pick01.py",
       "component": "A_CONTROL",
-      "source_sha256": "51936b43be64123bd6a328b708476b70c49b351d46321b44533bb95405df24d9",
-      "public_sha256": "627155863842d992fd4f077e7ef34a8d3571974bde805520be69f8bcd64533e8",
-      "bytes": 146319,
+      "source_sha256": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
+      "public_sha256": "ca86cb27d309d0900a948001e667afefde5c4902c9eea3cfff942422a1af6223",
+      "bytes": 147757,
       "public_copy_changed": true,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY",
       "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
     },
     {
@@ -1697,11 +1698,11 @@
       "source_group": "console17_new_test",
       "source_name": "test_console17_limited_session.py",
       "component": "A_NATIVE",
-      "source_sha256": "4d5600265c44da79bae040ed2dfc798d9d42d5a60b955d2d99646e6fc6194f79",
-      "public_sha256": "4d5600265c44da79bae040ed2dfc798d9d42d5a60b955d2d99646e6fc6194f79",
-      "bytes": 14745,
+      "source_sha256": "c10647b5c5c4d3c17e33652e90c2e3f2ce9fe470ff295fb10241ce7bd160ded4",
+      "public_sha256": "c10647b5c5c4d3c17e33652e90c2e3f2ce9fe470ff295fb10241ce7bd160ded4",
+      "bytes": 17546,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY",
       "active_original_sha256": null
     },
     {
@@ -1733,11 +1734,11 @@
       "source_group": "console17_new_test",
       "source_name": "test_console17.py",
       "component": "CONSOLE",
-      "source_sha256": "ed45b37b5c6464b3bde81becdaea4098a7f41ba8c524d7befe6fe75d5f689bb3",
-      "public_sha256": "ed45b37b5c6464b3bde81becdaea4098a7f41ba8c524d7befe6fe75d5f689bb3",
-      "bytes": 15730,
+      "source_sha256": "29859f6c5f694daf5604cdd884758c7943bfda64412ad425496d6ad30fb45a43",
+      "public_sha256": "29859f6c5f694daf5604cdd884758c7943bfda64412ad425496d6ad30fb45a43",
+      "bytes": 19128,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY",
       "active_original_sha256": null
     },
     {
@@ -1815,9 +1816,9 @@
       "source_group": "console17_docs",
       "source_name": "SOURCE_SHA256.json",
       "component": "DOCS",
-      "source_sha256": "36e28e517b4b2ef845ea3d6fcf2def64bbc3f9cd2f6e4099804699f7fc8c855e",
-      "public_sha256": "36e28e517b4b2ef845ea3d6fcf2def64bbc3f9cd2f6e4099804699f7fc8c855e",
-      "bytes": 6035,
+      "source_sha256": "988a072c61e90aa27a6a223c443be0d34edd9d0dc3d0bd15b71e38b649ce9c2e",
+      "public_sha256": "988a072c61e90aa27a6a223c443be0d34edd9d0dc3d0bd15b71e38b649ce9c2e",
+      "bytes": 6795,
       "public_copy_changed": false
     },
     {
@@ -1829,12 +1830,55 @@
       "public_sha256": "c17e8b476a20d5740789f9d89c409c2f213b7eaee8e438aa8650ebb562ee40df",
       "bytes": 9625,
       "public_copy_changed": false
+    },
+    {
+      "file": "console/CONSOLE17_TESTED_NATIVE_SHA256.json",
+      "source_group": "console17",
+      "source_name": "CONSOLE17_TESTED_NATIVE_SHA256.json",
+      "component": "CONSOLE",
+      "source_sha256": "303f60d1d4d0872c72148db2eb677a66a10fda891e92de70eac0433e76de5d23",
+      "public_sha256": "4c69c35b61a614e93a3614ed9d8a2a1610ea817e7acd42036fb624d7d83ae4ed",
+      "bytes": 1354,
+      "public_copy_changed": true,
+      "source_location": "ACTIVE_AFTER_CONSOLE17_APPLY"
+    },
+    {
+      "file": "docs/console17/CONSOLE17_APPLY_SOURCE_SHA256.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_APPLY_SOURCE_SHA256.json",
+      "component": "DOCS",
+      "source_sha256": "4fc00152fab89896391e937de014eb2b9e3f413e4a2ab7e55900022678186ea0",
+      "public_sha256": "4fc00152fab89896391e937de014eb2b9e3f413e4a2ab7e55900022678186ea0",
+      "bytes": 4553,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/CONSOLE17_LIMITED_TERMINAL_REGRESSION.json",
+      "source_group": "console17_docs",
+      "source_name": "CONSOLE17_LIMITED_TERMINAL_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "8f5fdc719fcc78ab6e4d70f50c988a1bad492a3b13ec7394bcd59f49af737dad",
+      "public_sha256": "8f5fdc719fcc78ab6e4d70f50c988a1bad492a3b13ec7394bcd59f49af737dad",
+      "bytes": 7735,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/console17/FIELD_READY_DECISION.md",
+      "source_group": "console17_docs",
+      "source_name": "FIELD_READY_DECISION.md",
+      "component": "DOCS",
+      "source_sha256": "6b0ec01598535b70831a89a87cf4cf28226bdd42e7bf8c86a71b076f39931148",
+      "public_sha256": "6b0ec01598535b70831a89a87cf4cf28226bdd42e7bf8c86a71b076f39931148",
+      "bytes": 4793,
+      "public_copy_changed": false
     }
   ],
   "console17": {
     "branch": "pro/sweepick-console17-20261015",
     "base_commit": "1b39c0eaed68d6efdb820c96e5ae979b6398fbf4",
-    "active_runtime_replaced": false,
-    "source_sha": "docs/console17/SOURCE_SHA256.json"
+    "active_runtime_replaced": true,
+    "source_sha": "docs/console17/SOURCE_SHA256.json",
+    "apply_sha": "docs/console17/CONSOLE17_APPLY_SOURCE_SHA256.json",
+    "decision": "docs/console17/FIELD_READY_DECISION.md"
   }
 }

@@ -208,3 +208,40 @@ def test_stopped_state_recorded_forbids_any_further_stage(tmp_path, monkeypatch,
     assert r["result"] == "STOPPED_IN_CLOSE_HOLDING_NEEDS_A_PERSON" and st["order"][-1] == "close" and st["stages"]["close"]["controller_result"] == "STOPPED_STATE_RECORDED"
     assert all(p1.allowed(st, n)[0] is False for n in ("lift", "open", "retreat", "home", "retreat_arm", "home_arm"))
     assert p1.limited_terminal(r, st) == "ENDED_BEFORE_LIFT"
+
+
+def _queue_one_diagnostic(stage_fn, out):
+    def sf(o, name, execute=False):
+        r = stage_fn(o, name, execute=execute)
+        if name == "pregrasp":                                                   # what certify() queues under a recorder: an argv whose [6] is the result file
+            p1.DEFERRED_COLLISION_DIAGNOSTICS.append(["python", "sweepick_collision_cert.py", "traj", "c", "c", "a", str(out / "pregrasp/plan1/path.DIAGNOSTIC1.json"), "scene"])
+        return r
+    return sf
+
+
+def test_limited_end_does_not_run_post_session_diagnostics_and_keeps_them(tmp_path, monkeypatch, base):
+    import test_sweepick_pick02_actual as t
+    out, f, stage_fn, run = cell(tmp_path, monkeypatch, base, block=3075); w = t.World(base, f); rec = Recorder(tmp_path)
+    ran = []
+    monkeypatch.setattr(p1.subprocess, "run", lambda *a, **k: ran.append(a) or (_ for _ in ()).throw(AssertionError("diagnostic subprocess started")))
+    code = p1.run_session(out, execute=True, record=True, limit=L, episode_fn=lambda: rec,
+                          session_kw=dict(stage_fn=_queue_one_diagnostic(stage_fn, out), look_fn=lambda o, tag: w.scene(tag), observe_fn=lambda o: S(out)))
+    doc = json.loads((out / "LIMITED_SCOPE_TERMINAL.json").read_text()); q = json.loads((out / "COLLISION_DIAGNOSTICS_PENDING.json").read_text())
+    assert code == 0 and ran == [] and doc["terminal"] == "LEFT_LIFT_HELD_CONFIRMED" and p1.DEFERRED_COLLISION_DIAGNOSTICS == []
+    assert doc["collision_diagnostics"] == dict(nominal_checks="ran before every stage write (unchanged)", post_session_tube_diagnostics="DEFERRED_OFFLINE", pending=1, file="COLLISION_DIAGNOSTICS_PENDING.json")
+    assert q["count"] == 1 and q["commands"][0][6].endswith("path.DIAGNOSTIC1.json")
+    assert (out / "LIMITED_SCOPE_TERMINAL.json").stat().st_mtime_ns <= (out / "COLLISION_DIAGNOSTICS_PENDING.json").stat().st_mtime_ns
+
+
+def test_baseline_session_still_runs_post_session_diagnostics(tmp_path, monkeypatch, base):
+    import test_sweepick_pick02_actual as t
+    out, f, stage_fn, run = cell(tmp_path, monkeypatch, base, block=3075); w = t.World(base, f); rec = Recorder(tmp_path)
+    ran = []
+    class Done:
+        returncode, stderr = 0, ""
+    def fake_run(command, **k):
+        ran.append(command); Path(command[6]).parent.mkdir(parents=True, exist_ok=True); Path(command[6]).write_text("{}"); return Done()
+    monkeypatch.setattr(p1.subprocess, "run", fake_run)
+    p1.run_session(out, execute=True, record=True, episode_fn=lambda: rec,
+                   session_kw=dict(stage_fn=_queue_one_diagnostic(stage_fn, out), look_fn=lambda o, tag: w.scene(tag), observe_fn=lambda o: S(out)))
+    assert len(ran) == 1 and not (out / "COLLISION_DIAGNOSTICS_PENDING.json").exists() and not (out / "LIMITED_SCOPE_TERMINAL.json").exists()
