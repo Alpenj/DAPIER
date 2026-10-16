@@ -1,0 +1,18 @@
+{
+ "scene": "sweepick_mounted_floor_scene.mjb",
+ "sha256": "b79ec0806f2b85eaf5b83f8b71efcd742ebdea3919da123e874a82339ed1e607",
+ "sources": {
+  "integration_scenes": "2c2e2f94d7cc75cb4286d3797577e1a3770685724d2f39ae9af7584c61e2f133",
+  "waffle_pi_urdf": "95ee80963532f9a8e499263f4eb0e00b833fedd1580db92158d40259dd635653",
+  "so101_mjcf": "/home/robot/DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml"
+ },
+ "layout": "mobile_aluminum_USER_DIMENSIONS_UNVERIFIED (runtime label)",
+ "support": "table top = floor z 0",
+ "block": "red_block 40 mm free joint (existing A block model)",
+ "left_mount_fit_m": [
+  0.036,
+  -0.016,
+  -0.016
+ ],
+ "left_mount_fit_basis": "real top depth of run 20261016_164052_9b3c13: share of left-arm points within 6 mm 0.33->0.77 (home) and 0.66->0.88 (pre-grasp)"
+}

@@ -24,14 +24,16 @@ HERE = Path(__file__).resolve().parent
 RT = Path.home() / "DAPIER/tjj-runtime/v1"
 sys.path[:0] = [p for p in (str(RT / "factory/v1"), str(RT / "source/production_source_g000"), str(RT / "source/turtlebot3_waffle_pi")) if p not in sys.path]
 import sweepick_real_command as rc, sweepick_kin, sweepick_move_a as mv
+import sweepick_setup as setup                                                 # 2026-10-16: DESK or MOUNTED_FLOOR (sweepick_setup.json)
+MOUNTED = setup.SETUP == setup.MOUNTED_FLOOR
 
 IN = Path.home() / "sweepick_261007_commission/inputs"
 CAND, CAL, ASM = IN / "CANDIDATE_Q12_CONFIG.json", Path.home() / ".config/dapier/lerobot-calibration", IN / "ASSEMBLED_ZERO_AND_PGRIPPER.json"
-SCENE = RT / "model/dual_scene_desk_both.mjb"
+SCENE = setup.MOUNTED_SCENE if MOUNTED else RT / "model/dual_scene_desk_both.mjb"
 # the arm datum on the printed board: operator ruler record of 2026-09-23 (registered-capture-07-board-input.json), axes assumed parallel
 T_DATUM_FROM_BOARD = np.array([[0, -1, 0, 0.201], [-1, 0, 0, -0.034], [0, 0, -1, -0.04], [0, 0, 0, 1.0]])
 DATUM_IN_MODEL_BASE = np.array([0.0388353, 0.0, 0.0254])                       # motor-1 lower shaft face in the model base (motor1-cad-datum-audit.json)
-BOARD_Z_IN_WORLD = float(DATUM_IN_MODEL_BASE[2] + T_DATUM_FROM_BOARD[2, 3])    # the real desk top in the model's world: -14.6 mm
+BOARD_Z_IN_WORLD = setup.FLOOR_Z if MOUNTED else float(DATUM_IN_MODEL_BASE[2] + T_DATUM_FROM_BOARD[2, 3])    # the support top in the model's world: desk -14.6 mm / mounted: the floor
 ARM = list(rc.JOINTS[:5]); ALL = list(rc.JOINTS)
 STAGES = ("pregrasp", "align", "descend_a", "descend_b", "descend", "descend_settle", "close", "lift", "lower", "open", "retreat", "home", "retreat_arm", "home_arm", "abort_home")
 GRIP_ENDED = ("GRIP_CONTACT_HOLDING", "GRIP_NO_CONTACT_HOLDING")                 # the jaw primitive ended normally (with or without a contact); a fault / stop / unusable feedback is not in here
@@ -126,6 +128,8 @@ def model(block=None, table_z=BOARD_Z_IN_WORLD):
 
 
 def world_from_camera(T_camera_from_board, m):
+    if MOUNTED:                                                                 # camera and arms are both on the robot: fixed, no board in the chain
+        return setup.mounted_robot_from_camera(m)
     Tb = np.eye(4); Tb[:3, 3] = DATUM_IN_MODEL_BASE
     Tw = np.eye(4); Tw[:3, 3] = m.body("left_base").pos
     return Tw @ Tb @ T_DATUM_FROM_BOARD @ np.linalg.inv(np.asarray(T_camera_from_board, float))
@@ -151,18 +155,21 @@ def analyse(bgr, depth_mm, K, ticks, *, object_half=0.02):
     import mujoco, tjj_perception as tp
     from sweepick_read03_capture import board_pose
     K = np.asarray(K, float).reshape(3, 3); bp = board_pose(bgr, K)
-    if bp is None:
+    if bp is None and not MOUNTED:
         return dict(ok=False, why="the printed board was not found in the top image: no frame chain")
     mp = mapping(); m = model(); d = mujoco.MjData(m)
     q12 = rc.ticks_to_q12(mp, ticks); sweepick_kin.set_q12(m, d, q12); mujoco.mj_forward(m, d)
-    Twc = world_from_camera(bp["T"], m); Kd = K.copy(); Kd[:2] /= 2
+    Twc = world_from_camera(None if bp is None else bp["T"], m); Kd = K.copy(); Kd[:2] /= 2
     pts = tp.back_project(np.asarray(depth_mm, float) / 1000.0, Kd, Twc)
     zt = float(np.median(pts[(np.abs(pts[:, 2] - BOARD_Z_IN_WORLD) < 0.03) & ~inside(m, d, pts, "", 0.03)][:, 2])) if len(pts) else None    # desk height as the DEPTH sees it
     arms = {}
     for side in ("left", "right"):
         near = inside(m, d, pts, side, 0.06) & (pts[:, 2] > zt + 0.03)
         arms[side] = dict(points=int(near.sum()), **{f"share_within_{int(k * 1000)}mm": (float(inside(m, d, pts[near], side, k).mean()) if near.sum() else None) for k in (0.0, 0.006, 0.012, 0.025)})
-    free = ~inside(m, d, pts, "", 0.02) & (pts[:, 0] > 0.05) & (pts[:, 0] < 0.45) & (np.abs(pts[:, 1]) < 0.25)
+    if MOUNTED:                                                                 # the floor around the robot, outside its own outline (the mounted scene footprint: base x -0.197..0.085 with the front camera, rails |y| <= 0.200; +1 cm)
+        free = ~inside(m, d, pts, "", 0.02) & ~((pts[:, 0] > -0.207) & (pts[:, 0] < 0.095) & (np.abs(pts[:, 1]) < 0.210)) & (pts[:, 0] > -0.30) & (pts[:, 0] < 0.55) & (np.abs(pts[:, 1]) < 0.60)
+    else:
+        free = ~inside(m, d, pts, "", 0.02) & (pts[:, 0] > 0.05) & (pts[:, 0] < 0.45) & (np.abs(pts[:, 1]) < 0.25)
     top = pts[free & (pts[:, 2] > zt + 2 * object_half - 0.01) & (pts[:, 2] < zt + 2 * object_half + 0.01)]
     obj = None
     if len(top) >= 50:
@@ -175,7 +182,7 @@ def analyse(bgr, depth_mm, K, ticks, *, object_half=0.02):
         obj["geometry"] = dict(classification="MODEL_PRIOR", half_extents_m=[object_half] * 3,
                                source="existing A block model", observed_patch_extent_xy_m=ex,
                                class_match_role="PROVISIONAL visible-patch diagnostic; partial depth coverage does not measure hidden object dimensions")
-    return dict(ok=True, board=dict(markers=bp["markers"], rms_px=bp["rms_px"], T_camera_from_board=bp["T"]), T_world_camera=Twc.tolist(), camera_in_world=Twc[:3, 3].tolist(),
+    return dict(ok=True, setup=setup.SETUP, board=None if bp is None else dict(markers=bp["markers"], rms_px=bp["rms_px"], T_camera_from_board=bp["T"], role="DIAGNOSTIC_ONLY" if MOUNTED else "FRAME_CHAIN"), T_world_camera=Twc.tolist(), camera_in_world=Twc[:3, 3].tolist(),
                 desk_z=dict(by_chain=BOARD_Z_IN_WORLD, by_depth=zt, note="the depth reads about 2 % long (READ02); the chain value is used for heights"), q12=[float(v) for v in q12], ticks=ticks, arms_on_model=arms, object=obj,
                 tool_left=[float(v) for v in d.site_xpos[m.site("left_cube_grasp").id]], **tool_axis(m, d))
 
@@ -680,7 +687,12 @@ def support_region(out, state, scene, top, radius_m=0.03):
     sweepick_local_loop.real_area): OCCUPIED / CLEAR / UNKNOWN (not fully observed). A pixel without depth is 'not observed'."""
     import mujoco
     from sweepick_local_loop import real_area
-    c = state_object(out, state)[0]; m = model(); Tb = np.eye(4); Tb[:3, 3] = DATUM_IN_MODEL_BASE; Tw = np.eye(4); Tw[:3, 3] = m.body("left_base").pos
+    c = state_object(out, state)[0]; m = model()
+    if MOUNTED:                                                                 # real_area works in diag(1,-1,-1) @ inv(T_camera_from_board); hand it the robot frame (floor z = 0) the same way
+        F = np.diag([1.0, -1.0, -1.0, 1.0]); T_cb = np.linalg.inv(F @ np.array(scene["T_world_camera"]))
+        r = real_area(top["depth_mm"], top["K"], T_cb, 0.0, (float(c[0]), float(c[1])), radius_m)
+        return dict(r, centre_robot_xy=[float(c[0]), float(c[1])], radius_m=radius_m, note="mounted: the robot frame (floor z 0) in place of the board frame; the arm above the place also counts as 'occupied'; used only as CLEAR = validly observed and empty")
+    Tb = np.eye(4); Tb[:3, 3] = DATUM_IN_MODEL_BASE; Tw = np.eye(4); Tw[:3, 3] = m.body("left_base").pos
     pb = np.linalg.inv(Tw @ Tb @ T_DATUM_FROM_BOARD) @ np.r_[c[0], c[1], BOARD_Z_IN_WORLD, 1.0]                       # into the printed board's frame
     r = real_area(top["depth_mm"], top["K"], scene["board"]["T_camera_from_board"], 0.0, (float(pb[0]), float(-pb[1])), radius_m)
     return dict(r, centre_board_xy=[float(pb[0]), float(-pb[1])], radius_m=radius_m, note="the arm above the place also counts as 'occupied' here; the result is used only as CLEAR = validly observed and empty")
@@ -1631,6 +1643,8 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
     started before the first observation and closed after the last one; if it cannot start, a session that asked for it is
     not started (a record that silently is not there would be found out too late)."""
     global EPISODE
+    if MOUNTED and full_chain:
+        raise RuntimeError("MOUNTED_FLOOR setup: the full chain (hand-over, receive, place) still uses the desk frame chain; only the single-arm floor pick runs here")
     out = Path(out); out.mkdir(parents=True, exist_ok=True); ep = None; observing = scope in ("observe", "SUPPORT_OBSERVATION"); approaching = scope in ("approach", "RECEIVE_APPROACH"); contacting = scope in ("contact", "RECEIVE_CONTACT")
     mode = ("SUPPORT_OBSERVATION" if observing else ("RECEIVE_APPROACH" if approaching else "RECEIVE_CONTACT" if contacting else "FULL_TASK")) if full_chain else "BASELINE_PICK_AND_PUT_BACK"
     if limit is not None:                                                      # Console-17: a limited scope is its own mode; never combined with the full chain or a hand-over

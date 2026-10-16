@@ -782,11 +782,11 @@
       "source_group": "native_revision",
       "source_name": "sweepick_pick01.py",
       "component": "A_CONTROL",
-      "source_sha256": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
-      "public_sha256": "2b2f9e02ba3b721ff2345617b21550189227658154e5716946f5cf5f2cc0f39a",
-      "bytes": 151196,
+      "source_sha256": "380bbb3d53f9c11bd470ba394fa1acfd7740698038249bd5cc184324d3851eff",
+      "public_sha256": "c2c0e4e3ad4e31b8d2d19e5532586129a17530dfadc776a7bf57e4725427f5e1",
+      "bytes": 153106,
       "public_copy_changed": true,
-      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE",
       "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
     },
     {
@@ -2586,6 +2586,61 @@
       "bytes": 13620,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/sweepick_setup.py",
+      "source_group": "mounted_floor_20261016",
+      "source_name": "sweepick_setup.py",
+      "component": "A_CONTROL",
+      "source_sha256": "d43a5038ef0c48cb11e881b207fa05a02ec699c7aeaf06aaaa5cef7c4fe920fb",
+      "public_sha256": "d43a5038ef0c48cb11e881b207fa05a02ec699c7aeaf06aaaa5cef7c4fe920fb",
+      "bytes": 2972,
+      "public_copy_changed": false,
+      "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/sweepick_setup.json",
+      "source_group": "mounted_floor_20261016",
+      "source_name": "sweepick_setup.json",
+      "component": "A_CONTROL",
+      "source_sha256": "b6581c3c7f7e9e57bea62afc1482cec57d2a8e1a4b537575dbaf7816565d424e",
+      "public_sha256": "b6581c3c7f7e9e57bea62afc1482cec57d2a8e1a4b537575dbaf7816565d424e",
+      "bytes": 127,
+      "public_copy_changed": false,
+      "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/sweepick_mounted_floor_scene.json",
+      "source_group": "mounted_floor_20261016",
+      "source_name": "sweepick_mounted_floor_scene.json",
+      "component": "A_CONTROL",
+      "source_sha256": "ed7874a0de58f68fc7ad53653cad160f83d315aed1e82d46f5de539064236e7c",
+      "public_sha256": "c0db2e3b584a6f8b0a0f07a57b05e714382df2b96a2902749a5839e9504e4c6a",
+      "bytes": 838,
+      "public_copy_changed": true,
+      "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/build_mounted_floor_scene.py",
+      "source_group": "mounted_floor_20261016",
+      "source_name": "build_mounted_floor_scene.py",
+      "component": "A_CONTROL",
+      "source_sha256": "271901f5592e4e8c70f36167a0b52859b2218679d12f4f43bdfc5b41744064f5",
+      "public_sha256": "271901f5592e4e8c70f36167a0b52859b2218679d12f4f43bdfc5b41744064f5",
+      "bytes": 3360,
+      "public_copy_changed": false,
+      "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/test_mounted_floor.py",
+      "source_group": "mounted_floor_20261016",
+      "source_name": "test_mounted_floor.py",
+      "component": "A_CONTROL",
+      "source_sha256": "7c894f2f5dcb597ba81d5847ee8da9e8f654cf99aeb8c0cadb3e8aba49e1036b",
+      "public_sha256": "7c894f2f5dcb597ba81d5847ee8da9e8f654cf99aeb8c0cadb3e8aba49e1036b",
+      "bytes": 4271,
+      "public_copy_changed": false,
+      "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE"
     }
   ],
   "console17": {
