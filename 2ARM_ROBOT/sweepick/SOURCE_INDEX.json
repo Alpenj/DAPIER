@@ -16,7 +16,8 @@
     "B20 archive recovery summaries omit original frames, actual q/ticks, calibration, device identities, machine paths and receipt timestamps; original evidence remains local",
     "B20 Right X handoff publishes three technical contracts only; actual RGB review PNG, measured feedback and source receipt metadata remain local",
     "B20 target-image consumer adds pure code and anonymized regressions; original REAL image/feedback/operator evidence/calibration/device records remain local",
-    "B20 physical Pad definition update retains external photos, their original SHA manifest and frame/model/calibration source details locally; no image correspondence, metric geometry or FIELD target is inferred"
+    "B20 physical Pad definition update retains external photos, their original SHA manifest and frame/model/calibration source details locally; no image correspondence, metric geometry or FIELD target is inferred",
+    "Dual wrist debug overlays reuse existing observed X reference and candidate model projection separately; original RGB, calibration, device samples, image outputs and full replay provenance remain local; image angles and next-descent forecast are not physical truth"
   ],
   "files": [
     {
@@ -2228,6 +2229,46 @@
       "public_sha256": "61c58b6275a634592ddc4785a59397c68396008fceb0782aa55feb02d28e38b2",
       "bytes": 7180,
       "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/wrist_overlay.py",
+      "source_name": "wrist_overlay.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
+      "source_sha256": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0",
+      "public_sha256": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0",
+      "bytes": 15295,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/run_wrist_overlay.py",
+      "source_name": "run_wrist_overlay.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
+      "source_sha256": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab",
+      "public_sha256": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab",
+      "bytes": 16451,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/test_wrist_overlay.py",
+      "source_name": "test_wrist_overlay.py",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
+      "source_sha256": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429",
+      "public_sha256": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429",
+      "bytes": 7459,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/DUAL_WRIST_OVERLAY_VALIDATION.json",
+      "source_name": "DUAL_WRIST_OVERLAY_VALIDATION.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
+      "source_sha256": "58dc877cc8dbf8ae09dc86fd2f07955eaf29059696d77597faae647146d77952",
+      "public_sha256": "9e9b0e81ed86135a3a11c7fee9e7d3840a6abf2f08da85964aca855e4b1eaa61",
+      "bytes": 9140,
+      "public_copy_changed": true
     }
   ]
 }
