@@ -1,0 +1,679 @@
+{
+ "schema": "sweepick.mounted-pick-feasibility.v1",
+ "date": "2026-10-16",
+ "source_kind": "OFFLINE MODEL on work6 (no device)",
+ "method": "the EXISTING SIM teacher planner used by plan_pick (IK + its own path collision check; tilt/jaw from its own config), seeded like plan_pick from the recorded home (20261016_121735_b9241e); pregrasp -> grasp -> lift as single segments; block = the A model block (40 mm); scene = A 'mobile' (TurtleBot3 Waffle Pi + mount + both SO-101 + camera stand, USER_DIMENSIONS_UNVERIFIED)",
+ "supports": {
+  "floor": "the floor surface under the block",
+  "shelf_top_z_m": 0.104,
+  "shelf_note": "TurtleBot top height in the MODEL (base_link collision top); replace with the measured height",
+  "shelf_gap_m": 0.02,
+  "shelf_gap_note": "assumed placement 2 cm from the robot outline, a scenario parameter, not a measurement"
+ },
+ "frame": "robot base frame of the model: x forward, y left, metres, block centre",
+ "grid_step_m": 0.05,
+ "cells_total": 1956,
+ "elapsed_s": 1149.4,
+ "groups": {
+  "floor left yaw0": {
+   "cells": 294,
+   "feasible": 56,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.1,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 35,
+    "tilt10/x": 8,
+    "tilt0/y": 4,
+    "tilt20/x": 9
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'left_",
+     4
+    ],
+    [
+     "path collision at u=0.39 [('tb3_base_link_collision', 'left_",
+     3
+    ],
+    [
+     "path collision at u=0.35 [('left_shoulder', 'left_lower_arm'",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ....OOOOOOO..........",
+    "+0.20 ...OOOOOOOOO.........",
+    "+0.15 ..OOOOOOOOOOO........",
+    "+0.10 .OOOOOO.....O........",
+    "+0.05 .OOOOOO..............",
+    "-0.00 .OOOOO...............",
+    "-0.05 .OOOOO...............",
+    "-0.10 .OOOO................",
+    "-0.15 .OO..................",
+    "-0.20 ....................."
+   ]
+  },
+  "floor left yaw45": {
+   "cells": 294,
+   "feasible": 54,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.1,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 36,
+    "tilt10/x": 9,
+    "tilt20/x": 9
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'left_",
+     5
+    ],
+    [
+     "path collision at u=0.70 [('tb3_base_link_collision', 'left_",
+     4
+    ],
+    [
+     "path collision at u=0.57 [('left_pgripper_housing', 'right_p",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ....OOOOOOO..........",
+    "+0.20 ...OOOOOOOOO.........",
+    "+0.15 ..OOOOOOOOOOO........",
+    "+0.10 .OOOOOO..............",
+    "+0.05 .OOOOOO..............",
+    "-0.00 .OOOOO...............",
+    "-0.05 .OOOO................",
+    "-0.10 .OOOO................",
+    "-0.15 .OO..................",
+    "-0.20 ....................."
+   ]
+  },
+  "floor right yaw0": {
+   "cells": 294,
+   "feasible": 55,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    0.1
+   ],
+   "grasps": {
+    "tilt10/x": 8,
+    "tilt0/x": 37,
+    "tilt20/x": 9,
+    "tilt0/y": 1
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'right",
+     4
+    ],
+    [
+     "path collision at u=0.35 [('right_shoulder', 'right_lower_ar",
+     3
+    ],
+    [
+     "path collision at u=0.39 [('tb3_base_link_collision', 'right",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ..........OOOOOOO....",
+    "+0.20 .........OOOOOOOOO...",
+    "+0.15 ........OOOOOOOOOOO..",
+    "+0.10 ..............OOOOOO.",
+    "+0.05 ..............OOOOOO.",
+    "-0.00 ...............OOOOO.",
+    "-0.05 ...............OOOOO.",
+    "-0.10 ................OOOO.",
+    "-0.15 ..................OO.",
+    "-0.20 ....................."
+   ]
+  },
+  "floor right yaw45": {
+   "cells": 294,
+   "feasible": 54,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    0.1
+   ],
+   "grasps": {
+    "tilt10/x": 9,
+    "tilt0/x": 36,
+    "tilt20/x": 9
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'right",
+     4
+    ],
+    [
+     "path collision at u=0.70 [('tb3_base_link_collision', 'right",
+     3
+    ],
+    [
+     "path collision at u=0.35 [('right_shoulder', 'right_lower_ar",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ..........OOOOOOO....",
+    "+0.20 .........OOOOOOOOO...",
+    "+0.15 ........OOOOOOOOOOO..",
+    "+0.10 ..............OOOOOO.",
+    "+0.05 ..............OOOOOO.",
+    "-0.00 ...............OOOOO.",
+    "-0.05 ................OOOO.",
+    "-0.10 ................OOOO.",
+    "-0.15 ..................OO.",
+    "-0.20 ....................."
+   ]
+  },
+  "shelf:FRONT left yaw0": {
+   "cells": 75,
+   "feasible": 14,
+   "x_range": [
+    0.2,
+    0.25
+   ],
+   "y_range": [
+    -0.05,
+    0.35
+   ],
+   "grasps": {
+    "tilt0/x": 5,
+    "tilt10/x": 5,
+    "tilt20/x": 4
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0072 axis_err=25.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0069 axis_err=25.8deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0092 axis_err=34.2deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.40    ...............   ",
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ..OOOOO........   ",
+    "+0.20    OOOOOOOOO......   "
+   ]
+  },
+  "shelf:FRONT left yaw45": {
+   "cells": 75,
+   "feasible": 14,
+   "x_range": [
+    0.2,
+    0.25
+   ],
+   "y_range": [
+    -0.05,
+    0.35
+   ],
+   "grasps": {
+    "tilt0/x": 5,
+    "tilt20/x": 4,
+    "tilt10/x": 5
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0078 axis_err=31.5deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0072 axis_err=25.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0089 axis_err=34.0deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.40    ...............   ",
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ..OOOOO........   ",
+    "+0.20    OOOOOOOOO......   "
+   ]
+  },
+  "shelf:FRONT right yaw0": {
+   "cells": 75,
+   "feasible": 14,
+   "x_range": [
+    0.2,
+    0.25
+   ],
+   "y_range": [
+    -0.35,
+    0.05
+   ],
+   "grasps": {
+    "tilt0/x": 5,
+    "tilt10/x": 5,
+    "tilt20/x": 4
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0072 axis_err=25.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0069 axis_err=25.8deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0092 axis_err=34.2deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.40    ...............   ",
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ........OOOOO..   ",
+    "+0.20    ......OOOOOOOOO   "
+   ]
+  },
+  "shelf:FRONT right yaw45": {
+   "cells": 75,
+   "feasible": 14,
+   "x_range": [
+    0.2,
+    0.25
+   ],
+   "y_range": [
+    -0.35,
+    0.05
+   ],
+   "grasps": {
+    "tilt0/x": 5,
+    "tilt20/x": 4,
+    "tilt10/x": 5
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0089 axis_err=34.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0065 axis_err=25.7deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0088 axis_err=31.0deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.40    ...............   ",
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ........OOOOO..   ",
+    "+0.20    ......OOOOOOOOO   "
+   ]
+  },
+  "shelf:LEFT_SIDE left yaw0": {
+   "cells": 60,
+   "feasible": 39,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    0.2,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 25,
+    "tilt10/x": 7,
+    "tilt20/x": 5,
+    "tilt20/y": 1,
+    "tilt0/y": 1
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0843 axis_err=1.2deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0672 axis_err=1.2deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0502 axis_err=7.1deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25  ....OO              ",
+    "+0.20  ..OOOO              ",
+    "+0.15  .OOOOO              ",
+    "+0.10  OOOOOO              ",
+    "+0.05  OOOOOO              ",
+    "-0.00  OOOOO.              ",
+    "-0.05  OOOOO.              ",
+    "-0.10  OOOO..              ",
+    "-0.15  OO....              ",
+    "-0.20  ......              "
+   ]
+  },
+  "shelf:LEFT_SIDE left yaw45": {
+   "cells": 60,
+   "feasible": 38,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    0.2,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 25,
+    "tilt10/x": 7,
+    "tilt20/x": 6
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0044 axis_err=1.1deg",
+     1
+    ],
+    [
+     "path collision at u=0.65 [('left_pgripper_housing', 'left_sh",
+     1
+    ],
+    [
+     "ik pos_err=0.0093 axis_err=33.1deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25  ....OO              ",
+    "+0.20  ..OOOO              ",
+    "+0.15  .OOOOO              ",
+    "+0.10  OOOOOO              ",
+    "+0.05  OOOOOO              ",
+    "-0.00  OOOOO.              ",
+    "-0.05  OOOO..              ",
+    "-0.10  OOOO..              ",
+    "-0.15  OO....              ",
+    "-0.20  ......              "
+   ]
+  },
+  "shelf:LEFT_SIDE right yaw0": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.1958 axis_err=91.5deg",
+     1
+    ],
+    [
+     "ik pos_err=0.2568 axis_err=98.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0427 axis_err=68.6deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25  ......              ",
+    "+0.20  ......              ",
+    "+0.15  ......              ",
+    "+0.10  ......              ",
+    "+0.05  ......              ",
+    "-0.00  ......              ",
+    "-0.05  ......              ",
+    "-0.10  ......              ",
+    "-0.15  ......              ",
+    "-0.20  ......              "
+   ]
+  },
+  "shelf:LEFT_SIDE right yaw45": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.0771 axis_err=74.1deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1191 axis_err=74.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1791 axis_err=90.3deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25  ......              ",
+    "+0.20  ......              ",
+    "+0.15  ......              ",
+    "+0.10  ......              ",
+    "+0.05  ......              ",
+    "-0.00  ......              ",
+    "-0.05  ......              ",
+    "-0.10  ......              ",
+    "-0.15  ......              ",
+    "-0.20  ......              "
+   ]
+  },
+  "shelf:RIGHT_SIDE left yaw0": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.0848 axis_err=81.7deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0455 axis_err=66.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1331 axis_err=78.4deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25               ...... ",
+    "+0.20               ...... ",
+    "+0.15               ...... ",
+    "+0.10               ...... ",
+    "+0.05               ...... ",
+    "-0.00               ...... ",
+    "-0.05               ...... ",
+    "-0.10               ...... ",
+    "-0.15               ...... ",
+    "-0.20               ...... "
+   ]
+  },
+  "shelf:RIGHT_SIDE left yaw45": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.1865 axis_err=84.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.2002 axis_err=92.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1330 axis_err=78.9deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25               ...... ",
+    "+0.20               ...... ",
+    "+0.15               ...... ",
+    "+0.10               ...... ",
+    "+0.05               ...... ",
+    "-0.00               ...... ",
+    "-0.05               ...... ",
+    "-0.10               ...... ",
+    "-0.15               ...... ",
+    "-0.20               ...... "
+   ]
+  },
+  "shelf:RIGHT_SIDE right yaw0": {
+   "cells": 60,
+   "feasible": 39,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    -0.2
+   ],
+   "grasps": {
+    "tilt10/x": 7,
+    "tilt0/x": 26,
+    "tilt20/x": 6
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0091 axis_err=33.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0222 axis_err=56.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0135 axis_err=43.9deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25               OO.... ",
+    "+0.20               OOOO.. ",
+    "+0.15               OOOOO. ",
+    "+0.10               OOOOOO ",
+    "+0.05               OOOOOO ",
+    "-0.00               .OOOOO ",
+    "-0.05               .OOOOO ",
+    "-0.10               ..OOOO ",
+    "-0.15               ....OO ",
+    "-0.20               ...... "
+   ]
+  },
+  "shelf:RIGHT_SIDE right yaw45": {
+   "cells": 60,
+   "feasible": 38,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    -0.2
+   ],
+   "grasps": {
+    "tilt0/x": 25,
+    "tilt20/x": 6,
+    "tilt10/x": 7
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0082 axis_err=33.6deg",
+     1
+    ],
+    [
+     "path collision at u=0.83 [('right_pgripper_housing', 'right_",
+     1
+    ],
+    [
+     "ik pos_err=0.0176 axis_err=8.5deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25               OO.... ",
+    "+0.20               OOOO.. ",
+    "+0.15               OOOOO. ",
+    "+0.10               OOOOOO ",
+    "+0.05               OOOOOO ",
+    "-0.00               .OOOOO ",
+    "-0.05               ..OOOO ",
+    "-0.10               ..OOOO ",
+    "-0.15               ....OO ",
+    "-0.20               ...... "
+   ]
+  }
+ },
+ "reading": [
+  "floor: each arm reaches ~55 of 294 cells: in front of the robot (x 0.15..0.25) and along its own side (left arm y 0.25..0.45 beside x -0.15..0.10; right arm mirrored); refusals near the base are path collisions with the base",
+  "shelf at TurtleBot height: on the arm's own side 39/60 cells (x -0.15..0.25); in front only the first 5-10 cm (x 0.20..0.25) is reachable; the opposite-side shelf is unreachable for the far arm (0/60)",
+  "block yaw 0 vs 45 deg changes 1-2 cells only",
+  "tilt 0 (vertical) is the most common accepted grasp; tilt 10/20 add cells near the edges"
+ ],
+ "not_established": [
+  "real mount dimensions and base height",
+  "a path from a real mounted start pose (left arm start = recorded desk home)",
+  "stage execution certificate, servo behaviour, camera visibility of the block from the mounted wrist/top cameras",
+  "right arm on the real robot (eligible_for_REAL=false)"
+ ]
+}

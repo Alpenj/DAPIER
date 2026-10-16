@@ -2416,9 +2416,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "FIELD_READINESS_GATES.md",
       "component": "DOCS",
-      "source_sha256": "ee4edf0d55af089d544d1d0931d621c47a628ce97b503ea2c5722389d586329b",
-      "public_sha256": "ee4edf0d55af089d544d1d0931d621c47a628ce97b503ea2c5722389d586329b",
-      "bytes": 5994,
+      "source_sha256": "c11552acc5211a07a734e7462b028e900b433f13a0ad8f9b6bfa8c88d53cd7ea",
+      "public_sha256": "c11552acc5211a07a734e7462b028e900b433f13a0ad8f9b6bfa8c88d53cd7ea",
+      "bytes": 8329,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2438,9 +2438,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "UPPER_BODY_INTERFACE_CONTRACT.md",
       "component": "DOCS",
-      "source_sha256": "59a83e98e99a412d6fe38d771e71d53e4df1dc9640feecfe9306275e26a15d70",
-      "public_sha256": "59a83e98e99a412d6fe38d771e71d53e4df1dc9640feecfe9306275e26a15d70",
-      "bytes": 7131,
+      "source_sha256": "691609cb9e13c920d2d7c71bef1f5633786b8f3a639828c2ce74ff2f9d645979",
+      "public_sha256": "691609cb9e13c920d2d7c71bef1f5633786b8f3a639828c2ce74ff2f9d645979",
+      "bytes": 7611,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2496,6 +2496,61 @@
       "source_sha256": "b61aba8e6ac6815041f3912aef69e6e7c0ab6dcad5d6e868b8d1c92907dbb38e",
       "public_sha256": "b61aba8e6ac6815041f3912aef69e6e7c0ab6dcad5d6e868b8d1c92907dbb38e",
       "bytes": 5606,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/mounted_pick.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "mounted_pick.py",
+      "component": "UPPER_BODY",
+      "source_sha256": "a7694bf27a3e0d85eb2237e98381f8e5458867830f6f4c49abb94824e4897411",
+      "public_sha256": "a7694bf27a3e0d85eb2237e98381f8e5458867830f6f4c49abb94824e4897411",
+      "bytes": 5460,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/run_parallel.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "run_parallel.py",
+      "component": "UPPER_BODY",
+      "source_sha256": "2691eb8c82ae75c46a1a5d596644a4d28f274e67123e51c2d68815464a3ecb01",
+      "public_sha256": "17c713ecaa4fd35bf3929f38b9696cda38c8cb36885b95ebf834b875015b44e9",
+      "bytes": 2725,
+      "public_copy_changed": true,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/summarize_grid.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "summarize_grid.py",
+      "component": "UPPER_BODY",
+      "source_sha256": "c8df05814ace38f3e2e34ea43d32b8bba9a2f042210b08a75401031f07831cf7",
+      "public_sha256": "c8df05814ace38f3e2e34ea43d32b8bba9a2f042210b08a75401031f07831cf7",
+      "bytes": 2069,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/start_w6.sh",
+      "source_group": "upper_body_20261016",
+      "source_name": "start_w6.sh",
+      "component": "UPPER_BODY",
+      "source_sha256": "9788dcec6801a6cba8939acab23efd768d21028b2ef868a5e28de045878849b1",
+      "public_sha256": "2c3b554748208eb03ab2b8ddb496e8096af3f4f4cf48872e01f06285a2367e5b",
+      "bytes": 320,
+      "public_copy_changed": true,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/upper_body_20261016/MOUNTED_PICK_FEASIBILITY.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "MOUNTED_PICK_FEASIBILITY.json",
+      "component": "DOCS",
+      "source_sha256": "897bbdf0f1fa49f3a754f235e5ec2b1a9b6ecf8245160bb89ae9c739f78fc656",
+      "public_sha256": "897bbdf0f1fa49f3a754f235e5ec2b1a9b6ecf8245160bb89ae9c739f78fc656",
+      "bytes": 14808,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     }
