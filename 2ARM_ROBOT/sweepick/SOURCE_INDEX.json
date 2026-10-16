@@ -13,25 +13,15 @@
   ],
   "files": [
     {
-      "file": "console/OPEN_INSTRUCTOR_DEMO.sh",
-      "source_group": "console",
-      "source_name": "OPEN_INSTRUCTOR_DEMO.sh",
-      "component": "CONSOLE",
-      "source_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
-      "public_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
-      "bytes": 186,
-      "public_copy_changed": false
-    },
-    {
       "file": "console/app.py",
       "source_group": "console",
       "source_name": "app.py",
       "component": "CONSOLE",
-      "source_sha256": "0d2b0829a0c30652b6e97d1d15ecc76b7405ab69642fc925447e9b15d857e268",
-      "public_sha256": "48686c3014b3abbf19d3c396776963eeaa7f9d787f7cc582766f00034dc029f9",
-      "bytes": 18362,
-      "public_copy_changed": true,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "source_sha256": "0b1bba2581ee43803de1e4bc27fd606e905a6b064c272d69a7ecafa4ddb014ce",
+      "public_sha256": "0b1bba2581ee43803de1e4bc27fd606e905a6b064c272d69a7ecafa4ddb014ce",
+      "bytes": 11264,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "83ee66bef5f41d9c9667a52b9ae5a3375f682b815003f833cf629c3a97e748b2"
     },
     {
@@ -71,10 +61,11 @@
       "source_group": "console",
       "source_name": "open_console.py",
       "component": "CONSOLE",
-      "source_sha256": "1cd28a38d34c78efc990463cb4818c1590993993d53b8cb03a039f679d7094a8",
-      "public_sha256": "c3ad8bd5d09624250964c93c4e3378a3d6c7cb3cf6da4346ac48561f2ccad3a2",
-      "bytes": 3802,
-      "public_copy_changed": true
+      "source_sha256": "3a89afe5c25508ae0be0df38d107a059d97c2e4a1986d430762888b3fa8f7fad",
+      "public_sha256": "11b4dc5eb67adfa92edd7cac09691f3c26bf6081d5a783141d7130a3385968e1",
+      "bytes": 3585,
+      "public_copy_changed": true,
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "console/records.py",
@@ -125,9 +116,9 @@
       "source_group": "console",
       "source_name": "app.js",
       "component": "CONSOLE",
-      "source_sha256": "e4555a9daa0736836602bbd5b8800dd4f1cd15c6fe5f78b48f42572ed65af07a",
-      "public_sha256": "e4555a9daa0736836602bbd5b8800dd4f1cd15c6fe5f78b48f42572ed65af07a",
-      "bytes": 72423,
+      "source_sha256": "6c6062a8f61b52596728117b1d8eb78ce2910dcd3c32363c94fa5cb21d1a23f5",
+      "public_sha256": "6c6062a8f61b52596728117b1d8eb78ce2910dcd3c32363c94fa5cb21d1a23f5",
+      "bytes": 72503,
       "public_copy_changed": false,
       "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69"
@@ -149,33 +140,23 @@
       "source_group": "console",
       "source_name": "index.html",
       "component": "CONSOLE",
-      "source_sha256": "56be64b95cfebdc6f9de00efa127aba0a40c64ea91c8fc116b85679764aa9050",
-      "public_sha256": "56be64b95cfebdc6f9de00efa127aba0a40c64ea91c8fc116b85679764aa9050",
-      "bytes": 36248,
+      "source_sha256": "3c97290e4200c7891c828689c8629a8d185f45450f4446125fe196654dc1a0b1",
+      "public_sha256": "3c97290e4200c7891c828689c8629a8d185f45450f4446125fe196654dc1a0b1",
+      "bytes": 35522,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819"
-    },
-    {
-      "file": "console/static/instructor.html",
-      "source_group": "console",
-      "source_name": "instructor.html",
-      "component": "CONSOLE",
-      "source_sha256": "12fe2875d01967c8de01716857c0b2b53261622abbb01ca72595d8be3d44f713",
-      "public_sha256": "12fe2875d01967c8de01716857c0b2b53261622abbb01ca72595d8be3d44f713",
-      "bytes": 9622,
-      "public_copy_changed": false
     },
     {
       "file": "console/static/review.js",
       "source_group": "console",
       "source_name": "review.js",
       "component": "CONSOLE",
-      "source_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253",
-      "public_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253",
-      "bytes": 24245,
+      "source_sha256": "c3f2398985c75f47a6a7d75c99cb70483565ca18dd038f4628af9add66968057",
+      "public_sha256": "c3f2398985c75f47a6a7d75c99cb70483565ca18dd038f4628af9add66968057",
+      "bytes": 20741,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3"
     },
     {
@@ -183,9 +164,9 @@
       "source_group": "console",
       "source_name": "style.css",
       "component": "CONSOLE",
-      "source_sha256": "705ab562da96a72ede247b66e3e3e3f155376bab33bcce71e72c70be0ec43d8a",
-      "public_sha256": "705ab562da96a72ede247b66e3e3e3f155376bab33bcce71e72c70be0ec43d8a",
-      "bytes": 27803,
+      "source_sha256": "e64091858f228a6499edd8f1eb117573b55ccf7ec0deac23b695dfbdbdee9633",
+      "public_sha256": "e64091858f228a6499edd8f1eb117573b55ccf7ec0deac23b695dfbdbdee9633",
+      "bytes": 27659,
       "public_copy_changed": false,
       "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9"
@@ -227,20 +208,22 @@
       "source_group": "console",
       "source_name": "test_inspection.py",
       "component": "CONSOLE",
-      "source_sha256": "dfa63fee7ecc1f54e381fb8406a866f50dddd1fd5afdfd1996ef9673e266e29c",
-      "public_sha256": "dfa63fee7ecc1f54e381fb8406a866f50dddd1fd5afdfd1996ef9673e266e29c",
-      "bytes": 8302,
-      "public_copy_changed": false
+      "source_sha256": "30f1bd146fea5171673e68b8ddfd028448a4331147ae2341c5d36b33ec02a8fb",
+      "public_sha256": "30f1bd146fea5171673e68b8ddfd028448a4331147ae2341c5d36b33ec02a8fb",
+      "bytes": 6760,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "console/test_open_console.py",
       "source_group": "console",
       "source_name": "test_open_console.py",
       "component": "CONSOLE",
-      "source_sha256": "c769012dbec7be8e24c46018b1f4facccdfe017231c9e3e42488fa816b46436f",
-      "public_sha256": "c769012dbec7be8e24c46018b1f4facccdfe017231c9e3e42488fa816b46436f",
-      "bytes": 2156,
-      "public_copy_changed": false
+      "source_sha256": "49d4eaad01d264d65291883de4a4d58aa84a71d7e6c4c94efb7af15c7073fb7d",
+      "public_sha256": "49d4eaad01d264d65291883de4a4d58aa84a71d7e6c4c94efb7af15c7073fb7d",
+      "bytes": 2667,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "console/test_records.py",
@@ -257,10 +240,11 @@
       "source_group": "console",
       "source_name": "test_replay.py",
       "component": "CONSOLE",
-      "source_sha256": "bd990a4c6c88323ca7bd98841dab96084457611ad650228071483ba0243218f8",
-      "public_sha256": "87bdf36564af84759c5c52a9ac870cf8b611756b242a8896ec7e5c5cd750b71d",
-      "bytes": 16250,
-      "public_copy_changed": true
+      "source_sha256": "5f66c6b4559a368c22043a7470bf68a9d60ba5d02de378b17875aa288f713645",
+      "public_sha256": "5f66c6b4559a368c22043a7470bf68a9d60ba5d02de378b17875aa288f713645",
+      "bytes": 15685,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "docs/a17/A17_CODE_AUDIT.md",
@@ -1741,11 +1725,11 @@
       "source_group": "console17_new_test",
       "source_name": "test_console17.py",
       "component": "CONSOLE",
-      "source_sha256": "0e3cb7be67b769cc34e22b64e65b07407276f953162815b1ccd9445f5816f7fd",
-      "public_sha256": "0e3cb7be67b769cc34e22b64e65b07407276f953162815b1ccd9445f5816f7fd",
-      "bytes": 19282,
+      "source_sha256": "333ac6398018de956ab7356008e78d61097579b86b8981fab60fd8379e3aa2a4",
+      "public_sha256": "333ac6398018de956ab7356008e78d61097579b86b8981fab60fd8379e3aa2a4",
+      "bytes": 16925,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": null
     },
     {
@@ -2462,6 +2446,17 @@
       "public_sha256": "b730a3f97343ceb3b527d95a12973e4318e5b8743859de247383e28dc59f3050",
       "bytes": 4390,
       "public_copy_changed": false
+    },
+    {
+      "file": "console/OPEN_CONSOLE.sh",
+      "source_group": "console",
+      "source_name": "OPEN_CONSOLE.sh",
+      "component": "CONSOLE",
+      "source_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
+      "public_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
+      "bytes": 186,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
     }
   ],
   "console17": {

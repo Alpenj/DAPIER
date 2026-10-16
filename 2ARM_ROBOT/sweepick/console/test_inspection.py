@@ -107,31 +107,6 @@ class InspectionEvidence(unittest.TestCase):
             self.assertEqual(response.path, self.directory / 'INSPECTION_PACKAGE.zip')
             controller.review_file.assert_not_called()
 
-    def test_analyses_catalog_exact_bytes_without_owner_access(self):
-        import app
-        path = self.base / 'REPORT.md'
-        path.write_text('한글 검수 결과\n')
-        item = {'title': 'A17 fixture', 'directory': self.base, 'files': ('REPORT.md', 'MISSING.json')}
-        with patch.object(app, 'ANALYSIS_REVIEWS', {'A17': item}), patch.object(app, 'controller') as controller:
-            result = app.analyses()['analyses'][0]
-            self.assertEqual(result['kind'], 'SOFTWARE_REVIEW_NO_PHYSICAL_RUN')
-            self.assertEqual(result['files'][0]['sha256'], hashlib.sha256(path.read_bytes()).hexdigest())
-            self.assertEqual(result['files'][0]['mtime_ns'], str(path.stat().st_mtime_ns))
-            self.assertFalse(result['files'][1]['available'])
-            self.assertEqual(app.analysis_file('A17', 'REPORT.md').path, path)
-            self.assertEqual(controller.mock_calls, [])
-
-    def test_analyses_reject_unknown_paths_and_symlinks(self):
-        import app
-        from fastapi import HTTPException
-        (self.base / 'linked.md').symlink_to('/etc/passwd')
-        item = {'title': 'fixture', 'directory': self.base, 'files': ('linked.md',)}
-        with patch.object(app, 'ANALYSIS_REVIEWS', {'A17': item}):
-            for review, name in [('A18','linked.md'),('A17','../REPORT.md'),('A17','linked.md')]:
-                with self.assertRaises(HTTPException) as caught:
-                    app.analysis_file(review, name)
-                self.assertEqual(caught.exception.status_code, 404)
-
 
 if __name__ == '__main__':
     unittest.main()

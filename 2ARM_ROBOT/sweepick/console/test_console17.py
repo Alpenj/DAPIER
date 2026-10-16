@@ -248,31 +248,3 @@ class LimitedRecord(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-class B16Registration(unittest.TestCase):
-    def test_three_groups_stay_separate_and_needs_observation_is_not_failure(self):
-        import tempfile
-        import app
-        with tempfile.TemporaryDirectory() as folder:
-            base = Path(folder)
-            atomic_json(base / 'B16_REAL_GOAL_PREVIEW_REPORT.json', {'status': 'P0_SHADOW_COMPLETE_WITH_MISSING_GEOMETRY', 'motor_commands_sent': 0,
-                'A_EXISTING_GOAL': {'status': 'MODEL_PREVIEW_ONLY', 'executable': False, 'physical_success': False, 'targets': [{}, {}]},
-                'ACT_DERIVED_DIAGNOSTIC': {'samples': 3, 'usable_goals_generated': 0, 'collision_result': 'NOT_EVALUATED'},
-                'B_GOAL_PROPOSAL': {'samples': [{}] * 5, 'targets_generated': 0},
-                'failure_cases': [{'run_id': 'r', 'observation_id': f'o{i}', 'status': 'NEEDS_OBSERVATION', 'missing': ['OBJECT_POSITION_MISSING']} for i in range(5)]})
-            atomic_json(base / 'FINAL_VERIFICATION.json', {'status': 'PASS'})
-            item = dict(app.ANALYSIS_REVIEWS['B16'], directory=base)
-            with patch.object(app, 'ANALYSIS_REVIEWS', {'B16': item}), patch.object(app, 'controller') as controller:
-                result = app.analyses()['analyses'][0]
-                with self.assertRaises(app.HTTPException):
-                    app.analysis_file('B16', '../B16_REAL_GOAL_PREVIEW_REPORT.json')
-            controller.assert_not_called()
-            groups = {g['id']: g for g in result['summary']['groups']}
-            self.assertEqual(set(groups), {'A_EXISTING_GOAL', 'ACT_DERIVED_DIAGNOSTIC', 'B_GOAL_PROPOSAL'})
-            self.assertEqual(groups['A_EXISTING_GOAL']['status'], 'MODEL_PREVIEW_ONLY'); self.assertIs(groups['A_EXISTING_GOAL']['executable'], False)
-            self.assertIn('실물 실행 가능성을 뜻하지 않음', groups['A_EXISTING_GOAL']['meaning'])
-            self.assertEqual(groups['B_GOAL_PROPOSAL']['needs_observation'], 5); self.assertIn('실패한 실행이 아니라', groups['B_GOAL_PROPOSAL']['meaning'])
-            self.assertEqual(result['kind'], 'SHADOW_ANALYSIS_NO_PHYSICAL_RUN'); self.assertFalse(result['device_access'])
-            self.assertEqual(result['verification'], {'status': 'PASS'})
-            self.assertEqual([f['available'] for f in result['files']].count(True), 2)       # only files that exist are served

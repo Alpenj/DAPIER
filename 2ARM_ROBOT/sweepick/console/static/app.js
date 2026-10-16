@@ -364,7 +364,8 @@ function renderSessionSummary() {
 function hostClock(seconds) {
   if (!finiteNumber(seconds)) return 'UNKNOWN';
   const date = new Date(Number(seconds) * 1000);
-  return `${date.toLocaleTimeString('ko-KR', {hour12: false})}.${String(date.getMilliseconds()).padStart(3, '0')}`;
+  const two = (value) => String(value).padStart(2, '0');
+  return `${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}.${String(date.getMilliseconds()).padStart(3, '0')}`;
 }
 
 function runEvidenceLines(run) {

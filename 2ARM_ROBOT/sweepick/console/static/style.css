@@ -107,6 +107,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .camera-meta div { min-width: 0; }.camera-meta dt { color: var(--muted); font-size: .63rem; }.camera-meta dd { margin: .15rem 0 0; overflow: hidden; text-overflow: ellipsis; font: 700 .69rem ui-monospace, monospace; }
 .lower-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(24rem, 1fr); align-items: start; gap: 1.2rem; }
 .run-history { padding: 1rem; }
+.current-run-panel { padding: 1rem; border-color: var(--blue, var(--line)); }
+.current-run-panel .control-panel { margin: 0; }
+#currentRunPanel, #runHistoryPanel, #inspectionPanel { scroll-margin-top: 1rem; }
 .field-panel { padding: 1rem; }
 .field-context { margin: -.35rem 0 .8rem; color: var(--muted); font: .68rem ui-monospace, monospace; overflow-wrap: anywhere; }
 .field-launch { display: grid; grid-template-columns: minmax(18rem, 1fr) auto; align-items: end; gap: .65rem; }
@@ -250,9 +253,6 @@ dialog::backdrop { background: rgba(0,0,0,.75); backdrop-filter: blur(3px); }
 .compact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .inspection-list { max-height: 18rem; margin: 0; padding-left: 1.2rem; overflow: auto; color: var(--muted); font-size: .72rem; }
 .inspection-list li + li { margin-top: .4rem; }
-.analysis-files { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .8rem; }
-.analysis-files button { font-size: .7rem; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
-.analysis-document { max-height: 40rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: .8rem; background: #0c1219; font-size: .76rem; }
 
 @media (max-width: 1180px) {
   .inspection-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
