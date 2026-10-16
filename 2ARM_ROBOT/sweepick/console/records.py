@@ -87,7 +87,7 @@ def lines(path, errors):
 
 
 # Run history: where a run stopped, for review. Read from the native trail (session/SESSION.json) and the first error; never a verdict.
-STEP_LABEL = {'observe': '초기 관측·집기 계획', 'full_chain_readiness': '전체 조작 준비 확인', 'visual': '손목 시각 정렬', 'look': '관측',
+STEP_LABEL = {'before_first_step': '첫 단계 전(세션·Recorder 시작)', 'observe': '초기 관측·집기 계획', 'full_chain_readiness': '전체 조작 준비 확인', 'visual': '손목 시각 정렬', 'look': '관측',
               'look_failed': '관측 실패', 'pregrasp': '집기 전 자세', 'align': '정렬', 'descend_a': '하강(A)', 'descend': '하강',
               'next_descent': '다음 하강', 'close': '그리퍼 닫기', 'lift': '들기', 'snapshot': '상태 기록', 'handoff': '인계',
               'handoff_observed': '인계 관측', 'handoff_not_entered': '인계 미진입', 'handoff_abandon': '인계 중단',
@@ -130,16 +130,20 @@ def native_gate(root):
     return {'gate': f"{row.get('what') or UNKNOWN}=false", 'look': row.get('look'), 'why': row.get('why'), 'source': 'session/STATE.json evidence'}
 
 
+def _owner_log(directory):
+    """The JSON object the native owner printed last in owner.log, or {}."""
+    try:
+        lines = (Path(directory) / 'owner.log').read_text(errors='replace').splitlines()
+        start = next((i for i, line in enumerate(lines) if line.startswith('{')), None)
+        value = json.loads('\n'.join(lines[start:])) if start is not None else {}
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 def native_terminal(directory, ended):
     """The native result class (owner.log result) kept apart from the wrapper exit code."""
-    result = None
-    try:
-        text = (Path(directory) / 'owner.log').read_text(errors='replace')
-        start = next((i for i, line in enumerate(text.splitlines()) if line.startswith('{')), None)
-        if start is not None:
-            result = json.loads('\n'.join(text.splitlines()[start:])).get('result')
-    except (OSError, ValueError, AttributeError):
-        pass
+    result = _owner_log(directory).get('result')
     code = (ended or {}).get('exit_code')
     return {'result': result or UNKNOWN, 'exit_code': code,
             'exit_role': 'native non-success terminal class (not an executor crash by itself)' if code == 3 and result else
@@ -210,6 +214,10 @@ def failure_point(root, first_error):
         error = dict(error, gate=native['gate'])
         if generic and native.get('why'):
             detail = native['why']
+    if not trail and generic:                                       # nothing ran: the native's own reason (owner.log), e.g. a reader that did not open
+        owner_why = _owner_log(Path(root).parent).get('why')
+        if owner_why:
+            step, detail, source = 'before_first_step', owner_why, 'owner.log why (no SESSION.json trail)'
     before = STEP_LABEL.get(trail[index - 1].get('step'), trail[index - 1].get('step')) if index else None
     return {'stage': step or UNKNOWN, 'label': STEP_LABEL.get(step, step or '단계 기록 없음'),
             'stage_failed': failed is not None, 'gate': error.get('gate'),

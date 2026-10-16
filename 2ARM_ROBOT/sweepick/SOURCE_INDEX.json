@@ -29,11 +29,11 @@
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "d6f3721bfd60dcd0127de33821abf2a035c4b31b9946d648a0d84dde5b020431",
-      "public_sha256": "d6f3721bfd60dcd0127de33821abf2a035c4b31b9946d648a0d84dde5b020431",
-      "bytes": 69997,
+      "source_sha256": "9e9812ce71c832423092d6144342003f844fe9810dd32f8c7ba9d388d0023ebb",
+      "public_sha256": "9e9812ce71c832423092d6144342003f844fe9810dd32f8c7ba9d388d0023ebb",
+      "bytes": 70160,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a"
     },
     {
@@ -72,11 +72,11 @@
       "source_group": "console",
       "source_name": "records.py",
       "component": "CONSOLE",
-      "source_sha256": "03a24adb1a40693484cd10d4e9777948f13a3432e7278a845415ecd313941cb8",
-      "public_sha256": "03a24adb1a40693484cd10d4e9777948f13a3432e7278a845415ecd313941cb8",
-      "bytes": 40641,
+      "source_sha256": "a425b489e878ae2a3f62b6436ce1b440f98829afbc55e7b904a7503ed447d707",
+      "public_sha256": "a425b489e878ae2a3f62b6436ce1b440f98829afbc55e7b904a7503ed447d707",
+      "bytes": 41199,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406"
     },
     {
@@ -657,7 +657,7 @@
       "public_sha256": "e4eedec4221520d70a9fbb83a77f6cd841c9c534d51afe1aa257d73c4b4c1763",
       "bytes": 31253,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "native/revision/sweepick_field.py",
@@ -767,11 +767,11 @@
       "source_group": "native_revision",
       "source_name": "sweepick_pick01.py",
       "component": "A_CONTROL",
-      "source_sha256": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
-      "public_sha256": "2b2f9e02ba3b721ff2345617b21550189227658154e5716946f5cf5f2cc0f39a",
-      "bytes": 151196,
-      "public_copy_changed": true,
-      "source_location": "OBSERVATION_REACH_WORKING_COPY_NOT_ACTIVE",
+      "source_sha256": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
+      "public_sha256": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
+      "bytes": 154380,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
     },
     {
@@ -1725,11 +1725,11 @@
       "source_group": "console17_new_test",
       "source_name": "test_console17.py",
       "component": "CONSOLE",
-      "source_sha256": "333ac6398018de956ab7356008e78d61097579b86b8981fab60fd8379e3aa2a4",
-      "public_sha256": "333ac6398018de956ab7356008e78d61097579b86b8981fab60fd8379e3aa2a4",
-      "bytes": 16925,
+      "source_sha256": "1f6419da38f55f36175f8e8c4143cdaf0db10e1b572a27bfc00384d061f16ee0",
+      "public_sha256": "1f6419da38f55f36175f8e8c4143cdaf0db10e1b572a27bfc00384d061f16ee0",
+      "bytes": 16924,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": null
     },
     {
@@ -1827,11 +1827,11 @@
       "source_group": "console17",
       "source_name": "CONSOLE17_TESTED_NATIVE_SHA256.json",
       "component": "CONSOLE",
-      "source_sha256": "0e94554674a30bcc566902f4bde44a40191ced178e5ab5d8734b94826c8425ff",
-      "public_sha256": "df794fd73fb0c23afed2c77538b13c99de3ad0937b046caea2cc14e6c37158ee",
-      "bytes": 2854,
+      "source_sha256": "c77367a1aba05dc8187477daa91e99e7d626ac327435516052ff89f124f2f5f2",
+      "public_sha256": "e71e671db6b79297e5757349d4ce9b443c952fb94c9d7cccc814c283948fc225",
+      "bytes": 3024,
       "public_copy_changed": true,
-      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "docs/console17/CONSOLE17_APPLY_SOURCE_SHA256.json",
@@ -2284,22 +2284,22 @@
       "source_group": "right_x_console_20261016",
       "source_name": "test_right_x_console.py",
       "component": "CONSOLE",
-      "source_sha256": "4dc8d52fb99d5f82a890abebe468179d8ee92f6173454f1c22a57ecd6113d306",
-      "public_sha256": "4dc8d52fb99d5f82a890abebe468179d8ee92f6173454f1c22a57ecd6113d306",
-      "bytes": 27952,
+      "source_sha256": "00c0d22ff648af437b98fb665b3696fc14c70bbd3b99ab1ac5766902b5a8eade",
+      "public_sha256": "00c0d22ff648af437b98fb665b3696fc14c70bbd3b99ab1ac5766902b5a8eade",
+      "bytes": 27943,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "console/RIGHT_X_TESTED_NATIVE_SHA256.json",
       "source_group": "right_x_console_20261016",
       "source_name": "RIGHT_X_TESTED_NATIVE_SHA256.json",
       "component": "CONSOLE",
-      "source_sha256": "73046badaa90d4095c8c6d9ec26d9cc6cb05fadc282181ec8caf73385961796d",
-      "public_sha256": "522bcb676c432f9c188efb55f86f32814100996834e4b9f3e20d78a27ac3b34c",
-      "bytes": 1665,
+      "source_sha256": "47834ac7ec8b893e6acf312cb4fee42b4cf89fafc5c360c31617786065220fb1",
+      "public_sha256": "121221b815c0caf9b2b0dc445817e6d35cded07e55079ba10b978c31419cd463",
+      "bytes": 3444,
       "public_copy_changed": true,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "docs/right_x_console_20261016/RIGHT_X_CONSOLE_CONTRACT.md",
@@ -2368,33 +2368,33 @@
       "source_group": "console",
       "source_name": "test_failure_point.py",
       "component": "CONSOLE",
-      "source_sha256": "2e528912216af13b487a489411bb53f590fea6121941515998b6c288d99ab8c4",
-      "public_sha256": "2e528912216af13b487a489411bb53f590fea6121941515998b6c288d99ab8c4",
-      "bytes": 6868,
+      "source_sha256": "140dbaf1a4726dc69e6d6aead929417d7b9c5814b92100d4b3472ba16936a9bf",
+      "public_sha256": "140dbaf1a4726dc69e6d6aead929417d7b9c5814b92100d4b3472ba16936a9bf",
+      "bytes": 7503,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "native/revision/left_fov_check.py",
       "source_group": "left_close_fov_20261016",
       "source_name": "left_fov_check.py",
       "component": "A_CONTROL",
-      "source_sha256": "c7f2916f3a0f73aa87f1f17dd4be7fa32913a720318a21ed1a74c924d5f9edb2",
-      "public_sha256": "c7f2916f3a0f73aa87f1f17dd4be7fa32913a720318a21ed1a74c924d5f9edb2",
-      "bytes": 4936,
+      "source_sha256": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
+      "public_sha256": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
+      "bytes": 5935,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "native/revision/test_left_fov_check.py",
       "source_group": "left_close_fov_20261016",
       "source_name": "test_left_fov_check.py",
       "component": "A_CONTROL",
-      "source_sha256": "c119628187d95cfcac61c7f511e40740ac4841ccb4c05f60ecf847cfaa35de62",
-      "public_sha256": "c119628187d95cfcac61c7f511e40740ac4841ccb4c05f60ecf847cfaa35de62",
-      "bytes": 3094,
+      "source_sha256": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc",
+      "public_sha256": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc",
+      "bytes": 3903,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "native/revision/test_recorder_exception_chain.py",
@@ -2405,7 +2405,7 @@
       "public_sha256": "a75ede715de0e08fb8b03aee1cb15202162ae804da62f0aa46e0e9dd6e515426",
       "bytes": 2428,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "docs/left_close_fov_20261016/LEFT_CLOSE_FOV_REAL_COMPARISON.json",
@@ -2457,6 +2457,58 @@
       "bytes": 186,
       "public_copy_changed": false,
       "source_location": "LEFT_FOV_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/sweepick_left_fov_reference.json",
+      "source_group": "left_fov_correction_20261016",
+      "source_name": "sweepick_left_fov_reference.json",
+      "component": "A_CONTROL",
+      "source_sha256": "0910df5444301b0b9e20229489edf439347e176fa31a9fbefcb4f20ab7d93147",
+      "public_sha256": "0910df5444301b0b9e20229489edf439347e176fa31a9fbefcb4f20ab7d93147",
+      "bytes": 9698,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "native/revision/test_left_fov_correction.py",
+      "source_group": "left_fov_correction_20261016",
+      "source_name": "test_left_fov_correction.py",
+      "component": "A_CONTROL",
+      "source_sha256": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48",
+      "public_sha256": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48",
+      "bytes": 9662,
+      "public_copy_changed": false,
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/left_fov_correction_20261016/LEFT_FOV_CORRECTION_REGRESSION.json",
+      "source_group": "left_fov_correction_20261016",
+      "source_name": "LEFT_FOV_CORRECTION_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "817293d5ff8ef0e1e8cdc05ed7c8d313f1869e1758f715e795b09560efd1a8cd",
+      "public_sha256": "817293d5ff8ef0e1e8cdc05ed7c8d313f1869e1758f715e795b09560efd1a8cd",
+      "bytes": 8212,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/left_fov_correction_20261016/LEFT_FOV_DEPLOYMENT_DECISION.md",
+      "source_group": "left_fov_correction_20261016",
+      "source_name": "LEFT_FOV_DEPLOYMENT_DECISION.md",
+      "component": "DOCS",
+      "source_sha256": "aac29ff52569d8cb68bbaf08f9737a8c72578adfba9aeb971a6e3247625d2aba",
+      "public_sha256": "aac29ff52569d8cb68bbaf08f9737a8c72578adfba9aeb971a6e3247625d2aba",
+      "bytes": 6087,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/left_fov_correction_20261016/LEFT_FOV_REAL_REPLAY_COMPARISON.json",
+      "source_group": "left_fov_correction_20261016",
+      "source_name": "LEFT_FOV_REAL_REPLAY_COMPARISON.json",
+      "component": "DOCS",
+      "source_sha256": "a9949ba4700609309f9bbb7f2be341acef8539844bae0be849af4ece35d41c36",
+      "public_sha256": "a9949ba4700609309f9bbb7f2be341acef8539844bae0be849af4ece35d41c36",
+      "bytes": 46527,
+      "public_copy_changed": false
     }
   ],
   "console17": {

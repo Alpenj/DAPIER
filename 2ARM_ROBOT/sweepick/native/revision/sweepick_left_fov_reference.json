@@ -1,0 +1,281 @@
+{
+ "schema": "sweepick.left-fov-reference.v2",
+ "role": "OBSERVED_REAL_RUNS_WITH_A_READABLE_FINAL_LOOK; not a tolerance",
+ "runs": [
+  {
+   "session": "/home/robot/sweepick_261010_receive_session_02/STATE.json",
+   "pre_offset_mm": 1.509433962264151,
+   "pre_lateral_error_mm": 1.4233336697071532,
+   "pre_lateral_target_mm": 0.08610029255699785,
+   "pre_width_px": 159,
+   "final_offset_mm": 0.873015873015873,
+   "final_width_px": 252,
+   "final_edges_px": [
+    35,
+    287
+   ],
+   "midline_px": 155.5
+  },
+  {
+   "session": "/home/robot/sweepick_261010_receive_session_04/STATE.json",
+   "pre_offset_mm": 2.3529411764705883,
+   "pre_lateral_error_mm": 2.401985148568052,
+   "pre_lateral_target_mm": -0.049043972097463806,
+   "pre_width_px": 153,
+   "final_offset_mm": 2.6956521739130435,
+   "final_width_px": 230,
+   "final_edges_px": [
+    54,
+    284
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_261010_receive_session_05/STATE.json",
+   "pre_offset_mm": 0.5161290322580645,
+   "pre_lateral_error_mm": 0.4598653800240761,
+   "pre_lateral_target_mm": 0.05626365223398839,
+   "pre_width_px": 155,
+   "final_offset_mm": 2.2127659574468086,
+   "final_width_px": 235,
+   "final_edges_px": [
+    49,
+    284
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_261010_receive_session_06/STATE.json",
+   "pre_offset_mm": 1.2738853503184713,
+   "pre_lateral_error_mm": 1.1975347650620525,
+   "pre_lateral_target_mm": 0.07635058525641875,
+   "pre_width_px": 157,
+   "final_offset_mm": 2.4369747899159666,
+   "final_width_px": 238,
+   "final_edges_px": [
+    49,
+    287
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_261011_receive_session_07/STATE.json",
+   "pre_offset_mm": 2.5157232704402515,
+   "pre_lateral_error_mm": 2.6947835413941172,
+   "pre_lateral_target_mm": -0.17906027095386598,
+   "pre_width_px": 159,
+   "final_offset_mm": 2.6556016597510372,
+   "final_width_px": 241,
+   "final_edges_px": [
+    49,
+    290
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_261011_receive_session_09/STATE.json",
+   "pre_offset_mm": 2.967741935483871,
+   "pre_lateral_error_mm": 2.8657244345313764,
+   "pre_lateral_target_mm": 0.10201750095249458,
+   "pre_width_px": 155,
+   "final_offset_mm": 1.8623481781376519,
+   "final_width_px": 247,
+   "final_edges_px": [
+    42,
+    289
+   ],
+   "midline_px": 154.0
+  },
+  {
+   "session": "/home/robot/sweepick_261012_receive_session_17/STATE.json",
+   "pre_offset_mm": -1.3173652694610778,
+   "pre_lateral_error_mm": -1.3075851352720307,
+   "pre_lateral_target_mm": -0.009780134189047022,
+   "pre_width_px": 167,
+   "final_offset_mm": -0.40160642570281124,
+   "final_width_px": 249,
+   "final_edges_px": [
+    26,
+    275
+   ],
+   "midline_px": 153.0
+  },
+  {
+   "session": "/home/robot/sweepick_261012_receive_session_18/STATE.json",
+   "pre_offset_mm": -0.8588957055214724,
+   "pre_lateral_error_mm": -0.6323588555523136,
+   "pre_lateral_target_mm": -0.2265368499691588,
+   "pre_width_px": 163,
+   "final_offset_mm": -1.7322834645669292,
+   "final_width_px": 254,
+   "final_edges_px": [
+    15,
+    269
+   ],
+   "midline_px": 153.0
+  },
+  {
+   "session": "/home/robot/sweepick_261013_right_receive_observation_02/STATE.json",
+   "pre_offset_mm": -2.8402366863905324,
+   "pre_lateral_error_mm": -2.8030664439145987,
+   "pre_lateral_target_mm": -0.03717024247593378,
+   "pre_width_px": 169,
+   "final_offset_mm": -1.839080459770115,
+   "final_width_px": 261,
+   "final_edges_px": [
+    10,
+    271
+   ],
+   "midline_px": 152.5
+  },
+  {
+   "session": "/home/robot/sweepick_261013_right_receive_observation_06/STATE.json",
+   "pre_offset_mm": 0.0,
+   "pre_lateral_error_mm": 0.1622255229846259,
+   "pre_lateral_target_mm": -0.1622255229846259,
+   "pre_width_px": 177,
+   "final_offset_mm": -1.8656716417910446,
+   "final_width_px": 268,
+   "final_edges_px": [
+    6,
+    274
+   ],
+   "midline_px": 152.5
+  },
+  {
+   "session": "/home/robot/sweepick_261013_right_receive_observation_08/STATE.json",
+   "pre_offset_mm": -0.3468208092485549,
+   "pre_lateral_error_mm": -0.1302189852319897,
+   "pre_lateral_target_mm": -0.21660182401656522,
+   "pre_width_px": 173,
+   "final_offset_mm": -1.1152416356877324,
+   "final_width_px": 269,
+   "final_edges_px": [
+    10,
+    279
+   ],
+   "midline_px": 152.0
+  },
+  {
+   "session": "/home/robot/sweepick_console_runs/20261014_155824_d4017e/session/STATE.json",
+   "pre_offset_mm": -1.1695906432748537,
+   "pre_lateral_error_mm": -0.993085939986389,
+   "pre_lateral_target_mm": -0.17650470328846468,
+   "pre_width_px": 171,
+   "final_offset_mm": -1.7037037037037037,
+   "final_width_px": 270,
+   "final_edges_px": [
+    6,
+    276
+   ],
+   "midline_px": 152.5
+  },
+  {
+   "session": "/home/robot/sweepick_console_runs/20261015_092942_a4628c/session/STATE.json",
+   "pre_offset_mm": -0.935672514619883,
+   "pre_lateral_error_mm": -0.9467458628264817,
+   "pre_lateral_target_mm": 0.011073348206598698,
+   "pre_width_px": 171,
+   "final_offset_mm": -1.386861313868613,
+   "final_width_px": 274,
+   "final_edges_px": [
+    7,
+    281
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_console_runs/20261015_112218_f0d866/session/STATE.json",
+   "pre_offset_mm": -0.23121387283236994,
+   "pre_lateral_error_mm": -0.34345712021827796,
+   "pre_lateral_target_mm": 0.112243247385908,
+   "pre_width_px": 173,
+   "final_offset_mm": -1.5789473684210527,
+   "final_width_px": 266,
+   "final_edges_px": [
+    10,
+    276
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json",
+   "pre_offset_mm": -1.696969696969697,
+   "pre_lateral_error_mm": -1.9937994241725483,
+   "pre_lateral_target_mm": 0.29682972720285133,
+   "pre_width_px": 165,
+   "final_offset_mm": -1.6858237547892718,
+   "final_width_px": 261,
+   "final_edges_px": [
+    12,
+    273
+   ],
+   "midline_px": 153.5
+  },
+  {
+   "session": "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json",
+   "pre_offset_mm": -0.8695652173913043,
+   "pre_lateral_error_mm": -1.0964424059200857,
+   "pre_lateral_target_mm": 0.22687718852878136,
+   "pre_width_px": 161,
+   "final_offset_mm": -0.24096385542168675,
+   "final_width_px": 249,
+   "final_edges_px": [
+    26,
+    275
+   ],
+   "midline_px": 152.0
+  },
+  {
+   "session": "/home/robot/sweepick_console_runs/20261016_121735_b9241e/session/STATE.json",
+   "pre_offset_mm": 0.7272727272727273,
+   "pre_lateral_error_mm": 0.58710320417959,
+   "pre_lateral_target_mm": 0.14016952309313718,
+   "pre_width_px": 165,
+   "final_offset_mm": -0.14652014652014653,
+   "final_width_px": 273,
+   "final_edges_px": [
+    16,
+    289
+   ],
+   "midline_px": 153.5
+  }
+ ],
+ "width_ratio_median": 1.546583850931677,
+ "width_ratio_range": [
+  1.4910179640718564,
+  1.6545454545454545
+ ],
+ "offset_change_mm_median": -0.45118879924873,
+ "offset_change_mm_range": [
+  -1.8656716417910446,
+  1.696636925188744
+ ],
+ "pre_offset_mm_range": [
+  -2.8402366863905324,
+  2.967741935483871
+ ],
+ "source_state_sha256": {
+  "/home/robot/sweepick_261010_receive_session_02/STATE.json": "195c50ea0a78240b57d04f667c8ccf5559fa3dfa181bc591eee7eb549c1859de",
+  "/home/robot/sweepick_261010_receive_session_04/STATE.json": "e7e7db1b53c646e8ea6b6ef5ad9605cbed15534429dab1a09b9a8451ddfd9b71",
+  "/home/robot/sweepick_261010_receive_session_05/STATE.json": "bbbf49d64789430a3884c6e2822d04380ad6e4250578c4661a144a431ff1e3e9",
+  "/home/robot/sweepick_261010_receive_session_06/STATE.json": "dbd2ebfa80a14628dc5eeed8391b94ed592e1f41f7cbcbf51f3bd4616b7efd93",
+  "/home/robot/sweepick_261011_receive_session_07/STATE.json": "25d017dce86537ac8371c1174aa1e0a967bd6d79d84be9984ff9921943cbf21b",
+  "/home/robot/sweepick_261011_receive_session_09/STATE.json": "1d183a688022cf4c1da2de29ee73971a933b434db663032a5ba80a271d3db154",
+  "/home/robot/sweepick_261012_receive_session_17/STATE.json": "7a7c31b7775db54344070e913becb8bb3063b6b84f2fef2a65c85c28ee55ed9d",
+  "/home/robot/sweepick_261012_receive_session_18/STATE.json": "71a4bf65fdd555c849aa8e9fb04ad8c4345717028007c5cf2a402c147379cca1",
+  "/home/robot/sweepick_261013_right_receive_observation_02/STATE.json": "6e5b5e0fe8900138b3388bafdca751615a01177457e68324971510a33c7766af",
+  "/home/robot/sweepick_261013_right_receive_observation_06/STATE.json": "8de3f32b8ac02571125d8c22deaf05542b7b4c93a5c751f99a0fb35f4ee73e68",
+  "/home/robot/sweepick_261013_right_receive_observation_08/STATE.json": "9bbfb806c98bf58be2d27a2c8816f15e8dabe75469e2caf3b027aee5bc38d725",
+  "/home/robot/sweepick_console_runs/20261014_155824_d4017e/session/STATE.json": "35487f36b5652a7e28a3b81f54ce00b27d9198f7448deb43fe0b22826ccd57b5",
+  "/home/robot/sweepick_console_runs/20261015_092942_a4628c/session/STATE.json": "223fe809e5df746a7701156211f5d46b94bccdb3ccf742bec34d1f9d1d82c04f",
+  "/home/robot/sweepick_console_runs/20261015_112218_f0d866/session/STATE.json": "7673fe7beeb1c84161f6545df3693b487c1d5ae5fb296407fdebef07a41613e8",
+  "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json": "e35446613ba2f95fee4f545cf7bd1c8ad0c6197f802dddc7f4aae24d41a54073",
+  "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json": "fced08eed5ae4452dfc3f9942d777a6b1cb1087ffd2e4b4c3fdf1098babe3dd4",
+  "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json": "13eb89b6ca52613a83b783aebb51facf921bee96de8d7f1b3ec8d5eef84297c9",
+  "/home/robot/sweepick_console_runs/20261016_121735_b9241e/session/STATE.json": "f6ad828d0ff4349aa76bfe8fca7dad966aeec0405fc691dbbaddbfe50713ec5c"
+ },
+ "excluded": [
+  "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json"
+ ]
+}

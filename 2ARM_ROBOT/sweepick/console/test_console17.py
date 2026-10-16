@@ -14,7 +14,7 @@ import test_records
 from control import FULL_CHAIN, LEFT_TO_LIFT, ControlError, limited_backend
 from records import atomic_json, run_record
 
-NATIVE = Path(os.environ.get('SWEEPICK_CONSOLE17_NATIVE', Path.home() / 'sweepick_261015_console17_native'))
+NATIVE = Path(os.environ.get('SWEEPICK_CONSOLE17_NATIVE', Path.home() / 'sweepick_261016_left_fov_native'))
 
 
 def native_launcher():

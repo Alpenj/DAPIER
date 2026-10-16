@@ -54,6 +54,14 @@ class FailurePoint(unittest.TestCase):
         self.assertIsNone(failure_reason(None))
 
 
+    def test_a_run_that_never_reached_a_step_shows_the_owner_reason(self):
+        session = self.root / 'session'; session.mkdir()
+        (session / 'SESSION.json').write_text(json.dumps({'run': 'PICK02', 'trail': []}))
+        (self.root / 'owner.log').write_text('{\n "result": "NOT_STARTED",\n "why": "the recorder could not start: RuntimeError: left_wrist could not be opened"\n}\n')
+        point = failure_point(session, {'gate': 'EXECUTOR_ERROR', 'detail': 'exit 3'})
+        self.assertEqual(point['label'], '첫 단계 전(세션·Recorder 시작)')
+        self.assertIn('left_wrist could not be opened', point['reason'])
+
 
 class SeparateEvidence(unittest.TestCase):
     """LEFT CLOSE FOV P0-5: native gate, native terminal class, recorder errors and per-arm torque are kept apart."""

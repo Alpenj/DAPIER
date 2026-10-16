@@ -1268,6 +1268,31 @@ LEFT_TO_LIFT = "LEFT_START_TO_LIFT"                                             
 VSERVO_SHADOW_SCHEMA = "sweepick.vservo-shadow-input.v1"
 
 
+# 2026-10-16 LEFT FOV: passing the existing pre-grasp gate and keeping the block in view after the descent are judged apart.
+# Run 20261016_112020_4d7c2b passed the gate at -5.15 mm (allowed 5.56 mm) and the real block ran off the left image border at
+# the grasp height. The view check predicts the final-look edges from stored REAL runs only (left_fov_check, its reference file
+# is a bound source); when it predicts the border, the EXISTING 1-axis loop reduces the EXISTING lateral error at this height.
+FOV_GATES = ("ready_to_descend",)                                              # pre-grasp only: never a lateral move at the close depth
+
+
+def fov_view_check(state, gate, evidence):
+    """{status: FOV_OK | FOV_RISK | FOV_UNKNOWN, ...} for a look that PASSED the gate; None for other gates. Reads only."""
+    if gate not in FOV_GATES:
+        return None
+    import left_fov_check as lf
+    ref = lf.load_reference()
+    if ref is None:
+        return dict(status="FOV_UNKNOWN", why="FOV reference file missing or unreadable: the existing behaviour is kept", reference=str(lf.REFERENCE_FILE))
+    pred = lf.predict_final_view(evidence, (state.get("jaw_reference") or {}).get("midline_px"), ref)
+    if pred is None:
+        return dict(status="FOV_UNKNOWN", why="the look gives no readable, stable, uncut block with a confirmed offset: no FOV prediction")
+    off = evidence.get("wrist_offset") or {}
+    correctable = bool(off.get("readable") and off.get("reference_confirmed_in_this_frame") and evidence.get("lateral_error_mm") is not None)
+    return dict(status="FOV_RISK" if pred["pred_touches_border"] else "FOV_OK", prediction=pred, correctable=correctable,
+                reference_sha256=hashlib.sha256(lf.REFERENCE_FILE.read_bytes()).hexdigest(),
+                role="independent of the existing gate; only the existing lateral error is reduced, the grasp target is not changed")
+
+
 def vservo_shadow_input(out, row, scene):
     """Shadow-only interface for B18/B19 (2026-10-15): one line per visual-loop look with the inputs A used and the
     correction A computed, plus the stored frame/scene paths. Nothing reads this file on the control path; a proposal
@@ -1431,18 +1456,29 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
             row["square"] = alignment
             if "unknown" in alignment:
                 row["end"] = alignment["unknown"]; note(**row); return "NOT_ALIGNED"
-            if ok:
+            fov = fov_view_check(S(), gate, ev) if ok else None
+            if fov is not None:
+                row["fov"] = fov
+            if prev is not None and prev.get("fov") is not None:                 # what the last correction did to the predicted view, next to what it did to the error
+                row["fov_before_this_look"] = dict(status=prev["fov"].get("status"), pred_edges_px=(prev["fov"].get("prediction") or {}).get("pred_edges_px"), lateral_error_mm=prev["err_mm"])
+            fov_driven = bool(ok and fov is not None and fov["status"] == "FOV_RISK")
+            if ok and not fov_driven:
                 note(**row); _rec(lambda: vservo_shadow_input(out, row, sc), "vservo shadow input"); return "ALIGNED"
-            if not ev.get("correctable"):
+            if fov_driven and not fov.get("correctable"):
+                row["end"] = "the gate passed but the block is predicted to leave the image after the descent, and this look gives no confirmed offset to correct"; note(**row); return "NOT_ALIGNED"
+            if not fov_driven and not ev.get("correctable"):
                 row["end"] = "not a lateral offset that a correction along the jaw axis can remove (or not readable)"; note(**row); return "NOT_ALIGNED"
             if prev is not None and abs(err_mm) > abs(prev["err_mm"]) - off["uncertainty_mm"]:
                 row["end"] = f"the error did not shrink by more than the image resolves ({prev['err_mm']:+.1f} -> {err_mm:+.1f} mm)"; note(**row); return "NOT_ALIGNED"
             g = gain if gain else image_response_prior(ev["wrist_object"]); move = -err_px / g
-            row["correction"] = dict(tool_move_along_jaw_mm=move, px_per_mm=g, relation=src, basis="local 1-axis image response; axis = the jaw axis (image x). Sign from the PICK01 record, checked against every move")
+            if fov_driven and move == 0.0:
+                row["end"] = "the block is predicted to leave the image after the descent but the lateral error is zero: no correction exists"; note(**row); return "NOT_ALIGNED"
+            row["correction"] = dict(tool_move_along_jaw_mm=move, px_per_mm=g, relation=src, basis="local 1-axis image response; axis = the jaw axis (image x). Sign from the PICK01 record, checked against every move",
+                                     reason="FOV_RISK_AFTER_A_PASSED_GATE" if fov_driven else "GATE_NOT_PASSED")
             if tool_now is None or axis_now is None:
                 row["end"] = "the tool position / jaw axis of this look is unknown (no frame chain): no correction is computed"; note(**row); return "NOT_ALIGNED"
             m["correction_computed"] = time.monotonic()
-            c = correct(out, move, f"wrist image {sc.get('tag')}: block {err_px:+.1f} px from where the plan puts it against the confirmed jaw midline; {g:.2f} px/mm ({src})", axis_xy=axis_now); row["plan_ok"] = c.get("plan_ok"); m["planned"] = time.monotonic(); note(**row)
+            c = correct(out, move, f"wrist image {sc.get('tag')}: block {err_px:+.1f} px from where the plan puts it against the confirmed jaw midline; {g:.2f} px/mm ({src})" + (" [FOV: predicted to leave the image after the descent]" if fov_driven else ""), axis_xy=axis_now); row["plan_ok"] = c.get("plan_ok"); m["planned"] = time.monotonic(); note(**row)
             _rec(lambda: vservo_shadow_input(out, row, sc), "vservo shadow input")
             if not c.get("plan_ok"):
                 return "NOT_ALIGNED"
@@ -1450,7 +1486,7 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
             if not run_stage("align", HOLDING_OK + ("TARGET_NOT_REACHED_HOLDING",)):     # short of the joint target but completed and holding: the next look measures where the hand really is
                 return "STOPPED"
             stage_timing["stage_returned"] = time.monotonic()
-            prev = dict(off=off, err_px=err_px, err_mm=err_mm, tool=list(tool_now), axis=list(axis_now), commanded=move, stage_timing=stage_timing); k += 1
+            prev = dict(off=off, err_px=err_px, err_mm=err_mm, tool=list(tool_now), axis=list(axis_now), commanded=move, stage_timing=stage_timing, fov=fov); k += 1
 
     r1 = visual_align("01_pregrasp", "ready_to_descend")
     if r1 != "ALIGNED":
@@ -1650,7 +1686,7 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
         if full_chain and handoff is None:
             import sweepick_full_chain
             handoff, _owner = sweepick_full_chain.build(out, ep, scope=scope, right_lift_m=right_lift_m, observation_plan=observation_plan, contact_plan=contact_plan)
-            (out / "ACTIVE_SELECTION.json").write_text(json.dumps(sweepick_full_chain.selection(scope), indent=1))      # which native files and which pin THIS process loaded, with their hashes                 # the implementation's FullEpisodeHandoff with this process's owner (executor, readers, field records) injected
+            (out / "ACTIVE_SELECTION.json").write_text(json.dumps(sweepick_full_chain.selection(scope), indent=1))      # which native files and which pin THIS process loaded, with their hashes                 # Codex's FullEpisodeHandoff with this process's owner (executor, readers, field records) injected
         r = session(out, execute=execute, handoff_fn=handoff, **dict(session_kw or {}, **(dict(limit=limit) if limit else {})))
     finally:
         EPISODE = None

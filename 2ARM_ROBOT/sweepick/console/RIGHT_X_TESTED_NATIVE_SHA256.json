@@ -1,25 +1,47 @@
 {
-  "schema": "sweepick.right-x-tested-native.v1",
-  "tested_at": "2026-10-16",
-  "tested_source": "/home/robot/sweepick_261016_right_x_metrology_native",
-  "files": {
-    "RUN_APPROVED_SESSION.py": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
-    "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
-    "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
-    "revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
-    "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
-    "revision/sweepick_episode.py": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
-    "revision/sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
-    "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
-    "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
-    "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
-    "revision/right_x_metrology.py": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
-    "revision/current_view_candidate.py": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db"
-  },
-  "changed_since_active": [
-    "RUN_APPROVED_SESSION.py",
-    "revision/sweepick_full_chain.py",
-    "revision/right_x_metrology.py"
-  ],
-  "regression": "see docs/right_x_console_20261016/RIGHT_X_CONSOLE_REGRESSION.json"
+ "schema": "sweepick.right-x-tested-native.v1",
+ "tested_at": "2026-10-16",
+ "tested_source": "/home/robot/sweepick_261016_left_fov_native",
+ "tested_suites": {
+  "native_full": "541 common IDs identical to the active native; 55 new (LEFT FOV 18, RIGHT_X 37) passed",
+  "console17": "28 passed (same IDs as the active native)",
+  "gripper": "154 passed / 1 failed in both trees (pre-existing KeyError provisional)"
+ },
+ "files": {
+  "RUN_APPROVED_SESSION.py": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+  "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+  "revision/sweepick_pick01.py": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
+  "revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+  "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+  "revision/sweepick_episode.py": "e4eedec4221520d70a9fbb83a77f6cd841c9c534d51afe1aa257d73c4b4c1763",
+  "revision/sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+  "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+  "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+  "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+  "revision/left_fov_check.py": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
+  "revision/sweepick_left_fov_reference.json": "0910df5444301b0b9e20229489edf439347e176fa31a9fbefcb4f20ab7d93147",
+  "revision/right_x_metrology.py": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+  "revision/current_view_candidate.py": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db"
+ },
+ "previous_record_files": {
+  "RUN_APPROVED_SESSION.py": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+  "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+  "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+  "revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+  "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+  "revision/sweepick_episode.py": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+  "revision/sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+  "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+  "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+  "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+  "revision/right_x_metrology.py": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+  "revision/current_view_candidate.py": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db"
+ },
+ "changed_since_previous_record": [
+  "revision/left_fov_check.py",
+  "revision/sweepick_episode.py",
+  "revision/sweepick_left_fov_reference.json",
+  "revision/sweepick_pick01.py"
+ ],
+ "regression": "docs/left_fov_correction_20261016/LEFT_FOV_CORRECTION_REGRESSION.json"
 }

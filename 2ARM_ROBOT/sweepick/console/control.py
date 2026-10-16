@@ -29,7 +29,8 @@ LIMITED_BACKEND_MARKERS = {'RUN_APPROVED_SESSION.py': ("def validate_limited_lau
                            'revision/sweepick_pick01.py': ('LEFT_TO_LIFT = "LEFT_START_TO_LIFT"', 'def write_limited_terminal(', 'def limited_lift_end(')}
 LIMITED_BOUND_SOURCES = ('RUN_APPROVED_SESSION.py', 'confirmed_wrist_routes.py', 'revision/sweepick_pick01.py', 'revision/sweepick_move_a.py',
                          'revision/sweepick_grasp.py', 'revision/sweepick_episode.py', 'revision/sweepick_full_chain.py',
-                         'revision/sweepick_jaw_profile_left.json', 'revision/sweepick_progress_profile.json', 'revision/console_feedback.py')
+                         'revision/sweepick_jaw_profile_left.json', 'revision/sweepick_progress_profile.json', 'revision/console_feedback.py',
+                         'revision/left_fov_check.py', 'revision/sweepick_left_fov_reference.json')       # 2026-10-16: the pre-grasp FOV check the executor reads
 LIMITED_TERMINALS = ('LEFT_LIFT_HELD_CONFIRMED', 'LEFT_LIFT_HOLD_UNKNOWN', 'LEFT_CLOSE_UNAVAILABLE', 'LEFT_LIFT_FAILED',
                      'OPERATOR_STOPPED', 'BUS_OR_SERVO_FAULT', 'ENDED_BEFORE_LIFT', 'NOT_STARTED')
 # RIGHT_X_FINITE_METROLOGY: the existing chain, then T/F/V right X endpoints, then the existing normal return. Its own approval,

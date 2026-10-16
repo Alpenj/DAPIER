@@ -1,21 +1,26 @@
-"""2026-10-16 LEFT CLOSE FOV — OFFLINE CANDIDATE, NOT EXECUTABLE. Nothing in the executor imports this module.
+"""2026-10-16 LEFT CLOSE FOV — will the block stay inside the left wrist image after the descent from the pre-grasp height?
 
-Run 20261016_112020_4d7c2b: the pre-grasp look passed the existing centring check at -5.15 mm (allowed 5.56 mm, the pad room
-of the wider 3492-tick opening), no re-centring ran, and after the final descent the real block ran off the LEFT image border
-(edges [0, 262], ready_to_close=false). Every stored REAL run whose final look stayed readable had entered the final descent
-from a pre-grasp error inside [-2.80, +2.87] mm.
+Run 20261016_112020_4d7c2b: the pre-grasp look passed the existing centring check (-5.15 mm, allowed 5.56 mm), no re-centring
+ran, and after the final descent the real block ran off the LEFT image border (edges [0, 262], ready_to_close=false).
 
-This module predicts, from a pre-grasp look alone, where the block's edges will be in the final descended look, using ONLY
-what the stored REAL successes show (final/pre-grasp width ratio and the lateral change between the two looks; medians).
-'Touching the border' is the existing wrist_object definition (xl <= 1 or xr >= width - 2). It adds no torque, speed,
-tolerance or collision value, it does not relax ready_to_close and it never treats a clipped centroid as the block centre.
-The only action it can name is the EXISTING visual_align at the pre-grasp height toward the EXISTING lateral target."""
+The prediction uses ONLY what stored REAL runs with a readable final look show: the final/pre-grasp width ratio and the change
+of the block's RAW image offset from the jaw midline between the two looks (medians). Inputs are kept apart:
+  raw image position   = jaw midline px + wrist_offset.offset_mm (where the block IS in the image)
+  lateral_error_mm     = offset_mm - lateral_target_mm (what the existing 1-axis loop corrects)
+'Touching the border' is the existing wrist_object definition (xl <= 1 or xr >= width - 2). No torque, speed, tolerance or
+collision value is added; ready_to_close is not relaxed; a clipped centroid is never taken as the block centre."""
 import json
 import statistics
 from pathlib import Path
 
 IMAGE_WIDTH_PX = 320                      # the left wrist stream (YUYV 320x240), as recorded in CAMERA_BINDING.json
 OBJECT_WIDTH_MM = 40.0                    # the existing A block model (half extent 0.02 m), as wrist_object uses it
+REFERENCE_FILE = Path(__file__).resolve().parent / 'sweepick_left_fov_reference.json'
+
+
+def _raw_offset(row):
+    off = row.get('wrist_offset') or {}
+    return off.get('offset_mm') if off.get('readable') else None
 
 
 def reference_from_states(states):
@@ -25,47 +30,58 @@ def reference_from_states(states):
         ev = st.get('evidence') or []
         final = next((e for e in ev if e.get('what') == 'ready_to_close'), None)
         pre = [e for e in ev if e.get('what') == 'ready_to_descend']
-        if not final or not final.get('ok') or not pre or final.get('lateral_error_mm') is None:
+        if not final or not final.get('ok') or not pre or _raw_offset(final) is None or _raw_offset(pre[-1]) is None:
             continue
         p = pre[-1]
-        rows.append(dict(session=name, pre_err_mm=p['lateral_error_mm'], pre_width_px=p['wrist_object']['width_px'],
-                         final_err_mm=final['lateral_error_mm'], final_width_px=final['wrist_object']['width_px'],
-                         final_edges_px=final['wrist_object']['edges_px']))
+        rows.append(dict(session=name, pre_offset_mm=_raw_offset(p), pre_lateral_error_mm=p.get('lateral_error_mm'),
+                         pre_lateral_target_mm=p.get('lateral_target_mm'), pre_width_px=p['wrist_object']['width_px'],
+                         final_offset_mm=_raw_offset(final), final_width_px=final['wrist_object']['width_px'],
+                         final_edges_px=final['wrist_object']['edges_px'], midline_px=(st.get('jaw_reference') or {}).get('midline_px')))
     if not rows:
         raise ValueError('no stored REAL run with a readable final look')
     ratios = [r['final_width_px'] / r['pre_width_px'] for r in rows]
-    drifts = [r['final_err_mm'] - r['pre_err_mm'] for r in rows]
-    return dict(schema='sweepick.left-fov-reference.v1', role='OBSERVED_REAL_SUCCESSES_ONLY; not a tolerance',
+    changes = [r['final_offset_mm'] - r['pre_offset_mm'] for r in rows]
+    return dict(schema='sweepick.left-fov-reference.v2', role='OBSERVED_REAL_RUNS_WITH_A_READABLE_FINAL_LOOK; not a tolerance',
                 runs=rows, width_ratio_median=statistics.median(ratios), width_ratio_range=[min(ratios), max(ratios)],
-                lateral_change_mm_median=statistics.median(drifts), lateral_change_mm_range=[min(drifts), max(drifts)],
-                pre_err_mm_range=[min(r['pre_err_mm'] for r in rows), max(r['pre_err_mm'] for r in rows)])
+                offset_change_mm_median=statistics.median(changes), offset_change_mm_range=[min(changes), max(changes)],
+                pre_offset_mm_range=[min(r['pre_offset_mm'] for r in rows), max(r['pre_offset_mm'] for r in rows)])
+
+
+def load_reference(path=REFERENCE_FILE):
+    try:
+        ref = json.loads(Path(path).read_text())
+        return ref if ref.get('schema') == 'sweepick.left-fov-reference.v2' and ref.get('runs') else None
+    except (OSError, ValueError, AttributeError):
+        return None
 
 
 def predict_final_view(pre_look, midline_px, reference):
-    """Predicted final-look edges from a pre-grasp evidence row (wrist_object + lateral_error_mm). None when unreadable."""
+    """Predicted final-look edges from a pre-grasp evidence row (wrist_object + RAW wrist_offset). None when unreadable."""
     obj = pre_look.get('wrist_object') or {}
-    err = pre_look.get('lateral_error_mm')
-    if not obj.get('visible') or obj.get('touches_border') or err is None or midline_px is None:
+    offset = _raw_offset(pre_look)
+    if not obj.get('visible') or not obj.get('stable', True) or obj.get('touches_border') or offset is None or midline_px is None or not reference:
         return None
     width = reference['width_ratio_median'] * obj['width_px']
     px_per_mm = width / OBJECT_WIDTH_MM
-    centre = midline_px + (err + reference['lateral_change_mm_median']) * px_per_mm
+    centre = midline_px + (offset + reference['offset_change_mm_median']) * px_per_mm
     left, right = centre - width / 2, centre + width / 2
-    return dict(pred_width_px=width, pred_edges_px=[left, right],
+    return dict(inputs=dict(raw_centre_px=obj.get('centre_px'), jaw_midline_px=midline_px, raw_offset_mm=offset,
+                            lateral_target_mm=pre_look.get('lateral_target_mm'), lateral_error_mm=pre_look.get('lateral_error_mm')),
+                pred_width_px=width, pred_edges_px=[left, right],
                 pred_touches_border=bool(left <= 1 or right >= IMAGE_WIDTH_PX - 2),
-                inside_observed_pre_err_range=reference['pre_err_mm_range'][0] <= err <= reference['pre_err_mm_range'][1],
-                basis='median width ratio and median lateral change of the stored REAL successes')
+                inside_observed_pre_offset_range=reference['pre_offset_mm_range'][0] <= offset <= reference['pre_offset_mm_range'][1],
+                basis='median width ratio and median raw-offset change of the stored REAL runs with a readable final look')
 
 
 def candidate(pre_look, midline_px, reference):
-    """What the candidate would ask for. Always executable=False."""
+    """Offline classification of one pre-grasp look. Always executable=False (the executor has its own path)."""
     pred = predict_final_view(pre_look, midline_px, reference)
     if pred is None:
         status, ask = 'UNREADABLE', 'none (the existing checks already stop on an unreadable look)'
     elif pre_look.get('ok') is False:
         status, ask = 'EXISTING_CHECK_ALREADY_REALIGNS', 'none (the existing centring check already asks for visual_align)'
     elif pred['pred_touches_border']:
-        status, ask = 'FOV_REALIGN_CANDIDATE', 'the EXISTING visual_align at the pre-grasp height toward the EXISTING lateral target'
+        status, ask = 'FOV_REALIGN_CANDIDATE', 'reduce the existing lateral error at the pre-grasp height through correct()/plan_pick/align'
     else:
         status, ask = 'NO_CHANGE', 'none'
     return dict(status=status, ask=ask, prediction=pred, executable=False,

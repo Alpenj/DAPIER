@@ -1,0 +1,155 @@
+{
+  "schema": "sweepick.left-fov-correction-regression.v1",
+  "date": "2026-10-16",
+  "scope": "offline only: fake bus + synthetic camera through the REAL session()/correct()/plan_pick/stage(), stored REAL records read only. No REAL START, no device open, no Motor/Torque write.",
+  "environment": {
+    "native_python": "/home/robot/DAPIER/so101_imitation_learning/.venv/bin/python, pytest, SWEEPICK_RECEIVE_DIR unset, trees run one after the other",
+    "console_python": "console .venv, unittest discover",
+    "disk_free_root": "22G of 233G"
+  },
+  "change": {
+    "revision/sweepick_pick01.py": "visual_align: after the existing pre-grasp gate PASSES, an independent FOV view check (fov_view_check); on FOV_RISK the EXISTING 1-axis loop reduces the EXISTING lateral error (correct() -> plan_pick -> stage align -> look again). Only gate ready_to_descend (FOV_GATES).",
+    "revision/left_fov_check.py": "prediction from the RAW image offset (jaw midline + offset_mm), kept apart from lateral_target_mm / lateral_error_mm; reference schema v2",
+    "revision/sweepick_left_fov_reference.json": "17 stored REAL runs with a readable final look (median width ratio 1.547, median raw-offset change -0.45 mm)",
+    "console": "LIMITED_BOUND_SOURCES binds left_fov_check.py and the reference; CONSOLE17 / RIGHT_X tested-SHA records rewritten after the tests below passed",
+    "native PREPARED_SOURCE_MANIFEST.json (local, not published)": "lists the two new files at the active-folder path so a prepared job binds them"
+  },
+  "stop_conditions_used": [
+    "existing: the error must shrink by more than the image resolves (uncertainty_mm) between looks",
+    "existing: image moving the wrong way for the move ends the loop",
+    "existing: plan_pick / stage refusal ends the loop",
+    "new, no number: a FOV-driven correction of exactly 0 mm is NOT_ALIGNED; a FOV risk without a confirmed offset is NOT_ALIGNED"
+  ],
+  "no_new_values": "no new distance, torque, speed, tolerance or collision margin; FOV border = the existing wrist_object touches_border definition; reference values are observed medians, not limits",
+  "p0_4_cases": {
+    "gate_passed_plus_fov_risk_nonzero_correction": "test_left_fov_correction::test_a_passed_gate_with_a_fov_risk_computes_a_nonzero_correction_and_runs_it_through_the_existing_stage",
+    "gate_failed_existing_path": "test_left_fov_correction::test_a_failed_gate_keeps_the_existing_visual_servo_path",
+    "fov_normal_no_command_change": "test_left_fov_correction::test_a_normal_view_changes_no_command",
+    "uncertain_or_clipped_feature_no_correction": "test_left_fov_correction::test_an_unconfirmed_or_clipped_feature_never_starts_a_correction",
+    "close_depth_never_moves": "test_left_fov_correction::test_the_close_depth_and_the_intermediate_height_never_get_a_fov_move",
+    "ik_or_collision_refusal_no_next_move": "test_left_fov_correction::test_a_refused_plan_or_a_contact_on_the_correction_path_stops_the_next_move (plan_pick refusal -> NOT_ALIGNED home; CONTACT certificate on align -> no Goal write, no descend)",
+    "error_not_shrinking_existing_stop": "test_left_fov_correction::test_an_error_that_does_not_shrink_after_the_fov_move_keeps_the_existing_stop",
+    "stop_bus_fault_existing_contract": "test_left_fov_correction::test_a_bus_fault_in_the_fov_move_keeps_the_existing_holding_contract (STOPPED_IN_ALIGN_HOLDING_NEEDS_A_PERSON, no automatic way home)",
+    "past_left_pick_records_preserved": "test_left_fov_correction::test_stored_real_pick_runs_keep_their_accepted_path_except_the_named_ones (offline on stored REAL; only 112020 and right_receive_observation_02 flagged)",
+    "all": "9 passed"
+  },
+  "mutation_check": "with FOV_GATES=() 8 of the 9 correction tests fail; the one left (gate failed -> existing path) is independent of the change, as expected",
+  "native": {
+    "full": {
+      "active_ids": 541,
+      "candidate_ids": 596,
+      "common": 541,
+      "common_active": {
+        "passed": 471,
+        "failed": 38,
+        "skipped": 31,
+        "error": 1
+      },
+      "common_candidate": {
+        "passed": 471,
+        "failed": 38,
+        "skipped": 31,
+        "error": 1
+      },
+      "changed_on_common": [],
+      "new": 55,
+      "new_outcomes": {
+        "passed": 55
+      },
+      "new_files": [
+        "revision.test_left_fov_check",
+        "revision.test_left_fov_correction",
+        "revision.test_recorder_exception_chain",
+        "revision.test_right_x_metrology",
+        "test_right_x_launch"
+      ],
+      "only_active": []
+    },
+    "console17": {
+      "active": {
+        "passed": 28
+      },
+      "candidate": {
+        "passed": 28
+      },
+      "changed": []
+    },
+    "pick02_actual": {
+      "active": {
+        "passed": 17,
+        "failed": 8
+      },
+      "candidate": {
+        "passed": 17,
+        "failed": 8
+      },
+      "changed": []
+    },
+    "right_x": {
+      "active": {},
+      "candidate": {
+        "passed": 37
+      },
+      "changed": []
+    },
+    "left_fov": {
+      "active": {},
+      "candidate": {
+        "passed": 18
+      },
+      "changed": []
+    },
+    "grip": {
+      "active_ids": 155,
+      "candidate_ids": 155,
+      "common": 155,
+      "common_active": {
+        "passed": 154,
+        "failed": 1
+      },
+      "common_candidate": {
+        "passed": 154,
+        "failed": 1
+      },
+      "changed_on_common": [],
+      "new": 0,
+      "new_outcomes": {},
+      "new_files": [],
+      "only_active": []
+    }
+  },
+  "console": {
+    "candidate_with_active_native_unchanged": "not meaningful before deploy: the native PREPARED_SOURCE_MANIFEST lists the two new files at the active-folder path, which does not exist until they are copied there (31 errors of FileNotFoundError in prepare); the same deployment coupling as RIGHT_X",
+    "deploy_simulation": "active native copied, the candidate files overlaid, manifest paths rewritten to the copy (simulation only): 184 tests OK, 2 skipped (they assume an active native WITHOUT the contracts); limited_backend=True, right_x_backend=True",
+    "records": {
+      "CONSOLE17_TESTED_NATIVE_SHA256.json": {
+        "files": 12,
+        "sha256": "c77367a1aba05dc8187477daa91e99e7d626ac327435516052ff89f124f2f5f2"
+      },
+      "RIGHT_X_TESTED_NATIVE_SHA256.json": {
+        "files": 14,
+        "sha256": "47834ac7ec8b893e6acf312cb4fee42b4cf89fafc5c360c31617786065220fb1"
+      },
+      "changed_files": [
+        "revision/sweepick_pick01.py",
+        "revision/sweepick_episode.py",
+        "revision/left_fov_check.py",
+        "revision/sweepick_left_fov_reference.json"
+      ]
+    },
+    "live_console_history_feature": "P0-5: the 9131591 run-history display was applied to the ACTIVE console on its own base (d527494) on 2026-10-16 at the user's request (branch pro/sweepick-console-history-live-20261016, 207e555); the live CONSOLE17 record (6b07fb4d), owner and FAULT handling unchanged; FULL_CHAIN and LEFT_START_TO_LIFT stayed supported. The other 42b0640 console changes went in only as display (native gate / terminal class / recorder errors / per-arm torque lines); first_error, FAULT, safe_shutdown and recovery blocking unchanged."
+  },
+  "separated_known_issues": {
+    "HttpReadOnly": "starts the app on the real run folder; right after a records.py change it rebuilds every run cache and passes 20 s (timeout); passes on rerun",
+    "gripper_KeyError_provisional": "pre-existing, both trees",
+    "pick02_actual_8_failed": "pre-existing stale assertions (tolerance changed), identical in both trees"
+  },
+  "source_sha256": {
+    "revision/sweepick_pick01.py": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
+    "revision/left_fov_check.py": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
+    "revision/sweepick_left_fov_reference.json": "0910df5444301b0b9e20229489edf439347e176fa31a9fbefcb4f20ab7d93147",
+    "revision/sweepick_episode.py": "e4eedec4221520d70a9fbb83a77f6cd841c9c534d51afe1aa257d73c4b4c1763",
+    "revision/test_left_fov_correction.py": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48",
+    "revision/test_left_fov_check.py": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc"
+  }
+}

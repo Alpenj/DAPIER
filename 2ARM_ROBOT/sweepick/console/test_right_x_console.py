@@ -18,7 +18,7 @@ import test_records
 from control import FULL_CHAIN, LEFT_TO_LIFT, RIGHT_X, RIGHT_X_MOVE, VIEW_MOVE, FIELD_REQUIRED, ControlError, right_x_backend
 from records import atomic_json, run_record
 
-NATIVE = Path(os.environ.get('SWEEPICK_RIGHT_X_NATIVE', Path.home() / 'sweepick_261016_right_x_metrology_native'))
+NATIVE = Path(os.environ.get('SWEEPICK_RIGHT_X_NATIVE', Path.home() / 'sweepick_261016_left_fov_native'))
 INPUTS = {'t_pose': 'AFTER_RIGHT_PREGRASP', 'x_basis_tool': [1.0, 0.0, 0.0],
           'x_basis_source': 'A model tool +X; physical direction unconfirmed', 'fit_displacement_m': -0.004, 'verify_displacement_m': -0.003}
 FIELD = {'direction_observed': True, 'start_pose_observed': True, 'noncontact_space_observed': True,

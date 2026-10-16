@@ -1,0 +1,1731 @@
+{
+  "schema": "sweepick.left-fov-real-replay-comparison.v1",
+  "date": "2026-10-16",
+  "role": "OFFLINE on stored REAL records only. These are not new physical results and not a correction success rate.",
+  "records": "18 stored REAL runs with a ready_to_close look: 17 with a readable final look (incl. 20261016_121735_b9241e added today) + 1 failure (112020)",
+  "inputs_kept_apart": "raw_centre_px, jaw_midline_px, raw_offset_mm (image position), lateral_target_mm, lateral_error_mm (what the loop corrects)",
+  "reference": {
+    "schema": "sweepick.left-fov-reference.v2",
+    "role": "OBSERVED_REAL_RUNS_WITH_A_READABLE_FINAL_LOOK; not a tolerance",
+    "width_ratio_median": 1.546583850931677,
+    "width_ratio_range": [
+      1.4910179640718564,
+      1.6545454545454545
+    ],
+    "offset_change_mm_median": -0.45118879924873,
+    "offset_change_mm_range": [
+      -1.8656716417910446,
+      1.696636925188744
+    ],
+    "pre_offset_mm_range": [
+      -2.8402366863905324,
+      2.967741935483871
+    ],
+    "excluded": [
+      "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json"
+    ]
+  },
+  "leave_one_out_prediction": [
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_02/STATE.json",
+      "first_pre": {
+        "offset_mm": -2.2929936305732483,
+        "lateral_error_mm": -2.2546347935577264,
+        "lateral_target_mm": -0.03835883701552179,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          18.9,
+          261.6
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 1.509433962264151,
+        "status": "NO_CHANGE",
+        "pred": [
+          40.6,
+          286.3
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          35,
+          287
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_04/STATE.json",
+      "first_pre": {
+        "offset_mm": 2.3529411764705883,
+        "lateral_error_mm": 2.401985148568052,
+        "lateral_target_mm": -0.049043972097463806,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          45.9,
+          283.2
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 2.3529411764705883,
+        "status": "NO_CHANGE",
+        "pred": [
+          45.9,
+          283.2
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          54,
+          284
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_05/STATE.json",
+      "first_pre": {
+        "offset_mm": 0.5161290322580645,
+        "lateral_error_mm": 0.4598653800240761,
+        "lateral_target_mm": 0.05626365223398839,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          33.5,
+          273.8
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 0.5161290322580645,
+        "status": "NO_CHANGE",
+        "pred": [
+          33.5,
+          273.8
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          49,
+          284
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_06/STATE.json",
+      "first_pre": {
+        "offset_mm": 1.2738853503184713,
+        "lateral_error_mm": 1.1975347650620525,
+        "lateral_target_mm": 0.07635058525641875,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          36.5,
+          280.0
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 1.2738853503184713,
+        "status": "NO_CHANGE",
+        "pred": [
+          36.5,
+          280.0
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          49,
+          287
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261011_receive_session_07/STATE.json",
+      "first_pre": {
+        "offset_mm": 1.032258064516129,
+        "lateral_error_mm": 1.2256516823754895,
+        "lateral_target_mm": -0.1933936178593605,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          36.6,
+          276.9
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 2.5157232704402515,
+        "status": "NO_CHANGE",
+        "pred": [
+          42.7,
+          289.3
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          49,
+          290
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261011_receive_session_09/STATE.json",
+      "first_pre": {
+        "offset_mm": 2.967741935483871,
+        "lateral_error_mm": 2.8657244345313764,
+        "lateral_target_mm": 0.10201750095249458,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          50.7,
+          290.2
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 2.967741935483871,
+        "status": "NO_CHANGE",
+        "pred": [
+          50.7,
+          290.2
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          42,
+          289
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261012_receive_session_17/STATE.json",
+      "first_pre": {
+        "offset_mm": -7.770700636942675,
+        "lateral_error_mm": -7.63610404175532,
+        "lateral_target_mm": -0.13459659518735598,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -19.0,
+          224.4
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -1.3173652694610778,
+        "status": "NO_CHANGE",
+        "pred": [
+          11.8,
+          270.8
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          26,
+          275
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261012_receive_session_18/STATE.json",
+      "first_pre": {
+        "offset_mm": -0.8588957055214724,
+        "lateral_error_mm": -0.6323588555523136,
+        "lateral_target_mm": -0.2265368499691588,
+        "ok": true,
+        "status": "NO_CHANGE",
+        "pred": [
+          20.2,
+          272.2
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -0.8588957055214724,
+        "status": "NO_CHANGE",
+        "pred": [
+          20.2,
+          272.2
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          15,
+          269
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_02/STATE.json",
+      "first_pre": {
+        "offset_mm": -2.8402366863905324,
+        "lateral_error_mm": -2.8030664439145987,
+        "lateral_target_mm": -0.03717024247593378,
+        "ok": true,
+        "status": "FOV_REALIGN_CANDIDATE",
+        "pred": [
+          -0.4,
+          261.7
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -2.8402366863905324,
+        "status": "FOV_REALIGN_CANDIDATE",
+        "pred": [
+          -0.4,
+          261.7
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          10,
+          271
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_06/STATE.json",
+      "first_pre": {
+        "offset_mm": -6.787878787878788,
+        "lateral_error_mm": -6.812827245193523,
+        "lateral_target_mm": 0.024948457314734447,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -20.3,
+          235.6
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 0.0,
+        "status": "NO_CHANGE",
+        "pred": [
+          13.7,
+          288.2
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          6,
+          274
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_08/STATE.json",
+      "first_pre": {
+        "offset_mm": -5.030674846625767,
+        "lateral_error_mm": -5.09825816229319,
+        "lateral_target_mm": 0.06758331566742276,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -7.0,
+          244.9
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -0.3468208092485549,
+        "status": "NO_CHANGE",
+        "pred": [
+          14.5,
+          281.9
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          10,
+          279
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261014_155824_d4017e/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -6.134969325153374,
+        "lateral_error_mm": -6.035555436034748,
+        "lateral_target_mm": -0.09941388911862639,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -13.5,
+          238.4
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -1.1695906432748537,
+        "status": "NO_CHANGE",
+        "pred": [
+          11.2,
+          275.5
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          6,
+          276
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_092942_a4628c/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -9.454545454545455,
+        "lateral_error_mm": -9.57205256404691,
+        "lateral_target_mm": 0.11750710950145427,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -35.9,
+          219.1
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -0.935672514619883,
+        "status": "NO_CHANGE",
+        "pred": [
+          13.5,
+          277.7
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          7,
+          281
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_112218_f0d866/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -7.515151515151516,
+        "lateral_error_mm": -7.684459312646344,
+        "lateral_target_mm": 0.16930779749482844,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -23.9,
+          232.0
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -0.23121387283236994,
+        "status": "NO_CHANGE",
+        "pred": [
+          16.3,
+          284.6
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          10,
+          276
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -6.211180124223603,
+        "lateral_error_mm": -6.049531796783819,
+        "lateral_target_mm": -0.16164832743978327,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -12.6,
+          236.2
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -1.696969696969697,
+        "status": "NO_CHANGE",
+        "pred": [
+          12.0,
+          267.0
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          12,
+          273
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -9.813664596273291,
+        "lateral_error_mm": -9.841335792043687,
+        "lateral_target_mm": 0.02767119577039555,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -37.0,
+          212.5
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -0.8695652173913043,
+        "status": "NO_CHANGE",
+        "pred": [
+          18.8,
+          268.2
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          26,
+          275
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -5.25,
+        "lateral_error_mm": -5.153991379692825,
+        "lateral_target_mm": -0.09600862030717515,
+        "ok": true,
+        "status": "FOV_REALIGN_CANDIDATE",
+        "pred": [
+          -5.0,
+          242.5
+        ]
+      },
+      "last_pre": {
+        "offset_mm": -5.25,
+        "status": "FOV_REALIGN_CANDIDATE",
+        "pred": [
+          -5.0,
+          242.5
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          0,
+          262
+        ],
+        "touches_border": true,
+        "ok": false
+      }
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261016_121735_b9241e/session/STATE.json",
+      "first_pre": {
+        "offset_mm": -9.325153374233128,
+        "lateral_error_mm": -9.317636053388938,
+        "lateral_target_mm": -0.007517320844191141,
+        "ok": false,
+        "status": "EXISTING_CHECK_ALREADY_REALIGNS",
+        "pred": [
+          -32.6,
+          219.3
+        ]
+      },
+      "last_pre": {
+        "offset_mm": 0.7272727272727273,
+        "status": "NO_CHANGE",
+        "pred": [
+          29.2,
+          284.2
+        ]
+      },
+      "actual_final": {
+        "edges": [
+          16,
+          289
+        ],
+        "touches_border": false,
+        "ok": true
+      }
+    }
+  ],
+  "executor_decision_replay": [
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_02/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_04/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_05/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_06/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261011_receive_session_07/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261011_receive_session_09/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261012_receive_session_17/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261012_receive_session_18/STATE.json",
+      "executor_on_first_look": "FOV_OK",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_02/STATE.json",
+      "executor_on_first_look": "FOV_RISK",
+      "executor_on_last_accepted_look": "FOV_RISK"
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_06/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_08/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261014_155824_d4017e/session/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_092942_a4628c/session/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_112218_f0d866/session/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json",
+      "executor_on_first_look": "FOV_RISK",
+      "executor_on_last_accepted_look": "FOV_RISK"
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261016_121735_b9241e/session/STATE.json",
+      "executor_on_first_look": "existing gate failed: existing realign",
+      "executor_on_last_accepted_look": "FOV_OK"
+    }
+  ],
+  "summary": {
+    "failure_112020": "first pre-grasp look FOV_REALIGN_CANDIDATE / executor FOV_RISK (pred left -5.0 px; actual final [0, 262])",
+    "successes_flagged": [
+      "right_receive_observation_02 (first look -2.8 mm, pred left -0.4 px, actual final left 10 px): one extra existing realign at the pre-grasp height"
+    ],
+    "successes_unchanged": "the other runs: FOV_OK on the look that passed, or the existing gate already realigned them"
+  },
+  "bottom_and_side_clipping": {
+    "per_run": [
+      {
+        "session": "/home/robot/sweepick_261010_receive_session_02/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              81,
+              242
+            ],
+            "row": 124,
+            "width_px": 161,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 29,
+            "bottom_row_fraction": 0.091,
+            "mask_rows": [
+              54,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              70,
+              263
+            ],
+            "row": 154,
+            "width_px": 193,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 67,
+            "bottom_row_fraction": 0.209,
+            "mask_rows": [
+              65,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              35,
+              287
+            ],
+            "row": 232,
+            "width_px": 252,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 246,
+            "bottom_row_fraction": 0.769,
+            "mask_rows": [
+              114,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261010_receive_session_04/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_0",
+            "image": "MISSING"
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "image": "MISSING"
+          },
+          "final": {
+            "look": "02_descended",
+            "image": "MISSING"
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261010_receive_session_05/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_0",
+            "edges_px": [
+              78,
+              234
+            ],
+            "row": 140,
+            "width_px": 156,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 127,
+            "bottom_row_fraction": 0.397,
+            "mask_rows": [
+              78,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              74,
+              261
+            ],
+            "row": 169,
+            "width_px": 187,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 53,
+            "bottom_row_fraction": 0.166,
+            "mask_rows": [
+              85,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              49,
+              283
+            ],
+            "row": 236,
+            "width_px": 234,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 235,
+            "bottom_row_fraction": 0.734,
+            "mask_rows": [
+              136,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261010_receive_session_06/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_0",
+            "edges_px": [
+              80,
+              236
+            ],
+            "row": 140,
+            "width_px": 156,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 123,
+            "bottom_row_fraction": 0.384,
+            "mask_rows": [
+              71,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              74,
+              261
+            ],
+            "row": 169,
+            "width_px": 187,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 42,
+            "bottom_row_fraction": 0.131,
+            "mask_rows": [
+              82,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              49,
+              288
+            ],
+            "row": 237,
+            "width_px": 239,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 240,
+            "bottom_row_fraction": 0.75,
+            "mask_rows": [
+              129,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261011_receive_session_07/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              84,
+              243
+            ],
+            "row": 126,
+            "width_px": 159,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 130,
+            "bottom_row_fraction": 0.406,
+            "mask_rows": [
+              60,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              72,
+              265
+            ],
+            "row": 163,
+            "width_px": 193,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 89,
+            "bottom_row_fraction": 0.278,
+            "mask_rows": [
+              73,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              49,
+              290
+            ],
+            "row": 234,
+            "width_px": 241,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 242,
+            "bottom_row_fraction": 0.756,
+            "mask_rows": [
+              125,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261011_receive_session_09/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_0",
+            "edges_px": [
+              88,
+              243
+            ],
+            "row": 123,
+            "width_px": 155,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 136,
+            "bottom_row_fraction": 0.425,
+            "mask_rows": [
+              66,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              74,
+              263
+            ],
+            "row": 154,
+            "width_px": 189,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 51,
+            "bottom_row_fraction": 0.159,
+            "mask_rows": [
+              77,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              42,
+              289
+            ],
+            "row": 236,
+            "width_px": 247,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 248,
+            "bottom_row_fraction": 0.775,
+            "mask_rows": [
+              125,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261012_receive_session_17/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              64,
+              231
+            ],
+            "row": 122,
+            "width_px": 167,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 128,
+            "bottom_row_fraction": 0.4,
+            "mask_rows": [
+              57,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              60,
+              251
+            ],
+            "row": 150,
+            "width_px": 191,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 74,
+            "bottom_row_fraction": 0.231,
+            "mask_rows": [
+              69,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              26,
+              275
+            ],
+            "row": 229,
+            "width_px": 249,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 248,
+            "bottom_row_fraction": 0.775,
+            "mask_rows": [
+              119,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261012_receive_session_18/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_2",
+            "edges_px": [
+              68,
+              231
+            ],
+            "row": 124,
+            "width_px": 163,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 92,
+            "bottom_row_fraction": 0.287,
+            "mask_rows": [
+              54,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              55,
+              248
+            ],
+            "row": 156,
+            "width_px": 193,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 50,
+            "bottom_row_fraction": 0.156,
+            "mask_rows": [
+              64,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              14,
+              268
+            ],
+            "row": 227,
+            "width_px": 254,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 255,
+            "bottom_row_fraction": 0.797,
+            "mask_rows": [
+              115,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261013_right_receive_observation_02/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "image": "MISSING"
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "image": "MISSING"
+          },
+          "final": {
+            "look": "02_descended",
+            "image": "MISSING"
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261013_right_receive_observation_06/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_2",
+            "image": "MISSING"
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "image": "MISSING"
+          },
+          "final": {
+            "look": "02_descended",
+            "image": "MISSING"
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_261013_right_receive_observation_08/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              64,
+              237
+            ],
+            "row": 112,
+            "width_px": 173,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 0,
+            "bottom_row_fraction": 0.0,
+            "mask_rows": [
+              43,
+              234
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              52,
+              254
+            ],
+            "row": 147,
+            "width_px": 202,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 57,
+            "bottom_row_fraction": 0.178,
+            "mask_rows": [
+              53,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              10,
+              279
+            ],
+            "row": 224,
+            "width_px": 269,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 209,
+            "bottom_row_fraction": 0.653,
+            "mask_rows": [
+              104,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261014_155824_d4017e/session/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              61,
+              233
+            ],
+            "row": 106,
+            "width_px": 172,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 0,
+            "bottom_row_fraction": 0.0,
+            "mask_rows": [
+              44,
+              233
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              49,
+              253
+            ],
+            "row": 142,
+            "width_px": 204,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 40,
+            "bottom_row_fraction": 0.125,
+            "mask_rows": [
+              54,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              6,
+              276
+            ],
+            "row": 227,
+            "width_px": 270,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 205,
+            "bottom_row_fraction": 0.641,
+            "mask_rows": [
+              104,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261015_092942_a4628c/session/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              63,
+              235
+            ],
+            "row": 107,
+            "width_px": 172,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 0,
+            "bottom_row_fraction": 0.0,
+            "mask_rows": [
+              44,
+              231
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              52,
+              252
+            ],
+            "row": 137,
+            "width_px": 200,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 64,
+            "bottom_row_fraction": 0.2,
+            "mask_rows": [
+              55,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              7,
+              281
+            ],
+            "row": 229,
+            "width_px": 274,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 271,
+            "bottom_row_fraction": 0.847,
+            "mask_rows": [
+              106,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261015_112218_f0d866/session/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              65,
+              239
+            ],
+            "row": 115,
+            "width_px": 174,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 27,
+            "bottom_row_fraction": 0.084,
+            "mask_rows": [
+              48,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              54,
+              250
+            ],
+            "row": 136,
+            "width_px": 196,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 77,
+            "bottom_row_fraction": 0.241,
+            "mask_rows": [
+              62,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              11,
+              276
+            ],
+            "row": 236,
+            "width_px": 265,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 266,
+            "bottom_row_fraction": 0.831,
+            "mask_rows": [
+              116,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              64,
+              230
+            ],
+            "row": 124,
+            "width_px": 166,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 109,
+            "bottom_row_fraction": 0.341,
+            "mask_rows": [
+              54,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              52,
+              247
+            ],
+            "row": 144,
+            "width_px": 195,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 89,
+            "bottom_row_fraction": 0.278,
+            "mask_rows": [
+              63,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              11,
+              272
+            ],
+            "row": 233,
+            "width_px": 261,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 262,
+            "bottom_row_fraction": 0.819,
+            "mask_rows": [
+              111,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              68,
+              228
+            ],
+            "row": 129,
+            "width_px": 160,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 65,
+            "bottom_row_fraction": 0.203,
+            "mask_rows": [
+              57,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              58,
+              251
+            ],
+            "row": 157,
+            "width_px": 193,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 71,
+            "bottom_row_fraction": 0.222,
+            "mask_rows": [
+              67,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              26,
+              275
+            ],
+            "row": 236,
+            "width_px": 249,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 250,
+            "bottom_row_fraction": 0.781,
+            "mask_rows": [
+              119,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json",
+        "final_ok": false,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_0",
+            "edges_px": [
+              53,
+              214
+            ],
+            "row": 123,
+            "width_px": 161,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 17,
+            "bottom_row_fraction": 0.053,
+            "mask_rows": [
+              47,
+              239
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              42,
+              239
+            ],
+            "row": 147,
+            "width_px": 197,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 46,
+            "bottom_row_fraction": 0.144,
+            "mask_rows": [
+              56,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              0,
+              262
+            ],
+            "row": 227,
+            "width_px": 262,
+            "touches_border_existing": true,
+            "left_column_px": 20,
+            "right_column_px": 0,
+            "bottom_row_px": 179,
+            "bottom_row_fraction": 0.559,
+            "mask_rows": [
+              101,
+              239
+            ]
+          }
+        }
+      },
+      {
+        "session": "/home/robot/sweepick_console_runs/20261016_121735_b9241e/session/STATE.json",
+        "final_ok": true,
+        "looks": {
+          "pregrasp_last_accepted": {
+            "look": "01_pregrasp_1",
+            "edges_px": [
+              73,
+              239
+            ],
+            "row": 102,
+            "width_px": 166,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 0,
+            "bottom_row_fraction": 0.0,
+            "mask_rows": [
+              39,
+              229
+            ]
+          },
+          "above_block": {
+            "look": "01a_above_block_0",
+            "edges_px": [
+              58,
+              261
+            ],
+            "row": 134,
+            "width_px": 203,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 85,
+            "bottom_row_fraction": 0.266,
+            "mask_rows": [
+              52,
+              239
+            ]
+          },
+          "final": {
+            "look": "02_descended",
+            "edges_px": [
+              16,
+              289
+            ],
+            "row": 223,
+            "width_px": 273,
+            "touches_border_existing": false,
+            "left_column_px": 0,
+            "right_column_px": 0,
+            "bottom_row_px": 240,
+            "bottom_row_fraction": 0.75,
+            "mask_rows": [
+              98,
+              239
+            ]
+          }
+        }
+      }
+    ],
+    "finding": "at the final height EVERY measured readable run has the block over the bottom image row (205..271 px of 320 on the last row): bottom clipping is normal there and does not separate success from failure. Only the failure touches a side column (left, 20 px). 3 runs have no stored wrist frames for these looks (not measured)."
+  },
+  "run_112020_offline_correction": {
+    "run": "20261016_112020_4d7c2b",
+    "fov": {
+      "status": "FOV_RISK",
+      "pred_edges_px": [
+        -4.996174186656731,
+        242.4572419624116
+      ],
+      "inputs": {
+        "raw_centre_px": 133.0,
+        "jaw_midline_px": 154.0,
+        "raw_offset_mm": -5.25,
+        "lateral_target_mm": -0.09600862030717515,
+        "lateral_error_mm": -5.153991379692825
+      }
+    },
+    "lateral_error_px": -20.6159655187713,
+    "lateral_error_mm": -5.153991379692825,
+    "prior_px_per_mm": 3.2,
+    "tool_move_along_jaw_mm": 6.442489224616031,
+    "jaw_axis_xy": [
+      -0.17113934527711314,
+      0.9852468342999743
+    ],
+    "plan_ok": true,
+    "plan_why": null,
+    "planning_s": 0.3,
+    "new_ticks": {
+      "pregrasp": {
+        "shoulder_pan": 2367.0,
+        "shoulder_lift": 2259.0,
+        "elbow_flex": 1936.0,
+        "wrist_flex": 3054.0,
+        "wrist_roll": 2500.0
+      },
+      "descend_a": {
+        "shoulder_pan": 2366.0,
+        "shoulder_lift": 2288.0,
+        "elbow_flex": 1984.0,
+        "wrist_flex": 2992.0,
+        "wrist_roll": 2500.0
+      },
+      "descend": {
+        "shoulder_pan": 2366.0,
+        "shoulder_lift": 2327.0,
+        "elbow_flex": 2091.0,
+        "wrist_flex": 2843.0,
+        "wrist_roll": 2500.0
+      },
+      "lift": {
+        "shoulder_pan": 2366.0,
+        "shoulder_lift": 2236.0,
+        "elbow_flex": 1933.0,
+        "wrist_flex": 3066.0,
+        "wrist_roll": 2500.0
+      }
+    },
+    "old_ticks": {
+      "pregrasp": {
+        "shoulder_pan": 2381.0,
+        "shoulder_lift": 2264.0,
+        "elbow_flex": 1929.0,
+        "wrist_flex": 3044.0,
+        "wrist_roll": 2514.0
+      },
+      "descend_a": {
+        "shoulder_pan": 2381.0,
+        "shoulder_lift": 2301.0,
+        "elbow_flex": 1965.0,
+        "wrist_flex": 2991.0,
+        "wrist_roll": 2514.0
+      },
+      "descend": {
+        "shoulder_pan": 2381.0,
+        "shoulder_lift": 2353.0,
+        "elbow_flex": 2049.0,
+        "wrist_flex": 2862.0,
+        "wrist_roll": 2514.0
+      },
+      "lift": {
+        "shoulder_pan": 2381.0,
+        "shoulder_lift": 2264.0,
+        "elbow_flex": 1893.0,
+        "wrist_flex": 3079.0,
+        "wrist_roll": 2514.0
+      }
+    },
+    "placement_at_grasp": [
+      6.495445181949211,
+      6.521837064147145
+    ],
+    "old_placement": [
+      6.653480620063851,
+      6.461982433195266
+    ],
+    "note": "offline replan from the stored measured pre-grasp joints; the stage executor and its path collision certificate are not run here (no device)"
+  },
+  "not_established": [
+    "the physical lateral offset at the final pose of 112020 (its image is clipped)",
+    "why the raw offset moves during the final descent (perspective of the measuring row is a hypothesis)",
+    "a correction success rate: one failure, no new physical run",
+    "the stage executor path certificate of the corrected 112020 target (needs the stage run; not run offline)"
+  ]
+}
