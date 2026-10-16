@@ -3,6 +3,7 @@ import copy
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import numpy as np
 
 from .wrist_overlay import frame_binding, measure_wrist, render_wrist
@@ -52,6 +53,30 @@ class WristOverlayTests(unittest.TestCase):
         self.assertEqual(measure_wrist(f,side='left',jaw_reference=ref,context=c,edge_evidence=e)['relative_angle']['status'],'UNKNOWN')
         overlay=render_wrist(f,measure_wrist(f,side='left'))
         with self.assertRaisesRegex(ValueError,'OVERLAY_IS_NOT_DETECTOR_INPUT'):measure_wrist(overlay,side='left')
+    def test_configured_image_target_is_not_an_observed_gripper_direction(self):
+        f,ref,c=fixture();e=dict(binding=frame_binding(f),unoccluded=True,correspondence_verified=True,points_uv=[[110,80],[200,80]])
+        with patch('visual_servo.wrist_overlay._alignment',return_value=dict(ok=True,square_at_deg=12.25)):
+            angle=measure_wrist(f,side='left',jaw_reference=ref,context=c,edge_evidence=e)['relative_angle']
+        self.assertEqual(angle['role'],'OBSERVED_EDGE_VS_CONFIGURED_IMAGE_REFERENCE')
+        self.assertAlmostEqual(angle['value_deg'],-12.25)
+        self.assertIn('configured image target',angle['reference_source'])
+        self.assertIsNone(angle['observed_gripper_direction_deg']);self.assertIsNone(angle['physical_3D_yaw'])
+        f,_,_=fixture('right');e['binding']=frame_binding(f)
+        model=dict(binding=frame_binding(f),role='MODEL_PRIOR',centre_uv=[80,100],closing_line_uv=[[40,100],[40,180]])
+        angle=measure_wrist(f,side='right',edge_evidence=e,model_projection=model)['relative_angle']
+        self.assertEqual(angle['role'],'OBSERVED_EDGE_VS_MODEL_PRIOR_DIRECTION')
+        self.assertEqual(angle['reference_angle_deg'],90)
+        self.assertIn('MODEL_PRIOR',angle['reference_source'])
+        self.assertIsNone(angle['observed_gripper_direction_deg']);self.assertIsNone(angle['physical_3D_yaw'])
+    def test_model_inside_does_not_clear_observed_clip_or_grant_a_FOV_pass(self):
+        f,ref,c=fixture();f['image_bgr'][80:160,:210]=[0,0,255];c['binding']=frame_binding(f)
+        n=dict(binding=frame_binding(f),role='MODEL_PRIOR',K=[[100,0,160],[0,100,120],[0,0,1]],D=[0]*5,
+            T_world_camera=np.eye(4).tolist(),T_world_camera_next=np.eye(4).tolist(),plane_centre=[0,0,1],plane_normal=[0,0,1])
+        r=measure_wrist(f,side='left',jaw_reference=ref,context=c,next_descent=n)
+        self.assertEqual(r['fov']['next_descent']['status'],'MODEL_PRIOR_ENVELOPE_INSIDE')
+        self.assertTrue(r['object']['widest_row_horizontal_clipped']);self.assertIsNone(r['image_error_px']['u'])
+        self.assertFalse(r['fov']['next_descent']['valid_for_control']);self.assertFalse(r['executable'])
+        self.assertNotIn('FOV_OK',str(r));self.assertIsNone(r['Correction'])
     def test_horizontal_clipping_invalidates_X_error_and_angle(self):
         f,ref,c=fixture();f['image_bgr'][80:160,:210]=[0,0,255];c['binding']=frame_binding(f)
         r=measure_wrist(f,side='left',jaw_reference=ref,context=c,next_descent=dict(binding=frame_binding(f),role='MODEL_PRIOR'))

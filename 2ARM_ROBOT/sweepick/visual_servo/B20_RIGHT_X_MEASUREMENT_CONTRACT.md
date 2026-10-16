@@ -24,3 +24,19 @@
 ```
 
 향후 검증된 1D 제안에서도 실행 권한 두 필드는 false다. A는 자신의 현재 actual pose에서 기존 IK·경로·충돌·Owner·Stage·STOP·writer 계약을 적용한다. gain, motor velocity, collision margin, reach tolerance는 변경하지 않는다. image error를 TCP millimetre accuracy로 환산하지 않는다.
+
+
+## 2026-10-16 오프라인 재검수 후 미충족 조건
+
+[이번 overlay 계약 검수](OVERLAY_CONTRACT_DIFF.md)는 005/037의 관측 윤곽을 재계산했으며 물리 목표를 새로 인증하지 않았다. 기존 [shortlist](RIGHT_REFERENCE_FINAL_SHORTLIST.md), [최소 현장 계약](B20_MINIMUM_FIELD_CAPTURE.md), [목표 영상 계약](FIELD_VERIFIED_TARGET_IMAGE_CONTRACT.md)의 조건을 유지한다.
+
+| 조건 | 이번 확인 | 현재 부족한 근거 |
+|---|---|---|
+| 실제 Inner Pad의 정의 | 기존 운영자 확인 보존 | 프레임별 Pad 좌표/경계·손가락 대응은 UNKNOWN |
+| T: 물리 비접촉 목표 | FIELD_VERIFIED_TARGET_IMAGE=false | 해당 물리 수신관계의 운영자 확인과 reference/current의 독립 source binding |
+| 현재 target association | UNKNOWN | 같은 물체·당시 left hold·mount/mode·실측 opening·exposure/read 관계의 비교 가능성 |
+| F: 실제 동일 X 응답 | 유효 fit pair 미확보 | 005/037은 다른 문맥·가림·exposure 미상; 두 영상을 pure-X pair로 사용하지 않음 |
+| V: 독립 방향 확인 | 미확보 | fit에서 제외된 관측·실제 X 축 scale/방향·source binding |
+| A ENDPOINTS_RECORDED 계약 | 목표 인증/J 검증과 구분 | encoder endpoint 기록만으로 T/F/V의 물리 확인을 대신하지 않음 |
+
+현재 `FIELD_VERIFIED_TARGET_IMAGE=false`, `REAL_J_VALIDATED=false`, `RightRelativeServoProposal.observed_control_dimensions=0`, `Correction=null`이다. RIGHT observed Pad X/Y와 실물 3D yaw는 null/UNKNOWN이다. 미래에 별도 물리 승인이 주어져야 T→F→V 원본 바인딩을 수집할 수 있으며, 이번 검수에서는 장치·카메라·포트 open, 움직임, 수집을 시작하지 않았다. 새 이동량·대기·허용오차 기본값을 추가하지 않았다.

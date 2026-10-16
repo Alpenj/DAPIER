@@ -1,0 +1,173 @@
+{
+  "schema": "sweepick.overlay-source-audit/1",
+  "base_commit": "b270a4fc50c4e5991d33f9d52fe5141ef416d4bc",
+  "status": "SOURCE_BINDINGS_VERIFIED",
+  "source_files_rechecked": 96,
+  "source_changes": [],
+  "raw_frames": [
+    {
+      "sample": "LEFT_FAILURE_BEFORE",
+      "camera_key": "left_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "6c2b8983103e3e17cd337e25f5d119ddb27be86ed11edc2d28ea139210c8ab8a",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "LEFT_FAILURE_AFTER",
+      "camera_key": "left_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "42f6d6fe4824786201fcb016ab1a6144540df4fb8e12c159f9e613e6f742369b",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "LEFT_SUCCESS_1_BEFORE",
+      "camera_key": "left_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "f3a99fcb0b1e7a3aca87ef15d0c81bb1c4f04be159591fd5c59b88abc53eb6a3",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "LEFT_SUCCESS_1_AFTER",
+      "camera_key": "left_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "f751e19ed43fb9da6fb2365cc5b8b348958f29915073a6c03885b5d079a785db",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "LEFT_SUCCESS_2_BEFORE",
+      "camera_key": "left_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "1ef2890989170fbc0b880720903effe9d434d947abdf40844bbaa79f0d70138a",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "LEFT_SUCCESS_2_AFTER",
+      "camera_key": "left_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "3145f6e3b5a90837320e8137f1387dfe49c2ccd3d9903960987b65b4d06d371d",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "archive_candidate_005",
+      "camera_key": "right_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "a5d177ad8ba74a62a862b9395dce63e2ce65abb3227962932a2f5566c5a437eb",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    },
+    {
+      "sample": "archive_candidate_037",
+      "camera_key": "right_wrist",
+      "source_kind": "REAL",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "binding_matches_prior": true,
+      "source_sha_matches_prior": true,
+      "decoded_array_sha_matches_prior": true,
+      "binding_digest": "dd3c5a164a6ffda40d95712ad7994aecbbf387a854fea4dfb7fff5ba519be312",
+      "raw_file_unchanged": true,
+      "raw_image_visual_QA": "performed by local executor on this replay; not independent physical metrology"
+    }
+  ],
+  "code_sha256": {
+    "wrist_overlay.py": "d646167ad6b032bf6532dd445652c5fd185fbfcdfe455ba562a6929b2de42475",
+    "test_wrist_overlay.py": "453bff55e2aaa116718e9780f8024fe11de1ce087bdff2d417facb70bf409049",
+    "run_wrist_overlay.py": "31f52bdf670a18f1de687dc1497458019c7139622fd6b8ede3928a9f9dab36d6"
+  },
+  "previous_code_sha256": {
+    "wrist_overlay.py": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0",
+    "test_wrist_overlay.py": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429",
+    "run_wrist_overlay.py": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab"
+  },
+  "images": [
+    {
+      "name": "LEFT_WRIST_DESCENT_COMPARISON.png",
+      "sha256": "14f1cca3e0f78fff82e9a3ad7bf12b5fa0d61143de2d0de5f7c57407459a7aea",
+      "identical_to_prior": true,
+      "role": "DEBUG_OVERLAY_ONLY",
+      "local_only": true,
+      "used_for_detection": false,
+      "visual_QA": "labels, visible contours, UNKNOWN values and MODEL role checked by local executor"
+    },
+    {
+      "name": "DUAL_WRIST_REFERENCE_OVERLAY.png",
+      "sha256": "b707f134eef2cf46caff705c77bc5dfd85bb913e526b12bad5447897e16c7061",
+      "identical_to_prior": true,
+      "role": "DEBUG_OVERLAY_ONLY",
+      "local_only": true,
+      "used_for_detection": false,
+      "visual_QA": "labels, visible contours, UNKNOWN values and MODEL role checked by local executor"
+    }
+  ],
+  "original_RGB_Episode_changed": false,
+  "old_public_validation_preserved": true,
+  "private_details": "Original paths, RGB, measured states, calibration and full SHA ledger remain local",
+  "Correction": null,
+  "executable": false,
+  "motor_write_authorized": false
+}

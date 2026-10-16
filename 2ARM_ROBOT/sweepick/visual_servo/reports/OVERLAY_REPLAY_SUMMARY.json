@@ -1,0 +1,361 @@
+{
+  "schema": "sweepick.dual-wrist-overlay-validation/1",
+  "status": "PASS",
+  "validation_scope": "OFFLINE_IMPLEMENTATION_AND_SOURCE_CHECKS; physical control/forecast validation not established",
+  "tests": {
+    "run": 71,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "frames": [
+    {
+      "sample": "LEFT_FAILURE_BEFORE",
+      "side": "left",
+      "image_error_px": {
+        "u": -13.5,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": 7.149404177827509,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": true,
+      "horizontal_clipped": false,
+      "next_FOV_status": "MODEL_PRIOR_ENVELOPE_INSIDE"
+    },
+    {
+      "sample": "LEFT_FAILURE_AFTER",
+      "side": "left",
+      "image_error_px": {
+        "u": null,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": 4.588741885783374,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": true,
+      "horizontal_clipped": true,
+      "next_FOV_status": "UNKNOWN"
+    },
+    {
+      "sample": "LEFT_SUCCESS_1_BEFORE",
+      "side": "left",
+      "image_error_px": {
+        "u": -4.0,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": 5.846705693605709,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": true,
+      "horizontal_clipped": false,
+      "next_FOV_status": "MODEL_PRIOR_ENVELOPE_INSIDE"
+    },
+    {
+      "sample": "LEFT_SUCCESS_1_AFTER",
+      "side": "left",
+      "image_error_px": {
+        "u": -12.0,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": 4.614428080866488,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": true,
+      "horizontal_clipped": false,
+      "next_FOV_status": "UNKNOWN"
+    },
+    {
+      "sample": "LEFT_SUCCESS_2_BEFORE",
+      "side": "left",
+      "image_error_px": {
+        "u": 2.5,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": -4.3379597388299835,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": true,
+      "horizontal_clipped": false,
+      "next_FOV_status": "MODEL_PRIOR_ENVELOPE_INSIDE"
+    },
+    {
+      "sample": "LEFT_SUCCESS_2_AFTER",
+      "side": "left",
+      "image_error_px": {
+        "u": -1.5,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": -4.731359697082915,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": true,
+      "horizontal_clipped": false,
+      "next_FOV_status": "UNKNOWN"
+    },
+    {
+      "sample": "archive_candidate_005",
+      "side": "right",
+      "image_error_px": {
+        "u": null,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": 1.4378917152400514,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": false,
+      "horizontal_clipped": false,
+      "next_FOV_status": "UNKNOWN"
+    },
+    {
+      "sample": "archive_candidate_037",
+      "side": "right",
+      "image_error_px": {
+        "u": null,
+        "v": null
+      },
+      "raw_far_edge_slope_deg": 7.9941328809759815,
+      "relative_angle": {
+        "status": "UNKNOWN",
+        "value_deg": null,
+        "role": "UNKNOWN",
+        "physical_3D_yaw": null,
+        "reason": "unoccluded corresponding edge and gripper direction are not established"
+      },
+      "frame_clipped": false,
+      "horizontal_clipped": false,
+      "next_FOV_status": "UNKNOWN"
+    }
+  ],
+  "usable_for_A": [
+    "left confirmed X-only reference error when not horizontally clipped; component may be bottom-clipped",
+    "observed visible contour/component centroid, with visibility caveats"
+  ],
+  "diagnostics_only": [
+    "MODEL_PRIOR grasp centre/closing/pad projection",
+    "legacy raw edge slope without correspondence",
+    "nominal model next-descent FOV forecast"
+  ],
+  "not_available": [
+    "observed 2D grasp centre",
+    "right observed Pad-relative error",
+    "REAL 3D yaw",
+    "verified relative angles in current archives"
+  ],
+  "next_descent_retrospective_checks": [
+    {
+      "run": "LEFT_FAILURE",
+      "nominal_top_envelope_status": "MODEL_PRIOR_ENVELOPE_INSIDE",
+      "after_actual_horizontal_clip": true,
+      "assessment": "MODEL_ENVELOPE_DID_NOT_FLAG_ACTUAL_X_CLIP",
+      "valid_for_control": false
+    },
+    {
+      "run": "LEFT_SUCCESS_1",
+      "nominal_top_envelope_status": "MODEL_PRIOR_ENVELOPE_INSIDE",
+      "after_actual_horizontal_clip": false,
+      "assessment": "NO_X_CLIP_AFTER_NOT_A_PHYSICAL_FORECAST_VALIDATION",
+      "valid_for_control": false
+    },
+    {
+      "run": "LEFT_SUCCESS_2",
+      "nominal_top_envelope_status": "MODEL_PRIOR_ENVELOPE_INSIDE",
+      "after_actual_horizontal_clip": false,
+      "assessment": "NO_X_CLIP_AFTER_NOT_A_PHYSICAL_FORECAST_VALIDATION",
+      "valid_for_control": false
+    }
+  ],
+  "model_next_descent_FOV_validation": "DID_NOT_FLAG_SPECIFIED_FAILURE_X_CLIP; DIAGNOSTIC_ONLY",
+  "A_feature_contract": {
+    "left_X": {
+      "field": "image_error_px.u",
+      "definition": "A widest-row object midpoint minus confirmed saved jaw midline",
+      "unit": "pixel",
+      "eligibility": "own raw frame/reference binding; legacy wrist_offset readable/current-confirmed; no horizontal clipping",
+      "v_reference": null
+    },
+    "observed_contour": {
+      "field": "object.visible_edges",
+      "meaning": "visible red-region boundary, not a certified physical cuboid edge",
+      "clipped_boundary": "object.clipped_boundary",
+      "partial_centroid": "object.component_centroid_uv"
+    },
+    "image_angle": {
+      "field": "relative_angle.value_deg",
+      "meaning": "image-plane angle only; configured image target and MODEL_PRIOR direction have separate provenance; neither certifies observed gripper direction",
+      "required": "own bound unoccluded corresponding straight observed edge plus valid reference",
+      "current_REAL_frames": "UNKNOWN",
+      "physical_3D_yaw": null
+    },
+    "models": {
+      "fields": [
+        "gripper.model_grasp_centre_uv",
+        "gripper.model_pad_boundaries_uv",
+        "fov.next_descent"
+      ],
+      "role": "MODEL_PRIOR_DIAGNOSTIC_ONLY",
+      "use_for_control": false
+    },
+    "input_output": {
+      "raw_role": "RAW_RGB",
+      "output_role": "DEBUG_OVERLAY_ONLY",
+      "overlays_as_detector_input": false
+    }
+  },
+  "skipped_test_details": [
+    {
+      "test": "setUpClass (visual_servo.test_visual_servo.ActualAModelTests)",
+      "reason": "requires private frozen A model and explicit model fixture"
+    }
+  ],
+  "output_images": {
+    "LEFT_WRIST_DESCENT_COMPARISON.png": {
+      "sha256": "14f1cca3e0f78fff82e9a3ad7bf12b5fa0d61143de2d0de5f7c57407459a7aea",
+      "artifact_role": "DEBUG_OVERLAY_ONLY",
+      "used_for_detection": false,
+      "local_only": true
+    },
+    "DUAL_WRIST_REFERENCE_OVERLAY.png": {
+      "sha256": "b707f134eef2cf46caff705c77bc5dfd85bb913e526b12bad5447897e16c7061",
+      "artifact_role": "DEBUG_OVERLAY_ONLY",
+      "used_for_detection": false,
+      "local_only": true
+    }
+  },
+  "side_effect_checks": {
+    "motor_commands_sent": 0,
+    "executor_calls": 0,
+    "optimizer_updates": 0,
+    "mj_step_calls": 0,
+    "device_open_attempts": 0,
+    "forbidden_attempts": [],
+    "forbidden_modules_loaded": []
+  },
+  "original_source_changes": [],
+  "Correction": null,
+  "executable": false,
+  "motor_write_authorized": false,
+  "code_sha256": {
+    "wrist_overlay.py": "d646167ad6b032bf6532dd445652c5fd185fbfcdfe455ba562a6929b2de42475",
+    "test_wrist_overlay.py": "453bff55e2aaa116718e9780f8024fe11de1ce087bdff2d417facb70bf409049",
+    "run_wrist_overlay.py": "31f52bdf670a18f1de687dc1497458019c7139622fd6b8ede3928a9f9dab36d6"
+  },
+  "review_base": "b270a4fc50c4e5991d33f9d52fe5141ef416d4bc",
+  "prior_tests": {
+    "run": 69,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "scope": "prior R3 result; not a new run in this sprint"
+  },
+  "new_tests": {
+    "added": 2,
+    "executed_with_requested_modules": 71,
+    "failures": 0,
+    "errors": 0,
+    "skipped_class": 1
+  },
+  "raw_frames_QA": "8 original RGB and 2 debug PNG visually checked by local executor; no physical edge/Pad correspondence certified",
+  "bindings_identical_to_prior": true,
+  "feature_values_identical_to_prior": true,
+  "images": [
+    {
+      "name": "LEFT_WRIST_DESCENT_COMPARISON.png",
+      "sha256": "14f1cca3e0f78fff82e9a3ad7bf12b5fa0d61143de2d0de5f7c57407459a7aea",
+      "identical_to_prior": true,
+      "role": "DEBUG_OVERLAY_ONLY",
+      "local_only": true,
+      "used_for_detection": false,
+      "visual_QA": "labels, visible contours, UNKNOWN values and MODEL role checked by local executor"
+    },
+    {
+      "name": "DUAL_WRIST_REFERENCE_OVERLAY.png",
+      "sha256": "b707f134eef2cf46caff705c77bc5dfd85bb913e526b12bad5447897e16c7061",
+      "identical_to_prior": true,
+      "role": "DEBUG_OVERLAY_ONLY",
+      "local_only": true,
+      "used_for_detection": false,
+      "visual_QA": "labels, visible contours, UNKNOWN values and MODEL role checked by local executor"
+    }
+  ],
+  "angle_contract": {
+    "observed_edge": "straight visible contour segment + explicit unoccluded/correspondence evidence",
+    "configured_target": "OBSERVED_EDGE_VS_CONFIGURED_IMAGE_REFERENCE; current_wrist_alignment.square_at_deg is configured image target",
+    "model_direction": "OBSERVED_EDGE_VS_MODEL_PRIOR_DIRECTION; model_projection.closing_line_uv",
+    "physical_gripper_direction": "UNKNOWN; never inferred from configured target",
+    "current_REAL_relative_angles": "all 8 UNKNOWN"
+  },
+  "right_status": {
+    "FIELD_VERIFIED_TARGET_IMAGE": false,
+    "REAL_J_VALIDATED": false,
+    "observed_control_dimensions": 0,
+    "observed_pad_error": null,
+    "Y": null,
+    "physical_3D_yaw": null,
+    "Correction": null
+  },
+  "A_FOV_connection": {
+    "Native_imports_overlay": false,
+    "overlay_calls_A_FOV_gate": false,
+    "MODEL_PRIOR_INSIDE_is_A_FOV_pass": false,
+    "no_runtime_integration_performed": true
+  },
+  "additional_target_and_bridge_tests": {
+    "tests_run": 38,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "counts": {
+      "motor_commands_sent": 0,
+      "executor_calls": 0,
+      "optimizer_updates": 0,
+      "mj_step_calls": 0,
+      "device_open_attempts": 0,
+      "forbidden_attempts": []
+    },
+    "forbidden_loaded": []
+  },
+  "negative_coverage": {
+    "same_object_unknown": "TargetImageTests.test_missing_physical_target_confirmation, test_unknown_physical_context_is_not_comparable",
+    "occlusion": "WristOverlayTests.test_explicit_unoccluded_corresponding_edge_yields_image_angle_only; TargetImageTests.test_clipped_occluded_and_missing_features_are_unusable",
+    "source_mixing": "TargetImageTests.test_model_real_and_fixture_provenance_cannot_mix",
+    "old_receipt": "test_stale_or_unknown_REAL_frame_cannot_correct; TargetImageTests.test_feedback_and_camera_freshness_are_capture_evidence",
+    "reference_fallback": "WristOverlayTests.test_no_reference_never_defaults_to_screen_centre; test_missing_or_model_pad_cannot_supply_REAL_reference",
+    "X_clip_vs_MODEL_INSIDE": "WristOverlayTests.test_model_inside_does_not_clear_observed_clip_or_grant_a_FOV_pass"
+  }
+}

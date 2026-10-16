@@ -132,18 +132,21 @@ def measure_wrist(frame, *, side, jaw_reference=None, context=None, model_projec
             result['relative_angle']['reason']='EDGE_IS_NOT_ONE_STRAIGHT_VISIBLE_CONTOUR_SEGMENT'
         else:
             slope = float(np.degrees(np.arctan2(*(points[-1]-points[0])[::-1])))
-            line = grip.get('model_closing_line_uv'); ref_angle = None; role = 'UNKNOWN'
+            line = grip.get('model_closing_line_uv'); ref_angle = None; role = 'UNKNOWN'; reference_source = None
             if grip['observed_midline_u'] is not None and result['legacy_alignment'] is not None:
                 if result['legacy_alignment'].get('ok') is True:
-                    ref_angle=result['legacy_alignment']['square_at_deg']; role='OBSERVED_EDGE_VS_EXISTING_IMAGE_REFERENCE'
+                    ref_angle=result['legacy_alignment']['square_at_deg']; role='OBSERVED_EDGE_VS_CONFIGURED_IMAGE_REFERENCE'
+                    reference_source='current_wrist_alignment.square_at_deg: configured image target, not measured gripper direction'
             elif line is not None:
                 dv=np.asarray(line[1])-line[0]
                 if np.linalg.norm(dv)>0:
                     ref_angle=float(np.degrees(np.arctan2(dv[1],dv[0])));role='OBSERVED_EDGE_VS_MODEL_PRIOR_DIRECTION'
+                    reference_source='model_projection.closing_line_uv: MODEL_PRIOR, not measured gripper direction'
             if ref_angle is not None:
                 result['object'].update(edge_correspondence_verified=True,occlusion='VERIFIED_UNOCCLUDED_FOR_THIS_EDGE',valid_reference_edge_uv=points.tolist())
                 result['relative_angle']=dict(status='AVAILABLE_IMAGE_ONLY',value_deg=float((slope-ref_angle+90)%180-90),
-                    role=role,reference_angle_deg=ref_angle,edge_angle_deg=slope,physical_3D_yaw=None)
+                    role=role,reference_source=reference_source,reference_angle_deg=ref_angle,edge_angle_deg=slope,
+                    observed_gripper_direction_deg=None,physical_3D_yaw=None)
     if next_descent is not None:
         if not _bound(next_descent,binding) or next_descent.get('role')!='MODEL_PRIOR':
             raise ValueError('BOUND_NEXT_DESCENT_MODEL_PRIOR_REQUIRED')

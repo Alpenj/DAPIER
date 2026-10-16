@@ -17,7 +17,8 @@
     "B20 Right X handoff publishes three technical contracts only; actual RGB review PNG, measured feedback and source receipt metadata remain local",
     "B20 target-image consumer adds pure code and anonymized regressions; original REAL image/feedback/operator evidence/calibration/device records remain local",
     "B20 physical Pad definition update retains external photos, their original SHA manifest and frame/model/calibration source details locally; no image correspondence, metric geometry or FIELD target is inferred",
-    "Dual wrist debug overlays reuse existing observed X reference and candidate model projection separately; original RGB, calibration, device samples, image outputs and full replay provenance remain local; image angles and next-descent forecast are not physical truth"
+    "Dual wrist debug overlays reuse existing observed X reference and candidate model projection separately; original RGB, calibration, device samples, image outputs and full replay provenance remain local; image angles and next-descent forecast are not physical truth",
+    "Offline overlay contract review labels configured image targets separately from MODEL_PRIOR directions; preserves prior execution hashes and UNKNOWN REAL angles/right targets; original eight-frame replay and calibration details stay local"
   ],
   "files": [
     {
@@ -1982,13 +1983,20 @@
     },
     {
       "file": "visual_servo/B20_RIGHT_X_MEASUREMENT_CONTRACT.md",
-      "source_group": "B20",
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
       "source_name": "B20_RIGHT_X_MEASUREMENT_CONTRACT.md",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "a619b3aca5df7f2047e9d5aea7d3390920be0d851f21853d37eafeb5c8f8255d",
-      "public_sha256": "a619b3aca5df7f2047e9d5aea7d3390920be0d851f21853d37eafeb5c8f8255d",
-      "bytes": 3707,
-      "public_copy_changed": false
+      "source_sha256": "242e771fb85299b031abb8c831cf323edb336aa10c3b4854672357f1a2877710",
+      "public_sha256": "242e771fb85299b031abb8c831cf323edb336aa10c3b4854672357f1a2877710",
+      "bytes": 5538,
+      "public_copy_changed": false,
+      "source_history": [
+        {
+          "base_commit": "b270a4fc50c4e5991d33f9d52fe5141ef416d4bc",
+          "source_sha256": "a619b3aca5df7f2047e9d5aea7d3390920be0d851f21853d37eafeb5c8f8255d",
+          "public_sha256": "a619b3aca5df7f2047e9d5aea7d3390920be0d851f21853d37eafeb5c8f8255d"
+        }
+      ]
     },
     {
       "file": "visual_servo/B20_A_SHADOW_INTERFACE.md",
@@ -2234,31 +2242,52 @@
       "file": "visual_servo/wrist_overlay.py",
       "source_name": "wrist_overlay.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
-      "source_sha256": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0",
-      "public_sha256": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0",
-      "bytes": 15295,
-      "public_copy_changed": false
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "d646167ad6b032bf6532dd445652c5fd185fbfcdfe455ba562a6929b2de42475",
+      "public_sha256": "d646167ad6b032bf6532dd445652c5fd185fbfcdfe455ba562a6929b2de42475",
+      "bytes": 15664,
+      "public_copy_changed": false,
+      "source_history": [
+        {
+          "base_commit": "b270a4fc50c4e5991d33f9d52fe5141ef416d4bc",
+          "source_sha256": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0",
+          "public_sha256": "cef73813c4aba97e1929c51791eafcb3b890841b368429bd09354b77e9f822f0"
+        }
+      ]
     },
     {
       "file": "visual_servo/run_wrist_overlay.py",
       "source_name": "run_wrist_overlay.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
-      "source_sha256": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab",
-      "public_sha256": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab",
-      "bytes": 16451,
-      "public_copy_changed": false
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "31f52bdf670a18f1de687dc1497458019c7139622fd6b8ede3928a9f9dab36d6",
+      "public_sha256": "31f52bdf670a18f1de687dc1497458019c7139622fd6b8ede3928a9f9dab36d6",
+      "bytes": 16621,
+      "public_copy_changed": false,
+      "source_history": [
+        {
+          "base_commit": "b270a4fc50c4e5991d33f9d52fe5141ef416d4bc",
+          "source_sha256": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab",
+          "public_sha256": "35cef276ed3422a0dff1c5006270cf6e9ecc210d91bedc392202fef4b2d2b7ab"
+        }
+      ]
     },
     {
       "file": "visual_servo/test_wrist_overlay.py",
       "source_name": "test_wrist_overlay.py",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_group": "DUAL_WRIST_REFERENCE_OVERLAY",
-      "source_sha256": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429",
-      "public_sha256": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429",
-      "bytes": 7459,
-      "public_copy_changed": false
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "453bff55e2aaa116718e9780f8024fe11de1ce087bdff2d417facb70bf409049",
+      "public_sha256": "453bff55e2aaa116718e9780f8024fe11de1ce087bdff2d417facb70bf409049",
+      "bytes": 9725,
+      "public_copy_changed": false,
+      "source_history": [
+        {
+          "base_commit": "b270a4fc50c4e5991d33f9d52fe5141ef416d4bc",
+          "source_sha256": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429",
+          "public_sha256": "0981f11ceb4010414b92f5694705a33472596391adc78e43be9a658978c27429"
+        }
+      ]
     },
     {
       "file": "visual_servo/reports/DUAL_WRIST_OVERLAY_VALIDATION.json",
@@ -2269,6 +2298,36 @@
       "public_sha256": "9e9b0e81ed86135a3a11c7fee9e7d3840a6abf2f08da85964aca855e4b1eaa61",
       "bytes": 9140,
       "public_copy_changed": true
+    },
+    {
+      "file": "visual_servo/OVERLAY_CONTRACT_DIFF.md",
+      "source_name": "OVERLAY_CONTRACT_DIFF.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "12aaab9a3c461f92e37e629ab03c0e308bdb5dc8606848c7b5a00b7132a6ebda",
+      "public_sha256": "12aaab9a3c461f92e37e629ab03c0e308bdb5dc8606848c7b5a00b7132a6ebda",
+      "bytes": 3241,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/OVERLAY_REPLAY_SUMMARY.json",
+      "source_name": "OVERLAY_REPLAY_SUMMARY.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "13a904891185ccd3e2a19204a018a39fc4b88ab685e93af149e4e0733d0862a2",
+      "public_sha256": "13a904891185ccd3e2a19204a018a39fc4b88ab685e93af149e4e0733d0862a2",
+      "bytes": 12432,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/reports/SOURCE_SHA_AUDIT.json",
+      "source_name": "SOURCE_SHA_AUDIT.json",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "OVERLAY_CONTRACT_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "4afedb4181d60856f32cd3d95e2ff66dfa733e2e1ea19d840513314636ffb0cb",
+      "public_sha256": "4afedb4181d60856f32cd3d95e2ff66dfa733e2e1ea19d840513314636ffb0cb",
+      "bytes": 6213,
+      "public_copy_changed": false
     }
   ]
 }
