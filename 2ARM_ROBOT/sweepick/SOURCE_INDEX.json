@@ -2383,9 +2383,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "sweepick_upper_body.py",
       "component": "UPPER_BODY",
-      "source_sha256": "bc59ee64e49c8c3dff0c38ca34a249133b7ee59d29f46b6c0e9aa0c8daddd628",
-      "public_sha256": "bc59ee64e49c8c3dff0c38ca34a249133b7ee59d29f46b6c0e9aa0c8daddd628",
-      "bytes": 28529,
+      "source_sha256": "bb319751411a2322776566cf512a0e23af848cf64ce1e06fc0961cf5978e0048",
+      "public_sha256": "bb319751411a2322776566cf512a0e23af848cf64ce1e06fc0961cf5978e0048",
+      "bytes": 32011,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2394,9 +2394,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "test_sweepick_upper_body.py",
       "component": "UPPER_BODY",
-      "source_sha256": "cb25efe77dc83397a5f1acbd8e48a2aaa904828f512633e4a427f4eaa4e1909a",
-      "public_sha256": "cb25efe77dc83397a5f1acbd8e48a2aaa904828f512633e4a427f4eaa4e1909a",
-      "bytes": 19598,
+      "source_sha256": "d30c163029e97887fe16dcdd633af428433acb3dac63f53fc92e21d80538a5bf",
+      "public_sha256": "d30c163029e97887fe16dcdd633af428433acb3dac63f53fc92e21d80538a5bf",
+      "bytes": 25865,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2449,9 +2449,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "native_adapter.py",
       "component": "UPPER_BODY",
-      "source_sha256": "5247bf4b38bd4822b07ce14d3eed9568710804400720b386e6c5c19ef0da6c11",
-      "public_sha256": "5247bf4b38bd4822b07ce14d3eed9568710804400720b386e6c5c19ef0da6c11",
-      "bytes": 5315,
+      "source_sha256": "724c7d6841080d4ee95f36ff393cc2aa5fb139893d18cf63e0c3a1e22b149d85",
+      "public_sha256": "724c7d6841080d4ee95f36ff393cc2aa5fb139893d18cf63e0c3a1e22b149d85",
+      "bytes": 5913,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2460,9 +2460,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "test_native_adapter.py",
       "component": "UPPER_BODY",
-      "source_sha256": "02cdfa365e1c379f862d275b1d31183c6732c11fb3804efa86ef7943ded178a2",
-      "public_sha256": "02cdfa365e1c379f862d275b1d31183c6732c11fb3804efa86ef7943ded178a2",
-      "bytes": 3896,
+      "source_sha256": "c06c3f9334819aeff709fdca75d66cc643b054bdcc3f2af364046feb2f7c394e",
+      "public_sha256": "c06c3f9334819aeff709fdca75d66cc643b054bdcc3f2af364046feb2f7c394e",
+      "bytes": 4068,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2641,6 +2641,50 @@
       "bytes": 4271,
       "public_copy_changed": false,
       "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/mounted_candidates.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "mounted_candidates.py",
+      "component": "UPPER_BODY",
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE",
+      "source_sha256": "36866d3ebe7777b247e36ce8a026e277e70c27d6ab3091afa0803fa4271ad7be",
+      "public_sha256": "36866d3ebe7777b247e36ce8a026e277e70c27d6ab3091afa0803fa4271ad7be",
+      "bytes": 8889,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/upper_body_20261016/MOUNTED_CANDIDATES.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "MOUNTED_CANDIDATES.json",
+      "component": "DOCS",
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE",
+      "source_sha256": "094e83701e3eb99a397e008be36d38fe6eaa06efbceb94328181750b2eb2799f",
+      "public_sha256": "6560ec9e2c9e03f3797abbde58785c9976d0cecd12c7379acabd5ac886ca4024",
+      "bytes": 14836,
+      "public_copy_changed": true
+    },
+    {
+      "file": "docs/upper_body_20261016/MOUNTED_UPPER_BODY_VERIFICATION.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "MOUNTED_UPPER_BODY_VERIFICATION.json",
+      "component": "DOCS",
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE",
+      "source_sha256": "5a6d4faa9b46ac1c04a3fe039c76ac2a706b718b3482bc12e931ad70ab9b339c",
+      "public_sha256": "5a6d4faa9b46ac1c04a3fe039c76ac2a706b718b3482bc12e931ad70ab9b339c",
+      "bytes": 20094,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/upper_body_20261016/MOUNTED_UPPER_BODY_VERIFICATION.md",
+      "source_group": "upper_body_20261016",
+      "source_name": "MOUNTED_UPPER_BODY_VERIFICATION.md",
+      "component": "DOCS",
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE",
+      "source_sha256": "fc37b027145f4b5c898b09dc66105fd9b73fa6af5402b3aff61d6237b009be15",
+      "public_sha256": "fc37b027145f4b5c898b09dc66105fd9b73fa6af5402b3aff61d6237b009be15",
+      "bytes": 5447,
+      "public_copy_changed": false
     }
   ],
   "console17": {

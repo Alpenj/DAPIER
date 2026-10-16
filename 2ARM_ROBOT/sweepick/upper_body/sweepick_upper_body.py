@@ -17,6 +17,7 @@ No numeric limit is invented here: no distance, speed, torque, tolerance or time
 observation or result must come after the base evidence it relies on, in the same clock domain, for the same task and
 stop; the timing allowances belong to the base-team interface agreement and are left UNSET."""
 import json
+import math
 
 SCHEMA = 'sweepick.upper-body-msg.v1'
 REQUIRED = ('schema', 'kind', 'task_id', 'sequence_id', 'side', 'source_kind', 'source_identity', 'stamp', 'clock_id', 'status', 'proof_ref')
@@ -76,7 +77,7 @@ def validate(msg, *, inbound=None):
         errors.append(f"side {msg.get('side')!r} not in {SIDES}")
     if not isinstance(msg.get('sequence_id'), int) or isinstance(msg.get('sequence_id'), bool):
         errors.append('sequence_id must be an integer')
-    if not isinstance(msg.get('stamp'), (int, float)) or isinstance(msg.get('stamp'), bool) or msg.get('stamp') != msg.get('stamp'):
+    if not _finite(msg.get('stamp')):
         errors.append('stamp must be a finite number')
     for field in INBOUND_EVIDENCE.get(kind, ()):
         if msg.get(field) in (None, '', False) and not (field == 'recovery_state' and msg.get(field) is not None):
@@ -93,11 +94,16 @@ def message(kind, task_id, sequence_id, side, *, source_kind, source_identity, s
     return msg
 
 
+def _finite(v):
+    """A real, finite number (not bool, not NaN, not +-Infinity)."""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
 def after(evidence, base_msg):
     """True when `evidence` (an observation / arm result with stamp + clock_id) is newer than `base_msg` in the same clock
     domain. Different clock domains are not comparable: False (UNKNOWN is not 'fresh')."""
-    return (isinstance(evidence, dict) and isinstance(base_msg, dict) and evidence.get('clock_id') == base_msg.get('clock_id')
-            and isinstance(evidence.get('stamp'), (int, float)) and evidence['stamp'] > base_msg['stamp'])
+    return (isinstance(evidence, dict) and isinstance(base_msg, dict) and bool(evidence.get('clock_id')) and evidence.get('clock_id') == base_msg.get('clock_id')
+            and _finite(evidence.get('stamp')) and _finite(base_msg.get('stamp')) and evidence['stamp'] > base_msg['stamp'])
 
 
 class BaseView:
@@ -193,13 +199,16 @@ def select_arm(evaluations, mode):
                     why='; '.join(f"{s}: {r['decided_by']} {r['status']} ({r['why']})" for s, r in recs.items()))
     if len(ok) == 1:
         return dict(selected=ok[0], decision='SELECTED', mode=mode, arms=recs, why=f'only the {ok[0]} arm passed every check')
-    travel = {s: (recs[s]['checks']['approach_ik'] or {}).get('joint_travel_ticks') for s in ok}
-    if any(not isinstance(v, (int, float)) for v in travel.values()):
-        return dict(selected=None, decision=ARM_NOT_READY, mode=mode, arms=recs, why='both arms eligible but the planner gave no approach travel to compare: not chosen by guess')
+    costs = {s: (recs[s]['checks']['approach_ik'] or {}).get('cost') for s in ok}
+    defs = {(c or {}).get('definition') for c in costs.values()}; srcs = {(c or {}).get('source') for c in costs.values()}
+    if any(not isinstance(c, dict) or not _finite(c.get('value')) for c in costs.values()) or len(defs) != 1 or None in defs or len(srcs) != 1 or None in srcs:
+        return dict(selected=None, decision='BOTH_ELIGIBLE_NO_COMPARABLE_COST', mode=mode, arms=recs, costs=costs,
+                    why='both arms eligible, but there is no cost with one definition and one source for both arms: no automatic preference (operator choice)')
+    travel = {s: costs[s]['value'] for s in ok}
     if travel['left'] == travel['right']:
-        return dict(selected='left', decision='SELECTED', mode=mode, arms=recs, comparison=travel, why='both eligible, equal approach travel: the arm with REAL PICK evidence (left)')
+        return dict(selected='left', decision='SELECTED', mode=mode, arms=recs, comparison=travel, cost_definition=defs.pop(), why='both eligible, equal cost: the arm with REAL PICK evidence (left)')
     pick = min(travel, key=travel.get)
-    return dict(selected=pick, decision='SELECTED', mode=mode, arms=recs, comparison=travel, why=f'both eligible: the {pick} arm needs less approach joint travel by the existing planner')
+    return dict(selected=pick, decision='SELECTED', mode=mode, arms=recs, comparison=travel, cost_definition=defs.pop(), why=f'both eligible: the {pick} arm has the lower cost under one shared definition and source')
 
 
 def hold_evidence(sample, secured):
@@ -230,7 +239,14 @@ def hold_evidence(sample, secured):
         out['why'].append(f"the executor reports {s.get('controller_state')!r}, not HOLDING"); return out
     out['readback_ok'] = True
     label, seen = s.get('grasp_label'), s.get('wrist_object_at_tool')
-    if label == 'HELD_CONFIRMED' and seen == 'OBSERVED':
+    image = s.get('wrist_image') if isinstance(s.get('wrist_image'), dict) else {}
+    bound = (isinstance(image.get('sha256'), str) and len(image['sha256']) == 64 and image.get('owner') == secured.get('owner')
+             and image.get('target_id') is not None and image.get('target_id') == secured.get('target_id')
+             and _finite(image.get('read_stamp')) and _finite(secured.get('secured_stamp')) and image['read_stamp'] > secured['secured_stamp']
+             and image.get('sha256') not in (secured.get('seen_image_sha256') or ()))
+    if label == 'HELD_CONFIRMED' and seen == 'OBSERVED' and not bound:
+        out['why'].append('the wrist image is not bound to this owner / this grasp / a new read after the pose was secured (sha, target, read time): not a current hold')
+    elif label == 'HELD_CONFIRMED' and seen == 'OBSERVED':
         out['gripper_hold'] = 'CONFIRMED'
     elif label in ('NO_CONTACT', 'NOT_HELD') or seen == 'ABSENT':
         out['gripper_hold'] = 'NOT_HELD'
@@ -388,22 +404,48 @@ class UpperBodyMission:
             return self._end('FAULT', ARM_FAULT, 'the block is not confirmed in the hand at the disposal stop', stamp, block_base=True, holding_state=hold.get('gripper_hold', UNKNOWN))
         if not self.still_allowed():
             return self._end('NOT_READY', ARM_NOT_READY, 'base or STOP changed after the check: no motion', stamp, block_base=True)
+        # PLACE_PLAN / AREA_VERIFIED -> approved approach -> re-verify right before RELEASE -> RELEASE/OPEN -> separation and
+        # landing observed -> RETREAT -> SAFE_END_VERIFIED. Each fact has its own evidence; the success message needs all.
         self.state = 'PLACE_AT_STOP'
-        r = self.a.place(self.side, self.still_allowed, observation)
-        bad = self._fault_or_unknown(r, 'place', stamp)
+        plan = self.a.place_plan(self.side, observation)
+        bad = self._fault_or_unknown(plan, 'place_plan', stamp)
         if bad:
             return bad
+        if plan.get('plan_ok') is not True or plan.get('area_verified') != 'CONFIRMED':
+            return self._end('FAULT', ARM_FAULT, f"no verified place plan / free support area before any approach (plan_ok={plan.get('plan_ok')}, area={plan.get('area_verified')})", stamp, block_base=True, holding_state='CONFIRMED_BEFORE_PLACE')
+        r = self.a.approach_place(self.side, self.still_allowed, plan)
+        bad = self._fault_or_unknown(r, 'approach_place', stamp)
+        if bad:
+            return bad
+        if r.get('approached') is not True:
+            return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED, 'the place approach did not end at the planned pose', stamp, block_base=True, holding_state=UNKNOWN)
+        again = self.a.verify_release_area(self.side)
+        if again.get('support_and_space') != 'CONFIRMED' or not after(again.get('evidence') or {}, park):
+            return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED, 'support / free space not re-confirmed right before the release: the gripper is not opened', stamp, block_base=True, holding_state='HELD_NOT_RELEASED')
+        if not self.still_allowed():
+            return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED, 'base or STOP changed right before the release: the gripper is not opened', stamp, block_base=True, holding_state='HELD_NOT_RELEASED')
         self.state = 'RELEASE_CHECK'
-        if r.get('support_and_space') != 'CONFIRMED' or not r.get('approached'):
-            return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED, 'support / free space at the disposal area not confirmed: the gripper was not to open', stamp, block_base=True, holding_state=UNKNOWN)
-        if r.get('separated') != 'OBSERVED' or r.get('in_target') != 'OBSERVED':
+        rel = self.a.release(self.side, self.still_allowed)
+        bad = self._fault_or_unknown(rel, 'release', stamp)
+        if bad:
+            return bad
+        seen = self.a.observe_release(self.side)
+        if seen.get('separated') != 'OBSERVED' or seen.get('in_target') != 'OBSERVED':
             return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED,
-                             f"release not confirmed: separated={r.get('separated')}, in_target={r.get('in_target')} (an open command/ACK alone is not a disposal)", stamp, block_base=True)
-        ev = r.get('evidence') or {}
+                             f"release not confirmed: separated={seen.get('separated')}, in_target={seen.get('in_target')} (an open command/ACK alone is not a disposal)", stamp, block_base=True)
+        back = self.a.retreat(self.side, self.still_allowed)
+        bad = self._fault_or_unknown(back, 'retreat', stamp)
+        if bad:
+            return bad
+        if back.get('retreated') is not True:
+            return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED, 'released but the retreat was not confirmed', stamp, block_base=True)
         end = self.a.safe_end(self.side)
+        if end.get('verified') is not True:
+            return self._end('RECOVERY_REQUIRED', ARM_RECOVERY_REQUIRED, f"released and retreated but the safe end is not verified ({end.get('torque_state')}, {end.get('holding_state')})", stamp, block_base=True)
+        ev = seen.get('evidence') or {}
         self.state = 'ARM_SAFE_END'
         return [self._send(ARM_DISPOSAL_CONFIRMED, 'ARM_SAFE_END', ev.get('ref', 'release evidence'), stamp, evidence=ev, safe_end=end,
-                           separated='OBSERVED', in_target='OBSERVED',
+                           separated='OBSERVED', in_target='OBSERVED', retreated=True,
                            note='the upper body part only; the mission manager declares the mission complete with the base team\'s stop-2 evidence')]
 
     def summary(self):

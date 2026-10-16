@@ -34,7 +34,7 @@ def check(ok=True, **k):
 
 
 def arm(capable=True, real=True, travel=100, **over):
-    c = dict(verified_capability=check(capable, eligible_for_REAL=real), mechanical_state=check(), approach_ik=check(joint_travel_ticks=travel),
+    c = dict(verified_capability=check(capable, eligible_for_REAL=real), mechanical_state=check(), approach_ik=check(cost=None if travel is None else dict(value=travel, definition='teacher path length, rad', source='HandoverTeacher.plan_move')),
              collision_and_view=check(), grasp_room=check(), transport_pose=check(), place_pose=check())
     c.update(over)
     return c
@@ -46,8 +46,10 @@ class Mock:
         self.r = dict(pick=dict(held='CONFIRMED', lifted=True, moved=True, evidence=dict(stamp=12.0, clock_id=CLOCK, ref='pick-look-04')),
                       transport=dict(reached=True, readback_ok=True, gripper_hold='CONFIRMED', interference_review='PASS', torque='ON', evidence=dict(stamp=13.0, clock_id=CLOCK, ref='transport#1')),
                       hold=dict(readback_ok=True, gripper_hold='CONFIRMED'),
-                      place=dict(approached=True, support_and_space='CONFIRMED', opened_ack=True, separated='OBSERVED', in_target='OBSERVED', retreated=True, evidence=dict(stamp=31.0, clock_id=CLOCK, ref='release#1')),
-                      safe_end=dict(torque_state='OFF_CONFIRMED', holding_state='EMPTY'))
+                      place_plan=dict(plan_ok=True, area_verified='CONFIRMED', evidence=dict(stamp=30.5, clock_id=CLOCK, ref='plan#1')),
+                      approach=dict(approached=True), verify=dict(support_and_space='CONFIRMED', evidence=dict(stamp=30.8, clock_id=CLOCK, ref='area#2')),
+                      release=dict(opened_ack=True), observe=dict(separated='OBSERVED', in_target='OBSERVED', evidence=dict(stamp=31.0, clock_id=CLOCK, ref='release#1')),
+                      retreat=dict(retreated=True), safe_end=dict(verified=True, torque_state='OFF_CONFIRMED', holding_state='EMPTY'))
         self.r.update(results); self.calls = []; self.before_motion = None
 
     def evaluate_arms(self, observation):
@@ -64,7 +66,12 @@ class Mock:
     def pick(self, side, still_allowed): return self._motion('pick', still_allowed)
     def transport_pose(self, side, still_allowed): return self._motion('transport', still_allowed)
     def hold_readback(self, side): self.calls.append('hold'); return copy.deepcopy(self.r['hold'])
-    def place(self, side, still_allowed, target): return self._motion('place', still_allowed)
+    def place_plan(self, side, target): self.calls.append('place_plan'); return copy.deepcopy(self.r['place_plan'])
+    def approach_place(self, side, still_allowed, plan): return self._motion('approach', still_allowed)
+    def verify_release_area(self, side): self.calls.append('verify'); return copy.deepcopy(self.r['verify'])
+    def release(self, side, still_allowed): return self._motion('release', still_allowed)
+    def observe_release(self, side): self.calls.append('observe'); return copy.deepcopy(self.r['observe'])
+    def retreat(self, side, still_allowed): return self._motion('retreat', still_allowed)
     def safe_end(self, side): self.calls.append('safe_end'); return copy.deepcopy(self.r['safe_end'])
 
 
@@ -160,7 +167,7 @@ class Mission(unittest.TestCase):
             self.assertEqual(out[0]['kind'], ub.ARM_NOT_READY); self.assertNotIn('pick', a.calls)
         m, a = mission(); run_to_transport(m); m.receive(base_msg(ub.BASE_STOP_OR_FAULT, 2, 20.0))
         out = m.place_at_stop(disposal_look(), 32.0)
-        self.assertEqual(out[0]['kind'], ub.ARM_NOT_READY); self.assertNotIn('place', a.calls)
+        self.assertEqual(out[0]['kind'], ub.ARM_NOT_READY); self.assertNotIn('approach', a.calls); self.assertNotIn('release', a.calls)
         self.assertEqual(out[-1]['kind'], ub.BASE_BLOCK_REQUEST)
 
     def test_time_of_check_vs_time_of_use(self):
@@ -198,7 +205,7 @@ class Mission(unittest.TestCase):
         out = m.pick_at_stop(auth(), look(), 12.5)
         self.assertEqual(out[0]['kind'], ub.ARM_PICK_CONFIRMED); self.assertIn('not a mission completion', out[0]['note'])
         for res in (dict(separated='UNKNOWN', in_target='UNKNOWN'), dict(separated='OBSERVED', in_target='UNKNOWN')):
-            m, a = mission(Mock(place=dict(Mock().r['place'], **res))); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0))
+            m, a = mission(Mock(observe=dict(Mock().r['observe'], **res))); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0))
             out = m.place_at_stop(disposal_look(), 32.0)
             self.assertEqual(out[0]['kind'], ub.ARM_RECOVERY_REQUIRED); self.assertIn('open command/ACK alone', out[0]['reason'])
 
@@ -258,11 +265,12 @@ class Mission(unittest.TestCase):
 
 class TransportHold(unittest.TestCase):
     J = ('shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_flex', 'wrist_roll', 'gripper')
-    SECURED = dict(owner='owner-pid-41-start-9', last_bus_seq=100, joints=J, goal=dict(zip(J, (2381, 2264, 1929, 3044, 2514, 2950))))
+    SECURED = dict(owner='owner-pid-41-start-9', last_bus_seq=100, joints=J, goal=dict(zip(J, (2381, 2264, 1929, 3044, 2514, 2950))), target_id='block@task-1', secured_stamp=20.0, seen_image_sha256=('a' * 64,))
 
     def sample(self, **over):
         s = dict(owner='owner-pid-41-start-9', bus_seq=101, torque=dict.fromkeys(self.J, 1), status=dict.fromkeys(self.J, 0), goal=dict(self.SECURED['goal']),
-                 controller_state='HOLDING', grasp_label='HELD_CONFIRMED', wrist_object_at_tool='OBSERVED', stamp=21.0, clock_id=CLOCK, ref='hold#101')
+                 controller_state='HOLDING', grasp_label='HELD_CONFIRMED', wrist_object_at_tool='OBSERVED', stamp=21.0, clock_id=CLOCK, ref='hold#101',
+                 wrist_image=dict(sha256='b' * 64, owner='owner-pid-41-start-9', target_id='block@task-1', read_stamp=21.0))
         s.update(over); return s
 
     def test_a_fresh_sample_with_label_and_image_is_a_confirmed_hold(self):
@@ -295,6 +303,70 @@ class TransportHold(unittest.TestCase):
             m, a = mission(HoldMock(self.sample(**over))); run_to_transport(m); m.receive(base_msg(ub.BASE_MOVING, 2, 20.0))
             out = m.hold_check(21.0)
             self.assertEqual(out[0]['kind'], kind, over); self.assertEqual(out[-1]['kind'], ub.BASE_BLOCK_REQUEST)
+
+
+class Counterexamples(unittest.TestCase):
+    """WORK6 review section 5 items 2-3: non-finite / stale inputs, every actuator boundary, release sequence, no early success."""
+
+    def test_non_finite_stamps_are_refused_and_never_fresh(self):
+        good = base_msg(ub.BASE_PARKED_AT_PICKUP, 1, 10.0)
+        for bad in (float('inf'), float('-inf'), float('nan'), True, '12'):
+            self.assertTrue(ub.validate(dict(good, stamp=bad), inbound=True), bad)
+            self.assertFalse(ub.after(dict(stamp=bad, clock_id=CLOCK), good), bad)
+        self.assertFalse(ub.after(dict(stamp=11.0, clock_id=CLOCK), dict(good, stamp=float('inf'))))
+        self.assertFalse(ub.after(dict(stamp=11.0, clock_id=''), dict(good, clock_id='')))
+
+    def test_base_moving_at_every_actuator_boundary_stops_that_motion(self):
+        for boundary in ('pick', 'transport', 'approach', 'release', 'retreat'):
+            m, a = mission()
+            def base_moves(name, b=boundary):
+                if name == b:
+                    m.receive(base_msg(ub.BASE_MOVING, 9, 30.9))
+            a.before_motion = base_moves
+            m.receive(base_msg(ub.BASE_PARKED_AT_PICKUP, 1, 10.0)); m.pick_at_stop(auth(), look(), 12.5); m.secure_transport(13.5)
+            m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 5, 29.0)); m.place_at_stop(disposal_look(), 32.0)
+            self.assertNotIn(ub.ARM_DISPOSAL_CONFIRMED, m.summary()['sent'], boundary)
+
+    def test_the_area_is_verified_before_any_approach_and_again_before_the_release(self):
+        m, a = mission(Mock(place_plan=dict(plan_ok=True, area_verified='UNKNOWN'))); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0))
+        out = m.place_at_stop(disposal_look(), 32.0)
+        self.assertEqual(out[0]['kind'], ub.ARM_FAULT); self.assertNotIn('approach', a.calls)
+        m, a = mission(Mock(verify=dict(support_and_space='UNKNOWN'))); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0))
+        out = m.place_at_stop(disposal_look(), 32.0)
+        self.assertIn('not opened', out[0]['reason']); self.assertNotIn('release', a.calls)
+        m, a = mission(Mock(verify=dict(support_and_space='CONFIRMED', evidence=dict(stamp=12.0, clock_id=CLOCK)))); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0))
+        self.assertNotIn('release', (m.place_at_stop(disposal_look(), 32.0), a.calls)[1])           # an area check from before the stop is not 'right before'
+
+    def test_a_fault_during_the_release_and_missing_retreat_or_safe_end_are_never_a_disposal(self):
+        cases = dict(release=(dict(release=dict(faults={'ID6': 'status 0x20'})), ub.ARM_RECOVERY_REQUIRED),
+                     retreat=(dict(retreat=dict(retreated=False)), ub.ARM_RECOVERY_REQUIRED),
+                     safe_end=(dict(safe_end=dict(verified=False, torque_state='UNKNOWN', holding_state='UNKNOWN')), ub.ARM_RECOVERY_REQUIRED))
+        for name, (over, kind) in cases.items():
+            m, a = mission(Mock(**over)); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0))
+            out = m.place_at_stop(disposal_look(), 32.0)
+            self.assertEqual(out[0]['kind'], kind, name); self.assertNotIn(ub.ARM_DISPOSAL_CONFIRMED, m.summary()['sent'], name)
+
+    def test_a_hold_image_that_is_old_reused_or_from_another_owner_or_target_is_not_a_hold(self):
+        T = TransportHold('test_a_fresh_sample_with_label_and_image_is_a_confirmed_hold')
+        for img in (dict(read_stamp=19.0), dict(sha256='a' * 64), dict(owner='other'), dict(target_id='other'), dict(read_stamp=float('inf')), dict(sha256='short')):
+            s = T.sample(); s['wrist_image'] = dict(s['wrist_image'], **img)
+            r = ub.hold_evidence(s, T.SECURED)
+            self.assertEqual(r['gripper_hold'], ub.UNKNOWN, img)
+
+    def test_both_arms_eligible_without_one_cost_definition_is_an_operator_choice(self):
+        ev = dict(left=arm(travel=300), right=arm(travel=120))
+        ev['right']['approach_ik']['cost'] = dict(value=120, definition='raw tick sum', source='HandoverTeacher.plan_move')
+        d = ub.select_arm(ev, 'MOCK')
+        self.assertIsNone(d['selected']); self.assertEqual(d['decision'], 'BOTH_ELIGIBLE_NO_COMPARABLE_COST')
+
+    def test_nothing_short_of_every_fact_declares_completion(self):
+        m, a = mission(); run_to_transport(m)
+        self.assertNotIn(ub.ARM_DISPOSAL_CONFIRMED, m.summary()['sent'])                  # PICK and servo HOLDING only
+        m, a = mission(Mock(observe=dict(separated='UNKNOWN', in_target='UNKNOWN'))); run_to_transport(m); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 2, 29.0)); m.place_at_stop(disposal_look(), 32.0)
+        self.assertIn('release', a.calls); self.assertNotIn(ub.ARM_DISPOSAL_CONFIRMED, m.summary()['sent'])   # OPEN ACK only
+        m, a = mission(); m.receive(base_msg(ub.BASE_PARKED_AT_DISPOSAL, 1, 29.0))
+        self.assertEqual(m.place_at_stop(disposal_look(), 32.0)[0]['kind'], ub.ARM_NOT_READY)               # base arrival only
+        self.assertIs(m.summary()['mission_completed_by_upper_body'], False)
 
 
 if __name__ == '__main__':

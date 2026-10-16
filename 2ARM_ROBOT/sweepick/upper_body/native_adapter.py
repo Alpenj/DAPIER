@@ -77,12 +77,29 @@ class NativeArmAdapter:
     def transport_pose(self, side, still_allowed):
         return self._refuse('transport_pose')
 
-    def place(self, side, still_allowed, target):
-        return self._refuse('place')
+    def place_plan(self, side, target):
+        return self._refuse('place_plan')
+
+    def approach_place(self, side, still_allowed, plan):
+        return self._refuse('approach_place')
+
+    def verify_release_area(self, side):
+        self.calls.append('verify_release_area')
+        return dict(support_and_space='UNKNOWN', why=NOT_WIRED)
+
+    def release(self, side, still_allowed):
+        return self._refuse('release')
+
+    def observe_release(self, side):
+        self.calls.append('observe_release')
+        return dict(separated='UNKNOWN', in_target='UNKNOWN', why=NOT_WIRED)
+
+    def retreat(self, side, still_allowed):
+        return self._refuse('retreat')
 
     def safe_end(self, side):
         self.calls.append('safe_end')
-        return dict(torque_state='UNKNOWN', holding_state='UNKNOWN', why=NOT_WIRED)
+        return dict(verified=False, torque_state='UNKNOWN', holding_state='UNKNOWN', why=NOT_WIRED)
 
     def hold_readback(self, side):
         self.calls.append('hold_readback')

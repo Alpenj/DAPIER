@@ -38,15 +38,15 @@ class NativeAdapter(unittest.TestCase):
         self.assertEqual(ub.select_arm(ev, 'REAL')['decision'], ub.ARM_NOT_READY)
 
     def test_every_motion_is_refused_without_moving_and_the_mission_ends_not_ready(self):
-        mounted = dict(left={k: dict(ok=True, joint_travel_ticks=1) for k in ('approach_ik', 'collision_and_view', 'grasp_room', 'transport_pose', 'place_pose')})
+        mounted = dict(left={k: dict(ok=True, cost=dict(value=1, definition='d', source='s')) for k in ('approach_ik', 'collision_and_view', 'grasp_room', 'transport_pose', 'place_pose')})
         a = self.adapter(IDLE, mount_verification=dict(ref='m'), mounted=mounted)
-        for r in (a.pick('left', lambda: True), a.transport_pose('left', lambda: True), a.place('left', lambda: True, {})):
+        for r in (a.pick('left', lambda: True), a.transport_pose('left', lambda: True), a.place_plan('left', {}), a.approach_place('left', lambda: True, {}), a.release('left', lambda: True), a.retreat('left', lambda: True)):
             self.assertEqual((r['moved'], r['refused'][:10]), (False, 'NOT_WIRED:'))
         m = ub.UpperBodyMission(T.TASK, a, mode='REAL', native_manifest_sha256=T.MANIFEST, clock_id=T.CLOCK)
         m.receive(T.base_msg(ub.BASE_PARKED_AT_PICKUP, 1, 10.0))
         out = m.pick_at_stop(T.auth(source_kind='REAL'), T.look(), 12.0)
         self.assertEqual(out[0]['kind'], ub.ARM_NOT_READY); self.assertIn('NOT_WIRED', out[0]['reason'])
-        self.assertEqual(a.calls, ['pick', 'transport_pose', 'place', 'evaluate_arms', 'pick'])
+        self.assertEqual(a.calls, ['pick', 'transport_pose', 'place_plan', 'approach_place', 'release', 'retreat', 'evaluate_arms', 'pick'])
 
     def test_the_adapter_imports_no_device_or_motor_code(self):
         tree = ast.parse(Path(na.__file__).read_text())
