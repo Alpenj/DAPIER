@@ -4,6 +4,8 @@ record_id: `DAPIER-2026-10-15-right-x-field-measurement-plan`
 
 상태: **FIELD_PHYSICAL_CONFIRMATION_REQUIRED**. 아래는 미실행 계획이다. 이번 작업에서는 장치를 열지 않았고 A Native·Console·servo setting·학습을 변경하지 않았다. 첫 1D X에 필요한 목표 관계와 방향 증거만 정리하며, 완전한 2D/6D 정합이나 새 calibration solve를 선행조건으로 만들지 않는다.
 
+2026-10-16 [실물 Pad 식별 갱신](PHYSICAL_PAD_IDENTIFICATION_UPDATE.md): 두 finger가 서로 마주 보는 안쪽 접촉면이라는 물리 정의는 운영자가 확인했다. 아래에서 아직 필요한 것은 **해당 archive 프레임의 면/물체 대응과 비접촉 목표 관계**다. Pad의 정의를 다시 확인하거나 같은 사진·Calibration을 다시 수집할 필요는 없다. 이번 외부 사진은 목표 자세나 새로운 현장 실행을 승인하지 않는다.
+
 ## 1. 기존 자료로 목표 영상을 확정하는 조건
 
 005/037의 실제 Right RGB와 같은 수신 구간의 Top/왼손목 문맥, actual read 원장을 함께 검토한다. 운영자가 다음 사실을 확인 기록으로 남길 수 있으면 기존 원본을 목표 영상으로 채택할 수 있다.

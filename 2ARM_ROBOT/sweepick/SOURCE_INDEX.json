@@ -15,7 +15,8 @@
     "B20 anonymized reference/optical/feature/CPU findings exclude original images, feedback, optical parameters, device identity and recording timestamps",
     "B20 archive recovery summaries omit original frames, actual q/ticks, calibration, device identities, machine paths and receipt timestamps; original evidence remains local",
     "B20 Right X handoff publishes three technical contracts only; actual RGB review PNG, measured feedback and source receipt metadata remain local",
-    "B20 target-image consumer adds pure code and anonymized regressions; original REAL image/feedback/operator evidence/calibration/device records remain local"
+    "B20 target-image consumer adds pure code and anonymized regressions; original REAL image/feedback/operator evidence/calibration/device records remain local",
+    "B20 physical Pad definition update retains external photos, their original SHA manifest and frame/model/calibration source details locally; no image correspondence, metric geometry or FIELD target is inferred"
   ],
   "files": [
     {
@@ -2090,32 +2091,32 @@
     },
     {
       "file": "visual_servo/RIGHT_REFERENCE_FINAL_SHORTLIST.md",
-      "source_group": "B20_RIGHT_X_HANDOFF",
+      "source_group": "B20_PHYSICAL_PAD_IDENTIFICATION_UPDATE",
       "source_name": "RIGHT_REFERENCE_FINAL_SHORTLIST.md",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "b2bfcce8c8272e48179990abe3dc13ab1258ce8ccc1530dc1c69a1391e84828d",
-      "public_sha256": "735fb451a1f70e1b4096b939c77fcbf062fa492d437a8bdc62da7a49a04d0706",
-      "bytes": 6289,
-      "public_copy_changed": true
+      "source_sha256": "b50b2ecd29de7ebf64bd737e86738793a6391c096241878c41b12276c7221ee3",
+      "public_sha256": "b50b2ecd29de7ebf64bd737e86738793a6391c096241878c41b12276c7221ee3",
+      "bytes": 6854,
+      "public_copy_changed": false
     },
     {
       "file": "visual_servo/RIGHT_X_FIELD_MEASUREMENT_PLAN.md",
-      "source_group": "B20_RIGHT_X_HANDOFF",
+      "source_group": "B20_PHYSICAL_PAD_IDENTIFICATION_UPDATE",
       "source_name": "RIGHT_X_FIELD_MEASUREMENT_PLAN.md",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "8229d9cd252a58464d5ac7c4da7b5a012c52587cee0ad9643cbefa696abb0224",
-      "public_sha256": "8d04f0e183db684d0d908bc9b964ee86197b274d2a3eb23fc851324d367a12a9",
-      "bytes": 13477,
-      "public_copy_changed": true
+      "source_sha256": "c3723c16b95a1f76ed826e91d0927afa325b22338c3e17f1d310ea60798badd2",
+      "public_sha256": "c3723c16b95a1f76ed826e91d0927afa325b22338c3e17f1d310ea60798badd2",
+      "bytes": 13976,
+      "public_copy_changed": false
     },
     {
       "file": "visual_servo/FIELD_VERIFIED_TARGET_IMAGE_CONTRACT.md",
-      "source_group": "B20_RIGHT_X_HANDOFF",
+      "source_group": "B20_PHYSICAL_PAD_IDENTIFICATION_UPDATE",
       "source_name": "FIELD_VERIFIED_TARGET_IMAGE_CONTRACT.md",
       "component": "B_VISUAL_SERVO_SHADOW",
-      "source_sha256": "ff77682e648c3ccb3618a1084904e6480d02b250c0836a60f05db8a37594486a",
-      "public_sha256": "ff77682e648c3ccb3618a1084904e6480d02b250c0836a60f05db8a37594486a",
-      "bytes": 8427,
+      "source_sha256": "8699fb3a485ce18b878f9a5c9d3b56151b4eb571515cc8b25ed323fad694b057",
+      "public_sha256": "8699fb3a485ce18b878f9a5c9d3b56151b4eb571515cc8b25ed323fad694b057",
+      "bytes": 8812,
       "public_copy_changed": false
     },
     {
@@ -2216,6 +2217,16 @@
       "source_sha256": "f464053154f76615ae92f6356342684fe4db1fb0e739799286e1001a889fa456",
       "public_sha256": "f464053154f76615ae92f6356342684fe4db1fb0e739799286e1001a889fa456",
       "bytes": 3874,
+      "public_copy_changed": false
+    },
+    {
+      "file": "visual_servo/PHYSICAL_PAD_IDENTIFICATION_UPDATE.md",
+      "source_name": "PHYSICAL_PAD_IDENTIFICATION_UPDATE.md",
+      "component": "B_VISUAL_SERVO_SHADOW",
+      "source_group": "B20_PHYSICAL_PAD_IDENTIFICATION_UPDATE",
+      "source_sha256": "61c58b6275a634592ddc4785a59397c68396008fceb0782aa55feb02d28e38b2",
+      "public_sha256": "61c58b6275a634592ddc4785a59397c68396008fceb0782aa55feb02d28e38b2",
+      "bytes": 7180,
       "public_copy_changed": false
     }
   ]

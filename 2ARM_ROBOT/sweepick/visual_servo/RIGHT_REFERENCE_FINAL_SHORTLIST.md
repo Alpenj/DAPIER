@@ -4,13 +4,15 @@ record_id: `DAPIER-2026-10-15-right-x-field-handoff`
 
 상태: **FIELD_PHYSICAL_CONFIRMATION_REQUIRED**. `archive_candidate_005`, `037`을 우선 비교하고 `001`, `033`은 각 세션의 접근 시작 대조군으로 사용한다. 최종 shortlist를 확정했으며 물리 목표 영상은 아직 확정하지 않았다. 이번 작업은 이미 끝난 archive recovery 이후의 새 인계다. 전체 영상 재검수, LEFT HELD 의미 수정, 19쌍 X 응답 분석을 반복하지 않았다.
 
+2026-10-16 [실물 Pad 식별 갱신](PHYSICAL_PAD_IDENTIFICATION_UPDATE.md): 운영자는 Inner Pad가 닫히는 두 finger의 서로 마주 보는 안쪽 접촉면임을 확인했다. 외부 사진 3장과 005/037을 대조했으며 **물리 부품의 정의는 확인, 프레임별 Pad 대응과 비접촉 목표는 미검증**으로 구분한다. 아래 미확정은 이 영상의 부재 소유·jaw 번호·좌표/경계 대응을 뜻하며 Pad라는 실물 부품의 의미를 다시 묻는 항목이 아니다.
+
 ## 네 후보의 판단
 
 | 후보 | 실제 관측 단계 | 물체 가시성 | 실제 Right Jaw / Pad 식별 | 비접촉 목표 판단 |
 |---|---|---|---|---|
-| 005 — 우선 A | 이전 세션 `03_observe_0_0_right` 마지막 실측 행 부근 | red component 4,687 px, frame 잘림 없음. 윗면·측면 일부가 보이며 검은 부재가 물체 앞을 가린다 | 검은 하드웨어 외형은 보이나 소유 팔·실제 jaw 번호·inner Pad 면/경계 대응은 미확정 | 가려진 접촉면의 간격을 영상으로 확정할 수 없다. **UNVERIFIED_REFERENCE_CANDIDATE** |
+| 005 — 우선 A | 이전 세션 `03_observe_0_0_right` 마지막 실측 행 부근 | red component 4,687 px, frame 잘림 없음. 윗면·측면 일부가 보이며 검은 부재가 물체 앞을 가린다 | Pad의 물리 정의는 확인됐다. 해당 silhouette의 소유 팔·실제 jaw 번호·Pad 영상 좌표/경계 대응은 미확정 | 가려진 접촉면의 간격을 영상으로 확정할 수 없다. **UNVERIFIED_REFERENCE_CANDIDATE** |
 | 037 — 우선 B | 다음 세션 같은 단계 마지막 실측 행 부근 | red component 5,550 px, frame 잘림 없음. 005와 영상상 위치·가시 면적이 다르다 | 005와 마찬가지로 실제 inner Pad 경계나 번호를 확정할 수 없다 | 더 큰 가시 면적은 비접촉·파지 가능성의 증거가 아니다. **UNVERIFIED_REFERENCE_CANDIDATE** |
-| 001 — 대조군 A | 이전 세션 `02_approach_right_approach_right` 첫 실측 행 부근 | red component 4,218 px, frame 잘림 없음 | 검은 부재와 물체의 중첩이 보이지만 물리 Right Pad 식별은 미확정 | 접근 시작의 외형 비교용. 목표 자세나 X 측정 pair로 채택하지 않음 |
+| 001 — 대조군 A | 이전 세션 `02_approach_right_approach_right` 첫 실측 행 부근 | red component 4,218 px, frame 잘림 없음 | 해당 프레임의 Right Pad 영상 대응은 미확정. 이번 외부 사진 비교 대상은 005/037이다 | 접근 시작의 외형 비교용. 목표 자세나 X 측정 pair로 채택하지 않음 |
 | 033 — 대조군 B | 다음 세션 같은 단계 첫 실측 행 부근 | red component 4,071 px, frame 잘림 없음 | 001과 같은 식별 한계 | 접근 시작의 외형 비교용. 목표 자세나 X 측정 pair로 채택하지 않음 |
 
 가시성·면적은 기존 RGB component 결과를 재사용했다. frame 잘림 없음은 전체 물체·전체 contact surface가 관측되었다는 뜻이 아니다. 왼손목의 전경 물체는 화면 경계에서 잘리고, Top은 어둡고 두 팔/물체가 겹쳐 보여 hidden contact를 해결하지 못한다. CAD projection을 이 영상의 물리 Pad로 해석하지 않았다.

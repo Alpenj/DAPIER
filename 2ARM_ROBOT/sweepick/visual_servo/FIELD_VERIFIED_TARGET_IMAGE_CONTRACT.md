@@ -2,6 +2,8 @@
 
 record_id: `DAPIER-2026-10-15-field-verified-target-image-contract`
 
+2026-10-16 [실물 Pad 식별 갱신](PHYSICAL_PAD_IDENTIFICATION_UPDATE.md): 실제 Inner Pad의 물리 정의는 운영자가 확인했다. 이 사실은 **구조 식별 근거**이며, 아래 계약의 영상별 비접촉 목표 확인·current binding·mount 확인을 대신하지 않는다. 외부 사진 확인을 FIELD reference나 current evidence로 변환하지 않았다.
+
 상태: **PROPOSED CONTRACT / FIELD_PHYSICAL_CONFIRMATION_REQUIRED**. 현재 네 후보는 모두 `UNVERIFIED_REFERENCE_CANDIDATE`다. 이 문서는 독립된 reference-image role을 정의하는 인계이며, 기존 어댑터에 새 role을 구현하거나 물리 검증을 수행한 결과가 아니다. 현재 `extract_right_features()`는 REAL reference에 `CURRENT_OBSERVED_PAD`와 current binding을 요구한다. 목표 영상을 그 role로 위장하거나 과거 binding을 current로 복사해서 이 검사를 통과시키지 않는다.
 
 ## 승격 조건과 상태
