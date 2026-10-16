@@ -202,6 +202,43 @@ def select_arm(evaluations, mode):
     return dict(selected=pick, decision='SELECTED', mode=mode, arms=recs, comparison=travel, why=f'both eligible: the {pick} arm needs less approach joint travel by the existing planner')
 
 
+def hold_evidence(sample, secured):
+    """What one readback sample during transport proves about the hold, against the record taken when the transport pose was
+    secured. Every field comes from the existing executor (its owner identity, bus sequence, torque/status/goal registers and
+    its own HOLDING judgement), the existing grasp label (sweepick_grasp: HELD_CONFIRMED ...) and the current wrist image.
+    No threshold is applied here: a value either matches what the existing code reported or the hold is not confirmed.
+    Returns the dict the mission's hold_check() reads."""
+    s = sample if isinstance(sample, dict) else {}
+    out = dict(readback_ok=False, gripper_hold=UNKNOWN, faults=None, owner_conflict=None, evidence=dict(stamp=s.get('stamp'), clock_id=s.get('clock_id'), ref=s.get('ref')), why=[])
+    if s.get('bus_lost'):
+        out['faults'] = {'bus': 'lost'}; out['why'].append('bus lost: torque and hold UNKNOWN'); return out
+    if s.get('owner') != secured.get('owner'):
+        out['owner_conflict'] = f"owner {s.get('owner')} is not the owner that secured the pose ({secured.get('owner')}): after a restart the hold is not assumed"
+        return out
+    if not isinstance(s.get('bus_seq'), int) or not isinstance(secured.get('last_bus_seq'), int) or s['bus_seq'] <= secured['last_bus_seq']:
+        out['why'].append('not a new bus read (stale or repeated sequence)'); return out
+    torque, status, goal = s.get('torque') or {}, s.get('status') or {}, s.get('goal') or {}
+    joints = secured.get('joints') or ()
+    if not joints or any(torque.get(j) != 1 for j in joints):
+        out['faults'] = {'torque': {j: torque.get(j) for j in joints if torque.get(j) != 1}}; out['why'].append('torque off or unread on a held joint (power loss / release)'); return out
+    if any(status.get(j) not in (0,) for j in joints):
+        out['faults'] = {'status': {j: status.get(j) for j in joints if status.get(j) != 0}}; out['why'].append('servo status register not clear'); return out
+    if any(goal.get(j) != (secured.get('goal') or {}).get(j) for j in joints):
+        out['readback_mismatch'] = {j: [goal.get(j), (secured.get('goal') or {}).get(j)] for j in joints if goal.get(j) != (secured.get('goal') or {}).get(j)}
+        out['why'].append('a goal register changed since the pose was secured'); return out
+    if s.get('controller_state') != 'HOLDING':
+        out['why'].append(f"the executor reports {s.get('controller_state')!r}, not HOLDING"); return out
+    out['readback_ok'] = True
+    label, seen = s.get('grasp_label'), s.get('wrist_object_at_tool')
+    if label == 'HELD_CONFIRMED' and seen == 'OBSERVED':
+        out['gripper_hold'] = 'CONFIRMED'
+    elif label in ('NO_CONTACT', 'NOT_HELD') or seen == 'ABSENT':
+        out['gripper_hold'] = 'NOT_HELD'
+    else:
+        out['why'].append(f'hold not confirmed by this sample (grasp label {label}, wrist image {seen}); torque on alone is not a hold')
+    return out
+
+
 class UpperBodyMission:
     """The arm side of one pickup -> disposal task. Each public step re-checks the base and its own preconditions just before
     it acts (time-of-check vs time-of-use) and gives the adapter a `still_allowed()` to call right before any motion.

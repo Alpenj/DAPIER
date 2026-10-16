@@ -1,0 +1,192 @@
+{
+  "schema": "sweepick.mounted-collision-model.v1",
+  "date": "2026-10-16",
+  "source_kind": "OFFLINE MODEL (no device read)",
+  "model": {
+    "builder": "tjj-runtime integration_scenes.build_scene(\"mobile\") — TurtleBot3 Waffle Pi + aluminium mount (+0.094 m) + two SO-101 at y=±0.150 + OS30A camera stand; the runtime's own label: mobile_aluminum_USER_DIMENSIONS_UNVERIFIED",
+    "waffle_pi_urdf": "git e1267f1 2ARM_ROBOT/sim/turtlebot3_waffle_pi (the runtime folder lacks its URDF; read-only copy, runtime not modified)",
+    "held_block": "the existing A block model (half extent 0.02 m) fixed at the gripper grasp site; collision-active",
+    "contact_rule": "any contact other than a wheel on the floor is a refusal (the existing \"no new contact at all\" rule); no clearance number",
+    "self_test": {
+      "arm_vs_mount": "detected (left_shoulder_pan sweep: left_gripper vs aluminum_mount)",
+      "held_block_can_touch": [
+        "aluminum_mount",
+        "os30a_plate_frame",
+        "right arm links",
+        "tb3_base_link",
+        "tb3_wheel",
+        "floor"
+      ]
+    }
+  },
+  "recorded_desk_poses_in_mounted_model": {
+    "count": 43,
+    "verdicts": {
+      "CLEAR": 43
+    },
+    "per_pose": {
+      "home": 8,
+      "pregrasp": 7,
+      "align": 6,
+      "descend_a": 7,
+      "descend": 7,
+      "lift": 3,
+      "lower": 1,
+      "open": 1,
+      "retreat": 1,
+      "retreat_arm": 1,
+      "home_arm": 1
+    },
+    "runs": [
+      "20261014_155824_d4017e",
+      "20261015_092942_a4628c",
+      "20261015_112218_f0d866",
+      "20261015_140844_3cc05c",
+      "20261015_151937_81d00c",
+      "20261016_112020_4d7c2b",
+      "20261016_121735_b9241e"
+    ],
+    "note": "left arm at each recorded REAL stage pose (desk runs 2026-10-14..16), right arm at its observed home; ticks -> angles by the existing calibrated mapping"
+  },
+  "key_finding": {
+    "desk_descend_grasp_point_world_m": [
+      0.146,
+      0.047,
+      0.138
+    ],
+    "meaning": "the desk pick poses put the grasp point 0.138 m above the floor in front of the base: a block on the floor is NOT reached by the desk poses. The pickup height at stop 1 must be specified by the mission (floor? shelf?) before any pick plan."
+  },
+  "reach_envelope": {
+    "method": "random joint samples of the left arm in the mounted model; a sampling report, not a plan (no IK path, no block, no certificate)",
+    "any_orientation": {
+      "samples": 40000,
+      "contact_free": 25194,
+      "lowest_grasp_point_z_m": 0.013
+    },
+    "top_grasp_orientation": {
+      "filter": "approach axis as vertical as the recorded desk descend (>=98% of its vertical component, same sense): a sampling filter for this report, not a limit",
+      "samples": 200000,
+      "kept": 4098,
+      "lowest": [
+        [
+          0.013,
+          -0.049,
+          0.338
+        ],
+        [
+          0.014,
+          0.086,
+          0.237
+        ],
+        [
+          0.014,
+          0.192,
+          0.224
+        ],
+        [
+          0.014,
+          0.084,
+          0.215
+        ],
+        [
+          0.014,
+          0.142,
+          0.232
+        ],
+        [
+          0.014,
+          0.012,
+          0.34
+        ],
+        [
+          0.014,
+          0.195,
+          0.123
+        ],
+        [
+          0.014,
+          0.167,
+          0.147
+        ]
+      ],
+      "reading": "contact-free top-grasp points reach ~0.014 m above the floor, but beside the base on the left (y 0.09..0.34 m), not straight ahead"
+    }
+  },
+  "transport_candidates": {
+    "rule": "recorded REAL poses re-checked holding the block",
+    "results": {
+      "home": {
+        "n": 7,
+        "clear": 7,
+        "held_block_z_m": [
+          0.248,
+          0.276
+        ],
+        "held_block_x_m": [
+          0.146,
+          0.15
+        ]
+      },
+      "lift": {
+        "n": 3,
+        "clear": 3,
+        "held_block_z_m": [
+          0.197,
+          0.198
+        ],
+        "held_block_x_m": [
+          0.142,
+          0.15
+        ]
+      },
+      "pregrasp": {
+        "n": 7,
+        "clear": 7,
+        "held_block_z_m": [
+          0.187,
+          0.189
+        ],
+        "held_block_x_m": [
+          0.144,
+          0.15
+        ]
+      },
+      "retreat": {
+        "n": 1,
+        "clear": 1,
+        "held_block_z_m": [
+          0.19,
+          0.19
+        ],
+        "held_block_x_m": [
+          0.149,
+          0.149
+        ]
+      },
+      "retreat_arm": {
+        "n": 1,
+        "clear": 1,
+        "held_block_z_m": [
+          0.188,
+          0.188
+        ],
+        "held_block_x_m": [
+          0.148,
+          0.148
+        ]
+      }
+    },
+    "reading": "home (folded) holding the block is contact-free with the mounted body and keeps the block highest (0.25..0.28 m); it stands ~0.15 m ahead of the base origin, near the front edge. Whether that is acceptable while driving (front obstacle sensing, LDS view, vibration) is the base team's and the field's decision: CANDIDATE only, not verified."
+  },
+  "not_established": [
+    "real mount dimensions (USER_DIMENSIONS_UNVERIFIED)",
+    "real arm-to-base transform (base_footprint<->arm_base unverified per C)",
+    "whether the LDS / front camera view is blocked by the arm or block",
+    "vibration / holding force during driving",
+    "any physical pose on the TurtleBot (no joint was read today)"
+  ],
+  "sources_sha256": {
+    "mounted/mobile_model.py": "27134cf14c225c9118f182e3044ba87c3fa556be2787bf580d4e5d0a363638aa",
+    "mounted/mounted_poses.py": "3f76cf81cd5e1c0f59919edde3bb99fbd61db57c5704f7c9b29f85d6f5c3ca79"
+  }
+}

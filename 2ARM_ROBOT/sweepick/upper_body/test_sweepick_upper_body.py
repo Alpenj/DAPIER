@@ -256,5 +256,46 @@ class Mission(unittest.TestCase):
         self.assertEqual(out[0]['kind'], ub.ARM_NOT_READY); self.assertNotIn('pick', a.calls)
 
 
+class TransportHold(unittest.TestCase):
+    J = ('shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_flex', 'wrist_roll', 'gripper')
+    SECURED = dict(owner='owner-pid-41-start-9', last_bus_seq=100, joints=J, goal=dict(zip(J, (2381, 2264, 1929, 3044, 2514, 2950))))
+
+    def sample(self, **over):
+        s = dict(owner='owner-pid-41-start-9', bus_seq=101, torque=dict.fromkeys(self.J, 1), status=dict.fromkeys(self.J, 0), goal=dict(self.SECURED['goal']),
+                 controller_state='HOLDING', grasp_label='HELD_CONFIRMED', wrist_object_at_tool='OBSERVED', stamp=21.0, clock_id=CLOCK, ref='hold#101')
+        s.update(over); return s
+
+    def test_a_fresh_sample_with_label_and_image_is_a_confirmed_hold(self):
+        r = ub.hold_evidence(self.sample(), self.SECURED)
+        self.assertEqual((r['readback_ok'], r['gripper_hold']), (True, 'CONFIRMED'))
+
+    def test_torque_on_alone_or_a_past_label_is_not_a_hold(self):
+        for over in (dict(wrist_object_at_tool='UNKNOWN'), dict(grasp_label='CONTACT_CANDIDATE'), dict(wrist_object_at_tool=None)):
+            r = ub.hold_evidence(self.sample(**over), self.SECURED)
+            self.assertTrue(r['readback_ok']); self.assertEqual(r['gripper_hold'], ub.UNKNOWN, over)
+        self.assertEqual(ub.hold_evidence(self.sample(wrist_object_at_tool='ABSENT'), self.SECURED)['gripper_hold'], 'NOT_HELD')
+
+    def test_restart_stale_read_power_loss_status_and_goal_change(self):
+        cases = dict(restart=(dict(owner='owner-pid-77-start-12'), 'owner_conflict'), stale=(dict(bus_seq=100), None),
+                     power=(dict(torque=dict(dict.fromkeys(self.J, 1), shoulder_lift=0)), 'faults'), status=(dict(status=dict(dict.fromkeys(self.J, 0), elbow_flex=32)), 'faults'),
+                     goal=(dict(goal=dict(self.SECURED['goal'], wrist_flex=3000)), 'readback_mismatch'), bus=(dict(bus_lost=True), 'faults'),
+                     not_holding=(dict(controller_state='TARGET_NOT_REACHED_HOLDING'), None))
+        for name, (over, key) in cases.items():
+            r = ub.hold_evidence(self.sample(**over), self.SECURED)
+            self.assertFalse(r['readback_ok'], name); self.assertEqual(r['gripper_hold'], ub.UNKNOWN, name)
+            if key:
+                self.assertTrue(r.get(key), name)
+
+    def test_the_mission_turns_a_lost_hold_into_a_fault_and_a_base_block(self):
+        secured = self.SECURED
+        class HoldMock(Mock):
+            def __init__(s_, sample): super().__init__(); s_.sample = sample
+            def hold_readback(s_, side): s_.calls.append('hold'); return ub.hold_evidence(s_.sample, secured)
+        for over, kind in ((dict(owner='other'), ub.ARM_FAULT), (dict(torque=dict.fromkeys(self.J, 0)), ub.ARM_RECOVERY_REQUIRED), (dict(wrist_object_at_tool='UNKNOWN'), ub.ARM_FAULT)):
+            m, a = mission(HoldMock(self.sample(**over))); run_to_transport(m); m.receive(base_msg(ub.BASE_MOVING, 2, 20.0))
+            out = m.hold_check(21.0)
+            self.assertEqual(out[0]['kind'], kind, over); self.assertEqual(out[-1]['kind'], ub.BASE_BLOCK_REQUEST)
+
+
 if __name__ == '__main__':
     unittest.main()

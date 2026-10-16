@@ -22,7 +22,17 @@
     "test_both_fit_are_compared_by_planner_travel_not_guessed : ok",
     "test_both_refused_or_unknown_is_arm_not_ready : ok",
     "test_left_fit_right_unfit : ok",
-    "test_right_fit_left_unfit_in_mock_and_right_is_never_REAL_eligible_yet : ok"
+    "test_right_fit_left_unfit_in_mock_and_right_is_never_REAL_eligible_yet : ok",
+    "test_a_fresh_sample_with_label_and_image_is_a_confirmed_hold : ok",
+    "test_restart_stale_read_power_loss_status_and_goal_change : ok",
+    "test_the_mission_turns_a_lost_hold_into_a_fault_and_a_base_block : ok",
+    "test_torque_on_alone_or_a_past_label_is_not_a_hold : ok",
+    "test_a_fault_on_the_console_refuses_both_arms_mechanically : ok",
+    "test_a_missing_device_link_is_a_refusal : ok",
+    "test_every_motion_is_refused_without_moving_and_the_mission_ends_not_ready : ok",
+    "test_the_adapter_imports_no_device_or_motor_code : ok",
+    "test_unrun_planner_checks_stay_unknown_and_the_right_arm_is_not_real_eligible : ok",
+    "test_without_a_mount_record_or_console_the_state_is_unknown_not_ok : ok"
   ],
   "directive_cases": {
     "select: left fit / right unfit": "SelectArm.test_left_fit_right_unfit",
@@ -41,22 +51,33 @@
     "new session approval mismatch / open FAULT / base-sourced approval": "Mission.test_authorization_is_the_operators_for_this_task_and_this_source",
     "unverified transport pose": "Mission.test_unverified_transport_pose_is_not_transport_ready",
     "REAL with only the unverified right arm": "Mission.test_real_mode_with_only_the_unverified_right_arm_fit_never_moves",
-    "schema / ordering / clock domain": "Schema.*"
+    "schema / ordering / clock domain": "Schema.*",
+    "transport hold: restart / stale read / power loss / status / goal change / torque-on-alone": "TransportHold.*",
+    "native adapter: read-only evaluation, every motion refused NOT_WIRED, no device import": "NativeAdapter.*"
   },
   "mutation_check": "six conditions disabled one at a time (freshness ordering, REAL eligibility, base block, open-ACK-as-disposal, readback loss, authorization task): every one makes at least one test fail; source restored byte-identical",
   "not_tested_here": [
-    "the REAL adapter (native pick01/move_a stage path) — not written; voltage/current values are reported by the existing executor as faults and are not re-thresholded here",
-    "simulation of the mounted arms, cameras, payload and transport pose (collision, range, vibration) — not run",
-    "the base team side — their messages are mocked from the draft schema"
+    "the REAL motion path — not wired (needs a native UPPER_BODY_PICK_TRANSPORT_PLACE scope)",
+    "simulation dynamics (vibration, holding force) of the mounted arms",
+    "the base team side (mocked from the draft schema)"
   ],
   "source_sha256": {
-    "sweepick_upper_body.py": "f88b1664e4cf9b9384d72a1d61e83c4443c4a498b13ff660843058fa381ac86d",
-    "test_sweepick_upper_body.py": "9a27307d3a943fbce0a8b4f64489ae033282fb896853d72782cf7e73a41b34b4"
+    "sweepick_upper_body.py": "bc59ee64e49c8c3dff0c38ca34a249133b7ee59d29f46b6c0e9aa0c8daddd628",
+    "test_sweepick_upper_body.py": "cb25efe77dc83397a5f1acbd8e48a2aaa904828f512633e4a427f4eaa4e1909a",
+    "native_adapter.py": "5247bf4b38bd4822b07ce14d3eed9568710804400720b386e6c5c19ef0da6c11",
+    "test_native_adapter.py": "02cdfa365e1c379f862d275b1d31183c6732c11fb3804efa86ef7943ded178a2",
+    "mounted/mobile_model.py": "27134cf14c225c9118f182e3044ba87c3fa556be2787bf580d4e5d0a363638aa",
+    "mounted/mounted_poses.py": "3f76cf81cd5e1c0f59919edde3bb99fbd61db57c5704f7c9b29f85d6f5c3ca79"
   },
   "unchanged_sources_sha256": {
     "native active RUN_APPROVED_SESSION.py": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
     "native active revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
     "native active revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
     "live console control.py": "840cb87c910f874cd8723055f227f56840a7333f508835bd88c2987114fc08b6"
+  },
+  "step_2026_10_16_b": {
+    "mounted_collision_model": "out/MOUNTED_COLLISION_AND_TRANSPORT.json (offline model; 43 recorded poses CLEAR; desk descend reaches 0.138 m above the floor only)",
+    "transport_hold_contract": "hold_evidence(): owner identity, new bus sequence, torque/status/goal registers and the executor HOLDING judgement must all match; CONFIRMED only with the existing grasp label HELD_CONFIRMED and the current wrist image; no threshold",
+    "native_adapter": "read-only: console status + /dev/dapier links + stored REAL capability; live run today -> both arms mechanical_state False (console FAULT 20261016_121735_b9241e awaiting a fresh preparation) -> ARM_NOT_READY; pick/transport/place refused NOT_WIRED"
   }
 }
