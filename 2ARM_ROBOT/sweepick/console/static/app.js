@@ -386,7 +386,26 @@ function renderRuns() {
     badge.textContent = CATEGORY_LABEL[run?.category] || display(run?.category);
     const outcome = document.createElement('small');
     outcome.textContent = `${display(run?.outcome)} · dataset ${display(run?.dataset?.auto_bucket)} · human ${display(run?.dataset?.human_review?.purpose)} / ${display(run?.dataset?.human_review?.review_status)} · ACT ${run?.dataset?.human_review?.act_approved === true ? 'APPROVED' : 'NOT_APPROVED'}`;
-    result.append(badge, outcome);
+    result.append(badge);
+    const point = run?.failure_point;
+    if (point && typeof point === 'object') {
+      const where = document.createElement('div');
+      where.className = 'failure-point';
+      const stage = document.createElement('strong');
+      stage.textContent = `멈춘 단계: ${display(point.label)}${point.after ? ` (직전: ${point.after})` : ''}`;
+      const reason = document.createElement('small');
+      reason.textContent = `${point.gate ? `${point.gate} · ` : ''}${display(point.reason)}`;
+      if (point.detail) reason.title = point.detail;
+      where.append(stage, reason);
+      if (Array.isArray(point.then) && point.then.length) {
+        const then = document.createElement('small');
+        then.className = 'muted';
+        then.textContent = `이후: ${point.then.join(' → ')}`;
+        where.append(then);
+      }
+      result.append(where);
+    }
+    result.append(outcome);
 
     const recording = document.createElement('td');
     const recordingStatus = document.createElement('strong');

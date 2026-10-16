@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -83,6 +84,73 @@ def lines(path, errors):
                     errors.append(f'{path.name}:{number}: incomplete/malformed record')
     except OSError as exc:
         errors.append(f'{path.name}: {exc}')
+
+
+# Run history: where a run stopped, for review. Read from the native trail (session/SESSION.json) and the first error; never a verdict.
+STEP_LABEL = {'observe': '초기 관측·집기 계획', 'full_chain_readiness': '전체 조작 준비 확인', 'visual': '손목 시각 정렬', 'look': '관측',
+              'look_failed': '관측 실패', 'pregrasp': '집기 전 자세', 'align': '정렬', 'descend_a': '하강(A)', 'descend': '하강',
+              'next_descent': '다음 하강', 'close': '그리퍼 닫기', 'lift': '들기', 'snapshot': '상태 기록', 'handoff': '인계',
+              'handoff_observed': '인계 관측', 'handoff_not_entered': '인계 미진입', 'handoff_abandon': '인계 중단',
+              'receive_approach_observed': '수신 접근 관측', 'receive_contact_finished': '수신 접촉 종료', 'plan_second_stop': '두 번째 정지 계획',
+              'lower': '내리기', 'open': '그리퍼 열기', 'retreat': '후퇴', 'retreat_arm': '팔 후퇴', 'away': '이탈', 'home': '홈 복귀',
+              'home_arm': '팔 홈 복귀', 'put_back_evidence': '되돌려 놓기 기록', 'limited_scope_terminal': '제한 범위 종료'}
+_MOTOR_CHECK = re.compile(r"motor check failed on port '([^']+)'.*?Missing motor IDs:\s*((?:\s*- \d+[^\n]*\n?)+)", re.S)
+
+
+def failure_reason(text):
+    """A short Korean summary of a native error string; the full text stays in the record."""
+    text = str(text or '')
+    found = _MOTOR_CHECK.search(text)
+    if found:
+        ids = re.findall(r'- (\d+)', found.group(2))
+        port = found.group(1).rsplit('/', 1)[-1]
+        return f'{port} 모터 무응답 (ID {", ".join(ids)}) — 서보 전원·버스 케이블 확인'
+    overload = re.search(r'ID=(\d+) error=0x20 \[RxPacketError\] Overload', text)
+    if overload:
+        return f'ID {overload.group(1)} 서보 과부하(Overload) 오류'
+    if 'bus could not be opened' in text or 'bus_lost' in text:
+        return 'Bus 열기 실패·연결 상실 (bus_lost)'
+    first = next((line.strip() for line in text.splitlines() if line.strip()), '')
+    return first[:200] or None
+
+
+AFTER_STOP_STEPS = ('retreat', 'retreat_arm', 'away', 'lower', 'open', 'home', 'home_arm', 'put_back_evidence')
+
+
+def failure_point(root, first_error):
+    """{stage, label, reason, detail, then, source} of the step a run stopped at, or None when nothing failed. The retreat/home
+    steps the native runs after a stop are listed under `then`, not taken as the stopping step."""
+    try:
+        trail = read_json(Path(root) / 'SESSION.json').get('trail') or []
+    except (OSError, ValueError, AttributeError):
+        trail = []
+    trail = [row for row in trail if isinstance(row, dict)]
+    error = first_error if isinstance(first_error, dict) else {}
+    failed = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('ready') is False), None)
+    if failed is None and not error:
+        return None
+    error_detail = error.get('detail')
+    generic = not error_detail or bool(re.fullmatch(r'exit -?\d+', str(error_detail)))
+    move_stage = re.match(r'([a-z_0-9]+)/run\d+/', str(error.get('source') or ''))
+    if failed is not None:
+        index, step, detail, source = failed, trail[failed].get('step'), trail[failed].get('why') or error_detail, 'SESSION.json trail (ready=false)'
+    elif move_stage:
+        step, detail, source = move_stage.group(1), error_detail, f"first_error ({error.get('source')})"
+        index = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('step') == step), None)
+    elif str(error_detail) in STEP_LABEL:
+        step, detail, source = str(error_detail), error.get('gate'), 'first_error (stage named by EPISODE.json)'
+        index = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('step') == step), None)
+    else:
+        index = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('step') not in AFTER_STOP_STEPS), None)
+        step = trail[index].get('step') if index is not None else None
+        detail = (trail[index].get('why') if index is not None and generic else None) or error_detail
+        source = 'SESSION.json trail (last step before retreat/home) + first_error'
+    then = [STEP_LABEL.get(row.get('step'), row.get('step')) for row in trail[index + 1:]] if index is not None else []
+    before = STEP_LABEL.get(trail[index - 1].get('step'), trail[index - 1].get('step')) if index else None
+    return {'stage': step or UNKNOWN, 'label': STEP_LABEL.get(step, step or '단계 기록 없음'),
+            'stage_failed': failed is not None, 'gate': error.get('gate'),
+            'reason': failure_reason(detail) or error.get('gate') or UNKNOWN,
+            'detail': str(detail)[:2000] if detail else None, 'after': before, 'then': then, 'source': source}
 
 
 def receive_summary(events):
@@ -233,6 +301,7 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
               'dataset': {'auto_bucket': auto_bucket, 'capture_integrity': data_status,
                           'human_review': load(directory / 'DATA_REVIEW.json', []) or None},
               'terminal': terminal,
+              'failure_point': failure_point(root, error),
               'replay_session_id': replay_id if replay_ready else None}
     return record, {'episode': ep, 'stages': completed, 'source_snapshot': snapshot,
                     'approval': approval, 'source_manifest': manifest,
@@ -447,6 +516,7 @@ def save_review(directory, record, evidence):
                     isinstance(record['first_error'].get('time_s'), (int, float)) and
                     archive.fault['time_s'] < record['first_error']['time_s']):
                 record['first_error'] = archive.fault
+                record['failure_point'] = failure_point(Path(directory) / 'session', archive.fault)
             if record['first_error']:
                 record['normal_return_confirmed'], record['safe_shutdown'] = False, UNKNOWN
                 if record['category'] == 'success':

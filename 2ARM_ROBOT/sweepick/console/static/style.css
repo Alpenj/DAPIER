@@ -75,6 +75,8 @@ button:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 .pending-view { margin-top: .7rem; padding: .75rem; border: 1px solid var(--warning); background: rgba(255,194,102,.06); }
 .view-proposal { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin: .65rem 0; }.view-proposal > div { min-width: 0; }.view-proposal pre { max-height: 10rem; margin: 0; padding: .55rem; overflow: auto; background: var(--bg); color: var(--text); font: .66rem ui-monospace, monospace; white-space: pre-wrap; }
 .badge { display: inline-flex; align-items: center; width: fit-content; padding: .2rem .46rem; border: 1px solid currentColor; border-radius: 999px; color: var(--muted); font-size: .65rem; line-height: 1.2; font-weight: 900; white-space: nowrap; }
+.failure-point { display: grid; gap: .15rem; margin: .4rem 0; padding: .35rem .5rem; border-left: 3px solid var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); overflow-wrap: anywhere; }
+.failure-point strong { color: var(--danger); font-size: .78rem; }
 .badge.success { color: var(--success); }.badge.failure, .badge.danger { color: var(--danger); }.badge.partial { color: var(--warning); }.badge.archive { color: var(--blue); }
 .replay-bar { display: grid; grid-template-columns: auto minmax(15rem, 1fr) auto; align-items: center; gap: .8rem; border-top: 1px solid var(--line); padding-top: .85rem; }
 .timeline { display: grid; grid-template-columns: minmax(8rem, 1fr) auto; align-items: center; gap: .75rem; }

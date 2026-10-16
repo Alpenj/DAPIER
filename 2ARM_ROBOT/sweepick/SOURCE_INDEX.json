@@ -39,11 +39,11 @@
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "73ee3bf160a1e7b962ff1b6108ca4f6e803dba8eb918acbf75c5ba9fea715ee0",
-      "public_sha256": "73ee3bf160a1e7b962ff1b6108ca4f6e803dba8eb918acbf75c5ba9fea715ee0",
-      "bytes": 69973,
+      "source_sha256": "d6f3721bfd60dcd0127de33821abf2a035c4b31b9946d648a0d84dde5b020431",
+      "public_sha256": "d6f3721bfd60dcd0127de33821abf2a035c4b31b9946d648a0d84dde5b020431",
+      "bytes": 69997,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a"
     },
     {
@@ -81,11 +81,11 @@
       "source_group": "console",
       "source_name": "records.py",
       "component": "CONSOLE",
-      "source_sha256": "297a98f6ba0defa4dac42be68b2922156ba4933ac407459f9cdcbd228fdccb6c",
-      "public_sha256": "297a98f6ba0defa4dac42be68b2922156ba4933ac407459f9cdcbd228fdccb6c",
-      "bytes": 31415,
+      "source_sha256": "757d155990a1ba201f702943798c95d447f6b006e1e3889d6bbbca8f208666b3",
+      "public_sha256": "757d155990a1ba201f702943798c95d447f6b006e1e3889d6bbbca8f208666b3",
+      "bytes": 36380,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406"
     },
     {
@@ -125,11 +125,11 @@
       "source_group": "console",
       "source_name": "app.js",
       "component": "CONSOLE",
-      "source_sha256": "9f4da89718e408ae2ecf7f7dee8943b656e995d0d4ae19659698ee7a0e6fc26f",
-      "public_sha256": "9f4da89718e408ae2ecf7f7dee8943b656e995d0d4ae19659698ee7a0e6fc26f",
-      "bytes": 69054,
+      "source_sha256": "7695d23367f1bb7063cad38cf415396f0f11f8059e049efd31858cf2bae471b5",
+      "public_sha256": "7695d23367f1bb7063cad38cf415396f0f11f8059e049efd31858cf2bae471b5",
+      "bytes": 69941,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69"
     },
     {
@@ -183,11 +183,11 @@
       "source_group": "console",
       "source_name": "style.css",
       "component": "CONSOLE",
-      "source_sha256": "42e5b026772013df8d71258015e700aee693fec5098f9c478b0a323d881b149f",
-      "public_sha256": "42e5b026772013df8d71258015e700aee693fec5098f9c478b0a323d881b149f",
-      "bytes": 27412,
+      "source_sha256": "a8f9b59cddc022cce1011e9833720d519d0d6519e5b2c9ad65299d2a9a8ba7ae",
+      "public_sha256": "a8f9b59cddc022cce1011e9833720d519d0d6519e5b2c9ad65299d2a9a8ba7ae",
+      "bytes": 27692,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9"
     },
     {
@@ -2377,6 +2377,17 @@
       "public_sha256": "c945c741f264fd48f44c045226c4826278933a39cf82d876e480a37d75ed3b5a",
       "bytes": 2444,
       "public_copy_changed": false
+    },
+    {
+      "file": "console/test_failure_point.py",
+      "source_group": "console",
+      "source_name": "test_failure_point.py",
+      "component": "CONSOLE",
+      "source_sha256": "37984e9e5c49187a918e73993feeb0ae0942b9bd1d02c641230523c70d72274e",
+      "public_sha256": "37984e9e5c49187a918e73993feeb0ae0942b9bd1d02c641230523c70d72274e",
+      "bytes": 3830,
+      "public_copy_changed": false,
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE"
     }
   ],
   "console17": {
