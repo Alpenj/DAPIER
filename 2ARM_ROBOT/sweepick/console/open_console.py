@@ -19,13 +19,13 @@ LAUNCHER = '/home/robot/sweepick_261013_receive_alignment_restore/RUN_APPROVED_S
 
 def console_ready():
     try:
-        with urlopen(URL + '/api/instructor', timeout=2) as response:
+        with urlopen(URL + '/api/control/plan', timeout=2) as response:
             record = json.load(response)
     except HTTPError as error:
-        raise RuntimeError(f'8765 포트가 응답하지만 시연 서버를 확인할 수 없습니다: HTTP {error.code}') from error
+        raise RuntimeError(f'8765 포트가 응답하지만 SWEEPICK 콘솔을 확인할 수 없습니다: HTTP {error.code}') from error
     except URLError:
         return False
-    if record.get('launcher') != LAUNCHER:
+    if record.get('existing_launcher') != LAUNCHER:
         raise RuntimeError('8765 포트의 서버가 준비한 SWEEPICK 콘솔과 다릅니다. 기존 프로세스를 덮어쓰지 않습니다.')
     return True
 
@@ -53,30 +53,28 @@ def ensure_console():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='로컬 시연 화면만 열기; 실물 START는 현장 승인 버튼에서 수행')
+    parser = argparse.ArgumentParser(description='로컬 콘솔 화면만 열기; 실물 START는 현장 승인 버튼에서 수행')
     parser.add_argument('--check', action='store_true', help='실행 파일/자료 존재만 확인, 서버와 로봇 시작 안 함')
     parser.add_argument('--no-browser', action='store_true', help='콘솔 서버 준비까지만 수행')
     args = parser.parse_args()
     try:
-        required = [BASE / '.venv/bin/python', BASE / 'app.py', BASE / 'static/instructor.html', Path(LAUNCHER),
-                    Path('/home/robot/sweepick_instructor_review_20261014/SOURCE_SELECTION.json'),
-                    Path('/home/robot/Downloads/SWEEPICK_INSTRUCTOR_REVIEW_20261014.zip')]
+        required = [BASE / '.venv/bin/python', BASE / 'app.py', BASE / 'static/index.html', Path(LAUNCHER)]
         missing = [str(path) for path in required if not path.is_file()]
         if missing:
             raise RuntimeError('필요한 파일 없음: ' + ', '.join(missing))
         if args.check:
-            print('PASS: 시연 화면·현재 A 실행기·검토 자료 존재. 서버/장치/실물 실행 안 함.')
+            print('PASS: 콘솔 화면·현재 A 실행기 존재. 서버/장치/실물 실행 안 함.')
             return 0
         ensure_console()
         if not args.no_browser:
-            if not webbrowser.open(URL + '/instructor'):
-                subprocess.run(['xdg-open', URL + '/instructor'], check=True)
+            if not webbrowser.open(URL + '/'):
+                subprocess.run(['xdg-open', URL + '/'], check=True)
         return 0
     except Exception as error:
         message = str(error)
         print(message, file=sys.stderr)
         if not args.check and not args.no_browser and shutil.which('zenity'):
-            subprocess.run(['zenity', '--error', '--title=SWEEPICK 시연 준비', '--text=' + message])
+            subprocess.run(['zenity', '--error', '--title=SWEEPICK 콘솔 열기', '--text=' + message])
         return 1
 
 

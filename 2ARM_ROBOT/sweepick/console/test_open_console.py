@@ -37,6 +37,14 @@ class ConsoleEntry(unittest.TestCase):
                 open_console.ensure_console()
         run.assert_not_called()
 
+    def test_the_entry_opens_the_main_dashboard_not_the_removed_instructor_page(self):
+        text = open_console.Path(open_console.__file__).read_text()
+        self.assertNotIn('/instructor', text)
+        with patch.object(open_console, 'ensure_console'), patch.object(open_console.webbrowser, 'open', return_value=True) as opened, \
+                patch('sys.argv', ['open_console.py']):
+            self.assertEqual(open_console.main(), 0)
+        opened.assert_called_once_with(open_console.URL + '/')
+
 
 if __name__ == '__main__':
     unittest.main()

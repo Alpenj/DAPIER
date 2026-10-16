@@ -580,7 +580,7 @@ class Controller:
         files = ('APPROVAL.json', 'JOB.json', 'CONTROL_FINAL.json', 'SOURCE_SNAPSHOT.json', 'MANIFEST.json', 'owner.log',
                  'session/episode/EPISODE.json', 'session/episode/events.jsonl', 'session/episode/frames.jsonl',
                  'session/episode/joints.jsonl', 'session/STATE.json', 'session/CURRENT_FEEDBACK.json',
-                 'session/review/lifetime.jsonl', 'session/review/TORQUE_OFF_OPERATOR_REQUEST.json',
+                 'session/review/lifetime.jsonl', 'session/SESSION.json', 'session/review/TORQUE_OFF_OPERATOR_REQUEST.json',
                  'session/review/MANUAL_RECOVERY_CONFIRMATION.json', 'DATA_REVIEW.json')
         stamp = {name: [path.stat().st_mtime_ns, path.stat().st_size] if path.exists() else None
                  for name in files for path in [directory / name]}

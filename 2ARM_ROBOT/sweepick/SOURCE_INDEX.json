@@ -13,25 +13,15 @@
   ],
   "files": [
     {
-      "file": "console/OPEN_INSTRUCTOR_DEMO.sh",
-      "source_group": "console",
-      "source_name": "OPEN_INSTRUCTOR_DEMO.sh",
-      "component": "CONSOLE",
-      "source_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
-      "public_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
-      "bytes": 186,
-      "public_copy_changed": false
-    },
-    {
       "file": "console/app.py",
       "source_group": "console",
       "source_name": "app.py",
       "component": "CONSOLE",
-      "source_sha256": "83ee66bef5f41d9c9667a52b9ae5a3375f682b815003f833cf629c3a97e748b2",
-      "public_sha256": "be7f90fc64be1a0b08930c0fc061555e4a1f29ef63df1fd563e783cf5c2d2102",
-      "bytes": 18167,
-      "public_copy_changed": true,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_sha256": "335785d95e9cc0f3de37e34934cd12961c04753498215c5a789dea1a8afd03c0",
+      "public_sha256": "335785d95e9cc0f3de37e34934cd12961c04753498215c5a789dea1a8afd03c0",
+      "bytes": 11069,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": "1969a2c72326741a59ae3353dbf9f529af0114563672362cde94ac0d218dc1c2"
     },
     {
@@ -39,11 +29,11 @@
       "source_group": "console",
       "source_name": "control.py",
       "component": "CONSOLE",
-      "source_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a",
-      "public_sha256": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a",
-      "bytes": 50271,
+      "source_sha256": "840cb87c910f874cd8723055f227f56840a7333f508835bd88c2987114fc08b6",
+      "public_sha256": "840cb87c910f874cd8723055f227f56840a7333f508835bd88c2987114fc08b6",
+      "bytes": 50295,
       "public_copy_changed": false,
-      "source_location": "LIVE_CONSOLE",
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": "098f92db75bf81e428bba82f3bad884b778cc4d99a73632f3fd9320b6c41ae4b"
     },
     {
@@ -71,21 +61,22 @@
       "source_group": "console",
       "source_name": "open_console.py",
       "component": "CONSOLE",
-      "source_sha256": "1cd28a38d34c78efc990463cb4818c1590993993d53b8cb03a039f679d7094a8",
-      "public_sha256": "c3ad8bd5d09624250964c93c4e3378a3d6c7cb3cf6da4346ac48561f2ccad3a2",
-      "bytes": 3802,
-      "public_copy_changed": true
+      "source_sha256": "3a89afe5c25508ae0be0df38d107a059d97c2e4a1986d430762888b3fa8f7fad",
+      "public_sha256": "11b4dc5eb67adfa92edd7cac09691f3c26bf6081d5a783141d7130a3385968e1",
+      "bytes": 3585,
+      "public_copy_changed": true,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
     },
     {
       "file": "console/records.py",
       "source_group": "console",
       "source_name": "records.py",
       "component": "CONSOLE",
-      "source_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406",
-      "public_sha256": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406",
-      "bytes": 30844,
+      "source_sha256": "84e1bb7795acff3d3fb58c3efb9b1f9d891bf571141f743160ca2ba104e5b22a",
+      "public_sha256": "84e1bb7795acff3d3fb58c3efb9b1f9d891bf571141f743160ca2ba104e5b22a",
+      "bytes": 40628,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": "8e8da947ddb6d8b724cdea3f2196274940d7add3a8c58fb9e5a883f65eb2ebc0"
     },
     {
@@ -125,11 +116,11 @@
       "source_group": "console",
       "source_name": "app.js",
       "component": "CONSOLE",
-      "source_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69",
-      "public_sha256": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69",
-      "bytes": 62002,
+      "source_sha256": "e7b2f00a62100d6e6c98b81e75efcef5294c5a03c8f3044b36485ac2e9597c40",
+      "public_sha256": "e7b2f00a62100d6e6c98b81e75efcef5294c5a03c8f3044b36485ac2e9597c40",
+      "bytes": 65451,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": "5a439f53f6be44cf2511e1f5fd10300a20dbb6d9b5a55e565fa13420137db6e5"
     },
     {
@@ -149,33 +140,23 @@
       "source_group": "console",
       "source_name": "index.html",
       "component": "CONSOLE",
-      "source_sha256": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819",
-      "public_sha256": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819",
-      "bytes": 31687,
+      "source_sha256": "a0c739b1ae15ba8fbc95463cee071bb93f1c17f57bddb670a8e554c4945e9b7d",
+      "public_sha256": "a0c739b1ae15ba8fbc95463cee071bb93f1c17f57bddb670a8e554c4945e9b7d",
+      "bytes": 30929,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": "e083ceadde688b9660b286de60214db36014d7354d0fd6b7e8042e7584294bee"
-    },
-    {
-      "file": "console/static/instructor.html",
-      "source_group": "console",
-      "source_name": "instructor.html",
-      "component": "CONSOLE",
-      "source_sha256": "12fe2875d01967c8de01716857c0b2b53261622abbb01ca72595d8be3d44f713",
-      "public_sha256": "12fe2875d01967c8de01716857c0b2b53261622abbb01ca72595d8be3d44f713",
-      "bytes": 9622,
-      "public_copy_changed": false
     },
     {
       "file": "console/static/review.js",
       "source_group": "console",
       "source_name": "review.js",
       "component": "CONSOLE",
-      "source_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253",
-      "public_sha256": "cebfb5d7833948408ba685178146dc791b7fa87f5346d8eda48ede1bb5d0a253",
-      "bytes": 24245,
+      "source_sha256": "c3f2398985c75f47a6a7d75c99cb70483565ca18dd038f4628af9add66968057",
+      "public_sha256": "c3f2398985c75f47a6a7d75c99cb70483565ca18dd038f4628af9add66968057",
+      "bytes": 20741,
       "public_copy_changed": false,
-      "source_location": "CONSOLE17_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": "9b84332f24587d522539389db776a516491b2bb42015ce24c9964f217fd108f3"
     },
     {
@@ -183,10 +164,11 @@
       "source_group": "console",
       "source_name": "style.css",
       "component": "CONSOLE",
-      "source_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9",
-      "public_sha256": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9",
-      "bytes": 26980,
-      "public_copy_changed": false
+      "source_sha256": "2481c90ccb60d32960d1ddd04ea3a2c61acd35fa541e36acd927bd7dde8e114c",
+      "public_sha256": "2481c90ccb60d32960d1ddd04ea3a2c61acd35fa541e36acd927bd7dde8e114c",
+      "bytes": 27227,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
     },
     {
       "file": "console/test_a16.py",
@@ -225,20 +207,22 @@
       "source_group": "console",
       "source_name": "test_inspection.py",
       "component": "CONSOLE",
-      "source_sha256": "dfa63fee7ecc1f54e381fb8406a866f50dddd1fd5afdfd1996ef9673e266e29c",
-      "public_sha256": "dfa63fee7ecc1f54e381fb8406a866f50dddd1fd5afdfd1996ef9673e266e29c",
-      "bytes": 8302,
-      "public_copy_changed": false
+      "source_sha256": "30f1bd146fea5171673e68b8ddfd028448a4331147ae2341c5d36b33ec02a8fb",
+      "public_sha256": "30f1bd146fea5171673e68b8ddfd028448a4331147ae2341c5d36b33ec02a8fb",
+      "bytes": 6760,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
     },
     {
       "file": "console/test_open_console.py",
       "source_group": "console",
       "source_name": "test_open_console.py",
       "component": "CONSOLE",
-      "source_sha256": "c769012dbec7be8e24c46018b1f4facccdfe017231c9e3e42488fa816b46436f",
-      "public_sha256": "c769012dbec7be8e24c46018b1f4facccdfe017231c9e3e42488fa816b46436f",
-      "bytes": 2156,
-      "public_copy_changed": false
+      "source_sha256": "49d4eaad01d264d65291883de4a4d58aa84a71d7e6c4c94efb7af15c7073fb7d",
+      "public_sha256": "49d4eaad01d264d65291883de4a4d58aa84a71d7e6c4c94efb7af15c7073fb7d",
+      "bytes": 2667,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
     },
     {
       "file": "console/test_records.py",
@@ -255,10 +239,11 @@
       "source_group": "console",
       "source_name": "test_replay.py",
       "component": "CONSOLE",
-      "source_sha256": "bd990a4c6c88323ca7bd98841dab96084457611ad650228071483ba0243218f8",
-      "public_sha256": "87bdf36564af84759c5c52a9ac870cf8b611756b242a8896ec7e5c5cd750b71d",
-      "bytes": 16250,
-      "public_copy_changed": true
+      "source_sha256": "5f66c6b4559a368c22043a7470bf68a9d60ba5d02de378b17875aa288f713645",
+      "public_sha256": "5f66c6b4559a368c22043a7470bf68a9d60ba5d02de378b17875aa288f713645",
+      "bytes": 15685,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
     },
     {
       "file": "docs/a17/A17_CODE_AUDIT.md",
@@ -1736,11 +1721,11 @@
       "source_group": "console17_new_test",
       "source_name": "test_console17.py",
       "component": "CONSOLE",
-      "source_sha256": "f3a43541523d2e350cba19203ab11b7adaa3173920fd8d362cb6389105027f40",
-      "public_sha256": "f3a43541523d2e350cba19203ab11b7adaa3173920fd8d362cb6389105027f40",
-      "bytes": 19188,
+      "source_sha256": "66473f9036e055f93a8388f35a8e86a9a070c356547b7ae27a777746eaa5f5a4",
+      "public_sha256": "66473f9036e055f93a8388f35a8e86a9a070c356547b7ae27a777746eaa5f5a4",
+      "bytes": 16831,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016",
       "active_original_sha256": null
     },
     {
@@ -2201,6 +2186,28 @@
       "bytes": 3162,
       "public_copy_changed": false,
       "source_location": "PRIVATE_WORK_RECORD"
+    },
+    {
+      "file": "console/OPEN_CONSOLE.sh",
+      "source_group": "console",
+      "source_name": "OPEN_CONSOLE.sh",
+      "component": "CONSOLE",
+      "source_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
+      "public_sha256": "14c78d22c77d718103bbf15a3374e81a79b299677a2cd02967fdff578f95b25f",
+      "bytes": 186,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
+    },
+    {
+      "file": "console/test_failure_point.py",
+      "source_group": "console",
+      "source_name": "test_failure_point.py",
+      "component": "CONSOLE",
+      "source_sha256": "140dbaf1a4726dc69e6d6aead929417d7b9c5814b92100d4b3472ba16936a9bf",
+      "public_sha256": "140dbaf1a4726dc69e6d6aead929417d7b9c5814b92100d4b3472ba16936a9bf",
+      "bytes": 7503,
+      "public_copy_changed": false,
+      "source_location": "ACTIVE_LIVE_CONSOLE_20261016"
     }
   ],
   "console17": {

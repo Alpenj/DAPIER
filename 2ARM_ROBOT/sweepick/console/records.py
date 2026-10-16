@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -83,6 +84,145 @@ def lines(path, errors):
                     errors.append(f'{path.name}:{number}: incomplete/malformed record')
     except OSError as exc:
         errors.append(f'{path.name}: {exc}')
+
+
+# Run history: where a run stopped, for review. Read from the native trail (session/SESSION.json) and the first error; never a verdict.
+STEP_LABEL = {'before_first_step': '첫 단계 전(세션·Recorder 시작)', 'observe': '초기 관측·집기 계획', 'full_chain_readiness': '전체 조작 준비 확인', 'visual': '손목 시각 정렬', 'look': '관측',
+              'look_failed': '관측 실패', 'pregrasp': '집기 전 자세', 'align': '정렬', 'descend_a': '하강(A)', 'descend': '하강',
+              'next_descent': '다음 하강', 'close': '그리퍼 닫기', 'lift': '들기', 'snapshot': '상태 기록', 'handoff': '인계',
+              'handoff_observed': '인계 관측', 'handoff_not_entered': '인계 미진입', 'handoff_abandon': '인계 중단',
+              'receive_approach_observed': '수신 접근 관측', 'receive_contact_finished': '수신 접촉 종료', 'plan_second_stop': '두 번째 정지 계획',
+              'lower': '내리기', 'open': '그리퍼 열기', 'retreat': '후퇴', 'retreat_arm': '팔 후퇴', 'away': '이탈', 'home': '홈 복귀',
+              'home_arm': '팔 홈 복귀', 'put_back_evidence': '되돌려 놓기 기록', 'limited_scope_terminal': '제한 범위 종료'}
+_MOTOR_CHECK = re.compile(r"motor check failed on port '([^']+)'.*?Missing motor IDs:\s*((?:\s*- \d+[^\n]*\n?)+)", re.S)
+
+
+def failure_reason(text):
+    """A short Korean summary of a native error string; the full text stays in the record."""
+    text = str(text or '')
+    found = _MOTOR_CHECK.search(text)
+    if found:
+        ids = re.findall(r'- (\d+)', found.group(2))
+        port = found.group(1).rsplit('/', 1)[-1]
+        return f'{port} 모터 무응답 (ID {", ".join(ids)}) — 서보 전원·버스 케이블 확인'
+    overload = re.search(r'ID=(\d+) error=0x20 \[RxPacketError\] Overload', text)
+    if overload:
+        return f'ID {overload.group(1)} 서보 과부하(Overload) 오류'
+    if 'bus could not be opened' in text or 'bus_lost' in text:
+        return 'Bus 열기 실패·연결 상실 (bus_lost)'
+    first = next((line.strip() for line in text.splitlines() if line.strip()), '')
+    return first[:200] or None
+
+
+AFTER_STOP_STEPS = ('retreat', 'retreat_arm', 'away', 'lower', 'open', 'home', 'home_arm', 'put_back_evidence')
+
+
+def native_gate(root):
+    """The last native check of STATE.json evidence that came out false: {gate, look, why}. Read only."""
+    try:
+        evidence = read_json(Path(root) / 'STATE.json').get('evidence') or []
+    except (OSError, ValueError, AttributeError):
+        return None
+    rows = [e for e in evidence if isinstance(e, dict)]
+    row = rows[-1] if rows and rows[-1].get('ok') is False else None     # only the check the session ended on; an earlier one may have been re-aligned
+    if row is None:
+        return None
+    return {'gate': f"{row.get('what') or UNKNOWN}=false", 'look': row.get('look'), 'why': row.get('why'), 'source': 'session/STATE.json evidence'}
+
+
+def _owner_log(directory):
+    """The JSON object the native owner printed last in owner.log, or {}."""
+    try:
+        lines = (Path(directory) / 'owner.log').read_text(errors='replace').splitlines()
+        start = next((i for i, line in enumerate(lines) if line.startswith('{')), None)
+        value = json.loads('\n'.join(lines[start:])) if start is not None else {}
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def native_terminal(directory, ended):
+    """The native result class (owner.log result) kept apart from the wrapper exit code."""
+    result = _owner_log(directory).get('result')
+    code = (ended or {}).get('exit_code')
+    return {'result': result or UNKNOWN, 'exit_code': code,
+            'exit_role': 'native non-success terminal class (not an executor crash by itself)' if code == 3 and result else
+                         'normal end' if code == 0 else UNKNOWN if code is None else 'wrapper exit status'}
+
+
+def recorder_errors(ep):
+    """Episode recorder errors, kept apart from the first task gate. The exception chain is shown when the native recorded it."""
+    rows = []
+    for row in (ep.get('errors') or [])[:20] if isinstance(ep, dict) else []:
+        if not isinstance(row, dict):
+            continue
+        exc = row.get('exception') if isinstance(row.get('exception'), dict) else None
+        rows.append({'t_host_s': row.get('t_host_s'), 'what': ' '.join(str(row.get('what') or '').split())[:300],
+                     'cause': (exc or {}).get('summary') or ((exc or {}).get('chain') or [{}])[-1].get('type') if exc else None,
+                     'cause_status': 'RECORDED' if exc and len(exc.get('chain') or []) > 1 else
+                                     'BUS_OPEN_CAUSE_UNCONFIRMED' if ': ConnectionError:' in str(row.get('what')) else 'MESSAGE_ONLY'})
+    return rows
+
+
+def torque_evidence(ep, feed):
+    """Per arm: the final release the native certified (RETURNED_RELEASED move) apart from the last torque register a feed saw."""
+    stages = [s for s in (ep.get('stages') or []) if isinstance(s, dict)] if isinstance(ep, dict) else []
+    out = {}
+    for side in ('left', 'right'):
+        last = next((s for s in reversed(stages) if s.get('side') == side), None)
+        seen = ((feed.get('sides') or {}).get(side) or {}).get('torque') if isinstance(feed, dict) else None
+        values = (seen or {}).get('values') if isinstance(seen, dict) else None
+        out[side] = {'final_stage': (last or {}).get('name') or (last or {}).get('stage'), 'final_result': (last or {}).get('result'),
+                     'final_release_certified': bool(last and last.get('result') == 'RETURNED_RELEASED'),
+                     'last_seen_torque_time_s': (seen or {}).get('time_s') if isinstance(seen, dict) else None,
+                     'last_seen_torque_all_zero': bool(values) and all(v == 0 for v in values.values()) if isinstance(values, dict) else None,
+                     'last_seen_role': 'LAST_OBSERVED_REGISTER; not a final torque-off check'}
+    return out
+
+
+def failure_point(root, first_error):
+    """{stage, label, reason, detail, then, source} of the step a run stopped at, or None when nothing failed. The retreat/home
+    steps the native runs after a stop are listed under `then`, not taken as the stopping step."""
+    try:
+        trail = read_json(Path(root) / 'SESSION.json').get('trail') or []
+    except (OSError, ValueError, AttributeError):
+        trail = []
+    trail = [row for row in trail if isinstance(row, dict)]
+    error = first_error if isinstance(first_error, dict) else {}
+    failed = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('ready') is False), None)
+    if failed is None and not error:
+        return None
+    error_detail = error.get('detail')
+    generic = not error_detail or bool(re.fullmatch(r'exit -?\d+', str(error_detail)))
+    move_stage = re.match(r'([a-z_0-9]+)/run\d+/', str(error.get('source') or ''))
+    if failed is not None:
+        index, step, detail, source = failed, trail[failed].get('step'), trail[failed].get('why') or error_detail, 'SESSION.json trail (ready=false)'
+    elif move_stage:
+        step, detail, source = move_stage.group(1), error_detail, f"first_error ({error.get('source')})"
+        index = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('step') == step), None)
+    elif str(error_detail) in STEP_LABEL:
+        step, detail, source = str(error_detail), error.get('gate'), 'first_error (stage named by EPISODE.json)'
+        index = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('step') == step), None)
+    else:
+        index = next((i for i in range(len(trail) - 1, -1, -1) if trail[i].get('step') not in AFTER_STOP_STEPS), None)
+        step = trail[index].get('step') if index is not None else None
+        detail = (trail[index].get('why') if index is not None and generic else None) or error_detail
+        source = 'SESSION.json trail (last step before retreat/home) + first_error'
+    then = [STEP_LABEL.get(row.get('step'), row.get('step')) for row in trail[index + 1:]] if index is not None else []
+    native = native_gate(root)
+    if native and (generic or failed is None):                     # the native check that failed, not the wrapper's exit status
+        error = dict(error, gate=native['gate'])
+        if generic and native.get('why'):
+            detail = native['why']
+    if not trail and generic:                                       # nothing ran: the native's own reason (owner.log), e.g. a reader that did not open
+        owner_why = _owner_log(Path(root).parent).get('why')
+        if owner_why:
+            step, detail, source = 'before_first_step', owner_why, 'owner.log why (no SESSION.json trail)'
+    before = STEP_LABEL.get(trail[index - 1].get('step'), trail[index - 1].get('step')) if index else None
+    return {'stage': step or UNKNOWN, 'label': STEP_LABEL.get(step, step or '단계 기록 없음'),
+            'stage_failed': failed is not None, 'gate': error.get('gate'),
+            'reason': failure_reason(detail) or error.get('gate') or UNKNOWN,
+            'detail': str(detail)[:2000] if detail else None, 'after': before, 'then': then, 'source': source, 'native_gate': native}
 
 
 def receive_summary(events):
@@ -226,6 +366,10 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
               'dataset': {'auto_bucket': auto_bucket, 'capture_integrity': data_status,
                           'human_review': load(directory / 'DATA_REVIEW.json', []) or None},
               'terminal': terminal,
+              'failure_point': failure_point(root, error),
+              'native_terminal': native_terminal(directory, ended), 'recorder_errors': recorder_errors(ep),
+              'torque_evidence': torque_evidence(ep, feed),
+              'stage_results': [{'stage': s.get('stage'), 'side': s.get('side'), 'result': s.get('result')} for s in (ep.get('stages') or []) if isinstance(s, dict)][-12:],
               'replay_session_id': replay_id if replay_ready else None}
     return record, {'episode': ep, 'stages': completed, 'source_snapshot': snapshot,
                     'approval': approval, 'source_manifest': manifest,
@@ -440,6 +584,7 @@ def save_review(directory, record, evidence):
                     isinstance(record['first_error'].get('time_s'), (int, float)) and
                     archive.fault['time_s'] < record['first_error']['time_s']):
                 record['first_error'] = archive.fault
+                record['failure_point'] = failure_point(Path(directory) / 'session', archive.fault)
             if record['first_error']:
                 record['normal_return_confirmed'], record['safe_shutdown'] = False, UNKNOWN
                 if record['category'] == 'success':

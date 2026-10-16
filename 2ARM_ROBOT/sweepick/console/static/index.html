@@ -18,8 +18,8 @@
       <h1>저장 시연 콘솔</h1>
     </div>
     <div class="system-state" aria-label="운영 상태">
-      <a href="/instructor">강사 시연 시작 화면</a>
-      <a href="#analysisPanel">A-16 · A-17 검수</a>
+      <a href="#currentRunPanel">현재 실행</a>
+      <a href="#runHistoryPanel">최근 실행 이력</a>
       <a href="#inspectionPanel">실물 Run 검수</a>
       <span class="status-dot" aria-hidden="true"></span>
       <strong id="systemControlState">실행 제어 확인 중</strong>
@@ -28,83 +28,38 @@
   </header>
 
   <main id="main">
-    <section class="panel session-panel" aria-labelledby="session-heading">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">RECORDED SESSION</p>
-          <h2 id="session-heading">저장 세션</h2>
-        </div>
-        <fieldset class="filters" id="categoryFilters">
-          <legend>결과 필터</legend>
-          <label><input type="radio" name="category" value="all" checked><span>전체</span></label>
-          <label><input type="radio" name="category" value="success"><span>성공</span></label>
-          <label><input type="radio" name="category" value="failure"><span>실패</span></label>
-          <label><input type="radio" name="category" value="partial"><span>부분성공</span></label>
-        </fieldset>
-      </div>
-
-      <div id="errorBanner" class="banner error" role="alert" hidden></div>
-      <div class="next-session-launch">
-        <div><span class="meta-label">CURRENT INPUT · FULL_CHAIN PHYSICAL RUN</span><strong>FULL_CHAIN_RECEIVE_CONTACT 새 실물 세션</strong><p>현재 카메라·로봇 입력으로 기존 full-chain 작업을 준비합니다. 저장 성공 기록 재생과는 별도입니다.</p></div>
-        <button id="nextSession" class="button primary" type="button">FULL_CHAIN 다음 실물 세션</button>
-      </div>
-      <div class="session-controls">
-        <label class="field grow" for="sessionSelect">
-          <span>세션 선택</span>
-          <select id="sessionSelect" disabled><option>세션 불러오는 중…</option></select>
-        </label>
-        <button id="successReplay" class="button secondary" type="button" disabled>성공 시연 다시 재생</button>
-        <button id="rerunPlan" class="button primary" type="button" disabled>FULL_CHAIN 실물 재실행 준비</button>
-      </div>
-
-      <div class="outcome-grid">
-        <div>
-          <span class="meta-label">기록 결과</span>
-          <div class="outcome-line"><span id="categoryBadge" class="badge neutral">UNKNOWN</span><strong id="rawOutcome">UNKNOWN</strong></div>
-        </div>
-        <div>
-          <span class="meta-label">분류 범위</span>
-          <strong id="classificationScope">UNKNOWN</strong>
-        </div>
-        <p class="scope-warning">PICK/LIFT 성공은 전체 handover 성공을 뜻하지 않습니다.</p>
-      </div>
-      <p id="sessionWarning" class="session-warning" hidden></p>
-
-      <section class="control-panel" aria-labelledby="execution-heading">
-        <div class="control-summary">
-          <div><span class="meta-label" id="execution-heading">실물 실행 상태</span><span id="executionState" class="badge neutral">확인 중</span></div>
-          <div><span class="meta-label">실행 범위</span><strong id="executionScope">UNKNOWN</strong></div>
-          <div><span class="meta-label">활성 작업</span><strong id="activeJob">없음</strong><small id="activePhase">—</small></div>
-          <div class="control-actions"><button id="liveView" class="button secondary" type="button" disabled>FULL_CHAIN 현재 실물 세션 보기</button><button id="archiveView" class="button secondary" type="button" hidden>저장 기록으로 돌아가기</button><button id="recoveryControl" class="button secondary" type="button" hidden>FULL_CHAIN 수동 복구 처리 확인</button></div>
-        </div>
-        <div id="controlError" class="banner error" role="alert" hidden></div>
-        <p id="limitedTerminal" class="notice" hidden></p>
-          <p id="blockReason" class="block-reason" hidden></p>
-        <section id="pendingView" class="pending-view" aria-labelledby="pending-view-heading" hidden>
-          <div><span class="meta-label" id="pending-view-heading">NEW observation_move_request · 사용자 결정 필요</span><strong id="pendingViewScope">UNKNOWN</strong></div>
-          <div class="view-proposal"><div><span class="meta-label">제안 plan</span><pre id="pendingViewPlan">—</pre></div><div><span class="meta-label">candidate</span><pre id="pendingViewCandidate">—</pre></div></div>
-          <div class="control-actions"><button id="declineView" class="button secondary" type="button">거절</button><button id="approveView" class="button primary" type="button">제안 이동 승인</button></div>
+    <section id="currentRunPanel" class="panel current-run-panel" aria-label="현재 실물 실행">
+        <section class="control-panel" aria-labelledby="execution-heading">
+          <div class="control-summary">
+            <div><span class="meta-label" id="execution-heading">실물 실행 상태</span><span id="executionState" class="badge neutral">확인 중</span></div>
+            <div><span class="meta-label">실행 범위</span><strong id="executionScope">UNKNOWN</strong></div>
+            <div><span class="meta-label">활성 작업</span><strong id="activeJob">없음</strong><small id="activePhase">—</small></div>
+            <div class="control-actions"><button id="liveView" class="button secondary" type="button" disabled>FULL_CHAIN 현재 실물 세션 보기</button><button id="archiveView" class="button secondary" type="button" hidden>저장 기록으로 돌아가기</button><button id="recoveryControl" class="button secondary" type="button" hidden>FULL_CHAIN 수동 복구 처리 확인</button></div>
+          </div>
+          <div id="controlError" class="banner error" role="alert" hidden></div>
+          <p id="limitedTerminal" class="notice" hidden></p>
+            <p id="blockReason" class="block-reason" hidden></p>
+          <section id="pendingView" class="pending-view" aria-labelledby="pending-view-heading" hidden>
+            <div><span class="meta-label" id="pending-view-heading">NEW observation_move_request · 사용자 결정 필요</span><strong id="pendingViewScope">UNKNOWN</strong></div>
+            <div class="view-proposal"><div><span class="meta-label">제안 plan</span><pre id="pendingViewPlan">—</pre></div><div><span class="meta-label">candidate</span><pre id="pendingViewCandidate">—</pre></div></div>
+            <div class="control-actions"><button id="declineView" class="button secondary" type="button">거절</button><button id="approveView" class="button primary" type="button">제안 이동 승인</button></div>
+          </section>
         </section>
-      </section>
+    </section>
 
-      <div class="replay-bar" aria-label="저장 시연 재생 제어">
-        <button id="playPause" class="button playback" type="button" disabled>▶ 저장 시연 재생</button>
-        <label class="timeline" for="timeSlider">
-          <span class="sr-only">재생 시간</span>
-          <input id="timeSlider" type="range" min="0" max="1" step="0.01" value="0" disabled>
-          <span class="time-readout"><b id="relativeTime">+00:00.0</b><span id="wallTime">기록 시각 —</span><span id="snapshotState" class="snapshot-state" role="status" aria-live="polite">표시 스냅샷 없음</span></span>
-        </label>
-        <label class="field speed" for="speedSelect"><span>속도</span>
-          <select id="speedSelect">
-            <option value="0.5">0.5×</option>
-            <option value="1" selected>1×</option>
-            <option value="2">2×</option>
-            <option value="5">5×</option>
-            <option value="10">10×</option>
-          </select>
-        </label>
+    <section id="runHistoryPanel" class="panel run-history" aria-labelledby="run-history-heading">
+      <div class="section-title compact">
+        <div><p class="eyebrow">PHYSICAL RUN HISTORY</p><h2 id="run-history-heading">실물 실행 이력·저장 데이터</h2></div>
+        <div><select id="runBucketFilter" aria-label="데이터 자동 분류"><option value="all">전체 데이터 분류</option><option value="failed">실패</option><option value="partial">부분</option><option value="success_candidates">성공 후보</option></select> <button id="refreshRuns" class="button secondary" type="button">이력 새로고침</button></div>
       </div>
-      <div class="bookmarks"><span class="meta-label">북마크</span><div id="bookmarkList" class="bookmark-list"><span class="muted">없음</span></div></div>
+      <p class="history-note">실물 실행 결과와 저장 상태입니다. “저장 데이터 재생”은 보관 파일 조회이며 실물 실행을 시작하지 않습니다.</p>
+      <div id="runHistoryError" class="banner error" role="alert" hidden></div>
+      <div class="table-wrap">
+        <table class="run-table">
+          <thead><tr><th>Run ID / 상태</th><th>결과</th><th>데이터 저장 상태</th><th>원본 / snapshot</th><th>재생 / AI 검토</th></tr></thead>
+          <tbody id="runRows"><tr><td colspan="5" class="muted">실행 이력을 불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="fieldPanel" class="panel field-panel" aria-labelledby="field-heading">
@@ -161,32 +116,117 @@
       </section>
     </section>
 
-    <section class="panel run-history" aria-labelledby="run-history-heading">
-      <div class="section-title compact">
-        <div><p class="eyebrow">PHYSICAL RUN HISTORY</p><h2 id="run-history-heading">실물 실행 이력·저장 데이터</h2></div>
-        <div><select id="runBucketFilter" aria-label="데이터 자동 분류"><option value="all">전체 데이터 분류</option><option value="failed">실패</option><option value="partial">부분</option><option value="success_candidates">성공 후보</option></select> <button id="refreshRuns" class="button secondary" type="button">이력 새로고침</button></div>
+    <section class="panel session-panel" aria-labelledby="session-heading">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">RECORDED SESSION</p>
+          <h2 id="session-heading">저장 세션</h2>
+        </div>
+        <fieldset class="filters" id="categoryFilters">
+          <legend>결과 필터</legend>
+          <label><input type="radio" name="category" value="all" checked><span>전체</span></label>
+          <label><input type="radio" name="category" value="success"><span>성공</span></label>
+          <label><input type="radio" name="category" value="failure"><span>실패</span></label>
+          <label><input type="radio" name="category" value="partial"><span>부분성공</span></label>
+        </fieldset>
       </div>
-      <p class="history-note">실물 실행 결과와 저장 상태입니다. “저장 데이터 재생”은 보관 파일 조회이며 실물 실행을 시작하지 않습니다.</p>
-      <div id="runHistoryError" class="banner error" role="alert" hidden></div>
-      <div class="table-wrap">
-        <table class="run-table">
-          <thead><tr><th>Run ID / 상태</th><th>결과</th><th>데이터 저장 상태</th><th>원본 / snapshot</th><th>재생 / AI 검토</th></tr></thead>
-          <tbody id="runRows"><tr><td colspan="5" class="muted">실행 이력을 불러오는 중…</td></tr></tbody>
-        </table>
+
+      <div id="errorBanner" class="banner error" role="alert" hidden></div>
+      <div class="next-session-launch">
+        <div><span class="meta-label">CURRENT INPUT · FULL_CHAIN PHYSICAL RUN</span><strong>FULL_CHAIN_RECEIVE_CONTACT 새 실물 세션</strong><p>현재 카메라·로봇 입력으로 기존 full-chain 작업을 준비합니다. 저장 성공 기록 재생과는 별도입니다.</p></div>
+        <button id="nextSession" class="button primary" type="button">FULL_CHAIN 다음 실물 세션</button>
       </div>
+      <div class="session-controls">
+        <label class="field grow" for="sessionSelect">
+          <span>세션 선택</span>
+          <select id="sessionSelect" disabled><option>세션 불러오는 중…</option></select>
+        </label>
+        <button id="successReplay" class="button secondary" type="button" disabled>성공 시연 다시 재생</button>
+        <button id="rerunPlan" class="button primary" type="button" disabled>FULL_CHAIN 실물 재실행 준비</button>
+      </div>
+
+      <div class="outcome-grid">
+        <div>
+          <span class="meta-label">기록 결과</span>
+          <div class="outcome-line"><span id="categoryBadge" class="badge neutral">UNKNOWN</span><strong id="rawOutcome">UNKNOWN</strong></div>
+        </div>
+        <div>
+          <span class="meta-label">분류 범위</span>
+          <strong id="classificationScope">UNKNOWN</strong>
+        </div>
+        <p class="scope-warning">PICK/LIFT 성공은 전체 handover 성공을 뜻하지 않습니다.</p>
+      </div>
+      <p id="sessionWarning" class="session-warning" hidden></p>
+
+
+      <div class="replay-bar" aria-label="저장 시연 재생 제어">
+        <button id="playPause" class="button playback" type="button" disabled>▶ 저장 시연 재생</button>
+        <label class="timeline" for="timeSlider">
+          <span class="sr-only">재생 시간</span>
+          <input id="timeSlider" type="range" min="0" max="1" step="0.01" value="0" disabled>
+          <span class="time-readout"><b id="relativeTime">+00:00.0</b><span id="wallTime">기록 시각 —</span><span id="snapshotState" class="snapshot-state" role="status" aria-live="polite">표시 스냅샷 없음</span></span>
+        </label>
+        <label class="field speed" for="speedSelect"><span>속도</span>
+          <select id="speedSelect">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="5">5×</option>
+            <option value="10">10×</option>
+          </select>
+        </label>
+      </div>
+      <div class="bookmarks"><span class="meta-label">북마크</span><div id="bookmarkList" class="bookmark-list"><span class="muted">없음</span></div></div>
     </section>
 
-    <section id="analysisPanel" class="panel" aria-labelledby="analysis-heading">
-      <div class="section-title"><div><p class="eyebrow">SOFTWARE REVIEW · NO PHYSICAL RUN</p><h2 id="analysis-heading">A-16 · A-17 검수 작업</h2></div></div>
-      <p class="history-note">실물 Run과 별개로 수행한 소스 분석·Fake Bus 검수입니다. 수정본의 실물 성공을 의미하지 않습니다.</p>
-      <div id="analysisCatalog" class="inspection-two-column"></div>
-      <div id="analysisError" class="banner error" role="alert" hidden></div>
-      <div id="analysisDocument" hidden>
-        <h3 id="analysisDocumentTitle"></h3><p id="analysisDocumentMeta" class="mono"></p>
-        <a id="analysisDownload" class="button secondary">원문 다운로드</a>
-        <pre id="analysisDocumentText" class="analysis-document" tabindex="0" aria-label="검수 문서 원문"></pre>
-      </div>
+    <section aria-labelledby="camera-heading">
+      <div class="section-title compact"><div><p id="cameraModeLabel" class="eyebrow">ARCHIVED CAMERA STREAMS</p><h2 id="camera-heading">카메라 4채널</h2></div><span id="cameraModeKey" class="archive-key">REPLAY_FRESH = 보관 프레임</span></div>
+      <div id="cameraGrid" class="camera-grid"></div>
     </section>
+
+    <div class="lower-grid">
+      <section class="panel" aria-labelledby="joint-heading">
+        <div class="section-title compact"><div><p class="eyebrow">RECORDED FEEDBACK</p><h2 id="joint-heading">12축 피드백</h2></div><span id="jointTime" class="muted">스냅샷 기준 —</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>축</th><th>Actual</th><th>Goal readback</th><th>요청 Goal</th><th>Torque</th><th>Moving</th><th>Status</th><th>Feedback</th><th>ACK</th><th>Application</th></tr></thead>
+            <tbody id="jointRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="diagnostics" aria-label="기록 진단">
+        <section class="panel" aria-labelledby="stage-heading">
+          <div class="section-title compact"><div><p class="eyebrow">STAGE EVIDENCE</p><h2 id="stage-heading">단계 결과</h2></div><strong id="currentStage" class="mono">UNKNOWN</strong></div>
+          <div id="stageResults" class="stage-list"></div>
+        </section>
+
+        <div class="diagnostic-grid">
+          <section class="panel metric-card" aria-labelledby="ik-heading"><span class="meta-label" id="ik-heading">IK · 기록 계획</span><strong id="ikStatus">UNKNOWN</strong><pre id="ikDetails">—</pre></section>
+          <section class="panel metric-card" aria-labelledby="collision-heading"><span class="meta-label" id="collision-heading">모델 충돌</span><strong id="collisionStatus">UNKNOWN</strong><p id="collisionClass">—</p><pre id="collisionDetails">—</pre></section>
+        </div>
+
+        <section class="panel error-card" aria-labelledby="command-heading">
+          <div class="section-title compact"><div><p class="eyebrow">COMMAND EVIDENCE</p><h2 id="command-heading">명령·오류</h2></div><span id="commandSummary" class="mono">IDUNKNOWN ACKUNKNOWN/applicationUNKNOWN/safetyUNKNOWN</span></div>
+          <dl class="command-grid">
+            <div><dt>ACK</dt><dd id="commandAck">UNKNOWN</dd></div>
+            <div><dt>Command state / proof</dt><dd id="commandApplication">UNKNOWN</dd></div>
+            <div><dt>Safe shutdown</dt><dd id="safeShutdown">UNKNOWN</dd></div>
+            <div><dt>상위 최종 종료 코드</dt><dd id="parentExit">UNKNOWN</dd></div>
+            <div><dt>하위 단계 종료 코드</dt><dd id="childExit">UNKNOWN</dd></div>
+          </dl>
+          <div id="firstErrorRecord" class="first-error"><span class="meta-label">First error gate / detail</span><strong id="errorGate">UNKNOWN</strong><p id="errorDetail">기록 없음</p></div>
+          <div id="laterRecovery" class="later-recovery" hidden><span class="meta-label">별도 사후 복구 기록</span><strong id="recoveryTime">UNKNOWN</strong><p id="recoveryDetail">—</p></div>
+          <div id="snapshotWarnings" class="warning-list"></div>
+        </section>
+
+        <section class="panel readonly-card" aria-labelledby="control-heading">
+          <div><span class="meta-label" id="control-heading">실물 제어</span><strong id="controlOwnership">브라우저 장치 직접 접근 없음 · 기존 owner만 실행</strong></div>
+          <button type="button" disabled title="START는 준비 창의 현장 승인 뒤에만 가능합니다">FULL_CHAIN START: 준비 창</button>
+          <button id="controlStop" type="button" disabled>FULL_CHAIN 실물 STOP</button>
+        </section>
+      </aside>
+    </div>
 
     <section id="inspectionPanel" class="panel inspection-panel" aria-labelledby="inspection-heading">
       <div class="section-title">
@@ -243,55 +283,6 @@
         </div>
       </div>
     </section>
-
-    <section aria-labelledby="camera-heading">
-      <div class="section-title compact"><div><p id="cameraModeLabel" class="eyebrow">ARCHIVED CAMERA STREAMS</p><h2 id="camera-heading">카메라 4채널</h2></div><span id="cameraModeKey" class="archive-key">REPLAY_FRESH = 보관 프레임</span></div>
-      <div id="cameraGrid" class="camera-grid"></div>
-    </section>
-
-    <div class="lower-grid">
-      <section class="panel" aria-labelledby="joint-heading">
-        <div class="section-title compact"><div><p class="eyebrow">RECORDED FEEDBACK</p><h2 id="joint-heading">12축 피드백</h2></div><span id="jointTime" class="muted">스냅샷 기준 —</span></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>축</th><th>Actual</th><th>Goal readback</th><th>요청 Goal</th><th>Torque</th><th>Moving</th><th>Status</th><th>Feedback</th><th>ACK</th><th>Application</th></tr></thead>
-            <tbody id="jointRows"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <aside class="diagnostics" aria-label="기록 진단">
-        <section class="panel" aria-labelledby="stage-heading">
-          <div class="section-title compact"><div><p class="eyebrow">STAGE EVIDENCE</p><h2 id="stage-heading">단계 결과</h2></div><strong id="currentStage" class="mono">UNKNOWN</strong></div>
-          <div id="stageResults" class="stage-list"></div>
-        </section>
-
-        <div class="diagnostic-grid">
-          <section class="panel metric-card" aria-labelledby="ik-heading"><span class="meta-label" id="ik-heading">IK · 기록 계획</span><strong id="ikStatus">UNKNOWN</strong><pre id="ikDetails">—</pre></section>
-          <section class="panel metric-card" aria-labelledby="collision-heading"><span class="meta-label" id="collision-heading">모델 충돌</span><strong id="collisionStatus">UNKNOWN</strong><p id="collisionClass">—</p><pre id="collisionDetails">—</pre></section>
-        </div>
-
-        <section class="panel error-card" aria-labelledby="command-heading">
-          <div class="section-title compact"><div><p class="eyebrow">COMMAND EVIDENCE</p><h2 id="command-heading">명령·오류</h2></div><span id="commandSummary" class="mono">IDUNKNOWN ACKUNKNOWN/applicationUNKNOWN/safetyUNKNOWN</span></div>
-          <dl class="command-grid">
-            <div><dt>ACK</dt><dd id="commandAck">UNKNOWN</dd></div>
-            <div><dt>Command state / proof</dt><dd id="commandApplication">UNKNOWN</dd></div>
-            <div><dt>Safe shutdown</dt><dd id="safeShutdown">UNKNOWN</dd></div>
-            <div><dt>상위 최종 종료 코드</dt><dd id="parentExit">UNKNOWN</dd></div>
-            <div><dt>하위 단계 종료 코드</dt><dd id="childExit">UNKNOWN</dd></div>
-          </dl>
-          <div id="firstErrorRecord" class="first-error"><span class="meta-label">First error gate / detail</span><strong id="errorGate">UNKNOWN</strong><p id="errorDetail">기록 없음</p></div>
-          <div id="laterRecovery" class="later-recovery" hidden><span class="meta-label">별도 사후 복구 기록</span><strong id="recoveryTime">UNKNOWN</strong><p id="recoveryDetail">—</p></div>
-          <div id="snapshotWarnings" class="warning-list"></div>
-        </section>
-
-        <section class="panel readonly-card" aria-labelledby="control-heading">
-          <div><span class="meta-label" id="control-heading">실물 제어</span><strong id="controlOwnership">브라우저 장치 직접 접근 없음 · 기존 owner만 실행</strong></div>
-          <button type="button" disabled title="START는 준비 창의 현장 승인 뒤에만 가능합니다">FULL_CHAIN START: 준비 창</button>
-          <button id="controlStop" type="button" disabled>FULL_CHAIN 실물 STOP</button>
-        </section>
-      </aside>
-    </div>
   </main>
 
   <dialog id="recoveryDialog" aria-labelledby="recoveryTitle">

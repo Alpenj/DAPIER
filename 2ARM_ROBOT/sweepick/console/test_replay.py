@@ -255,22 +255,15 @@ class HttpReadOnly(unittest.TestCase):
                                 headers={'Content-Type': 'application/json', **headers}), timeout=5)
             self.assertEqual(error.exception.code, code)
 
-    def test_instructor_materials_and_recovery_boundary(self):
-        info = self.get('/api/instructor')
-        self.assertTrue(info['bundle_verified'])
-        with ZipFile('/home/robot/Downloads/SWEEPICK_INSTRUCTOR_REVIEW_20261014.zip') as archive:
-            expected = all(archive.read(member) == path.read_bytes() for member, path in (
-                ('source/RUN_APPROVED_SESSION.py', Path(info['launcher'])),
-                ('source/sweepick_full_chain(2).py', Path(info['launcher']).parent / 'revision/sweepick_full_chain.py')))
-        self.assertEqual(info['source_matches'], expected)
-        for path, content in [('/instructor', 'SWEEPICK 강사 시연'),
-                              ('/instructor-materials/OPERATE.txt', 'AI 호출은 필요 없다')]:
-            with urlopen(self.base + path, timeout=5) as response:
-                self.assertIn(content, response.read().decode())
-        with urlopen(self.base + '/api/instructor/bundle', timeout=5) as response:
-            self.assertIn('application/zip', response.headers['Content-Type'])
-        with urlopen(self.base + '/instructor-materials/reference/02_TECHNICAL_BRIEF_KO.md', timeout=5) as response:
-            self.assertIn('text/plain', response.headers['Content-Type'])
+    def test_removed_pages_are_gone_and_recovery_boundary_holds(self):
+        # 2026-10-16: the instructor demo page and the non-physical A-16/A-17 review panel were removed from the dashboard
+        for path in ('/instructor', '/api/instructor', '/api/instructor/bundle', '/instructor-materials/OPERATE.txt', '/api/analyses'):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(self.base + path, timeout=5)
+            self.assertEqual(error.exception.code, 404, path)
+        with urlopen(self.base + '/', timeout=5) as response:
+            page = response.read().decode()
+        self.assertNotIn('analysisPanel', page); self.assertNotIn('/instructor', page)
         token = self.get('/api/control')['csrf_token']
         for headers, code in [({}, 403), ({'Origin': self.base, 'X-Sweepick-Token': token}, 409)]:
             with self.assertRaises(HTTPError) as error:
