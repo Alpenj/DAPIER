@@ -1,0 +1,507 @@
+{
+  "schema": "dapier.c2.ros2-readonly-dryrun.v1",
+  "started_at": "2026-10-16T13:39:19+0900",
+  "environment": {
+    "ROS_DISTRO": "jazzy",
+    "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
+    "ROS_LOCALHOST_ONLY": "1",
+    "python": "3.12.3",
+    "rclpy_available": true,
+    "nav2_msgs_version": "1.3.13",
+    "rclpy_version": "7.1.12"
+  },
+  "write_authority": {
+    "publishers_created_by_adapter": 0,
+    "action_goals_sent": 0,
+    "cmd_vel_published": 0,
+    "service_calls": 0,
+    "sweepick_prepare_calls": 0,
+    "motor_writes": 0
+  },
+  "data_origin": "NO_DATA",
+  "duration_s": 5.0,
+  "adapter_interfaces": {
+    "publishers": [
+      {
+        "topic": "/parameter_events",
+        "types": [
+          "rcl_interfaces/msg/ParameterEvent"
+        ]
+      },
+      {
+        "topic": "/rosout",
+        "types": [
+          "rcl_interfaces/msg/Log"
+        ]
+      }
+    ],
+    "subscriptions": [
+      {
+        "topic": "/camera/color/camera_info",
+        "types": [
+          "sensor_msgs/msg/CameraInfo"
+        ]
+      },
+      {
+        "topic": "/cmd_vel",
+        "types": [
+          "geometry_msgs/msg/TwistStamped"
+        ]
+      },
+      {
+        "topic": "/cmd_vel_nav",
+        "types": [
+          "geometry_msgs/msg/Twist"
+        ]
+      },
+      {
+        "topic": "/cmd_vel_unstamped",
+        "types": [
+          "geometry_msgs/msg/Twist"
+        ]
+      },
+      {
+        "topic": "/docking/object_detection_status",
+        "types": [
+          "std_msgs/msg/String"
+        ]
+      },
+      {
+        "topic": "/docking/status",
+        "types": [
+          "std_msgs/msg/String"
+        ]
+      },
+      {
+        "topic": "/docking/target_object_pose",
+        "types": [
+          "geometry_msgs/msg/PoseStamped"
+        ]
+      },
+      {
+        "topic": "/docking/target_object_provenance",
+        "types": [
+          "std_msgs/msg/String"
+        ]
+      },
+      {
+        "topic": "/navigate_to_pose/_action/feedback",
+        "types": [
+          "nav2_msgs/action/NavigateToPose_FeedbackMessage"
+        ]
+      },
+      {
+        "topic": "/navigate_to_pose/_action/status",
+        "types": [
+          "action_msgs/msg/GoalStatusArray"
+        ]
+      },
+      {
+        "topic": "/odom",
+        "types": [
+          "nav_msgs/msg/Odometry"
+        ]
+      },
+      {
+        "topic": "/task/status",
+        "types": [
+          "std_msgs/msg/String"
+        ]
+      },
+      {
+        "topic": "/tf",
+        "types": [
+          "tf2_msgs/msg/TFMessage"
+        ]
+      },
+      {
+        "topic": "/tf_static",
+        "types": [
+          "tf2_msgs/msg/TFMessage"
+        ]
+      }
+    ],
+    "service_clients": [],
+    "user_publishers_created": 0,
+    "user_clients_created": 0
+  },
+  "subscriptions": [
+    {
+      "topic": "/navigate_to_pose/_action/status",
+      "type": "action_msgs.msg._goal_status_array.GoalStatusArray",
+      "qos": {
+        "reliability": "1",
+        "durability": "1",
+        "depth": 1
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/navigate_to_pose/_action/feedback",
+      "type": "nav2_msgs.action._navigate_to_pose.NavigateToPose_FeedbackMessage",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/odom",
+      "type": "nav_msgs.msg._odometry.Odometry",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/cmd_vel",
+      "type": "geometry_msgs.msg._twist_stamped.TwistStamped",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/cmd_vel_unstamped",
+      "type": "geometry_msgs.msg._twist.Twist",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/cmd_vel_nav",
+      "type": "geometry_msgs.msg._twist.Twist",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/docking/status",
+      "type": "std_msgs.msg._string.String",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/task/status",
+      "type": "std_msgs.msg._string.String",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/docking/target_object_pose",
+      "type": "geometry_msgs.msg._pose_stamped.PoseStamped",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/docking/object_detection_status",
+      "type": "std_msgs.msg._string.String",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/docking/target_object_provenance",
+      "type": "std_msgs.msg._string.String",
+      "qos": {
+        "reliability": "1",
+        "durability": "2",
+        "depth": 10
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    },
+    {
+      "topic": "/camera/color/camera_info",
+      "type": "sensor_msgs.msg._camera_info.CameraInfo",
+      "qos": {
+        "reliability": "2",
+        "durability": "2",
+        "depth": 5
+      },
+      "qos_copied_from_publisher": null,
+      "publishers_at_subscribe": []
+    }
+  ],
+  "graph_topics": [
+    {
+      "topic": "/camera/color/camera_info",
+      "types": [
+        "sensor_msgs/msg/CameraInfo"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/cmd_vel",
+      "types": [
+        "geometry_msgs/msg/TwistStamped"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/cmd_vel_nav",
+      "types": [
+        "geometry_msgs/msg/Twist"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/cmd_vel_unstamped",
+      "types": [
+        "geometry_msgs/msg/Twist"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/docking/object_detection_status",
+      "types": [
+        "std_msgs/msg/String"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/docking/status",
+      "types": [
+        "std_msgs/msg/String"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/docking/target_object_pose",
+      "types": [
+        "geometry_msgs/msg/PoseStamped"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/docking/target_object_provenance",
+      "types": [
+        "std_msgs/msg/String"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/navigate_to_pose/_action/feedback",
+      "types": [
+        "nav2_msgs/action/NavigateToPose_FeedbackMessage"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/navigate_to_pose/_action/status",
+      "types": [
+        "action_msgs/msg/GoalStatusArray"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/odom",
+      "types": [
+        "nav_msgs/msg/Odometry"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/parameter_events",
+      "types": [
+        "rcl_interfaces/msg/ParameterEvent"
+      ],
+      "publishers": [
+        {
+          "node": "_ros2cli_daemon_0_2b6266c7ea3e431e8d2e0bc1cc2218bb",
+          "qos": {
+            "reliability": "1",
+            "durability": "2"
+          }
+        },
+        {
+          "node": "sweepick_c2_readonly_adapter",
+          "qos": {
+            "reliability": "1",
+            "durability": "2"
+          }
+        }
+      ]
+    },
+    {
+      "topic": "/rosout",
+      "types": [
+        "rcl_interfaces/msg/Log"
+      ],
+      "publishers": [
+        {
+          "node": "_ros2cli_daemon_0_2b6266c7ea3e431e8d2e0bc1cc2218bb",
+          "qos": {
+            "reliability": "1",
+            "durability": "1"
+          }
+        },
+        {
+          "node": "sweepick_c2_readonly_adapter",
+          "qos": {
+            "reliability": "1",
+            "durability": "1"
+          }
+        }
+      ]
+    },
+    {
+      "topic": "/task/status",
+      "types": [
+        "std_msgs/msg/String"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/tf",
+      "types": [
+        "tf2_msgs/msg/TFMessage"
+      ],
+      "publishers": []
+    },
+    {
+      "topic": "/tf_static",
+      "types": [
+        "tf2_msgs/msg/TFMessage"
+      ],
+      "publishers": []
+    }
+  ],
+  "observed": {
+    "clock_id": "ros2:ROS_TIME(use_sim_time=False)",
+    "message_counts": {},
+    "publisher_nodes_seen": {},
+    "nav2_goals": {},
+    "nav2_last_terminal": null,
+    "nav2_feedback_count": 0,
+    "docking_state": null,
+    "docking_last_text": null,
+    "task_state": null,
+    "task_last_text": null,
+    "last_odom": null,
+    "last_cmd_vel": null,
+    "sensor_frame_count": 0,
+    "target_pose_count": 0,
+    "detection_status_text": null,
+    "provenance_sidecar_count": 0,
+    "first_receive_s": null,
+    "last_receive_s": null
+  },
+  "gate_timeline": [
+    {
+      "t_s": 1792125560.611,
+      "allowed": false,
+      "reasons": [
+        "NO_ODOM_OBSERVED"
+      ],
+      "docking_state": null,
+      "task_state": null,
+      "nav2_active": []
+    },
+    {
+      "t_s": 1792125561.618,
+      "allowed": false,
+      "reasons": [
+        "NO_ODOM_OBSERVED"
+      ],
+      "docking_state": null,
+      "task_state": null,
+      "nav2_active": []
+    },
+    {
+      "t_s": 1792125562.625,
+      "allowed": false,
+      "reasons": [
+        "NO_ODOM_OBSERVED"
+      ],
+      "docking_state": null,
+      "task_state": null,
+      "nav2_active": []
+    },
+    {
+      "t_s": 1792125563.632,
+      "allowed": false,
+      "reasons": [
+        "NO_ODOM_OBSERVED"
+      ],
+      "docking_state": null,
+      "task_state": null,
+      "nav2_active": []
+    },
+    {
+      "t_s": 1792125564.639,
+      "allowed": false,
+      "reasons": [
+        "NO_ODOM_OBSERVED"
+      ],
+      "docking_state": null,
+      "task_state": null,
+      "nav2_active": []
+    }
+  ],
+  "arrival_evidence": {
+    "evidence": null,
+    "reasons": [
+      "NO_NAV2_TERMINAL_STATUS_OBSERVED"
+    ]
+  },
+  "base_stop_evidence": {
+    "evidence": null,
+    "reasons": [
+      "NO_ARRIVAL"
+    ]
+  },
+  "post_stop_candidate": {
+    "observation": null,
+    "rejected": [
+      "NO_BASE_STOP_EVIDENCE"
+    ],
+    "provenance": null
+  },
+  "tf_lookups": [],
+  "pipeline_dryrun": {
+    "stages": [
+      "DETECT",
+      "NAVIGATE"
+    ],
+    "stopped_at": "ARRIVED:NO_NAV2_TERMINAL_STATUS_OBSERVED",
+    "outcome": null
+  },
+  "arm_commands_invoked_count": 0
+}

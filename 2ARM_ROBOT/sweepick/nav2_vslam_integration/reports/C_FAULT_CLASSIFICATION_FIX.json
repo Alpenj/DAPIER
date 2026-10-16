@@ -1,0 +1,69 @@
+{
+  "schema": "dapier.c2.fault-classification-fix.v1",
+  "date": "2026-10-16",
+  "team": "DAPIER C-2 (Argon C-1 handoff)",
+  "file": "2ARM_ROBOT/sweepick/nav2_vslam_integration/sweepick_adapter.py",
+  "code_commit": "6621b11d12fca6942b0a804c6dae205240051ad2",
+  "branch": "pro/sweepick-c2-argon-handoff-20261016",
+  "defects_confirmed_in_c1": [
+    {
+      "id": "D1",
+      "description": "state=FAULT, first_error.gate=BUS_LOST, stop_event=owner_stop -> classified STOP",
+      "c1_cause": "evaluate_session_outcome step 1 treated first_error.stop_event=='owner_stop' and any gate containing 'STOP' as an operator STOP; the native owner also emits owner_stop after it stops itself on a bus loss (console/replay.py:stop_gate keeps the native gate inside the reason text)",
+      "real_evidence": "~/sweepick_console_runs/20261015_151937_81d00c/RUN_RECORD.json: first_error.gate=OWNER_STOP, detail contains {'gate': 'bus_lost', 'level': 'HARD', 'detail': 'the bus could not be opened: ConnectionError: '}",
+      "c2_result": "FAULT (SWEEPICK_FAULT), hardware_fault kept, operator_stop=None"
+    },
+    {
+      "id": "D2",
+      "description": "state=FAULT with session_result=PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME -> OBSERVATION_FAILED could win",
+      "c1_cause": "step 3 (observation failure) ran before step 4 (FAULT); a Console FAULT verdict (executor error / torque-off unconfirmed) was downgraded",
+      "real_evidence": "~/sweepick_console_runs/20261016_112020_4d7c2b/RUN_RECORD.json: state=FAULT, first_error EXECUTOR_ERROR exit 3, native_terminal.result=PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME, normal_return_confirmed=false (right arm never reached RETURNED_RELEASED)",
+      "c2_result": "FAULT (SWEEPICK_FAULT, native_gate EXECUTOR_ERROR), observation_failure='PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME' kept in the result and in the reason text"
+    }
+  ],
+  "classification_rules": {
+    "function": "classify_terminal_evidence(status_payload) -> TerminalEvidenceClassification(hardware_fault, operator_stop, observation_failure, console_fault_state, refusal, basis)",
+    "priority": ["1 hardware/executor FAULT (gate in HARDWARE_FAULT_GATES or token in gate/detail text: bus_lost, bus could not be opened, could not connect, ConnectionError, SerialException, motor check failed, missing motor, 모터 무응답, overload, RxPacketError, servo fault, motor fault, executor_exception, FeetechMotorsBus)",
+                 "2 operator STOP (Console stop(): active.stop_sent=True / STOP_REQUESTED; LIMITED terminal OPERATOR_STOPPED or stop_latch_present; gate OPERATOR_STOP/OPERATOR_STOPPED/STOP_LATCH/SIGINT or operator-naming text) with no hardware fault",
+                 "3 refusal / authorization (unchanged)",
+                 "4 Console FAULT verdict (state=FAULT, first_error, active.error, limited BUS_OR_SERVO_FAULT/LEFT_LIFT_FAILED) -> FAULT, observation failure preserved",
+                 "5 observation / alignment / grasp-gate failure with a healthy executor -> OBSERVATION_FAILED (blocked unless normal return confirmed)",
+                 "6 manipulation evidence (unchanged)"],
+    "owner_stop_rule": "an owner_stop event or OWNER_STOP gate by itself names the native owner, not a person; without Console stop_sent or an operator-naming gate it is classified FAULT (conservative), never STOP",
+    "evidence_preserved_on_result": ["hardware_fault", "operator_stop", "observation_failure", "classification_basis"],
+    "manual_recovery_block": "unchanged: FAULT / STOP / LIMITED_HOLDING keep subsequent_commands_blocked=True and requires_operator_recovery=True"
+  },
+  "operator_recovery_contract": {
+    "function": "VslamSweepickCoordinator.confirm_operator_recovery(operator_verified, note, console_status=None)",
+    "block_origins": {
+      "SWEEPICK_CONSOLE": "adapter result with a Console run id: cleared only when console_status.active.id == blocked run, active.operator_recovery is the Console record written by console/control.py:confirm_recovery (source=local_operator_manual_confirmation, power_isolated=True, workspace_reset=True, job_id == run), owner_alive is False, can_prepare is True, state != BLOCKED",
+      "SWEEPICK_CONSOLE_NO_RUN": "Console rejected before a run existed (foreign owner / device / scope): console_status must show no owner alive, not BLOCKED, can_prepare True",
+      "INTEGRATION_GATE": "Nav2 / base-stop / TF gate of this layer: explicit operator note accepted and recorded (no Console run involved)"
+    },
+    "boolean_only": "refused for Console origins (check CONSOLE_STATUS_REQUIRED_BOOLEAN_NOT_ACCEPTED); decision kept in coordinator.last_recovery_decision (OperatorRecoveryDecision)",
+    "console_side_contract_reviewed": "Controller.status() exposes active.operator_recovery (the validated MANUAL_RECOVERY_CONFIRMATION.json) and can_prepare = not alive and (state not in (FAULT, LIMITED_HOLDING) or recovery is not None); C reads these, never writes the record"
+  },
+  "tests": {
+    "file": "tests/test_c2_fault_classification.py",
+    "mock_cases": [
+      "BUS_LOST + owner_stop -> FAULT",
+      "OWNER_STOP gate with bus_lost text -> FAULT",
+      "Console stop_sent (real operator STOP) -> STOP",
+      "owner_stop of unknown origin -> FAULT (not STOP)",
+      "observation failure + normal return -> OBSERVATION_FAILED",
+      "observation failure + Console FAULT state -> FAULT, observation preserved",
+      "observation failure + hardware FAULT -> FAULT, observation preserved",
+      "all three evidence classes kept on the classification object",
+      "recovery: boolean alone refused / record absent refused / other run refused / incomplete record refused / matching record clears latch / prior unrecovered FAULT blocks the next task / integration gate accepts an operator note"
+    ],
+    "real_cases_read_only": [
+      {"run": "20261016_112020_4d7c2b", "expected": "FAULT + observation_failure PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME, hardware_fault None", "result": "pass"},
+      {"run": "20261015_175106_f5aabc", "expected": "FAULT, hardware_fault from failure_point (motor check failed, ID 1-6)", "result": "pass"},
+      {"run": "20261015_151937_81d00c", "expected": "FAULT, hardware_fault (bus_lost inside OWNER_STOP detail), operator_stop None", "result": "pass"}
+    ],
+    "existing_c1_tests": "test_07 / test_08 / test_09 unchanged and passing",
+    "totals": {"suite": "2ARM_ROBOT/sweepick/nav2_vslam_integration/tests", "tests": 57, "passed": 57, "failed": 0,
+               "interpreter": "~/sweepick_261016_c2_argon_handoff/.venv (system site-packages + pydantic 2.14.1)"}
+  },
+  "not_changed": ["console/control.py", "console/records.py", "console/replay.py", "native/*", "goal_bridge/*", "visual_servo computations"]
+}

@@ -1,0 +1,490 @@
+{
+  "schema": "dapier.c2.ros2-readonly-dryrun.summary.v1",
+  "date": "2026-10-16",
+  "team": "DAPIER C-2 (Argon C-1 handoff)",
+  "code_commit": "6621b11d12fca6942b0a804c6dae205240051ad2",
+  "environment": {
+    "ROS_DISTRO": "jazzy",
+    "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
+    "ROS_LOCALHOST_ONLY": "1",
+    "python": "3.12.3",
+    "rclpy_available": true,
+    "nav2_msgs_version": "1.3.13",
+    "rclpy_version": "7.1.12"
+  },
+  "environment_findings": [
+    "Navigation repo targets ROS 2 Jazzy (README, install_ros2.sh, visual_slam_guide.md); /opt/ros/jazzy installed; nav2_msgs 1.3.13, rclpy 7.1.12. The C-1 roadmap's 'ROS 2 Humble' was wrong and is corrected in C-2.",
+    "cmd_vel is geometry_msgs/TwistStamped on /cmd_vel (enable_stamped_cmd_vel: true in nav2_vslam_params.yaml, task_manager, precision_* nodes); raw Twist copies go to /cmd_vel_unstamped and /cmd_vel_nav.",
+    "/docking/status and /task/status are std_msgs/String 'STATE=<...>' lines; /docking/target_object_pose is PoseStamped with publish-time stamps (camera_color_optical_frame from object_detector_3d; base_footprint from precision_docking_controller_node).",
+    "NavigateToPose Result (Jazzy) = {error_code uint16, error_msg string}; GoalStatus 4=SUCCEEDED, 6=ABORTED, 5=CANCELED; action status topic QoS reliable+transient_local depth 1.",
+    "No stored ROS 2 data (rosbag2 metadata.yaml/.db3/.mcap) exists under ~ ; the live local graph was empty (/parameter_events, /rosout only). A REAL-data dry-run is therefore pending; the rclpy path was exercised with a labelled MOCK graph."
+  ],
+  "adapter": {
+    "module": "nav2_vslam_integration/ros2_readonly_adapter.py",
+    "node": "sweepick_c2_readonly_adapter (subscribe-only; publishers created by adapter = 0; action/service clients = 0)",
+    "consumes": [
+      "/navigate_to_pose/_action/status action_msgs/GoalStatusArray",
+      "/navigate_to_pose/_action/feedback nav2_msgs/action/NavigateToPose_FeedbackMessage",
+      "/odom nav_msgs/Odometry",
+      "/cmd_vel geometry_msgs/TwistStamped",
+      "/cmd_vel_unstamped, /cmd_vel_nav geometry_msgs/Twist",
+      "/docking/status, /task/status, /docking/object_detection_status std_msgs/String",
+      "/docking/target_object_pose geometry_msgs/PoseStamped",
+      "/camera/color/camera_info sensor_msgs/CameraInfo (sensor frame cadence)",
+      "/docking/target_object_provenance std_msgs/String JSON (PROPOSED sidecar, consumed only if present)",
+      "/tf, /tf_static via tf2_ros.Buffer"
+    ],
+    "qos": "copied from the first discovered publisher per topic after a discovery wait; fallbacks mirror task_manager (depth 10 reliable) / sensor_data",
+    "base_stop_is_observed_not_commanded": true,
+    "task_manager_fsm_changed": false,
+    "nav2_arrival_marks_manipulation_success": false
+  },
+  "runs": {
+    "mock_graph_republish_same_sensor_frame": {
+      "data_origin": "MOCK_ROS_GRAPH",
+      "duration_s": 12.0,
+      "started_at": "2026-10-16T13:45:49+0900",
+      "message_counts": {
+        "/navigate_to_pose/_action/status": 241,
+        "/odom": 240,
+        "/cmd_vel": 1,
+        "/docking/status": 240,
+        "/task/status": 240,
+        "/camera/color/camera_info": 240,
+        "/docking/target_object_pose": 201,
+        "/docking/object_detection_status": 201,
+        "/docking/target_object_provenance": 181
+      },
+      "publisher_nodes_seen": {
+        "/navigate_to_pose/_action/status": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/odom": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/cmd_vel": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/status": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/task/status": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/camera/color/camera_info": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/target_object_pose": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/object_detection_status": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/target_object_provenance": [
+          "sweepick_c2_mock_graph"
+        ]
+      },
+      "adapter_own_publishers": [
+        "/parameter_events",
+        "/rosout"
+      ],
+      "adapter_user_publishers_created": 0,
+      "adapter_service_clients": [],
+      "subscriptions_qos_copied_from_publisher": 9,
+      "subscriptions_total": 12,
+      "arrival": {
+        "nav2_status": "DOCKED",
+        "final_pose_frame": "odom",
+        "evidence_source": "nav2:/navigate_to_pose/_action/status:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2+docking:/docking/status",
+        "last_nav_frame_seq": 20
+      },
+      "base_stop": {
+        "settled_duration_s": 10.998886346817017,
+        "cmd_vel_zero_published": true,
+        "nav2_controller_idle": true,
+        "last_nav_frame_seq": 20,
+        "evidence_source": "observed:/odom,/cmd_vel,/navigate_to_pose/_action/status,/docking/status;first_quiet_odom_s=1792125953.855"
+      },
+      "base_stop_reasons": [],
+      "gate_timeline_compact": [
+        [
+          1792125954.856,
+          true,
+          []
+        ],
+        [
+          1792125955.856,
+          true,
+          []
+        ],
+        [
+          1792125956.856,
+          true,
+          []
+        ],
+        [
+          1792125957.856,
+          true,
+          []
+        ],
+        [
+          1792125958.856,
+          true,
+          []
+        ],
+        [
+          1792125959.856,
+          true,
+          []
+        ],
+        [
+          1792125960.856,
+          true,
+          []
+        ],
+        [
+          1792125961.856,
+          true,
+          []
+        ],
+        [
+          1792125962.856,
+          true,
+          []
+        ],
+        [
+          1792125963.856,
+          true,
+          []
+        ],
+        [
+          1792125964.856,
+          true,
+          []
+        ],
+        [
+          1792125965.856,
+          true,
+          []
+        ]
+      ],
+      "post_stop_candidate": {
+        "rejected": [],
+        "provenance_source": "DETECTOR_PROVENANCE_SIDECAR",
+        "provenance_verified": true,
+        "is_ema_filtered": true,
+        "transform_source": "TF2_LOOKUP_AT_MESSAGE_TIME",
+        "transform_translation_m": [
+          0.073,
+          -0.011,
+          0.094
+        ]
+      },
+      "pipeline": {
+        "stages": [
+          "DETECT",
+          "NAVIGATE",
+          "ARRIVED",
+          "BASE_STOPPED",
+          "REOBSERVE",
+          "RESULT"
+        ],
+        "stopped_at": "REOBSERVE",
+        "outcome_reason": "Post-arrival re-observation failed (OBSERVATION_TOO_OLD:age=10.051>1.500; EMA_FILTER_CARRYOVER_FROM_MOTION_FORBIDDEN); arm motion forbidden"
+      },
+      "arm_commands_invoked_count": 0,
+      "tf_lookups_ok": 1,
+      "tf_lookups_failed": 1
+    },
+    "mock_graph_fresh_sensor_frames": {
+      "data_origin": "MOCK_ROS_GRAPH",
+      "duration_s": 12.0,
+      "started_at": "2026-10-16T13:44:05+0900",
+      "message_counts": {
+        "/navigate_to_pose/_action/status": 241,
+        "/odom": 240,
+        "/cmd_vel": 8,
+        "/docking/status": 240,
+        "/task/status": 240,
+        "/camera/color/camera_info": 240,
+        "/docking/target_object_pose": 194,
+        "/docking/object_detection_status": 194,
+        "/docking/target_object_provenance": 174
+      },
+      "publisher_nodes_seen": {
+        "/navigate_to_pose/_action/status": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/odom": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/cmd_vel": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/status": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/task/status": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/camera/color/camera_info": [
+          "_NODE_NAME_UNKNOWN_",
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/target_object_pose": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/object_detection_status": [
+          "sweepick_c2_mock_graph"
+        ],
+        "/docking/target_object_provenance": [
+          "sweepick_c2_mock_graph"
+        ]
+      },
+      "adapter_own_publishers": [
+        "/parameter_events",
+        "/rosout"
+      ],
+      "adapter_user_publishers_created": 0,
+      "adapter_service_clients": [],
+      "subscriptions_qos_copied_from_publisher": 9,
+      "subscriptions_total": 12,
+      "arrival": {
+        "nav2_status": "DOCKED",
+        "final_pose_frame": "odom",
+        "evidence_source": "nav2:/navigate_to_pose/_action/status:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2+docking:/docking/status",
+        "last_nav_frame_seq": 27
+      },
+      "base_stop": {
+        "settled_duration_s": 10.648376703262329,
+        "cmd_vel_zero_published": true,
+        "nav2_controller_idle": true,
+        "last_nav_frame_seq": 27,
+        "evidence_source": "observed:/odom,/cmd_vel,/navigate_to_pose/_action/status,/docking/status;first_quiet_odom_s=1792125849.583"
+      },
+      "base_stop_reasons": [],
+      "gate_timeline_compact": [
+        [
+          1792125850.283,
+          true,
+          []
+        ],
+        [
+          1792125851.283,
+          true,
+          []
+        ],
+        [
+          1792125852.284,
+          true,
+          []
+        ],
+        [
+          1792125853.284,
+          true,
+          []
+        ],
+        [
+          1792125854.283,
+          true,
+          []
+        ],
+        [
+          1792125855.283,
+          true,
+          []
+        ],
+        [
+          1792125856.283,
+          true,
+          []
+        ],
+        [
+          1792125857.283,
+          true,
+          []
+        ],
+        [
+          1792125858.283,
+          true,
+          []
+        ],
+        [
+          1792125859.283,
+          true,
+          []
+        ],
+        [
+          1792125860.283,
+          true,
+          []
+        ],
+        [
+          1792125861.283,
+          true,
+          []
+        ]
+      ],
+      "post_stop_candidate": {
+        "rejected": [],
+        "provenance_source": "DETECTOR_PROVENANCE_SIDECAR",
+        "provenance_verified": true,
+        "is_ema_filtered": false,
+        "transform_source": "TF2_LOOKUP_AT_MESSAGE_TIME",
+        "transform_translation_m": [
+          0.073,
+          -0.011,
+          0.094
+        ]
+      },
+      "pipeline": {
+        "stages": [
+          "DETECT",
+          "NAVIGATE",
+          "ARRIVED",
+          "BASE_STOPPED",
+          "REOBSERVE",
+          "MANIPULATION_READY"
+        ],
+        "stopped_at": "MANIPULATION_READY:ARM_TASK_NOT_REQUESTED_IN_DRYRUN",
+        "outcome_reason": null
+      },
+      "arm_commands_invoked_count": 0,
+      "tf_lookups_ok": 1,
+      "tf_lookups_failed": 1
+    },
+    "live_local_graph": {
+      "data_origin": "NO_DATA",
+      "duration_s": 5.0,
+      "started_at": "2026-10-16T13:39:19+0900",
+      "message_counts": {},
+      "publisher_nodes_seen": {},
+      "adapter_own_publishers": [
+        "/parameter_events",
+        "/rosout"
+      ],
+      "adapter_user_publishers_created": 0,
+      "adapter_service_clients": [],
+      "subscriptions_qos_copied_from_publisher": 0,
+      "subscriptions_total": 12,
+      "arrival": {
+        "nav2_status": null,
+        "final_pose_frame": null,
+        "evidence_source": null,
+        "last_nav_frame_seq": null
+      },
+      "base_stop": {
+        "settled_duration_s": null,
+        "cmd_vel_zero_published": null,
+        "nav2_controller_idle": null,
+        "last_nav_frame_seq": null,
+        "evidence_source": null
+      },
+      "base_stop_reasons": [
+        "NO_ARRIVAL"
+      ],
+      "gate_timeline_compact": [
+        [
+          1792125560.611,
+          false,
+          [
+            "NO_ODOM_OBSERVED"
+          ]
+        ],
+        [
+          1792125561.618,
+          false,
+          [
+            "NO_ODOM_OBSERVED"
+          ]
+        ],
+        [
+          1792125562.625,
+          false,
+          [
+            "NO_ODOM_OBSERVED"
+          ]
+        ],
+        [
+          1792125563.632,
+          false,
+          [
+            "NO_ODOM_OBSERVED"
+          ]
+        ],
+        [
+          1792125564.639,
+          false,
+          [
+            "NO_ODOM_OBSERVED"
+          ]
+        ]
+      ],
+      "post_stop_candidate": {
+        "rejected": [
+          "NO_BASE_STOP_EVIDENCE"
+        ],
+        "provenance_source": null,
+        "provenance_verified": null,
+        "is_ema_filtered": null,
+        "transform_source": null,
+        "transform_translation_m": null
+      },
+      "pipeline": {
+        "stages": [
+          "DETECT",
+          "NAVIGATE"
+        ],
+        "stopped_at": "ARRIVED:NO_NAV2_TERMINAL_STATUS_OBSERVED",
+        "outcome_reason": null
+      },
+      "arm_commands_invoked_count": 0,
+      "tf_lookups_ok": 0,
+      "tf_lookups_failed": 0
+    }
+  },
+  "expected_vs_observed": [
+    {
+      "case": "base still moving (0-4 s of the mock)",
+      "expected": "arm request forbidden",
+      "observed": "gate reasons BASE_STILL_MOVING / NAV2_GOAL_ACTIVE / CMD_VEL_NONZERO in the first gate samples (see gate_timeline_compact)"
+    },
+    {
+      "case": "Nav2 SUCCEEDED + docking DOCKED",
+      "expected": "ARRIVED only, no success flag",
+      "observed": "arrival.nav2_status=DOCKED, manipulation_succeeded=False"
+    },
+    {
+      "case": "detector re-publishes one sensor frame as new PoseStamped (EMA)",
+      "expected": "refused",
+      "observed": "REOBSERVE: OBSERVATION_TOO_OLD + EMA_FILTER_CARRYOVER_FROM_MOTION_FORBIDDEN; arm_commands_invoked_count=0"
+    },
+    {
+      "case": "fresh raw frames with sidecar + tf2 lookup at sensor time",
+      "expected": "MANIPULATION_READY, no ARM_TASK",
+      "observed": "stopped_at MANIPULATION_READY:ARM_TASK_NOT_REQUESTED_IN_DRYRUN; arm_commands_invoked_count=0"
+    },
+    {
+      "case": "live graph with nothing running",
+      "expected": "NO_DATA, stop at ARRIVED",
+      "observed": "data_origin NO_DATA, ARRIVED:NO_NAV2_TERMINAL_STATUS_OBSERVED"
+    }
+  ],
+  "limits": [
+    "MOCK_ROS_GRAPH runs prove the adapter path and the refusal rules, not the robot: static TF values are URDF/launch copies, poses are synthetic.",
+    "The sidecar topic does not exist in the current Navigation code; until proposals/C2_object_detector_3d_provenance_sidecar.patch (or an equivalent) is applied, every real post-stop observation is refused as POST_STOP_OBSERVATION_UNVERIFIED by design.",
+    "map<-base_footprint lookup at the arrival stamp sometimes misses in the mock (dynamic /tf timing); the adapter then labels the pose frame 'odom' rather than guessing."
+  ],
+  "full_reports": [
+    "reports/dryrun/dryrun_mock_graph_republish.json",
+    "reports/dryrun/dryrun_mock_graph_fresh.json",
+    "reports/dryrun/dryrun_live_graph.json"
+  ],
+  "how_to_rerun": "python 2ARM_ROBOT/sweepick/nav2_vslam_integration/run_ros2_readonly_dryrun.py --duration 12 --mock-graph [--mock-fresh-frames] --out <json>  (real robot: omit --mock-graph, add --console-status <read-only status json>)"
+}

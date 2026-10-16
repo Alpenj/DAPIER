@@ -1,0 +1,82 @@
+{
+  "schema": "dapier.c2.local-commits-and-remote-push.v1",
+  "date": "2026-10-16",
+  "team": "DAPIER C-2 (Argon C-1 handoff)",
+  "rule_set": ["no --force", "no merge into main or A/B integration branches", "C-only changes kept apart from A changes", "no auto deploy"],
+  "repositories": {
+    "DAPIER": {
+      "worktree": "~/DAPIER/.local-workspaces/pro/sweepick-c-vslam-nav2-integration-20261016",
+      "git_common_dir": "~/DAPIER/.git",
+      "origin": "https://github.com/Alpenj/DAPIER.git",
+      "argon_c1": {
+        "branch_at_handoff": "pro/sweepick-c-vslam-nav2-integration-20261016",
+        "head_at_handoff": "6d242845e180efc9e43f7dbece2bbb1a82ec59ab",
+        "submitted_sha": "6d24284",
+        "match": true,
+        "parent": "42b06401e82c66ab80411df1d592cb2b36e596c8",
+        "parent_identity": "A LEFT CLOSE FOV P0 candidate (already on origin/pro/sweepick-left-fov-20261016 and origin/pro/sweepick-left-fov-correction-20261016)",
+        "files": 13,
+        "all_files_under": "2ARM_ROBOT/sweepick/nav2_vslam_integration/ (new files only; no A/B file touched)",
+        "working_tree_at_handoff": "clean except untracked 2ARM_ROBOT/sweepick.zip (1.7 MB, not committed, not pushed)",
+        "secret_scan": "no key/token/password/private-key pattern in the commit",
+        "push": {"status": "PUSHED", "remote_ref": "refs/heads/pro/sweepick-c-vslam-nav2-integration-20261016", "result": "[new branch]", "force": false}
+      },
+      "c2": {
+        "branch": "pro/sweepick-c2-argon-handoff-20261016 (created from 6d24284)",
+        "code_commit": "6621b11d12fca6942b0a804c6dae205240051ad2",
+        "code_commit_subject": "DAPIER C-2: fault/STOP/observation separation, Console recovery contract, TF2+provenance gate, ROS 2 Jazzy read-only adapter",
+        "diffstat_vs_c1": "16 files changed, 2740 insertions(+), 119 deletions(-) — all under 2ARM_ROBOT/sweepick/nav2_vslam_integration/",
+        "reports_commit": "the commit that adds this file (branch HEAD at push time); SHA recorded in the handoff message and in C_OCT23_INTEGRATION_READINESS.md footer",
+        "push": {"status": "PUSHED_AFTER_REPORTS", "remote_ref": "refs/heads/pro/sweepick-c2-argon-handoff-20261016", "force": false}
+      },
+      "a_vs_c_separation": {
+        "a_changes_in_history": "42b0640 (A LEFT CLOSE FOV): SOURCE_INDEX.json, console/records.py, console/static/*, console/test_failure_point.py, docs/left_close_fov_20261016/*, native/revision/left_fov_check.py, native/revision/sweepick_episode.py, native/revision/test_*.py — inherited unchanged, not re-pushed by C",
+        "c_changes": "6d24284 + 6621b11 + reports commit: only 2ARM_ROBOT/sweepick/nav2_vslam_integration/**",
+        "verification": "git diff --stat 42b0640..HEAD lists no path outside nav2_vslam_integration/"
+      }
+    },
+    "Navigation": {
+      "worktree": "~/DAPIER/.local-workspaces/pro/vslam-nav2-c-integration-20261016",
+      "git_common_dir": "~/DAPIER/.local-artifacts/deps/Dapier_project_visaul_slam/.git",
+      "origin": "https://github.com/shouttt1320/Dapier_project_visaul_slam.git",
+      "argon_c1": {
+        "branch_at_handoff": "pro/sweepick-c-vslam-nav2-integration-20261016",
+        "head_at_handoff": "b509838ba3d72f95dfaf31a1b0a4d78d311cca2a",
+        "submitted_sha": "b509838",
+        "match": true,
+        "parent": "3416c7c65b7d8b63e24a7a3b9a520367c333f7ce",
+        "parent_identity": "origin/main (docs : 설명 문서 업데이트)",
+        "files": 2,
+        "working_tree_at_handoff": "clean",
+        "push": {
+          "status": "DENIED_403",
+          "detail": "remote: Permission to shouttt1320/Dapier_project_visaul_slam.git denied to Alpenj. gh api permissions: push=false, pull=true. No fork of the repository exists under the Alpenj account (gh api .../forks empty).",
+          "not_done_on_purpose": "no fork was created and no alternative remote was added: that is an outward-facing decision for the user / Navigation owner",
+          "preservation_instead": {
+            "bundle": "~/sweepick_261016_c2_argon_handoff/navigation_preserve/sweepick_261016_navigation_c1_c2.bundle (origin/main..C-2 head; heads: pro/sweepick-c-vslam-nav2-integration-20261016=b509838, pro/sweepick-c2-argon-handoff-20261016=c8cc836; sha256 4a0bd7e4e34bec0da1f9e841809e727881960c254259542d14dfd919902e9162)",
+            "patches": ["0001-DAPIER-C-Add-llm_semantic_docker-Sweepick-integratio.patch (sha256 c46a0349cf2d66ee59920331e7fecac3a8fcf4dad961ec2978db4c46082b3ed5)",
+                        "0002-DAPIER-C-2-re-export-C-2-contracts-include-C-2-suite.patch (sha256 33e9ebc2a1de5921e3d91e8d0b92178d96cbf39637b0a93e6e2bd36de1850b2b)"],
+            "restore": "git fetch <bundle> pro/sweepick-c2-argon-handoff-20261016  |  git am 0001*.patch 0002*.patch on 3416c7c"
+          },
+          "options_for_user": ["ask the repository owner (shouttt1320) for push access to a C work branch, then: git push origin pro/sweepick-c-vslam-nav2-integration-20261016 pro/sweepick-c2-argon-handoff-20261016 (no force)",
+                               "or fork under Alpenj and push the same two branches there"]
+        }
+      },
+      "c2": {
+        "branch": "pro/sweepick-c2-argon-handoff-20261016 (created from b509838)",
+        "code_commit": "c8cc836f95eb655ac05aecc6c55293b068fd447b",
+        "files": ["robot_ws/src/llm_semantic_docker/llm_semantic_docker/sweepick_integration_bridge.py (re-exports only)",
+                  "robot_ws/src/llm_semantic_docker/test/test_sweepick_integration_e2e.py (adds C-2 suites)",
+                  "robot_ws/src/llm_semantic_docker/proposals/C2_object_detector_3d_provenance_sidecar.patch (UNAPPLIED)",
+                  "robot_ws/src/llm_semantic_docker/proposals/README.md"],
+        "no_change_to": ["task_manager.py", "object_detector_3d.py", "precision_docking_controller_node.py", "precision_approacher_node.py", "launch/*", "config/*"],
+        "local_identity_note": "the Navigation clone had no user.name/email; set locally (repo-level) to the same identity DAPIER commits use before committing",
+        "push": {"status": "NOT_POSSIBLE_403", "preserved_in_bundle": true}
+      }
+    }
+  },
+  "main_checkouts_untouched": {
+    "DAPIER_main_checkout": "~/DAPIER (other branch, uncommitted work of other sessions) — not used",
+    "Navigation_main_checkout": "~/DAPIER/.local-artifacts/deps/Dapier_project_visaul_slam at 3942b81 [main] (local main is ahead of origin/main 3416c7c; not touched, not pushed)"
+  }
+}
