@@ -1,0 +1,49 @@
+{
+  "schema": "dapier.c.nav2-docking-regression.v1",
+  "team": "Gemini 4 Argon / Independent Team C",
+  "branch": "pro/sweepick-c-vslam-nav2-integration-20261016",
+  "navigation_base_commit": "3416c7cd82a183f7aa7697131d986f836a35e94b",
+  "manipulation_base_commit": "42b06403cf89217d678b566334572195a3ff2952",
+  "device_access": false,
+  "summary": {
+    "nav2_docking_regression_tests": 5,
+    "nav2_docking_regression_passed": 5,
+    "sweepick_b16_b17_goal_bridge_tests": 25,
+    "sweepick_b16_b17_goal_bridge_passed": 22,
+    "sweepick_b16_b17_goal_bridge_skipped_private": 3,
+    "public_snapshot_integrity_check": "PASS",
+    "status": "PASS"
+  },
+  "regression_cases": [
+    {
+      "test": "test_01_command_validator_semantic_waypoints_regression",
+      "target_module": "llm_semantic_docker/command_validator.py + config/semantic_waypoints.yaml",
+      "verified": "box_staging, desk_staging, charger_staging, entrance, meeting_room, workplace1, workplace2 정상 해석 및 미등록 웨이포인트(UNKNOWN_WAYPOINT) 100% 차단",
+      "status": "PASS"
+    },
+    {
+      "test": "test_02_command_validator_docking_profiles_and_stations_regression",
+      "target_module": "llm_semantic_docker/command_validator.py + config/docking_profiles.yaml + config/docking_stations.yaml",
+      "verified": "workplace1/workplace2(station_icp), desk+red_object(desk_red_object), desk(desk_direct), charger(charger_station), STOP 액션 스키마 및 프로파일 매핑 보존",
+      "status": "PASS"
+    },
+    {
+      "test": "test_03_station_manager_coordinate_transforms_and_standoff_regression",
+      "target_module": "llm_semantic_docker/station_manager.py",
+      "verified": "transform_to_station_local <-> transform_to_map 양방향 역변환 정밀도(오차 < 1e-6m) 및 calculate_standoff_pose(0.60m) 계산 일치 확인",
+      "status": "PASS"
+    },
+    {
+      "test": "test_04_vslam_launch_optical_tf_and_bridge_resolution_regression",
+      "target_module": "turtlebot3_visual_slam/launch/vslam_navigation.launch.py + navigation_bridge.py",
+      "verified": "camera_to_optical_tf(camera_link -> camera_color_optical_frame, roll=-pi/2, pitch=0, yaw=-pi/2) 정적 TF 보존 및 base_footprint 좌표 변환 정합성 확인",
+      "status": "PASS"
+    },
+    {
+      "test": "test_05_object_detector_3d_plane_svd_geometry_regression",
+      "target_module": "llm_semantic_docker/object_detector_3d.py",
+      "verified": "Stage-2 3D 점군 평면 SVD 법선 벡터([-1, 0, 0]) 및 RMS 잔차 계산 무결성 확인",
+      "status": "PASS"
+    }
+  ]
+}

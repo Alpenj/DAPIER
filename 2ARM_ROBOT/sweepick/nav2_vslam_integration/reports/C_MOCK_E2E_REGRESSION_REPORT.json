@@ -1,0 +1,73 @@
+{
+  "schema": "dapier.c.mock-e2e-regression.v1",
+  "team": "Gemini 4 Argon / Independent Team C",
+  "branch": "pro/sweepick-c-vslam-nav2-integration-20261016",
+  "deadline": "2026-10-23",
+  "execution_mode": "MOCK_DEVICE_FREE",
+  "device_access": false,
+  "motor_writes": 0,
+  "auto_start_invocations": 0,
+  "base_to_arm_tf_fabricated": false,
+  "summary": {
+    "total_tests": 13,
+    "passed": 13,
+    "failed": 0,
+    "errors": 0,
+    "status": "PASS"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "P2-SCENARIO-1",
+      "name": "정상 흐름 (DETECT -> NAVIGATE -> ARRIVED -> BASE_STOPPED -> REOBSERVE -> MANIPULATION_READY -> ARM_TASK -> RESULT)",
+      "tests": [
+        "test_01_normal_flow_full_chain_waiting_then_completed",
+        "test_02_normal_flow_left_start_to_lift_completed_and_partial",
+        "test_03_nav2_arrival_is_never_manipulation_success",
+        "test_12_navigation_manipulation_bridge_full_e2e"
+      ],
+      "verified_contracts": [
+        "Nav2 도착(STATUS_SUCCEEDED/DOCKED) 시 ARRIVED 단계에 머물며 manipulation_succeeded=False 유지",
+        "BASE_STOPPED 이후 신규 카메라 프레임이 확인되어야 MANIPULATION_READY 진입",
+        "콘솔 세션이 PREPARED 상태일 때 자동 START 없이 WAITING_FOR_OPERATOR_APPROVAL 반환",
+        "실제 왼팔 PICK/LIFT(close=GRIP_CONTACT_HOLDING, lift=HOLDING, held_after_lift=True) 또는 오른팔 인계 완료 시에만 COMPLETED 반환",
+        "LEFT_START_TO_LIFT에서 오른팔 인계가 요구된 경우 PARTIAL_COMPLETED로 구분하고 Torque ON 보유 상태이므로 후속 명령 차단"
+      ],
+      "status": "PASS"
+    },
+    {
+      "scenario_id": "P2-SCENARIO-2",
+      "name": "관측 실패 (Nav2 도착 후 재관측 실패 및 이동 전 좌표/Latch 재사용 차단)",
+      "tests": [
+        "test_04_observation_failure_no_object_after_arrival_aborts_without_arm_motion",
+        "test_05_stale_pre_navigation_coordinates_rejected_at_reobserve",
+        "test_06_latched_qwen_bbox_and_motion_ema_rejected_at_reobserve",
+        "test_07_sweepick_native_look_or_grasp_failure_classified_as_observation_failed"
+      ],
+      "verified_contracts": [
+        "REOBSERVE에서 물체 미검출 시 arm_commands_invoked_count=0, prepare_calls=0으로 팔을 전혀 움직이지 않고 OBSERVATION_FAILED 종료",
+        "이동 전(DETECT) 물체 좌표 재사용 시 PRE_NAVIGATION_OBSERVATION_REUSE_FORBIDDEN 및 STALE_PRE_STOP_OBSERVATION으로 즉시 차단",
+        "object_detector_3d.py의 주행 중 EMA 필터 이력, 0.5초 Persistence Latch, 180초 Qwen BBox Latch가 정지 후 관측으로 둔갑하는 것을 차단",
+        "Sweepick 내부 시각 정렬 실패(NOT_ALIGNED_RETURNED_HOME) 시 OBSERVATION_FAILED로 분류"
+      ],
+      "status": "PASS"
+    },
+    {
+      "scenario_id": "P2-SCENARIO-3",
+      "name": "실행 실패 (Sweepick STOP · FAULT · 실행 거부 시 후속 명령 차단 및 Task Manager 오류 전파)",
+      "tests": [
+        "test_08_execution_failure_sweepick_stop_blocks_subsequent_commands",
+        "test_09_execution_failure_sweepick_fault_blocks_subsequent_commands",
+        "test_10_execution_failure_sweepick_rejected_manifest_or_foreign_owner",
+        "test_11_unverified_base_to_arm_tf_direct_projection_rejected",
+        "test_13_real_console_controller_contract_integration"
+      ],
+      "verified_contracts": [
+        "Sweepick STOP 발생 시 RESULT(STOP) 반환, TaskManagerErrorReport 전파, 수동 복구 확인 전까지 모든 후속 명령 차단",
+        "Sweepick FAULT(서보 Overload, 버스 유실, Torque OFF 미확인) 발생 시 RESULT(FAULT) 반환 및 후속 명령 차단",
+        "외부 owner 점유(BLOCKED) 또는 Manifest SHA 불일치 시 RESULT(EXECUTION_REJECTED) 반환 및 후속 명령 차단",
+        "미검증 base_footprint <-> arm_base 직접 좌표 변환 시도(DIRECT_BASE_TO_ARM_METRIC_TF) 시 UNVERIFIED_BASE_TO_ARM_TF로 즉시 거부"
+      ],
+      "status": "PASS"
+    }
+  ]
+}
