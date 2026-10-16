@@ -2416,9 +2416,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "FIELD_READINESS_GATES.md",
       "component": "DOCS",
-      "source_sha256": "ceaa304db020c6fb34f1ece4d718c410d076b70d576151de24a4cd3a2815c2f2",
-      "public_sha256": "ceaa304db020c6fb34f1ece4d718c410d076b70d576151de24a4cd3a2815c2f2",
-      "bytes": 5937,
+      "source_sha256": "ee4edf0d55af089d544d1d0931d621c47a628ce97b503ea2c5722389d586329b",
+      "public_sha256": "ee4edf0d55af089d544d1d0931d621c47a628ce97b503ea2c5722389d586329b",
+      "bytes": 5994,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
