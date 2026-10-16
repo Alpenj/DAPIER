@@ -9,7 +9,8 @@
     "support sensor whitespace-only lines normalized",
     "review handoff filename normalized",
     "B17 public reports retain anonymized technical findings; private recording values, source paths, model binaries and calibration are excluded",
-    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately"
+    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately",
+    "Offline A/B review proposal only: frozen branch refs and selected path comparison, separate known baseline failures and REAL UNKNOWN/OOD evidence; original230 index records and all runtime files preserved; no active integration or deployment"
   ],
   "files": [
     {
@@ -2376,6 +2377,36 @@
       "source_sha256": "c945c741f264fd48f44c045226c4826278933a39cf82d876e480a37d75ed3b5a",
       "public_sha256": "c945c741f264fd48f44c045226c4826278933a39cf82d876e480a37d75ed3b5a",
       "bytes": 2444,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/review_sprint_20261016/SOURCE_REF_AUDIT.json",
+      "source_name": "SOURCE_REF_AUDIT.json",
+      "component": "OFFLINE_CONTRACT_REVIEW",
+      "source_group": "A_B_REVIEW_SPRINT_20261016",
+      "source_sha256": "fc8870e010bb2c408bb3072996d1d8eb8b70c03bd74f932f23d5b3d4ecb519c2",
+      "public_sha256": "fc8870e010bb2c408bb3072996d1d8eb8b70c03bd74f932f23d5b3d4ecb519c2",
+      "bytes": 15611,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/review_sprint_20261016/REVIEW_SPRINT_RESULT.json",
+      "source_name": "REVIEW_SPRINT_RESULT.json",
+      "component": "OFFLINE_CONTRACT_REVIEW",
+      "source_group": "A_B_REVIEW_SPRINT_20261016",
+      "source_sha256": "ddf5c27f75271efeaba7e1eb3b3f73158044bdcd1f090b0c4d0143128decc22b",
+      "public_sha256": "ddf5c27f75271efeaba7e1eb3b3f73158044bdcd1f090b0c4d0143128decc22b",
+      "bytes": 11747,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/review_sprint_20261016/INTEGRATION_PROPOSAL.md",
+      "source_name": "INTEGRATION_PROPOSAL.md",
+      "component": "OFFLINE_CONTRACT_REVIEW",
+      "source_group": "A_B_REVIEW_SPRINT_20261016",
+      "source_sha256": "63f76e55efb60739c1ed9022f1d57f729de69d3847ea76fd971808946618f5bd",
+      "public_sha256": "63f76e55efb60739c1ed9022f1d57f729de69d3847ea76fd971808946618f5bd",
+      "bytes": 6311,
       "public_copy_changed": false
     }
   ],

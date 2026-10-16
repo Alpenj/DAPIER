@@ -1,0 +1,345 @@
+{
+  "schema": "sweepick.review-sprint-result/1",
+  "status": "OFFLINE_REVIEW_COMPLETE_WITH_KNOWN_BASELINE_FAILURES; FIELD_BLOCKED",
+  "integration_base": "483b2ef5349022da2251164a27492746e0e1ea58",
+  "report_branch": "pro/sweepick-review-sprint-20261016",
+  "candidate_heads": {
+    "A_FOV": "1cd0444dfb8bdd1d2a70cd87c90bd4f895990498",
+    "B_overlay": "0042f8cdfdd9af64b234477b8e1a77e164e01820"
+  },
+  "runtime_code_merged": false,
+  "new_verification": {
+    "A_FOV_target": {
+      "run": 27,
+      "passed": 27,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "A_HARD_gate_allowlist": {
+      "run": 9,
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "B_requested_modules": {
+      "run": 71,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "B_target_metrology_bridge": {
+      "tests_run": 38,
+      "failures": [],
+      "errors": [],
+      "skips": []
+    },
+    "A_same_sparse_native_before": {
+      "tests": 341,
+      "passed": 310,
+      "failures": 26,
+      "errors": 5,
+      "skips": 0
+    },
+    "A_same_sparse_native_after": {
+      "tests": 342,
+      "passed": 311,
+      "failures": 26,
+      "errors": 5,
+      "skips": 0
+    },
+    "A_existing_bad_ID_delta": {
+      "new": [],
+      "gone": [],
+      "changed_class": []
+    },
+    "cross_AB_pure_checks": [
+      "B pure AST features accept frozen A candidate source without Native import; X-only preserved",
+      "MODEL INSIDE cannot restore B observed clipped X or executable status under A candidate source",
+      "A missing-reference UNKNOWN coexists with B MODEL INSIDE; no B-to-A pass conversion",
+      "A FOV scope remains pre-descent only"
+    ],
+    "cross_AB_checks_passed": 4,
+    "independent_review": {
+      "closed_findings": [
+        "incompatible matched contexts",
+        "malformed source/frame identity",
+        "FOV reference coupling to planned motor return",
+        "nonfinite prediction including oversized integer OverflowError"
+      ],
+      "open_consequential_findings": 0,
+      "pure_cases_checked": 10,
+      "no_hardware_access_or_edits": true
+    },
+    "B_prior69": "previous overlay execution only; separate from current71 and additional38"
+  },
+  "A18_replay": {
+    "original_state_files": 18,
+    "source_SHA_matches": 18,
+    "original_changes": 0,
+    "actual_horizontal_clip_labels": 1,
+    "actual_no_horizontal_clip_labels": 17,
+    "runtime_gate_counts": {
+      "before": {
+        "runtime_gate_counts": {
+          "TP": 1,
+          "FP": 1,
+          "TN": 16,
+          "FN": 0,
+          "UNKNOWN": 0,
+          "OOD": 0
+        },
+        "executor_status": {
+          "FOV_OK": 16,
+          "FOV_RISK": 2
+        }
+      },
+      "after": {
+        "runtime_gate_counts": {
+          "TP": 0,
+          "FP": 0,
+          "TN": 0,
+          "FN": 0,
+          "UNKNOWN": 17,
+          "OOD": 1
+        },
+        "executor_status": {
+          "FOV_UNKNOWN": 17,
+          "OUT_OF_SUPPORT": 1
+        }
+      }
+    },
+    "support_aware_before": {
+      "TP": 0,
+      "FP": 1,
+      "TN": 16,
+      "FN": 0,
+      "UNKNOWN": 0,
+      "OOD": 1
+    },
+    "interpretation": "Counts only. Original gate did not block OOD as a distinct state. UNKNOWN/OOD are not TP/TN and no sensitivity or physical correction success rate is claimed."
+  },
+  "B8_replay": {
+    "frames": [
+      {
+        "sample": "LEFT_FAILURE_BEFORE",
+        "side": "left",
+        "image_error_px": {
+          "u": -13.5,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": true,
+        "horizontal_clipped": false,
+        "next_FOV_status": "MODEL_PRIOR_ENVELOPE_INSIDE"
+      },
+      {
+        "sample": "LEFT_FAILURE_AFTER",
+        "side": "left",
+        "image_error_px": {
+          "u": null,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": true,
+        "horizontal_clipped": true,
+        "next_FOV_status": "UNKNOWN"
+      },
+      {
+        "sample": "LEFT_SUCCESS_1_BEFORE",
+        "side": "left",
+        "image_error_px": {
+          "u": -4.0,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": true,
+        "horizontal_clipped": false,
+        "next_FOV_status": "MODEL_PRIOR_ENVELOPE_INSIDE"
+      },
+      {
+        "sample": "LEFT_SUCCESS_1_AFTER",
+        "side": "left",
+        "image_error_px": {
+          "u": -12.0,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": true,
+        "horizontal_clipped": false,
+        "next_FOV_status": "UNKNOWN"
+      },
+      {
+        "sample": "LEFT_SUCCESS_2_BEFORE",
+        "side": "left",
+        "image_error_px": {
+          "u": 2.5,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": true,
+        "horizontal_clipped": false,
+        "next_FOV_status": "MODEL_PRIOR_ENVELOPE_INSIDE"
+      },
+      {
+        "sample": "LEFT_SUCCESS_2_AFTER",
+        "side": "left",
+        "image_error_px": {
+          "u": -1.5,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": true,
+        "horizontal_clipped": false,
+        "next_FOV_status": "UNKNOWN"
+      },
+      {
+        "sample": "archive_candidate_005",
+        "side": "right",
+        "image_error_px": {
+          "u": null,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": false,
+        "horizontal_clipped": false,
+        "next_FOV_status": "UNKNOWN"
+      },
+      {
+        "sample": "archive_candidate_037",
+        "side": "right",
+        "image_error_px": {
+          "u": null,
+          "v": null
+        },
+        "relative_angle": {
+          "status": "UNKNOWN",
+          "value_deg": null,
+          "role": "UNKNOWN",
+          "physical_3D_yaw": null,
+          "reason": "unoccluded corresponding edge and gripper direction are not established"
+        },
+        "frame_clipped": false,
+        "horizontal_clipped": false,
+        "next_FOV_status": "UNKNOWN"
+      }
+    ],
+    "same_original_SHA_camera_source_bindings": true,
+    "source_files_unchanged": 96,
+    "visual_QA": "local executor directly viewed8 RAW and2PNG; external review author did not inspect images; no independent physical edge/Pad certification",
+    "image_bytes_same_as_prior": true,
+    "images_local_only": true,
+    "relative_angles_UNKNOWN": 8,
+    "observed_2D_grasp_centres_UNKNOWN": 8,
+    "right_observed_pad_errors_UNKNOWN": 2,
+    "B_model_missed_actual_X_clip": true,
+    "B_MODEL_INSIDE_is_A_FOV_pass": false
+  },
+  "fake_writes": {
+    "FOV_RISK": {
+      "align_goal_writes": 26,
+      "total_fake_write_calls": 9045
+    },
+    "FOV_UNKNOWN": {
+      "align_goal_writes": 0,
+      "total_fake_write_calls": 6005
+    },
+    "OUT_OF_SUPPORT": {
+      "align_goal_writes": 0,
+      "total_fake_write_calls": 6005
+    },
+    "note": "These align counts cover only passed-gate fixtures where the FOV result itself can drive alignment. Existing centering corrections for a not-ok but correctable judge remain independent of FOV and are followed by a new passed look. Totals include the fake pregrasp, return-home, and full-session trajectory writes. They are not hardware writes."
+  },
+  "physical_state": {
+    "FOV": "BLOCKED: REAL reference/current source-bound RAW, mount and object-width context missing;17UNKNOWN1OOD",
+    "RIGHT": "FIELD_VERIFIED_TARGET_IMAGE=false; REAL_J_VALIDATED=false; dimensions0; Correction=null",
+    "C": "MOCK only; base_footprint to arm_base physical TF and live stop/resume unverified; no C task or live ROS dry-run started"
+  },
+  "source_constraints": {
+    "A_STATE_and_B_RGB": "separate recorded observations; no same-frame/time or same-offset assumption",
+    "reference_original_SHA": "0910df5444301b0b9e20229489edf439347e176fa31a9fbefcb4f20ab7d93147",
+    "A_published_code_SHA": {
+      "sweepick_pick01.py": "7aa18794abe2fff10e123c1c8eb6e6f2caac47d241aba1538283f6080213a6a1",
+      "left_fov_check.py": "ab3b03d4cfc3a251c58f52a2a2890355cd99b1aa33e06f9dba7b4a1449bd6cb5",
+      "test_left_fov_check.py": "a669080e306b1776e4ebe6f51f13d3d0ebd6e0f9d067d078010b13e104ed745e",
+      "test_left_fov_correction.py": "0ff4f95c12c20169357a2d4009d22630b333a4079baadbfaf1561578d52ea138"
+    },
+    "A_unit_test_source_SHA": {
+      "sweepick_pick01.py": "a5102e7f5ca8eb028c3b81b479b23e1b70869e417e0a2aa204cc5c042c690dfd",
+      "left_fov_check.py": "ab3b03d4cfc3a251c58f52a2a2890355cd99b1aa33e06f9dba7b4a1449bd6cb5",
+      "test_left_fov_check.py": "a669080e306b1776e4ebe6f51f13d3d0ebd6e0f9d067d078010b13e104ed745e",
+      "test_left_fov_correction.py": "0ff4f95c12c20169357a2d4009d22630b333a4079baadbfaf1561578d52ea138"
+    },
+    "comment_only_publication_transform": {
+      "file": "native/revision/sweepick_pick01.py",
+      "tested_sha256": "a5102e7f5ca8eb028c3b81b479b23e1b70869e417e0a2aa204cc5c042c690dfd",
+      "published_sha256": "7aa18794abe2fff10e123c1c8eb6e6f2caac47d241aba1538283f6080213a6a1",
+      "whole_module_AST_identical": true,
+      "scope": "remove inherited tool attribution comment only; reuse unchanged semantic test results"
+    },
+    "core_command_functions_unchanged": {
+      "correct": "1b1eed2f595850760e80c81584e230769a96e3cf21c1d35ebba86613321ece28",
+      "plan_pick": "5e62d19fa888a375044e8a83e5faf069edac1eb73fbbf81d04fb9aa814852983",
+      "stage": "28f97e2c545b5fb717262c69d15ca1107fc099f1e78af646399a65e608cefe23"
+    },
+    "B_published_code_SHA": {
+      "wrist_overlay.py": "d646167ad6b032bf6532dd445652c5fd185fbfcdfe455ba562a6929b2de42475",
+      "test_wrist_overlay.py": "453bff55e2aaa116718e9780f8024fe11de1ce087bdff2d417facb70bf409049",
+      "run_wrist_overlay.py": "31f52bdf670a18f1de687dc1497458019c7139622fd6b8ede3928a9f9dab36d6"
+    },
+    "SHA_format_is_not_RAW_or_clock_authentication": true
+  },
+  "actual_device_writes": 0,
+  "hardware_START": 0,
+  "active_deploy": 0,
+  "motor_or_torque_or_EEPROM_settings_writes": 0,
+  "original_Episode_changed": false,
+  "main_merge": false,
+  "force_push": false,
+  "Correction": null,
+  "executable": false,
+  "motor_write_authorized": false
+}
