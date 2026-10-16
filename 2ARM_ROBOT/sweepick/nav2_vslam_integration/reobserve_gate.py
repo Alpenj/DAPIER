@@ -81,6 +81,10 @@ class PostStopReobserveGate:
         self.config = config or ReobserveGateConfig()
         self.frame_contract = frame_contract or CoordinateFrameContract()
         self._invalidated_observation_ids: Set[str] = set()
+        # C-2: an observation that already passed this gate is consumed; the detector keeps
+        # re-publishing the same EMA/latched value, so a second PoseStamped built from the same
+        # sensor frame must not pass again as a "new" post-stop observation.
+        self._consumed_observation_ids: Set[str] = set()
 
     def invalidate_observation(self, observation: Optional[CameraObservation3D]) -> None:
         """Mark a pre-navigation or in-motion observation as permanently unusable after motion."""
@@ -108,6 +112,9 @@ class PostStopReobserveGate:
                 clock_id=base_stop.clock_id,
                 rejected_reasons=("NO_POST_STOP_OBSERVATION_AVAILABLE",),
             )
+
+        if observation.observation_id in self._consumed_observation_ids:
+            rejected.append("REPUBLISHED_OBSERVATION_SAME_SENSOR_FRAME")
 
         if (
             observation.invalidated_by_navigation
@@ -192,6 +199,8 @@ class PostStopReobserveGate:
             )
 
         passed = len(rejected) == 0
+        if passed:
+            self._consumed_observation_ids.add(observation.observation_id)
         reason = (
             "FRESH_POST_STOP_OBSERVATION_CONFIRMED"
             if passed

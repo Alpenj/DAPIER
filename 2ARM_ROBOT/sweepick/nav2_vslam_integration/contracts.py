@@ -199,6 +199,8 @@ class NavigationArrivalEvidence:
     final_pose_map: Tuple[float, float, float]  # (x, y, yaw_rad)
     last_nav_frame_seq: int
     manipulation_succeeded: bool = False
+    final_pose_frame: str = "map"  # C-2: "map" only when map<-base_footprint TF was looked up; else "odom"
+    evidence_source: str = ""      # C-2: e.g. "nav2:/navigate_to_pose/_action/status" or "MOCK"
 
     def __post_init__(self) -> None:
         if self.manipulation_succeeded is not False:
@@ -222,6 +224,7 @@ class BaseStopEvidence:
     settled_duration_s: float
     last_nav_frame_seq: int
     pre_arrival_coordinates_invalidated: bool = True
+    evidence_source: str = ""  # C-2: observed topics that produced this evidence, or "MOCK"
 
 
 @dataclass(frozen=True)

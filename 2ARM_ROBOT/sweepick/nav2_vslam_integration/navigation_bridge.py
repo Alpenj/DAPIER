@@ -26,6 +26,12 @@ from .contracts import (
     NavigationArrivalEvidence,
 )
 from .pipeline_coordinator import VslamSweepickCoordinator
+from .tf_provenance import (
+    DetectionProvenance,
+    SensorFrameLedger,
+    VerifiedTransform,
+    build_post_stop_observation,
+)
 
 
 DEFAULT_NAV_REPO_ROOT = (
@@ -84,10 +90,14 @@ def transform_optical_pose_to_base_footprint(
     position_optical_m: Tuple[float, float, float],
     normal_optical: Tuple[float, float, float] = (0.0, 0.0, -1.0),
     *,
-    camera_link_in_base_footprint_m: Tuple[float, float, float] = (0.073, 0.0, 0.084),
+    camera_link_in_base_footprint_m: Tuple[float, float, float],
 ) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
-    """Transform a 3D point and surface normal from `camera_color_optical_frame` to `base_footprint`
-    using the existing TurtleBot3 / `vslam_navigation.launch.py` TF2 chain.
+    """Pure geometry: rotate an optical-frame point/normal into `camera_link` axes and add an
+    explicitly supplied `camera_link` origin. C-2: there is NO default origin any more; the
+    C-1 value (0.073, 0.0, 0.084) was neither the Waffle Pi URDF chain
+    (base_footprint->base_link (0,0,0.010), base_link->camera_link (0.073,-0.011,0.084)) nor a
+    measurement of the real camera mount. Real evidence must come from a TF2 lookup at the
+    message time (`tf_provenance.VerifiedTransform`); this helper is for math regression only.
     Does NOT invent any `base_footprint <-> arm_base` transform.
     """
     r_mat = optical_to_camera_link_rotation()
@@ -210,26 +220,31 @@ class NavigationManipulationBridge:
         self,
         *,
         raw_intent_json: str,
-        initial_detection_optical: Tuple[float, float, float],
-        initial_detected_at_s: float,
-        initial_frame_seq: int,
         arrival: NavigationArrivalEvidence,
         base_stop: BaseStopEvidence,
-        post_stop_detection_optical: Optional[Tuple[float, float, float]],
-        post_stop_detected_at_s: Optional[float],
-        post_stop_frame_seq: Optional[int],
-        post_stop_inliers: int = 85,
-        post_stop_rms_m: float = 0.008,
-        post_stop_is_ema_from_motion: bool = False,
-        post_stop_is_persistence_latched: bool = False,
-        post_stop_detector_mode: str = "hsv",
-        post_stop_qwen_bbox_at_s: Optional[float] = None,
+        initial_detection_optical: Optional[Tuple[float, float, float]] = None,
+        initial_provenance: Optional[DetectionProvenance] = None,
+        initial_transform: Optional[VerifiedTransform] = None,
+        post_stop_detection_optical: Optional[Tuple[float, float, float]] = None,
+        post_stop_normal_optical: Tuple[float, float, float] = (0.0, 0.0, -1.0),
+        post_stop_provenance: Optional[DetectionProvenance] = None,
+        post_stop_transform: Optional[VerifiedTransform] = None,
+        sensor_frame_id: str = "camera_color_optical_frame",
         reobserve_checked_at_s: float = 0.0,
         scope: ApprovedSweepickScope = ApprovedSweepickScope.FULL_CHAIN_RECEIVE_CONTACT,
         require_full_handover: bool = False,
         handoff_mode: str = "INDEPENDENT_LOCAL_CAMERA_OBSERVATION",
+        allow_mock_evidence: bool = False,
+        sensor_frame_ledger: Optional[SensorFrameLedger] = None,
     ) -> IntegrationOutcomeRecord:
-        """Validate navigation intent, run the 8-stage pipeline, and return the integration outcome."""
+        """Validate navigation intent, run the 8-stage pipeline, and return the integration outcome.
+
+        C-2 P0-3: the post-stop observation is built only from (a) detector provenance that names
+        the sensor frame, EMA/latch state, anchor source, inlier count and RMS, and (b) a TF2
+        transform looked up at that sensor time. When either is missing the pipeline reaches
+        REOBSERVE and stops there with `POST_STOP_OBSERVATION_UNVERIFIED` / `TF_UNAVAILABLE...`;
+        no value is synthesised and the arm is never requested.
+        """
         resolved = self.resolve_navigation_goal(raw_intent_json)
         if not resolved["valid"]:
             return self.coordinator.reject_at_detect(
@@ -238,45 +253,42 @@ class NavigationManipulationBridge:
                 block_subsequent=False,
             )
 
-        init_pos_base, init_norm_base = transform_optical_pose_to_base_footprint(
-            initial_detection_optical
-        )
-        initial_obs = CameraObservation3D(
-            observation_id=f"pre_nav_seq_{initial_frame_seq}",
-            frame_seq=initial_frame_seq,
-            captured_at_s=initial_detected_at_s,
-            clock_id=base_stop.clock_id,
-            frame_id="base_footprint",
-            position_in_base_footprint_m=init_pos_base,
-            normal_in_base_footprint=init_norm_base,
-            inlier_count=60,
-            rms_m=0.012,
-            detector_mode=post_stop_detector_mode,
-        )
+        initial_obs: Optional[CameraObservation3D] = None
+        self.last_initial_rejection: Tuple[str, ...] = ()
+        if initial_detection_optical is not None and initial_provenance is not None:
+            initial_obs, self.last_initial_rejection = build_post_stop_observation(
+                position_in_sensor_frame_m=initial_detection_optical,
+                normal_in_sensor_frame=(0.0, 0.0, -1.0),
+                sensor_frame_id=sensor_frame_id,
+                provenance=initial_provenance,
+                transform=initial_transform,
+                ledger=None,
+                allow_mock=allow_mock_evidence,
+            )
 
         post_obs: Optional[CameraObservation3D] = None
-        if (
-            post_stop_detection_optical is not None
-            and post_stop_detected_at_s is not None
-            and post_stop_frame_seq is not None
-        ):
-            post_pos_base, post_norm_base = transform_optical_pose_to_base_footprint(
-                post_stop_detection_optical
+        self.last_post_stop_rejection: Tuple[str, ...] = ()
+        if post_stop_detection_optical is not None and post_stop_provenance is not None:
+            post_obs, self.last_post_stop_rejection = build_post_stop_observation(
+                position_in_sensor_frame_m=post_stop_detection_optical,
+                normal_in_sensor_frame=post_stop_normal_optical,
+                sensor_frame_id=sensor_frame_id,
+                provenance=post_stop_provenance,
+                transform=post_stop_transform,
+                ledger=sensor_frame_ledger,
+                allow_mock=allow_mock_evidence,
             )
-            post_obs = CameraObservation3D(
-                observation_id=f"post_stop_seq_{post_stop_frame_seq}",
-                frame_seq=post_stop_frame_seq,
-                captured_at_s=post_stop_detected_at_s,
-                clock_id=base_stop.clock_id,
-                frame_id="base_footprint",
-                position_in_base_footprint_m=post_pos_base,
-                normal_in_base_footprint=post_norm_base,
-                inlier_count=post_stop_inliers,
-                rms_m=post_stop_rms_m,
-                detector_mode=post_stop_detector_mode,
-                is_ema_filtered_from_motion=post_stop_is_ema_from_motion,
-                is_persistence_latched=post_stop_is_persistence_latched,
-                qwen_bbox_captured_at_s=post_stop_qwen_bbox_at_s,
+        elif post_stop_detection_optical is not None:
+            self.last_post_stop_rejection = ("POST_STOP_OBSERVATION_UNVERIFIED:provenance_missing",)
+
+        if post_obs is None and self.last_post_stop_rejection:
+            # Reach REOBSERVE through the normal stages and refuse there with the provenance reasons.
+            return self._refuse_at_reobserve(
+                initial_obs=initial_obs,
+                arrival=arrival,
+                base_stop=base_stop,
+                reasons=self.last_post_stop_rejection,
+                reobserve_checked_at_s=reobserve_checked_at_s,
             )
 
         return self.coordinator.execute_pipeline(
@@ -288,4 +300,38 @@ class NavigationManipulationBridge:
             scope=scope,
             require_full_handover=require_full_handover,
             handoff_mode=handoff_mode,
+        )
+
+    def _refuse_at_reobserve(
+        self,
+        *,
+        initial_obs: Optional[CameraObservation3D],
+        arrival: NavigationArrivalEvidence,
+        base_stop: BaseStopEvidence,
+        reasons: Tuple[str, ...],
+        reobserve_checked_at_s: float,
+    ) -> IntegrationOutcomeRecord:
+        from .contracts import IntegrationStage, ManipulationResultStatus
+
+        coord = self.coordinator
+        blocked = coord._check_not_blocked("execute_integrated_task")
+        if blocked is not None:
+            return blocked
+        coord.reset_for_next_cycle()
+        coord.step_detect(initial_obs)
+        coord.step_navigate()
+        arr_abort = coord.step_arrived(arrival)
+        if arr_abort is not None:
+            return arr_abort
+        stop_abort = coord.step_base_stopped(base_stop)
+        if stop_abort is not None:
+            return stop_abort
+        coord._transition_to(IntegrationStage.REOBSERVE)
+        return coord._abort_with_error(
+            failed_stage=IntegrationStage.REOBSERVE,
+            status=ManipulationResultStatus.OBSERVATION_FAILED,
+            error_code="POST_STOP_OBSERVATION_UNVERIFIED",
+            detail="Post-stop observation refused (" + "; ".join(reasons) + "); arm motion forbidden",
+            block_subsequent=False,
+            requires_recovery=False,
         )

@@ -16,7 +16,8 @@ contracts:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 from .contracts import (
     ApprovedSweepickScope,
@@ -41,6 +42,70 @@ from .sweepick_adapter import (
     SweepickAdapterResult,
     SweepickExecutionAdapter,
 )
+
+
+BLOCK_ORIGIN_NONE = "NONE"
+BLOCK_ORIGIN_SWEEPICK_CONSOLE = "SWEEPICK_CONSOLE"      # STOP / FAULT / LIMITED_HOLDING / rejection with a Console run
+BLOCK_ORIGIN_SWEEPICK_NO_RUN = "SWEEPICK_CONSOLE_NO_RUN"  # Console rejected before a run existed (foreign owner, device, scope)
+BLOCK_ORIGIN_INTEGRATION_GATE = "INTEGRATION_GATE"      # Nav2 / base-stop / TF gate of this layer, no Console run involved
+
+CONSOLE_RECOVERY_SOURCE = "local_operator_manual_confirmation"
+
+
+@dataclass(frozen=True)
+class OperatorRecoveryDecision:
+    """Result of `confirm_operator_recovery` (C-2 P0-2).
+
+    A Console-origin block is cleared only by the Console's own manual-recovery record
+    (`review/MANUAL_RECOVERY_CONFIRMATION.json`, exposed as `status()['active']['operator_recovery']`
+    by `console/control.py:Controller.recovery_confirmation`). A boolean from the caller is never
+    enough for that origin.
+    """
+
+    accepted: bool
+    block_origin: str
+    reason: str
+    console_run_id: Optional[str] = None
+    console_recovery_record: Optional[Dict[str, Any]] = None
+    checks: Tuple[str, ...] = ()
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+def console_recovery_evidence(
+    console_status: Optional[Dict[str, Any]],
+    *,
+    run_id: Optional[str],
+) -> Tuple[Optional[Dict[str, Any]], Tuple[str, ...]]:
+    """Validate the Console's recovery record for `run_id`. Returns `(record, failed_checks)`."""
+    failed: List[str] = []
+    if not isinstance(console_status, dict):
+        return None, ("CONSOLE_STATUS_MISSING",)
+    active = console_status.get("active") if isinstance(console_status.get("active"), dict) else {}
+    record = active.get("operator_recovery") if isinstance(active.get("operator_recovery"), dict) else None
+    if run_id is not None and active.get("id") != run_id:
+        failed.append(f"CONSOLE_ACTIVE_RUN_MISMATCH:{active.get('id')}!={run_id}")
+    if record is None:
+        failed.append("CONSOLE_MANUAL_RECOVERY_RECORD_ABSENT")
+    else:
+        if record.get("source") != CONSOLE_RECOVERY_SOURCE:
+            failed.append(f"CONSOLE_RECOVERY_SOURCE_INVALID:{record.get('source')}")
+        if record.get("power_isolated") is not True:
+            failed.append("CONSOLE_RECOVERY_POWER_NOT_ISOLATED")
+        if record.get("workspace_reset") is not True:
+            failed.append("CONSOLE_RECOVERY_WORKSPACE_NOT_RESET")
+        if run_id is not None and record.get("job_id") != run_id:
+            failed.append(f"CONSOLE_RECOVERY_JOB_MISMATCH:{record.get('job_id')}!={run_id}")
+        if active.get("session_out") and record.get("session_out") not in (None, active.get("session_out")):
+            failed.append("CONSOLE_RECOVERY_SESSION_MISMATCH")
+    if console_status.get("owner_alive") is True:
+        failed.append("CONSOLE_OWNER_STILL_ALIVE")
+    if console_status.get("can_prepare") is not True:
+        failed.append("CONSOLE_CAN_PREPARE_FALSE")
+    if console_status.get("state") == "BLOCKED":
+        failed.append("CONSOLE_FOREIGN_OWNER_BLOCKED")
+    return record, tuple(failed)
 
 
 class VslamSweepickCoordinator:
@@ -71,6 +136,9 @@ class VslamSweepickCoordinator:
         self.task_manager_error_report: Optional[TaskManagerErrorReport] = None
         self.command_latch_blocked: bool = False
         self.command_block_reason: Optional[str] = None
+        self.block_origin: str = BLOCK_ORIGIN_NONE
+        self.blocked_run_id: Optional[str] = None
+        self.last_recovery_decision: Optional[OperatorRecoveryDecision] = None
         self.arm_commands_invoked_count: int = 0
 
     def _transition_to(self, next_stage: IntegrationStage) -> None:
@@ -120,13 +188,73 @@ class VslamSweepickCoordinator:
             sweepick_run_id=report.run_id,
         )
 
-    def confirm_operator_recovery(self, *, operator_verified: bool, note: str) -> bool:
-        """Explicit operator recovery reset required after STOP / FAULT / EXECUTION_REJECTED / LIMITED_HOLDING."""
-        if not operator_verified or not note or not note.strip():
+    def confirm_operator_recovery(
+        self,
+        *,
+        operator_verified: bool,
+        note: str,
+        console_status: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Clear the command latch after STOP / FAULT / EXECUTION_REJECTED / LIMITED_HOLDING.
+
+        C-2 contract:
+        - `BLOCK_ORIGIN_SWEEPICK_CONSOLE`: requires `console_status` (a fresh `Controller.status()`)
+          whose `active.operator_recovery` is the Console's own manual-recovery record for the
+          blocked run and whose `can_prepare` is True. `operator_verified=True` alone is refused.
+        - `BLOCK_ORIGIN_SWEEPICK_CONSOLE_NO_RUN`: requires `console_status` not BLOCKED, no owner alive,
+          `can_prepare` True.
+        - `BLOCK_ORIGIN_INTEGRATION_GATE`: no Console run was involved; an explicit operator note is
+          accepted and recorded.
+        The decision is stored in `last_recovery_decision`.
+        """
+        checks: List[str] = []
+        if not operator_verified:
+            checks.append("OPERATOR_NOT_VERIFIED")
+        if not note or not note.strip():
+            checks.append("OPERATOR_NOTE_EMPTY")
+        if not self.command_latch_blocked:
+            decision = OperatorRecoveryDecision(
+                accepted=False, block_origin=self.block_origin, reason="NO_ACTIVE_BLOCK", checks=tuple(checks)
+            )
+            self.last_recovery_decision = decision
+            return False
+
+        origin = self.block_origin
+        record: Optional[Dict[str, Any]] = None
+        if origin in (BLOCK_ORIGIN_SWEEPICK_CONSOLE, BLOCK_ORIGIN_SWEEPICK_NO_RUN):
+            if console_status is None:
+                checks.append("CONSOLE_STATUS_REQUIRED_BOOLEAN_NOT_ACCEPTED")
+            else:
+                record, failed = console_recovery_evidence(
+                    console_status,
+                    run_id=self.blocked_run_id if origin == BLOCK_ORIGIN_SWEEPICK_CONSOLE else None,
+                )
+                if origin == BLOCK_ORIGIN_SWEEPICK_NO_RUN:
+                    failed = tuple(f for f in failed if not f.startswith("CONSOLE_MANUAL_RECOVERY_RECORD")
+                                   and not f.startswith("CONSOLE_RECOVERY_") and not f.startswith("CONSOLE_ACTIVE_RUN"))
+                checks.extend(failed)
+        elif origin == BLOCK_ORIGIN_INTEGRATION_GATE:
+            pass
+        else:
+            checks.append(f"UNKNOWN_BLOCK_ORIGIN:{origin}")
+
+        accepted = not checks
+        decision = OperatorRecoveryDecision(
+            accepted=accepted,
+            block_origin=origin,
+            reason="RECOVERY_ACCEPTED" if accepted else "; ".join(checks),
+            console_run_id=self.blocked_run_id,
+            console_recovery_record=record if accepted else None,
+            checks=tuple(checks),
+        )
+        self.last_recovery_decision = decision
+        if not accepted:
             return False
         self.command_latch_blocked = False
         self.command_block_reason = None
         self.task_manager_error_report = None
+        self.block_origin = BLOCK_ORIGIN_NONE
+        self.blocked_run_id = None
         return True
 
     def reset_for_next_cycle(self) -> None:
@@ -165,7 +293,7 @@ class VslamSweepickCoordinator:
             requires_recovery=block_subsequent,
         )
 
-    def step_detect(self, initial_detection: CameraObservation3D) -> IntegrationStage:
+    def step_detect(self, initial_detection: Optional[CameraObservation3D]) -> IntegrationStage:
         """Stage 1: DETECT (initial target or semantic waypoint cue before navigation)."""
         if self.command_latch_blocked:
             raise RuntimeError(f"Command blocked: {self.command_block_reason}")
@@ -355,7 +483,7 @@ class VslamSweepickCoordinator:
     def execute_pipeline(
         self,
         *,
-        initial_detection: CameraObservation3D,
+        initial_detection: Optional[CameraObservation3D],
         arrival: NavigationArrivalEvidence,
         base_stop: BaseStopEvidence,
         post_stop_observation: Optional[CameraObservation3D],
@@ -418,6 +546,10 @@ class VslamSweepickCoordinator:
             if adapter_res.subsequent_commands_blocked:
                 self.command_latch_blocked = True
                 self.command_block_reason = adapter_res.reason
+                self.block_origin = (
+                    BLOCK_ORIGIN_SWEEPICK_CONSOLE if adapter_res.run_id else BLOCK_ORIGIN_SWEEPICK_NO_RUN
+                )
+                self.blocked_run_id = adapter_res.run_id
             if adapter_res.status not in (
                 ManipulationResultStatus.COMPLETED,
                 ManipulationResultStatus.PARTIAL_COMPLETED,
@@ -468,6 +600,8 @@ class VslamSweepickCoordinator:
         if block_subsequent:
             self.command_latch_blocked = True
             self.command_block_reason = f"{error_code}: {detail}"
+            self.block_origin = BLOCK_ORIGIN_INTEGRATION_GATE
+            self.blocked_run_id = None
         report = TaskManagerErrorReport(
             failed_stage=failed_stage,
             result_status=status,

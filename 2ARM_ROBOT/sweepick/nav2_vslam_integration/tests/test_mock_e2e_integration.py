@@ -561,26 +561,78 @@ class TestMockEndToEndIntegration(unittest.TestCase):
         self.assertEqual(self.coordinator.arm_commands_invoked_count, 0)
 
     def test_12_navigation_manipulation_bridge_full_e2e(self) -> None:
+        """C-2: the bridge needs labelled MOCK provenance + a MOCK transform chain (URDF constants)
+        and `allow_mock_evidence=True`; in REAL mode the same inputs are refused (test_12b)."""
+        from nav2_vslam_integration import DetectionProvenance, compose_static_chain
+        from nav2_vslam_integration.tf_provenance import PROVENANCE_SOURCE_MOCK
+
         bridge = NavigationManipulationBridge(coordinator=self.coordinator)
         _, arrival, base_stop, _ = _make_standard_fixtures()
+        clock = base_stop.clock_id
+        # Waffle Pi URDF + vslam_navigation.launch.py static TF, composed as a labelled MOCK chain.
+        chain = [
+            ("base_footprint", "base_link", (0.0, 0.0, 0.010), (0.0, 0.0, 0.0)),
+            ("base_link", "camera_link", (0.073, -0.011, 0.084), (0.0, 0.0, 0.0)),
+            ("camera_link", "camera_color_optical_frame", (0.0, 0.0, 0.0), (-1.5707963, 0.0, -1.5707963)),
+        ]
+        tf_pre = compose_static_chain(chain, stamp_s=100.0, clock_id=clock)
+        tf_post = compose_static_chain(chain, stamp_s=112.85, clock_id=clock)
+        prov_pre = DetectionProvenance(
+            source_topic="/docking/target_object_pose", message_stamp_s=100.02, receive_index=10, clock_id=clock,
+            provenance_source=PROVENANCE_SOURCE_MOCK, sensor_stamp_s=100.0, anchor_source="hsv",
+            is_ema_filtered=False, is_persistence_latched=False, inlier_count=60, rms_m=0.012, detector_mode="hsv",
+        )
+        prov_post = DetectionProvenance(
+            source_topic="/docking/target_object_pose", message_stamp_s=112.87, receive_index=125, clock_id=clock,
+            provenance_source=PROVENANCE_SOURCE_MOCK, sensor_stamp_s=112.85, anchor_source="hsv",
+            is_ema_filtered=False, is_persistence_latched=False, inlier_count=85, rms_m=0.008, detector_mode="hsv",
+        )
 
         # Valid DOCK command on `desk` with `red_object` anchor cue
         outcome = bridge.execute_integrated_task(
             raw_intent_json='{"action": "DOCK", "target": {"target_structure": "desk", "anchor_cue": "red_object"}}',
             initial_detection_optical=(0.05, 0.02, 1.15),
-            initial_detected_at_s=100.0,
-            initial_frame_seq=10,
+            initial_provenance=prov_pre,
+            initial_transform=tf_pre,
             arrival=arrival,
             base_stop=base_stop,
             post_stop_detection_optical=(0.01, 0.03, 0.28),
-            post_stop_detected_at_s=112.85,
-            post_stop_frame_seq=125,
+            post_stop_provenance=prov_post,
+            post_stop_transform=tf_post,
             reobserve_checked_at_s=112.90,
+            allow_mock_evidence=True,
         )
         self.assertEqual(
             outcome.result_status,
             ManipulationResultStatus.WAITING_FOR_OPERATOR_APPROVAL,
         )
+
+    def test_12b_bridge_refuses_unverified_or_mock_evidence_in_real_mode(self) -> None:
+        from nav2_vslam_integration import DetectionProvenance, compose_static_chain
+        from nav2_vslam_integration.tf_provenance import PROVENANCE_SOURCE_POSE_HEADER_ONLY
+
+        bridge = NavigationManipulationBridge(coordinator=self.coordinator)
+        _, arrival, base_stop, _ = _make_standard_fixtures()
+        clock = base_stop.clock_id
+        header_only = DetectionProvenance(
+            source_topic="/docking/target_object_pose", message_stamp_s=112.87, receive_index=125, clock_id=clock,
+            provenance_source=PROVENANCE_SOURCE_POSE_HEADER_ONLY,
+        )
+        outcome = bridge.execute_integrated_task(
+            raw_intent_json='{"action": "DOCK", "target": {"target_structure": "desk", "anchor_cue": "red_object"}}',
+            arrival=arrival,
+            base_stop=base_stop,
+            post_stop_detection_optical=(0.01, 0.03, 0.28),
+            post_stop_provenance=header_only,
+            post_stop_transform=None,
+            reobserve_checked_at_s=112.90,
+        )
+        self.assertEqual(outcome.result_status, ManipulationResultStatus.OBSERVATION_FAILED)
+        self.assertEqual(outcome.error_report["failed_stage"], "REOBSERVE")
+        self.assertEqual(outcome.error_report["error_code"], "POST_STOP_OBSERVATION_UNVERIFIED")
+        self.assertIn("TF_UNAVAILABLE_AT_MESSAGE_TIME", outcome.reason)
+        self.assertEqual(self.mock_console.prepare_calls, 0)
+        self.assertEqual(self.coordinator.arm_commands_invoked_count, 0)
 
     def test_13_real_console_controller_contract_integration(self) -> None:
         import subprocess

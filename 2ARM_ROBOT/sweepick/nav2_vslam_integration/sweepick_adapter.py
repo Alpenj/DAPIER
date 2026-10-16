@@ -15,7 +15,7 @@ while strictly preserving:
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 from .contracts import (
     ApprovedSweepickScope,
@@ -41,6 +41,209 @@ OBSERVATION_FAILURE_STEPS = frozenset({
     "visual",
     "align",
 })
+
+# C-2 P0-2: evidence classes. A Motor/Bus FAULT is recognised from the native executor's own
+# gate names and from the recorded error text (`console/replay.py:stop_gate` keeps the native
+# gate inside the owner_stop reason, e.g. "{'gate': 'bus_lost', ...}"); an `owner_stop` event
+# alone is NOT an operator STOP, because the owner also stops itself after a bus loss.
+HARDWARE_FAULT_GATES = frozenset({
+    "BUS_LOST",
+    "SERVO_FAULT",
+    "SERVO_OVERLOAD",
+    "MOTOR_FAULT",
+    "EXECUTOR_EXCEPTION",
+    "EXCEPTION",
+    "CHILD_TERMINAL_ERROR",
+    "FAULT_HOLDING",
+    "FAULT_JOINTS_RELEASED",
+    "BUS_OR_SERVO_FAULT",
+})
+
+HARDWARE_FAULT_TOKENS = (
+    "bus_lost",
+    "bus could not be opened",
+    "could not connect",
+    "connectionerror",
+    "serialexception",
+    "motor check failed",
+    "missing motor",
+    "모터 무응답",
+    "overload",
+    "rxpacketerror",
+    "servo_fault",
+    "servo fault",
+    "motor fault",
+    "executor_exception",
+    "feetechmotorsbus",
+)
+
+# Operator STOP evidence: the Console's own stop() (`stop_sent`, `STOP_REQUESTED`, `.STOP` latch)
+# or a native gate that names the operator. "owner_stop"/"OWNER_STOP" by itself names the native
+# owner, not a person.
+OPERATOR_STOP_GATES = frozenset({"OPERATOR_STOP", "OPERATOR_STOPPED", "STOP_LATCH", "SIGINT"})
+OPERATOR_STOP_TOKENS = ("operator stop", "sigint", "stop latch", ".stop", "운영자 stop", "운영자 정지")
+
+CONSOLE_FAULT_STATES = frozenset({"FAULT"})
+
+
+@dataclass(frozen=True)
+class TerminalEvidenceClassification:
+    """Separated evidence classes read from one Console status payload (C-2 P0-2).
+
+    All three classes are kept; `evaluate_session_outcome` picks the result status with the
+    priority FAULT > STOP > OBSERVATION_FAILED but never drops the other classes.
+    """
+
+    hardware_fault: Optional[Dict[str, Any]]
+    operator_stop: Optional[Dict[str, Any]]
+    observation_failure: Optional[str]
+    console_fault_state: bool
+    refusal: Optional[Dict[str, Any]]
+    basis: Tuple[str, ...]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+def _lower_text(*parts: Any) -> str:
+    return " ".join(str(part) for part in parts if part is not None).lower()
+
+
+def _hardware_fault_from(gate: Optional[str], detail: Any, source: str) -> Optional[Dict[str, Any]]:
+    gate_u = str(gate).upper() if isinstance(gate, str) else None
+    text = _lower_text(gate, detail)
+    if gate_u in HARDWARE_FAULT_GATES or any(token in text for token in HARDWARE_FAULT_TOKENS):
+        return {"gate": gate_u or "HARDWARE_FAULT", "detail": str(detail) if detail is not None else "", "source": source}
+    return None
+
+
+def _operator_stop_from(gate: Optional[str], detail: Any, source: str) -> Optional[Dict[str, Any]]:
+    gate_u = str(gate).upper() if isinstance(gate, str) else None
+    text = _lower_text(gate, detail)
+    if gate_u in OPERATOR_STOP_GATES or any(token in text for token in OPERATOR_STOP_TOKENS):
+        return {"gate": gate_u or "OPERATOR_STOP", "detail": str(detail) if detail is not None else "", "source": source}
+    return None
+
+
+def _session_result_from_outcome(outcome: Any) -> Optional[str]:
+    """`EPISODE.json task_outcome` is "PARTIAL_OR_DIAGNOSTIC: <RESULT>" or "<RESULT>"."""
+    if not isinstance(outcome, str) or not outcome or outcome == "UNKNOWN":
+        return None
+    return outcome.split(":", 1)[1].strip() if ":" in outcome else outcome.strip()
+
+
+def classify_terminal_evidence(status_payload: Dict[str, Any]) -> TerminalEvidenceClassification:
+    """Read one Console `status()` payload and separate hardware FAULT / operator STOP / observation failure."""
+    state = status_payload.get("state")
+    active = status_payload.get("active") or {}
+    terminal = active.get("terminal") if isinstance(active.get("terminal"), dict) else {}
+    limited_doc = active.get("limited_terminal") if isinstance(active.get("limited_terminal"), dict) else {}
+    first_error = active.get("first_error") if isinstance(active.get("first_error"), dict) else {}
+    failure_point = active.get("failure_point") if isinstance(active.get("failure_point"), dict) else {}
+    native_terminal = active.get("native_terminal") if isinstance(active.get("native_terminal"), dict) else {}
+    basis: List[str] = []
+
+    # --- hardware / executor fault evidence ---
+    hardware: Optional[Dict[str, Any]] = None
+    candidates = [
+        (first_error.get("gate"), first_error.get("detail"), "active.first_error"),
+        ((terminal.get("stopped_by") or {}).get("gate") if isinstance(terminal.get("stopped_by"), dict) else None,
+         (terminal.get("stopped_by") or {}).get("detail") if isinstance(terminal.get("stopped_by"), dict) else terminal.get("stopped_by"),
+         "active.terminal.stopped_by"),
+        ((terminal.get("failed_stage") or {}).get("result") if isinstance(terminal.get("failed_stage"), dict) else None, None,
+         "active.terminal.failed_stage"),
+        (failure_point.get("gate"), failure_point.get("detail") or failure_point.get("reason"), "active.failure_point"),
+        (limited_doc.get("terminal"), limited_doc.get("error"), "active.limited_terminal"),
+        (None, active.get("error"), "active.error"),
+    ]
+    for gate, detail, source in candidates:
+        hardware = _hardware_fault_from(gate, detail, source)
+        if hardware:
+            basis.append(f"hardware_fault<-{source}")
+            break
+
+    # --- operator STOP evidence ---
+    operator: Optional[Dict[str, Any]] = None
+    if active.get("stop_sent") is True or state == "STOP_REQUESTED" or active.get("state") == "STOP_REQUESTED":
+        operator = {"gate": "CONSOLE_STOP", "detail": "Console stop(): .STOP latch + SIGINT sent", "source": "active.stop_sent"}
+        basis.append("operator_stop<-active.stop_sent")
+    elif limited_doc.get("terminal") == "OPERATOR_STOPPED" or limited_doc.get("stop_latch_present") is True:
+        operator = {"gate": "OPERATOR_STOPPED", "detail": str(limited_doc.get("terminal")), "source": "active.limited_terminal"}
+        basis.append("operator_stop<-active.limited_terminal")
+    else:
+        for gate, detail, source in (
+            (first_error.get("gate"), first_error.get("detail"), "active.first_error"),
+            ((terminal.get("stopped_by") or {}).get("gate") if isinstance(terminal.get("stopped_by"), dict) else None,
+             (terminal.get("stopped_by") or {}).get("detail") if isinstance(terminal.get("stopped_by"), dict) else terminal.get("stopped_by"),
+             "active.terminal.stopped_by"),
+        ):
+            operator = _operator_stop_from(gate, detail, source)
+            if operator:
+                basis.append(f"operator_stop<-{source}")
+                break
+    if operator and hardware:
+        basis.append("owner_stop_after_hardware_fault->FAULT_wins")
+
+    # --- observation / alignment / grasp-gate failure evidence ---
+    session_result = active.get("session_result") or limited_doc.get("session_result") \
+        or _session_result_from_outcome(native_terminal.get("result")) \
+        or _session_result_from_outcome(active.get("outcome"))
+    observation: Optional[str] = None
+    if session_result in OBSERVATION_FAILURE_RESULTS:
+        observation = str(session_result)
+        basis.append("observation_failure<-session_result")
+    elif limited_doc.get("terminal") in ("LEFT_CLOSE_UNAVAILABLE", "ENDED_BEFORE_LIFT"):
+        observation = str(limited_doc.get("terminal"))
+        basis.append("observation_failure<-limited_terminal")
+    elif failure_point.get("stage") in OBSERVATION_FAILURE_STEPS and not hardware:
+        observation = f"{failure_point.get('stage')}:{failure_point.get('gate') or failure_point.get('reason') or 'observation step failed'}"
+        basis.append("observation_failure<-failure_point.stage")
+
+    # --- refusal / authorization ---
+    refusal: Optional[Dict[str, Any]] = None
+    gate = first_error.get("gate")
+    if terminal.get("refused") or first_error.get("kind") == "observation_plan_authorization_failed" or (
+        isinstance(gate, str) and "AUTHORIZATION" in gate.upper()
+    ):
+        refusal = {"gate": gate or "EXECUTION_AUTHORIZATION_REFUSED", "detail": terminal.get("refused") or first_error.get("detail")}
+        basis.append("refusal")
+
+    console_fault = state in CONSOLE_FAULT_STATES or active.get("state") in CONSOLE_FAULT_STATES
+    if console_fault:
+        basis.append("console_state=FAULT")
+
+    return TerminalEvidenceClassification(
+        hardware_fault=hardware,
+        operator_stop=operator,
+        observation_failure=observation,
+        console_fault_state=bool(console_fault),
+        refusal=refusal,
+        basis=tuple(basis),
+    )
+
+
+def active_from_console_run_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Map a saved `RUN_RECORD.json` (`console/records.py:run_record`, read-only) to the `active` shape
+    that `Controller.status()` exposes, so stored real runs can be classified offline."""
+    outcome = record.get("outcome")
+    native_terminal = record.get("native_terminal") if isinstance(record.get("native_terminal"), dict) else {}
+    return {
+        "id": record.get("id"),
+        "state": record.get("state"),
+        "execution_scope": record.get("execution_scope"),
+        "first_error": record.get("first_error"),
+        "session_result": _session_result_from_outcome(native_terminal.get("result")) or _session_result_from_outcome(outcome),
+        "outcome": outcome,
+        "normal_return_confirmed": record.get("normal_return_confirmed"),
+        "stage_results": record.get("stage_results") or [],
+        "failure_point": record.get("failure_point"),
+        "native_terminal": native_terminal,
+        "terminal": record.get("terminal") or {},
+        "limited_terminal": record.get("limited_terminal"),
+        "receive_contact": record.get("receive_contact") or {},
+        "operator_recovery": record.get("operator_recovery"),
+        "record_source": "RUN_RECORD.json",
+    }
 
 
 class SweepickConsoleProtocol(Protocol):
@@ -84,6 +287,12 @@ class SweepickAdapterResult:
     reason: str
     error_code: Optional[str] = None
     native_gate: Optional[str] = None
+    # C-2 P0-2: evidence classes are preserved side by side; a FAULT never hides an observation
+    # failure and an observation failure never hides an executor FAULT.
+    hardware_fault: Optional[Dict[str, Any]] = None
+    operator_stop: Optional[Dict[str, Any]] = None
+    observation_failure: Optional[str] = None
+    classification_basis: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.motor_authority_created_by_integration is not False:
@@ -287,24 +496,25 @@ class SweepickExecutionAdapter:
         session_result = active.get("session_result") or (limited_doc.get("session_result") if isinstance(limited_doc, dict) else None)
         stages: List[Dict[str, Any]] = active.get("stage_results") or []
 
-        # 1. Check explicit STOP conditions first
-        stop_requested = (
-            state == "STOP_REQUESTED"
-            or active.get("stop_sent") is True
-            or first_error.get("stop_event") == "owner_stop"
-            or bool(terminal.get("stopped_by"))
-            or (isinstance(limited_doc, dict) and (
-                limited_doc.get("terminal") == "OPERATOR_STOPPED"
-                or limited_doc.get("stop_latch_present") is True
-            ))
-            or (isinstance(error_gate, str) and "STOP" in error_gate.upper())
+        evidence = classify_terminal_evidence(status_payload)
+        session_result = session_result or (evidence.observation_failure if evidence.observation_failure in OBSERVATION_FAILURE_RESULTS else None)
+        limited_kind = limited_doc.get("terminal") if isinstance(limited_doc, dict) else None
+        preserved = dict(
+            hardware_fault=evidence.hardware_fault,
+            operator_stop=evidence.operator_stop,
+            observation_failure=evidence.observation_failure,
+            classification_basis=evidence.basis,
         )
-        if stop_requested:
+
+        # 1. Motor/Bus/executor FAULT wins over everything, including an owner_stop that followed it
+        #    and an observation failure recorded in the same session (both are kept in the result).
+        if evidence.hardware_fault is not None:
+            fault = evidence.hardware_fault
             return SweepickAdapterResult(
-                status=ManipulationResultStatus.STOP,
+                status=ManipulationResultStatus.FAULT,
                 approved_scope=scope_id,
                 run_id=run_id,
-                session_result=session_result,
+                session_result=session_result or limited_kind,
                 left_pick_lift_confirmed=False,
                 right_handover_confirmed=False,
                 normal_return_off_confirmed=False,
@@ -312,31 +522,73 @@ class SweepickExecutionAdapter:
                 subsequent_commands_blocked=True,
                 requires_operator_recovery=True,
                 motor_authority_created_by_integration=False,
-                reason=str(error_detail or "Sweepick STOP 발생 · 자동 재시작 금지 및 수동 복구 필요"),
-                error_code="SWEEPICK_STOP",
-                native_gate=error_gate or "OPERATOR_OR_OWNER_STOP",
+                reason=str(fault.get("detail") or error_detail or "Sweepick Motor/Bus FAULT · 수동 복구 확인 전 다음 명령 차단")
+                + (f" · 관측 실패 별도 보존: {evidence.observation_failure}" if evidence.observation_failure else ""),
+                error_code="SWEEPICK_FAULT",
+                native_gate=str(fault.get("gate") or error_gate or "HARDWARE_FAULT"),
+                **preserved,
             )
 
-        # 2. Check explicit refusal / authorization rejection
-        if terminal.get("refused") or first_error.get("kind") == "observation_plan_authorization_failed" or (
-            isinstance(error_gate, str) and "AUTHORIZATION" in error_gate.upper()
-        ):
+        # 2. Operator STOP (Console stop() / .STOP latch / operator-named gate), no hardware fault
+        if evidence.operator_stop is not None:
+            return SweepickAdapterResult(
+                status=ManipulationResultStatus.STOP,
+                approved_scope=scope_id,
+                run_id=run_id,
+                session_result=session_result or limited_kind,
+                left_pick_lift_confirmed=False,
+                right_handover_confirmed=False,
+                normal_return_off_confirmed=False,
+                operator_approval_required=False,
+                subsequent_commands_blocked=True,
+                requires_operator_recovery=True,
+                motor_authority_created_by_integration=False,
+                reason=str(evidence.operator_stop.get("detail") or error_detail or "Sweepick STOP 발생 · 자동 재시작 금지 및 수동 복구 필요"),
+                error_code="SWEEPICK_STOP",
+                native_gate=str(evidence.operator_stop.get("gate") or error_gate or "OPERATOR_STOP"),
+                **preserved,
+            )
+
+        # 3. Explicit refusal / authorization rejection
+        if evidence.refusal is not None:
             return self._rejected(
                 scope_id=scope_id,
                 run_id=run_id,
-                error_code=error_gate or "EXECUTION_AUTHORIZATION_REFUSED",
-                reason=str(error_detail or "Sweepick 실행/관측 승인 거부"),
+                error_code=str(evidence.refusal.get("gate") or "EXECUTION_AUTHORIZATION_REFUSED"),
+                reason=str(evidence.refusal.get("detail") or error_detail or "Sweepick 실행/관측 승인 거부"),
                 native_gate=error_gate,
+                **preserved,
             )
 
-        # 3. Check native observation / alignment failure before grasp/lift
-        failure_stage = (active.get("failure_point") or {}).get("stage")
-        limited_kind = limited_doc.get("terminal") if isinstance(limited_doc, dict) else None
+        # 4. The Console's own FAULT verdict (executor error, unconfirmed torque-off, owner stop of
+        #    unknown origin) is never downgraded to OBSERVATION_FAILED; the observation failure is kept.
         if (
-            session_result in OBSERVATION_FAILURE_RESULTS
-            or (failure_stage in OBSERVATION_FAILURE_STEPS and not self._has_servo_or_bus_fault(first_error, error_detail))
-            or limited_kind in ("LEFT_CLOSE_UNAVAILABLE", "ENDED_BEFORE_LIFT")
+            evidence.console_fault_state
+            or first_error
+            or active.get("error")
+            or limited_kind in ("BUS_OR_SERVO_FAULT", "LEFT_LIFT_FAILED")
         ):
+            return SweepickAdapterResult(
+                status=ManipulationResultStatus.FAULT,
+                approved_scope=scope_id,
+                run_id=run_id,
+                session_result=session_result or limited_kind,
+                left_pick_lift_confirmed=False,
+                right_handover_confirmed=False,
+                normal_return_off_confirmed=False,
+                operator_approval_required=False,
+                subsequent_commands_blocked=True,
+                requires_operator_recovery=True,
+                motor_authority_created_by_integration=False,
+                reason=str(error_detail or "Sweepick FAULT 발생 · 수동 복구 확인 전 다음 명령 차단")
+                + (f" · 관측 실패 별도 보존: {evidence.observation_failure}" if evidence.observation_failure else ""),
+                error_code="SWEEPICK_FAULT",
+                native_gate=error_gate,
+                **preserved,
+            )
+
+        # 5. Observation / alignment / grasp-gate failure with the executor itself healthy
+        if evidence.observation_failure is not None:
             normal_off = bool(active.get("normal_return_confirmed") or (isinstance(limited_doc, dict) and limited_doc.get("torque_off_confirmed")))
             return SweepickAdapterResult(
                 status=ManipulationResultStatus.OBSERVATION_FAILED,
@@ -353,28 +605,10 @@ class SweepickExecutionAdapter:
                 reason=str(error_detail or session_result or limited_kind or "Sweepick 시각 관측/정렬 또는 파지 확인 실패"),
                 error_code="SWEEPICK_OBSERVATION_OR_GRASP_GATE_FAILED",
                 native_gate=error_gate or str(session_result or limited_kind),
+                **preserved,
             )
 
-        # 4. Check FAULT conditions
-        if state == "FAULT" or first_error or active.get("error") or limited_kind in ("BUS_OR_SERVO_FAULT", "LEFT_LIFT_FAILED"):
-            return SweepickAdapterResult(
-                status=ManipulationResultStatus.FAULT,
-                approved_scope=scope_id,
-                run_id=run_id,
-                session_result=session_result or limited_kind,
-                left_pick_lift_confirmed=False,
-                right_handover_confirmed=False,
-                normal_return_off_confirmed=False,
-                operator_approval_required=False,
-                subsequent_commands_blocked=True,
-                requires_operator_recovery=True,
-                motor_authority_created_by_integration=False,
-                reason=str(error_detail or "Sweepick FAULT 발생 · 수동 복구 확인 전 다음 명령 차단"),
-                error_code="SWEEPICK_FAULT",
-                native_gate=error_gate,
-            )
-
-        # 5. Evaluate actual manipulation evidence (LEFT PICK/LIFT & RIGHT HANDOVER)
+        # 6. Evaluate actual manipulation evidence (LEFT PICK/LIFT & RIGHT HANDOVER)
         stage_map = {
             (s.get("side", "left"), s.get("stage")): s.get("result")
             for s in stages
@@ -568,14 +802,6 @@ class SweepickExecutionAdapter:
         )
 
     @staticmethod
-    def _has_servo_or_bus_fault(first_error: Dict[str, Any], detail: Optional[str]) -> bool:
-        text = f"{first_error.get('gate') or ''} {detail or ''}".lower()
-        return any(
-            token in text
-            for token in ("motor check failed", "overload", "bus_lost", "connectionerror", "servo", "executor_error")
-        )
-
-    @staticmethod
     def _rejected(
         *,
         scope_id: str,
@@ -583,6 +809,7 @@ class SweepickExecutionAdapter:
         error_code: str,
         reason: str,
         native_gate: Optional[str] = None,
+        **preserved: Any,
     ) -> SweepickAdapterResult:
         return SweepickAdapterResult(
             status=ManipulationResultStatus.EXECUTION_REJECTED,
@@ -599,4 +826,5 @@ class SweepickExecutionAdapter:
             reason=reason,
             error_code=error_code,
             native_gate=native_gate,
+            **preserved,
         )

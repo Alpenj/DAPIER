@@ -34,9 +34,24 @@ from .reobserve_gate import (
 from .sweepick_adapter import (
     SweepickAdapterResult,
     SweepickExecutionAdapter,
+    TerminalEvidenceClassification,
+    active_from_console_run_record,
+    classify_terminal_evidence,
 )
 from .pipeline_coordinator import (
+    BLOCK_ORIGIN_INTEGRATION_GATE,
+    BLOCK_ORIGIN_SWEEPICK_CONSOLE,
+    BLOCK_ORIGIN_SWEEPICK_NO_RUN,
+    OperatorRecoveryDecision,
     VslamSweepickCoordinator,
+    console_recovery_evidence,
+)
+from .tf_provenance import (
+    DetectionProvenance,
+    SensorFrameLedger,
+    VerifiedTransform,
+    build_post_stop_observation,
+    compose_static_chain,
 )
 from .navigation_bridge import (
     NavigationManipulationBridge,
@@ -65,4 +80,18 @@ __all__ = [
     "VslamSweepickCoordinator",
     "transform_optical_pose_to_base_footprint",
     "validate_stage_transition",
+    # C-2
+    "BLOCK_ORIGIN_INTEGRATION_GATE",
+    "BLOCK_ORIGIN_SWEEPICK_CONSOLE",
+    "BLOCK_ORIGIN_SWEEPICK_NO_RUN",
+    "DetectionProvenance",
+    "OperatorRecoveryDecision",
+    "SensorFrameLedger",
+    "TerminalEvidenceClassification",
+    "VerifiedTransform",
+    "active_from_console_run_record",
+    "build_post_stop_observation",
+    "classify_terminal_evidence",
+    "compose_static_chain",
+    "console_recovery_evidence",
 ]

@@ -168,14 +168,20 @@ class TestNav2DockingRegression(unittest.TestCase):
         self.assertIn("'--child-frame-id', 'camera_color_optical_frame'", launch_text)
         self.assertIn("'-1.5707963'", launch_text)
 
-        # Optical point (x_right=0.0, y_down=0.0, z_forward=0.50) -> base_footprint (0.50+0.073, 0.0, 0.084)
+        # Pure-math regression of the optical -> camera_link rotation. The origin is supplied
+        # explicitly (C-2: no default). Value = Waffle Pi URDF chain composed by hand
+        # (base_footprint->base_link z=0.010, base_link->camera_link (0.073,-0.011,0.084)),
+        # labelled here as a constant for math checking only, not as real camera evidence.
+        urdf_chain_origin = (0.073, -0.011, 0.094)
         p_base, n_base = transform_optical_pose_to_base_footprint(
             (0.0, 0.0, 0.50),
             (0.0, 0.0, -1.0),
-            camera_link_in_base_footprint_m=(0.073, 0.0, 0.084),
+            camera_link_in_base_footprint_m=urdf_chain_origin,
         )
-        np.testing.assert_allclose(p_base, (0.573, 0.0, 0.084), atol=1e-6)
+        np.testing.assert_allclose(p_base, (0.573, -0.011, 0.094), atol=1e-6)
         np.testing.assert_allclose(n_base, (-1.0, 0.0, 0.0), atol=1e-6)
+        with self.assertRaises(TypeError):
+            transform_optical_pose_to_base_footprint((0.0, 0.0, 0.50), (0.0, 0.0, -1.0))  # no default origin
 
         mock_console = MockSweepickConsoleController()
         coordinator = VslamSweepickCoordinator(
