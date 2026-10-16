@@ -1,0 +1,452 @@
+{
+  "schema": "sweepick.right-x-all-scopes-sha-audit.v1",
+  "audited_at": "2026-10-16",
+  "trees": {
+    "active_native": "/home/robot/sweepick_261013_receive_alignment_restore",
+    "candidate_native": "/home/robot/sweepick_261016_right_x_metrology_native",
+    "live_console": "/home/robot/sweepick_local_robot_console",
+    "candidate_console": "/home/robot/sweepick_261016_right_x_console"
+  },
+  "scopes": {
+    "FULL_CHAIN_RECEIVE_CONTACT": {
+      "bound_by_console": "none (no tested-SHA gate; prepare writes PREPARED_SOURCE_MANIFEST)",
+      "files": [
+        "RUN_APPROVED_SESSION.py",
+        "confirmed_wrist_routes.py",
+        "revision/sweepick_pick01.py",
+        "revision/sweepick_move_a.py",
+        "revision/sweepick_grasp.py",
+        "revision/sweepick_episode.py",
+        "revision/sweepick_full_chain.py",
+        "revision/sweepick_jaw_profile_left.json",
+        "revision/sweepick_progress_profile.json",
+        "revision/console_feedback.py"
+      ],
+      "rows": {
+        "RUN_APPROVED_SESSION.py": {
+          "active_native": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+          "candidate_native": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+          "live_console_c17_record": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+          "candidate_console_c17_record": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+          "candidate_console_rx_record": null
+        },
+        "confirmed_wrist_routes.py": {
+          "active_native": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_native": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "live_console_c17_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_console_c17_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_pick01.py": {
+          "active_native": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_native": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "live_console_c17_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_console_c17_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_move_a.py": {
+          "active_native": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_native": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "live_console_c17_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_console_c17_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_grasp.py": {
+          "active_native": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_native": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "live_console_c17_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_console_c17_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_episode.py": {
+          "active_native": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_native": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "live_console_c17_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_console_c17_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_full_chain.py": {
+          "active_native": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+          "candidate_native": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+          "live_console_c17_record": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+          "candidate_console_c17_record": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_jaw_profile_left.json": {
+          "active_native": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_native": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "live_console_c17_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_console_c17_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_progress_profile.json": {
+          "active_native": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_native": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "live_console_c17_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_console_c17_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_console_rx_record": null
+        },
+        "revision/console_feedback.py": {
+          "active_native": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_native": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "live_console_c17_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_console_c17_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_console_rx_record": null
+        }
+      },
+      "candidate_native_differs_from_active": [
+        "RUN_APPROVED_SESSION.py",
+        "revision/sweepick_full_chain.py"
+      ]
+    },
+    "LEFT_START_TO_LIFT": {
+      "bound_by_console": "CONSOLE17_TESTED_NATIVE_SHA256.json",
+      "files": [
+        "RUN_APPROVED_SESSION.py",
+        "confirmed_wrist_routes.py",
+        "revision/sweepick_pick01.py",
+        "revision/sweepick_move_a.py",
+        "revision/sweepick_grasp.py",
+        "revision/sweepick_episode.py",
+        "revision/sweepick_full_chain.py",
+        "revision/sweepick_jaw_profile_left.json",
+        "revision/sweepick_progress_profile.json",
+        "revision/console_feedback.py"
+      ],
+      "rows": {
+        "RUN_APPROVED_SESSION.py": {
+          "active_native": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+          "candidate_native": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+          "live_console_c17_record": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+          "candidate_console_c17_record": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+          "candidate_console_rx_record": null
+        },
+        "confirmed_wrist_routes.py": {
+          "active_native": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_native": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "live_console_c17_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_console_c17_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_pick01.py": {
+          "active_native": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_native": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "live_console_c17_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_console_c17_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_move_a.py": {
+          "active_native": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_native": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "live_console_c17_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_console_c17_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_grasp.py": {
+          "active_native": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_native": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "live_console_c17_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_console_c17_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_episode.py": {
+          "active_native": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_native": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "live_console_c17_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_console_c17_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_full_chain.py": {
+          "active_native": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+          "candidate_native": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+          "live_console_c17_record": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+          "candidate_console_c17_record": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_jaw_profile_left.json": {
+          "active_native": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_native": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "live_console_c17_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_console_c17_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_console_rx_record": null
+        },
+        "revision/sweepick_progress_profile.json": {
+          "active_native": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_native": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "live_console_c17_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_console_c17_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_console_rx_record": null
+        },
+        "revision/console_feedback.py": {
+          "active_native": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_native": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "live_console_c17_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_console_c17_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_console_rx_record": null
+        }
+      },
+      "candidate_native_differs_from_active": [
+        "RUN_APPROVED_SESSION.py",
+        "revision/sweepick_full_chain.py"
+      ]
+    },
+    "RIGHT_X_FINITE_METROLOGY": {
+      "bound_by_console": "RIGHT_X_TESTED_NATIVE_SHA256.json",
+      "files": [
+        "RUN_APPROVED_SESSION.py",
+        "confirmed_wrist_routes.py",
+        "revision/sweepick_pick01.py",
+        "revision/sweepick_move_a.py",
+        "revision/sweepick_grasp.py",
+        "revision/sweepick_episode.py",
+        "revision/sweepick_full_chain.py",
+        "revision/sweepick_jaw_profile_left.json",
+        "revision/sweepick_progress_profile.json",
+        "revision/console_feedback.py",
+        "revision/right_x_metrology.py",
+        "revision/current_view_candidate.py"
+      ],
+      "rows": {
+        "RUN_APPROVED_SESSION.py": {
+          "active_native": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+          "candidate_native": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+          "live_console_c17_record": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+          "candidate_console_c17_record": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+          "candidate_console_rx_record": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47"
+        },
+        "confirmed_wrist_routes.py": {
+          "active_native": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_native": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "live_console_c17_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_console_c17_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+          "candidate_console_rx_record": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532"
+        },
+        "revision/sweepick_pick01.py": {
+          "active_native": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_native": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "live_console_c17_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_console_c17_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+          "candidate_console_rx_record": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db"
+        },
+        "revision/sweepick_move_a.py": {
+          "active_native": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_native": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "live_console_c17_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_console_c17_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+          "candidate_console_rx_record": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05"
+        },
+        "revision/sweepick_grasp.py": {
+          "active_native": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_native": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "live_console_c17_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_console_c17_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+          "candidate_console_rx_record": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2"
+        },
+        "revision/sweepick_episode.py": {
+          "active_native": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_native": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "live_console_c17_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_console_c17_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+          "candidate_console_rx_record": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9"
+        },
+        "revision/sweepick_full_chain.py": {
+          "active_native": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+          "candidate_native": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+          "live_console_c17_record": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+          "candidate_console_c17_record": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+          "candidate_console_rx_record": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9"
+        },
+        "revision/sweepick_jaw_profile_left.json": {
+          "active_native": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_native": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "live_console_c17_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_console_c17_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+          "candidate_console_rx_record": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d"
+        },
+        "revision/sweepick_progress_profile.json": {
+          "active_native": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_native": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "live_console_c17_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_console_c17_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+          "candidate_console_rx_record": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43"
+        },
+        "revision/console_feedback.py": {
+          "active_native": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_native": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "live_console_c17_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_console_c17_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0",
+          "candidate_console_rx_record": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0"
+        },
+        "revision/right_x_metrology.py": {
+          "active_native": null,
+          "candidate_native": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+          "live_console_c17_record": null,
+          "candidate_console_c17_record": null,
+          "candidate_console_rx_record": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2"
+        },
+        "revision/current_view_candidate.py": {
+          "active_native": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db",
+          "candidate_native": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db",
+          "live_console_c17_record": null,
+          "candidate_console_c17_record": null,
+          "candidate_console_rx_record": "9022f8120e16c05d7b251913f61ab083e08ca651a1a0bf8cbebc7627b3dee7db"
+        }
+      },
+      "candidate_native_differs_from_active": [
+        "RUN_APPROVED_SESSION.py",
+        "revision/sweepick_full_chain.py",
+        "revision/right_x_metrology.py"
+      ]
+    }
+  },
+  "candidate_console_backend_verdicts": {
+    "active_native": {
+      "LEFT_START_TO_LIFT": [
+        false,
+        "활성 native SHA가 시험한 소스와 다름: RUN_APPROVED_SESSION.py, revision/sweepick_full_chain.py"
+      ],
+      "RIGHT_X_FINITE_METROLOGY": [
+        false,
+        "native 실행본에 RIGHT_X 측정 계약이 없음: RUN_APPROVED_SESSION.py: RIGHT_X = 'RIGHT_X_FINITE_METROLOGY'; RUN_APPROVED_SESSION.py: rx.approval_errors(approval, out); RUN_APPROVED_SESSION.py: scope=rx.MOVE_SCOPE); revision/right_x_metrology.py: not readable; revision/sweepick_full_chain.py: def run_right_x_metrology(; revision/sweepick_full_chain.py: RIGHT_X_METROLOGY.json"
+      ]
+    },
+    "candidate_native": {
+      "LEFT_START_TO_LIFT": [
+        true,
+        "native 계약 표식 + 활성 native SHA = 시험한 소스 SHA"
+      ],
+      "RIGHT_X_FINITE_METROLOGY": [
+        true,
+        "native RIGHT_X 계약 표식 + 활성 native SHA = 시험한 소스 SHA"
+      ]
+    }
+  },
+  "console_files": {
+    "control.py": {
+      "live": "c90beb6e0fd7b4ef2c209c9ae1900baf29254d5a96378199ec732903af19a33a",
+      "candidate": "73ee3bf160a1e7b962ff1b6108ca4f6e803dba8eb918acbf75c5ba9fea715ee0"
+    },
+    "app.py": {
+      "live": "83ee66bef5f41d9c9667a52b9ae5a3375f682b815003f833cf629c3a97e748b2",
+      "candidate": "0d2b0829a0c30652b6e97d1d15ecc76b7405ab69642fc925447e9b15d857e268"
+    },
+    "records.py": {
+      "live": "976a32a5f29c85a9e79702a10a3efa67138bf639a7275169228411832a97f406",
+      "candidate": "297a98f6ba0defa4dac42be68b2922156ba4933ac407459f9cdcbd228fdccb6c"
+    },
+    "live.py": {
+      "live": "85106b742a25dce0c4d59b1dc7e22e0723a54d58e6a5f9d21b4ef5e016791f2d",
+      "candidate": "85106b742a25dce0c4d59b1dc7e22e0723a54d58e6a5f9d21b4ef5e016791f2d"
+    },
+    "inspection.py": {
+      "live": "bae2e3fba587a1675752d940f2f52b19c8228bb6b7ee88bffe4180ca0bd68128",
+      "candidate": "bae2e3fba587a1675752d940f2f52b19c8228bb6b7ee88bffe4180ca0bd68128"
+    },
+    "replay.py": {
+      "live": "e10bbbd98927df79803388eff6f9e12d764dd6733371183e697f555bf9c30da1",
+      "candidate": "e10bbbd98927df79803388eff6f9e12d764dd6733371183e697f555bf9c30da1"
+    },
+    "static/index.html": {
+      "live": "8f3f8e89a8e22c7aa47125dcd91b9ad2b4f09c10ca4ba9c8575612cbfeadf819",
+      "candidate": "56be64b95cfebdc6f9de00efa127aba0a40c64ea91c8fc116b85679764aa9050"
+    },
+    "static/app.js": {
+      "live": "108be397bfb912fd6213a67b5869e18d803fc7b75fc199715b65ffcbe576cc69",
+      "candidate": "9f4da89718e408ae2ecf7f7dee8943b656e995d0d4ae19659698ee7a0e6fc26f"
+    },
+    "static/field.js": {
+      "live": "6bde29460a38d455ef21223cee1c1cded223d42c2905cdbfe0bbb6a1075062b1",
+      "candidate": "b892ec453d9a8cfebf799b3236a997185313da293f7e5997595e029c6dcd6581"
+    },
+    "static/style.css": {
+      "live": "c669c60be02f6625f5a72c431f5ec122ece51cff02d72322c25b7695071795f9",
+      "candidate": "42e5b026772013df8d71258015e700aee693fec5098f9c478b0a323d881b149f"
+    },
+    "CONSOLE17_TESTED_NATIVE_SHA256.json": {
+      "live": "6b07fb4dc2c25ccf8879e0f0e7d55f942b270ae2e999d1938ae4cf2ea00d0b20",
+      "candidate": "0e94554674a30bcc566902f4bde44a40191ced178e5ab5d8734b94826c8425ff"
+    },
+    "RIGHT_X_TESTED_NATIVE_SHA256.json": {
+      "live": null,
+      "candidate": "73046badaa90d4095c8c6d9ec26d9cc6cb05fadc282181ec8caf73385961796d"
+    }
+  },
+  "rx_record_matches_candidate_native": true,
+  "c17_record_matches_candidate_native": true,
+  "before_this_change": {
+    "candidate_console_backend_verdicts": {
+      "active_native": {
+        "LEFT_START_TO_LIFT": [
+          true,
+          "native 계약 표식 + 활성 native SHA = 시험한 소스 SHA"
+        ],
+        "RIGHT_X_FINITE_METROLOGY": [
+          false,
+          "native 실행본에 RIGHT_X 측정 계약이 없음: RUN_APPROVED_SESSION.py: RIGHT_X = 'RIGHT_X_FINITE_METROLOGY'; RUN_APPROVED_SESSION.py: rx.approval_errors(approval, out); RUN_APPROVED_SESSION.py: scope=rx.MOVE_SCOPE); revision/right_x_metrology.py: not readable; revision/sweepick_full_chain.py: def run_right_x_metrology(; revision/sweepick_full_chain.py: RIGHT_X_METROLOGY.json"
+        ]
+      },
+      "candidate_native": {
+        "LEFT_START_TO_LIFT": [
+          false,
+          "활성 native SHA가 시험한 소스와 다름: RUN_APPROVED_SESSION.py, revision/sweepick_full_chain.py"
+        ],
+        "RIGHT_X_FINITE_METROLOGY": [
+          true,
+          "native RIGHT_X 계약 표식 + 활성 native SHA = 시험한 소스 SHA"
+        ]
+      }
+    },
+    "why": "the old CONSOLE17 record held launcher 9578a1ee / full_chain d97aa60f, so the candidate native closed LEFT_START_TO_LIFT"
+  },
+  "console17_record_change": {
+    "file": "console/CONSOLE17_TESTED_NATIVE_SHA256.json",
+    "changed_files": {
+      "RUN_APPROVED_SESSION.py": {
+        "previous": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+        "new": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47"
+      },
+      "revision/sweepick_full_chain.py": {
+        "previous": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
+        "new": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9"
+      }
+    },
+    "written_after": "Console-17 28/28 passed on the candidate native (same 28 IDs as the active native); native 541 common IDs unchanged"
+  },
+  "right_x_record_unchanged": {
+    "file": "console/RIGHT_X_TESTED_NATIVE_SHA256.json",
+    "sha256": "73046badaa90d4095c8c6d9ec26d9cc6cb05fadc282181ec8caf73385961796d",
+    "all_12_equal_candidate_native": true
+  },
+  "deploy_files": {
+    "native_into_active_folder (/home/robot/sweepick_261013_receive_alignment_restore)": {
+      "RUN_APPROVED_SESSION.py": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+      "revision/sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+      "revision/right_x_metrology.py": "dd126c28a9af480cf497962ed1e52ddf77fe5d6785ab9651e84172911fd3eab2",
+      "revision/test_right_x_metrology.py": "46192b92cdf945d504531529c9ee1bb3bc3f3e7dd64e0565c563458564b66999",
+      "test_right_x_launch.py": "1e913ce58c9af8aaa437a0fd4d369663f69ff6059888c30d15e79f44d565ab32"
+    },
+    "console_into_live_console (/home/robot/sweepick_local_robot_console)": {
+      "control.py": "73ee3bf160a1e7b962ff1b6108ca4f6e803dba8eb918acbf75c5ba9fea715ee0",
+      "app.py": "0d2b0829a0c30652b6e97d1d15ecc76b7405ab69642fc925447e9b15d857e268",
+      "records.py": "297a98f6ba0defa4dac42be68b2922156ba4933ac407459f9cdcbd228fdccb6c",
+      "static/index.html": "56be64b95cfebdc6f9de00efa127aba0a40c64ea91c8fc116b85679764aa9050",
+      "static/app.js": "9f4da89718e408ae2ecf7f7dee8943b656e995d0d4ae19659698ee7a0e6fc26f",
+      "static/field.js": "b892ec453d9a8cfebf799b3236a997185313da293f7e5997595e029c6dcd6581",
+      "static/style.css": "42e5b026772013df8d71258015e700aee693fec5098f9c478b0a323d881b149f",
+      "CONSOLE17_TESTED_NATIVE_SHA256.json": "0e94554674a30bcc566902f4bde44a40191ced178e5ab5d8734b94826c8425ff",
+      "RIGHT_X_TESTED_NATIVE_SHA256.json": "73046badaa90d4095c8c6d9ec26d9cc6cb05fadc282181ec8caf73385961796d",
+      "test_console17.py": "0e3cb7be67b769cc34e22b64e65b07407276f953162815b1ccd9445f5816f7fd",
+      "test_right_x_console.py": "4dc8d52fb99d5f82a890abebe468179d8ee92f6173454f1c22a57ecd6113d306",
+      "test_preapproval_start.py": "465774fd3a280f0485cba07eaad97e553f33f2c1e81fdbe9dc86d24fad4f2713",
+      "test_obs_settled_short.py": "acf471f6f33eb7db7076a5e6d96d72a7691c1188f3d5af7286feebc7e8a9a3a0"
+    }
+  },
+  "deploy_simulation": {
+    "how": "active native copied to scratch, the 5 candidate native files + review/ + review_tools/ overlaid, PREPARED_SOURCE_MANIFEST paths rewritten to the copy (simulation only)",
+    "candidate_console_backend_verdicts": {
+      "LEFT_START_TO_LIFT": true,
+      "RIGHT_X_FINITE_METROLOGY": true
+    },
+    "note": "PREPARED_SOURCE_MANIFEST.json lists absolute paths of the active folder; deploy by copying files into that folder, not by pointing the console at another folder"
+  }
+}

@@ -1,8 +1,25 @@
 {
  "schema": "sweepick.console17-tested-native.v1",
- "tested_at": "2026-10-15",
- "tested_source": "/home/robot/sweepick_261015_obs_reach_native",
+ "tested_at": "2026-10-16",
+ "tested_source": "/home/robot/sweepick_261016_right_x_metrology_native",
+ "tested_suites": {
+  "console17": "revision/test_console17_limited_session.py + revision/test_console17_trim_other_arm.py + test_console17_launch_scope.py: 28 passed (active native 28 passed, same IDs)",
+  "native_full": "541 common IDs identical to the active native; 37 new RIGHT_X tests passed",
+  "gripper": "154 passed / 1 failed in both trees (same pre-existing KeyError provisional)"
+ },
  "files": {
+  "RUN_APPROVED_SESSION.py": "46def8404dd8a3fb975a3fa62f7ed3f5fcae7ef445419a827d570b90c8f14a47",
+  "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
+  "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+  "revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+  "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
+  "revision/sweepick_episode.py": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
+  "revision/sweepick_full_chain.py": "19e7ca354676e6e914a229b714d7da4630027f17e97b843e25318f1f5808e7d9",
+  "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
+  "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
+  "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0"
+ },
+ "previous_record_files": {
   "RUN_APPROVED_SESSION.py": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
   "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
   "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
@@ -14,22 +31,9 @@
   "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
   "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0"
  },
- "previous_record_files": {
-  "RUN_APPROVED_SESSION.py": "59a33f1abbdb43445f93c5aded1b38405d03224a33137a034c9d54bfa6568e8e",
-  "confirmed_wrist_routes.py": "d4814926b6af08e52c7b2cab457d04f7213309a57b32622a8b32e0a5fbd33532",
-  "revision/sweepick_pick01.py": "815327ab2321984a771b9588f163fc12b851799929f36ad0bab14f165da52867",
-  "revision/sweepick_move_a.py": "5dd5d7602a1641fd695e6d36235ae26713d1a474fb10d6fc0848c41c3a5cb950",
-  "revision/sweepick_grasp.py": "e7ee0f4c3557473c5c0f4bdeff124c6442f1225634171c704cbfe5daddbb63a2",
-  "revision/sweepick_episode.py": "2da2b1f839538ae71b0254d991d7b7891c0fb3c6aced2e267fec26f1a8719ad9",
-  "revision/sweepick_full_chain.py": "d97aa60fca02a620d81ed9794e2b1fab24cabeb492940ff4e2379637bfd3db6e",
-  "revision/sweepick_jaw_profile_left.json": "63e42112d4c1b8a64d5e6d196227aeecbf80f96f2dff613c0d00572f6798bd4d",
-  "revision/sweepick_progress_profile.json": "ef54eb126522864bcf0e2907f555b7c8c33b8c559336423ec55fb8d6ecfabb43",
-  "revision/console_feedback.py": "d53dab7bfcfac8212ef46b2a57c4be41ad9cfe5f3f99d005d4f86aba82141fa0"
- },
- "changed_since_active": [
+ "changed_since_previous_record": [
   "RUN_APPROVED_SESSION.py",
-  "revision/sweepick_pick01.py",
-  "revision/sweepick_move_a.py"
+  "revision/sweepick_full_chain.py"
  ],
- "regression": "see docs/a_p0_final_20261015/FINAL_A_P0_REGRESSION.json"
+ "regression": "see docs/right_x_final_20261016/RIGHT_X_FINAL_CROSS_REGRESSION.json"
 }

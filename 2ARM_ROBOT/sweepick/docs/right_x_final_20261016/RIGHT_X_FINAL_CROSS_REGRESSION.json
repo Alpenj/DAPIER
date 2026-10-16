@@ -1,0 +1,273 @@
+{
+  "schema": "sweepick.right-x-final-cross-regression.v1",
+  "date": "2026-10-16",
+  "scope": "offline only: Fake Bus, console unit, browser. No REAL START, no device open, no Motor/Torque write.",
+  "environment": {
+    "native_python": "/home/robot/DAPIER/so101_imitation_learning/.venv/bin/python (pytest, PYTEST_DISABLE_PLUGIN_AUTOLOAD=1, -p no:cacheprovider, PYTHONDONTWRITEBYTECODE=1)",
+    "SWEEPICK_RECEIVE_DIR": "unset for the full/gripper/console17 runs; set to <tree>/pin (what RUN_APPROVED_SESSION.py sets) for the extra full_chain run",
+    "order": "trees run one after the other, never in parallel",
+    "console_python": "console .venv, python -m unittest discover -v",
+    "disk_free_root": "11G of 233G (96% used) before and after; every junit/log artifact below was written completely"
+  },
+  "native": {
+    "full": {
+      "active_ids": 541,
+      "candidate_ids": 578,
+      "common": 541,
+      "common_active": {
+        "error": 1,
+        "passed": 471,
+        "failed": 38,
+        "skipped": 31
+      },
+      "common_candidate": {
+        "error": 1,
+        "passed": 471,
+        "failed": 38,
+        "skipped": 31
+      },
+      "outcome_changed_on_common": [],
+      "only_candidate": 37,
+      "only_candidate_outcomes": {
+        "passed": 37
+      },
+      "only_candidate_files": [
+        "revision.test_right_x_metrology",
+        "test_right_x_launch"
+      ],
+      "only_active": []
+    },
+    "failing_in_both_pre_existing": [
+      "::revision.test_capture_right_wrist_calibration",
+      "revision.test_model_assisted_receive_plan::test_native_hops_cannot_hide_a_changed_native_jaw_command",
+      "revision.test_model_assisted_receive_plan::test_native_hops_keep_original_jaw_provenance_after_lossy_affine_round_trip",
+      "revision.test_receive_followup::test_observation_seed_accepts_saved_passive_jaw_without_changing_geometry",
+      "revision.test_sweepick_episode::test_the_looks_use_the_recorders_readers_and_only_frames_received_after_the_call",
+      "revision.test_sweepick_episode::test_the_real_session_with_the_recorder_on",
+      "revision.test_sweepick_grip::test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage",
+      "revision.test_sweepick_pick02_actual::test_a_block_disturbed_by_the_last_descent_is_not_closed_on_and_the_arm_backs_up_despite_the_flicker[not readable]",
+      "revision.test_sweepick_pick02_actual::test_a_block_disturbed_by_the_last_descent_is_not_closed_on_and_the_arm_backs_up_despite_the_flicker[shifted]",
+      "revision.test_sweepick_pick02_actual::test_a_block_disturbed_by_the_last_descent_is_not_closed_on_and_the_arm_backs_up_despite_the_flicker[turned]",
+      "revision.test_sweepick_pick02_actual::test_a_block_turned_at_the_first_stop_ends_the_descent_there",
+      "revision.test_sweepick_pick02_actual::test_a_real_lateral_error_is_removed_by_the_visual_loop_and_the_block_stays_where_it_was_observed",
+      "revision.test_sweepick_pick02_actual::test_a_request_refused_before_any_write_is_kept_as_a_refusal_and_does_not_close_the_way_home",
+      "revision.test_sweepick_pick02_actual::test_the_whole_session_on_an_arm_with_the_real_servo_behaviour",
+      "revision.test_sweepick_pick02_actual::test_the_whole_session_with_a_flickering_readback_and_a_second_stop_from_the_measured_error",
+      "revision.test_sweepick_real_command::test_arms_only_report_uses_only_the_range_gates_and_heuristics_are_diagnostics",
+      "revision.test_sweepick_real_command::test_classification_separates_hard_from_temporary",
+      "revision.test_sweepick_real_command::test_dry_run_sends_nothing_and_reports_refusals",
+      "revision.test_sweepick_real_command::test_inverse_reproduces_the_stored_real_sample",
+      "test_observation_launch::test_adopted_view_uses_supplied_actual_and_camera",
+      "test_observation_launch::test_approval_wait_lost_support_raises_without_permission",
+      "test_observation_launch::test_current06_yaw_target_survives_wrist_perspective_changes",
+      "test_observation_launch::test_initial_observation_and_stage_keep_both_ports_with_the_primary_owner",
+      "test_observation_launch::test_initial_planning_exception_keeps_traceback_without_stage",
+      "test_observation_launch::test_owner_observation_preserves_fresh_passive_feedback",
+      "test_observation_launch::test_owner_optical_startup_with_actual_reenumerated_pairing",
+      "test_observation_launch::test_passive_gripper_seed_preserves_actual_and_collision_geometry",
+      "test_observation_launch::test_passive_seed_does_not_replace_nonfinite_actual[-inf]",
+      "test_observation_launch::test_passive_seed_does_not_replace_nonfinite_actual[inf]",
+      "test_observation_launch::test_passive_seed_does_not_replace_nonfinite_actual[nan]",
+      "test_observation_launch::test_rebound_optical_rejects_left_camera_binding",
+      "test_observation_launch::test_receive_keeps_passive_actual_and_bounds_only_the_command_seed",
+      "test_observation_launch::test_receive_measured_input_still_rejects_nonfinite[-inf]",
+      "test_observation_launch::test_receive_measured_input_still_rejects_nonfinite[inf]",
+      "test_observation_launch::test_receive_measured_input_still_rejects_nonfinite[nan]",
+      "test_observation_launch::test_startup_plans_only_the_current_pick",
+      "test_observation_launch::test_view_approval_is_current_plan_bound[declined-False]",
+      "test_observation_launch::test_view_approval_is_current_plan_bound[match-True]",
+      "test_observation_launch::test_view_approval_is_current_plan_bound[wrong_hash-False]"
+    ],
+    "gripper": {
+      "active_ids": 155,
+      "candidate_ids": 155,
+      "common_active": {
+        "passed": 154,
+        "failed": 1
+      },
+      "common_candidate": {
+        "passed": 154,
+        "failed": 1
+      },
+      "outcome_changed_on_common": []
+    },
+    "console17": {
+      "active": {
+        "passed": 28
+      },
+      "candidate": {
+        "passed": 28
+      },
+      "changed_on_common": [],
+      "files": [
+        "revision.test_console17_limited_session",
+        "revision.test_console17_trim_other_arm",
+        "test_console17_launch_scope"
+      ]
+    },
+    "observation_and_wait": {
+      "active": {
+        "passed": 36,
+        "failed": 20
+      },
+      "candidate": {
+        "passed": 36,
+        "failed": 20
+      },
+      "changed_on_common": [],
+      "files": [
+        "revision.test_observation_approval_wait",
+        "revision.test_observation_geometry_cache",
+        "revision.test_receive_observation_only",
+        "test_observation_launch"
+      ]
+    },
+    "right_x_new": {
+      "active": {},
+      "candidate": {
+        "passed": 37
+      },
+      "changed_on_common": [],
+      "files": [
+        "revision.test_right_x_metrology",
+        "test_right_x_launch"
+      ]
+    },
+    "full_chain_unit_file": {
+      "unset_env": {
+        "active": {
+          "skipped": 31
+        },
+        "candidate": {
+          "skipped": 31
+        },
+        "changed_on_common": [],
+        "files": [
+          "revision.test_sweepick_full_chain"
+        ]
+      },
+      "pin_env": {
+        "env": "SWEEPICK_RECEIVE_DIR=<tree>/pin (what RUN_APPROVED_SESSION.py sets)",
+        "ids": 31,
+        "same_ids": true,
+        "changed": [],
+        "active": {
+          "failed": 28,
+          "skipped": 3
+        },
+        "candidate": {
+          "failed": 28,
+          "skipped": 3
+        },
+        "failure_causes": {
+          "FileNotFoundError: [Errno 2] No such file or directory: '/ho": 16,
+          "cv2 empty image": 11,
+          "AssertionError: assert ('pin' == '_codex_recei...in_final_01": 1
+        }
+      },
+      "note": "skipped without the pin; with the pin 28 fail in BOTH trees on stored run fixtures missing on this machine (SCENE.json / empty images) and 1 pin-name assertion. Same IDs, same outcomes."
+    },
+    "deploy_simulation_full": "578 IDs, every outcome equal to the candidate tree"
+  },
+  "console": {
+    "live_console_ids": 139,
+    "candidate_console_ids": 170,
+    "common": 139,
+    "live_common": {
+      "ok": 137,
+      "skipped": 1,
+      "ERROR": 1
+    },
+    "candidate_common": {
+      "ok": 139
+    },
+    "changed_on_common": {
+      "test_console17.LimitedBackend.test_current_active_native_without_the_contract_stays_disabled": [
+        "skipped",
+        "ok"
+      ],
+      "test_replay.HttpReadOnly.test_catalog_and_images_are_real_http": [
+        "ERROR",
+        "ok"
+      ]
+    },
+    "only_candidate": 31,
+    "only_candidate_outcomes": {
+      "ok": 31
+    },
+    "only_candidate_modules": [
+      "test_obs_settled_short",
+      "test_preapproval_start",
+      "test_right_x_console"
+    ],
+    "only_live": [],
+    "deploy_sim_ids": 175,
+    "deploy_sim": {
+      "ok": 173,
+      "skipped": 2
+    },
+    "deploy_sim_skipped": [
+      "test_console17.LimitedBackend.test_current_active_native_without_the_contract_stays_disabled",
+      "test_right_x_console.RightXConsole.test_active_native_without_the_contract_stays_disabled"
+    ],
+    "ran": {
+      "live": 144,
+      "candidate": 175,
+      "deploy_simulation": 175
+    },
+    "ran_vs_ids": "5 tests run twice under the same ID because one test module imports another module's test class (both trees)"
+  },
+  "browser": {
+    "items": 12,
+    "checks": [
+      "scope_catalog_13_writes_7_excluded_supported_only_with_tested_candidate",
+      "inputs_have_no_default_and_prepare_disabled_until_entered",
+      "zero_displacement_and_non_unit_axis_keep_prepare_disabled",
+      "prepared_job_shows_13_writes_start_needs_field_and_writes_ack_no_preapproval",
+      "F_request_shows_start_actual_displacement_target_collision_return_and_needs_field_confirmation",
+      "phone_width_390_no_horizontal_scroll",
+      "after_F_approval_V_is_a_new_request_with_reset_field_confirmation",
+      "native_wait_consumed_F_true_then_V_false_with_distinct_digests",
+      "full_chain_prepare_start_and_preapproval_option_unchanged",
+      "full_chain_view_request_decided_with_existing_single_click",
+      "only_fake_tmux_fuser_calls",
+      "no_page_exceptions"
+    ],
+    "page_errors": [],
+    "records": "the committed CONSOLE17 and RIGHT_X records were used as they are (RX_REAL_RECORDS=1)",
+    "digests_F_V": [
+      "dafe12b96533",
+      "df8022cb49d2"
+    ]
+  },
+  "right_x_contract_tests": {
+    "F_V_separate_approval": [
+      "test_right_x_console::test_f_and_v_are_separate_digests_and_the_f_approval_never_answers_v",
+      "test_right_x_launch::test_move_request_has_its_own_scope_and_ignores_an_earlier_decision_file"
+    ],
+    "foreign_decision_and_STOP": [
+      "test_right_x_console::test_foreign_decisions_are_ignored_but_stop_still_ends_the_wait",
+      "test_right_x_console::test_same_digest_with_another_session_or_scope_is_not_an_approval"
+    ],
+    "bus_fault_and_support_loss": [
+      "revision.test_right_x_metrology::test_stop_fault_and_unconfirmed_left_hold_raise_into_the_existing_stop_contract[5 cases]",
+      "revision.test_right_x_metrology::test_fault_inside_metrology_marks_the_record_and_stops",
+      "test_right_x_console::test_support_loss_while_waiting_raises_into_the_stop_contract"
+    ],
+    "normal_return_failure": [
+      "revision.test_right_x_metrology::test_normal_return_failure_after_metrology_keeps_the_existing_stop_contract",
+      "test_right_x_console::test_a_request_that_is_not_a_single_clear_returnable_actual_bound_move_cannot_be_approved"
+    ],
+    "all": "passed"
+  },
+  "separated_known_issues": {
+    "HttpReadOnly": "test_replay.HttpReadOnly.test_catalog_and_images_are_real_http: ERROR in the live run, ok in the candidate run; known flaky. It starts the app on the real run folder, which regenerates derived caches (RUN_RECORD/AI_REVIEW/INSPECTION.json); MANIFEST/APPROVAL/JOB/SOURCE_SNAPSHOT are not touched.",
+    "gripper_KeyError_provisional": "revision.test_sweepick_grip::test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage, stale test, both trees"
+  },
+  "changes_in_this_round": {
+    "console/CONSOLE17_TESTED_NATIVE_SHA256.json": "rebound to the candidate native (launcher 46def840, full_chain 19e7ca35) after the tests above passed",
+    "console/test_console17.py": "the closed-scope test accepts either closing reason (contract missing OR active native != tested source); the behaviour checks are unchanged",
+    "console/test_right_x_console.py": "test decision files are written as the console writes them (temporary file + replace); a non-atomic test write let the native wait read half a file 1/25 times. 60/60 after."
+  },
+  "not_changed": "STOP, Collision, Calibration, IK, move_a, gripper logic; native candidate files; past run manifests"
+}

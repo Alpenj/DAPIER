@@ -1740,11 +1740,11 @@
       "source_group": "console17_new_test",
       "source_name": "test_console17.py",
       "component": "CONSOLE",
-      "source_sha256": "f3a43541523d2e350cba19203ab11b7adaa3173920fd8d362cb6389105027f40",
-      "public_sha256": "f3a43541523d2e350cba19203ab11b7adaa3173920fd8d362cb6389105027f40",
-      "bytes": 19188,
+      "source_sha256": "0e3cb7be67b769cc34e22b64e65b07407276f953162815b1ccd9445f5816f7fd",
+      "public_sha256": "0e3cb7be67b769cc34e22b64e65b07407276f953162815b1ccd9445f5816f7fd",
+      "bytes": 19282,
       "public_copy_changed": false,
-      "source_location": "A_P0_WORKING_COPY_NOT_ACTIVE",
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE",
       "active_original_sha256": null
     },
     {
@@ -1842,11 +1842,11 @@
       "source_group": "console17",
       "source_name": "CONSOLE17_TESTED_NATIVE_SHA256.json",
       "component": "CONSOLE",
-      "source_sha256": "6b07fb4dc2c25ccf8879e0f0e7d55f942b270ae2e999d1938ae4cf2ea00d0b20",
-      "public_sha256": "5c36b1dbb884c588d624fea79b9a5bb222de3bf03da0039e80cc1e43408eadca",
-      "bytes": 2458,
+      "source_sha256": "0e94554674a30bcc566902f4bde44a40191ced178e5ab5d8734b94826c8425ff",
+      "public_sha256": "df794fd73fb0c23afed2c77538b13c99de3ad0937b046caea2cc14e6c37158ee",
+      "bytes": 2854,
       "public_copy_changed": true,
-      "source_location": "A_P0_FINAL_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "docs/console17/CONSOLE17_APPLY_SOURCE_SHA256.json",
@@ -2299,11 +2299,11 @@
       "source_group": "right_x_console_20261016",
       "source_name": "test_right_x_console.py",
       "component": "CONSOLE",
-      "source_sha256": "0c66d46353714b5d5ce6d3d2feb174f86a41fa62af77016514da5e1e0f1eb81b",
-      "public_sha256": "0c66d46353714b5d5ce6d3d2feb174f86a41fa62af77016514da5e1e0f1eb81b",
-      "bytes": 27811,
+      "source_sha256": "4dc8d52fb99d5f82a890abebe468179d8ee92f6173454f1c22a57ecd6113d306",
+      "public_sha256": "4dc8d52fb99d5f82a890abebe468179d8ee92f6173454f1c22a57ecd6113d306",
+      "bytes": 27952,
       "public_copy_changed": false,
-      "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "RIGHT_X_FINAL_WORKING_COPY_NOT_ACTIVE"
     },
     {
       "file": "console/RIGHT_X_TESTED_NATIVE_SHA256.json",
@@ -2337,6 +2337,46 @@
       "bytes": 14813,
       "public_copy_changed": true,
       "source_location": "RIGHT_X_CONSOLE_WORKING_COPY_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/right_x_final_20261016/RIGHT_X_ACTIVE_DEPLOYMENT_PLAN.md",
+      "source_group": "right_x_final_20261016",
+      "source_name": "RIGHT_X_ACTIVE_DEPLOYMENT_PLAN.md",
+      "component": "DOCS",
+      "source_sha256": "483e9b049af5d4f95be3433706b855ec28dc6376ff7fe38a09715cb5a70032b2",
+      "public_sha256": "483e9b049af5d4f95be3433706b855ec28dc6376ff7fe38a09715cb5a70032b2",
+      "bytes": 5527,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/right_x_final_20261016/RIGHT_X_ALL_SCOPES_SHA_AUDIT.json",
+      "source_group": "right_x_final_20261016",
+      "source_name": "RIGHT_X_ALL_SCOPES_SHA_AUDIT.json",
+      "component": "DOCS",
+      "source_sha256": "bfdd66b9e59d126ecf4230a2089605ef9550747c0f6472505f365a8b3ef47712",
+      "public_sha256": "bfdd66b9e59d126ecf4230a2089605ef9550747c0f6472505f365a8b3ef47712",
+      "bytes": 27469,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/right_x_final_20261016/RIGHT_X_FINAL_CROSS_REGRESSION.json",
+      "source_group": "right_x_final_20261016",
+      "source_name": "RIGHT_X_FINAL_CROSS_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "9dee5ce80e05a4139d68a336239e81041ec605ec15977bafbd4782cb182d0e6a",
+      "public_sha256": "9dee5ce80e05a4139d68a336239e81041ec605ec15977bafbd4782cb182d0e6a",
+      "bytes": 12700,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/right_x_final_20261016/RIGHT_X_INTEGRATION_HEAD.md",
+      "source_group": "right_x_final_20261016",
+      "source_name": "RIGHT_X_INTEGRATION_HEAD.md",
+      "component": "DOCS",
+      "source_sha256": "c945c741f264fd48f44c045226c4826278933a39cf82d876e480a37d75ed3b5a",
+      "public_sha256": "c945c741f264fd48f44c045226c4826278933a39cf82d876e480a37d75ed3b5a",
+      "bytes": 2444,
+      "public_copy_changed": false
     }
   ],
   "console17": {

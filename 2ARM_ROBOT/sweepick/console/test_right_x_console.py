@@ -76,6 +76,12 @@ class FakeOwner:
         time.sleep(min(float(seconds), 0.02))
 
 
+def write_decision(out, doc):
+    """As the console writes it (temporary file, then replace): the native wait never reads a half-written file."""
+    temporary = Path(out) / 'OBSERVATION_MOVE_APPROVAL.tmp'
+    temporary.write_text(json.dumps(doc)); temporary.replace(Path(out) / 'OBSERVATION_MOVE_APPROVAL.json')
+
+
 class Waiter:
     """One native authorize_observation_plan call in a thread, as the launcher runs it for an X move."""
     def __init__(self, runner, owner, plan, raw, candidate, scope=RIGHT_X_MOVE):
@@ -320,7 +326,7 @@ class RightXConsole(unittest.TestCase):
         p = self.pending()
         for foreign in ({'approved': True, 'request_sha256': 'f' * 64, 'scope': RIGHT_X_MOVE, 'session_out': str(out)},   # another digest
                         {'approved': True, 'request_sha256': p['request_sha256'][::-1], 'scope': VIEW_MOVE, 'session_out': str(out)}):
-            (out / 'OBSERVATION_MOVE_APPROVAL.json').write_text(json.dumps(foreign))
+            write_decision(out, foreign)
             self.assertFalse(w.join(0.2))                                            # ignored: still waiting, nothing moved
             self.assertEqual(self.control.status()['active']['pending_view']['request_sha256'], p['request_sha256'])  # still shown
         self.assertTrue(self.control.status()['can_stop'])
@@ -342,9 +348,8 @@ class RightXConsole(unittest.TestCase):
                 raw = actual(len(wrong)); owner = FakeOwner(out, raw)
                 w = Waiter(runner, owner, x_plan(raw), raw, rx.move_candidate('F', dict(INPUTS, verify_from='F')))
                 p = self.pending(previous=getattr(self, '_last', None)); self._last = p['request_sha256']
-                (out / 'OBSERVATION_MOVE_APPROVAL.json').write_text(json.dumps(dict({'approved': True, 'request_sha256': p['request_sha256'],
-                                                                                      'scope': RIGHT_X_MOVE, 'session_out': str(out)}, **wrong)))
-                self.assertTrue(w.join()); self.assertIs(w.result, False)             # ends the wait as not approved (no move)
+                write_decision(out, dict({'approved': True, 'request_sha256': p['request_sha256'], 'scope': RIGHT_X_MOVE, 'session_out': str(out)}, **wrong))
+                self.assertTrue(w.join()); self.assertIs(w.result, False, w.error)    # ends the wait as not approved (no move)
 
     def test_support_loss_while_waiting_raises_into_the_stop_contract(self):
         job, runner, rx = self.running()
