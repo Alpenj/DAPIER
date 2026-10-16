@@ -1,0 +1,62 @@
+{
+  "schema": "sweepick.pick-hold-transport-place-regression.v1",
+  "date": "2026-10-16",
+  "source_kind": "MOCK/OFFLINE",
+  "scope": "contract layer only (sweepick_upper_body.py) with a mock adapter. No device, no native session, no base, no simulation.",
+  "result": "OK",
+  "tests": [
+    "test_a_pick_from_the_past_is_not_a_held_confirmation : ok",
+    "test_authorization_is_the_operators_for_this_task_and_this_source : ok",
+    "test_base_moving_stop_or_fault_blocks_pick_place_and_arm_motion : ok",
+    "test_ik_or_collision_refusal_and_readback_mismatch : ok",
+    "test_lift_alone_is_not_completion_and_an_open_ack_alone_is_not_a_disposal : ok",
+    "test_observations_and_parks_of_another_place_or_time_are_not_reused : ok",
+    "test_real_mode_with_only_the_unverified_right_arm_fit_never_moves : ok",
+    "test_stop_and_faults_at_each_stage_keep_unknown_and_block_the_base : ok",
+    "test_the_whole_mock_task_and_no_mission_completion_by_the_upper_body : ok",
+    "test_time_of_check_vs_time_of_use : ok",
+    "test_transport_readback_loss_is_never_success_and_asks_the_base_to_block : ok",
+    "test_unverified_transport_pose_is_not_transport_ready : ok",
+    "test_base_view_ignores_other_tasks_old_sequences_and_clock_changes : ok",
+    "test_every_message_carries_the_required_identity_and_a_bare_arrived_is_refused : ok",
+    "test_both_fit_are_compared_by_planner_travel_not_guessed : ok",
+    "test_both_refused_or_unknown_is_arm_not_ready : ok",
+    "test_left_fit_right_unfit : ok",
+    "test_right_fit_left_unfit_in_mock_and_right_is_never_REAL_eligible_yet : ok"
+  ],
+  "directive_cases": {
+    "select: left fit / right unfit": "SelectArm.test_left_fit_right_unfit",
+    "select: right fit / left unfit (+ right not REAL-eligible)": "SelectArm.test_right_fit_left_unfit_in_mock_and_right_is_never_REAL_eligible_yet",
+    "select: both fit": "SelectArm.test_both_fit_are_compared_by_planner_travel_not_guessed",
+    "select: both refused": "SelectArm.test_both_refused_or_unknown_is_arm_not_ready",
+    "BASE_MOVING / STOP / FAULT blocks pick, place, arm motion": "Mission.test_base_moving_stop_or_fault_blocks_pick_place_and_arm_motion",
+    "transport readback loss -> no success + base block request": "Mission.test_transport_readback_loss_is_never_success_and_asks_the_base_to_block",
+    "previous-place observation / arm-ready not reused": "Mission.test_observations_and_parks_of_another_place_or_time_are_not_reused, Mission.test_a_pick_from_the_past_is_not_a_held_confirmation",
+    "LIFT alone not COMPLETED; OPEN sent alone not disposal": "Mission.test_lift_alone_is_not_completion_and_an_open_ack_alone_is_not_a_disposal, Mission.test_the_whole_mock_task_and_no_mission_completion_by_the_upper_body",
+    "STOP / gripper loss / status fault / external owner per stage": "Mission.test_stop_and_faults_at_each_stage_keep_unknown_and_block_the_base",
+    "camera stale": "Mission.test_observations_and_parks_of_another_place_or_time_are_not_reused",
+    "q/receipt mismatch": "Mission.test_ik_or_collision_refusal_and_readback_mismatch",
+    "IK / collision refusal": "Mission.test_ik_or_collision_refusal_and_readback_mismatch",
+    "time-of-check vs time-of-use": "Mission.test_time_of_check_vs_time_of_use",
+    "new session approval mismatch / open FAULT / base-sourced approval": "Mission.test_authorization_is_the_operators_for_this_task_and_this_source",
+    "unverified transport pose": "Mission.test_unverified_transport_pose_is_not_transport_ready",
+    "REAL with only the unverified right arm": "Mission.test_real_mode_with_only_the_unverified_right_arm_fit_never_moves",
+    "schema / ordering / clock domain": "Schema.*"
+  },
+  "mutation_check": "six conditions disabled one at a time (freshness ordering, REAL eligibility, base block, open-ACK-as-disposal, readback loss, authorization task): every one makes at least one test fail; source restored byte-identical",
+  "not_tested_here": [
+    "the REAL adapter (native pick01/move_a stage path) — not written; voltage/current values are reported by the existing executor as faults and are not re-thresholded here",
+    "simulation of the mounted arms, cameras, payload and transport pose (collision, range, vibration) — not run",
+    "the base team side — their messages are mocked from the draft schema"
+  ],
+  "source_sha256": {
+    "sweepick_upper_body.py": "f88b1664e4cf9b9384d72a1d61e83c4443c4a498b13ff660843058fa381ac86d",
+    "test_sweepick_upper_body.py": "9a27307d3a943fbce0a8b4f64489ae033282fb896853d72782cf7e73a41b34b4"
+  },
+  "unchanged_sources_sha256": {
+    "native active RUN_APPROVED_SESSION.py": "9578a1ee8dd1a9cd122b28c4ddc526b306468f8b23161a157b3218388dad9581",
+    "native active revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db",
+    "native active revision/sweepick_move_a.py": "030d37ee20ce26396b7f40afee1e1817dae8f8a17a4e06af1f9959815af35a05",
+    "live console control.py": "840cb87c910f874cd8723055f227f56840a7333f508835bd88c2987114fc08b6"
+  }
+}

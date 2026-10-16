@@ -2377,6 +2377,72 @@
       "public_sha256": "c945c741f264fd48f44c045226c4826278933a39cf82d876e480a37d75ed3b5a",
       "bytes": 2444,
       "public_copy_changed": false
+    },
+    {
+      "file": "upper_body/sweepick_upper_body.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "sweepick_upper_body.py",
+      "component": "UPPER_BODY",
+      "source_sha256": "f88b1664e4cf9b9384d72a1d61e83c4443c4a498b13ff660843058fa381ac86d",
+      "public_sha256": "f88b1664e4cf9b9384d72a1d61e83c4443c4a498b13ff660843058fa381ac86d",
+      "bytes": 25567,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/test_sweepick_upper_body.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "test_sweepick_upper_body.py",
+      "component": "UPPER_BODY",
+      "source_sha256": "9a27307d3a943fbce0a8b4f64489ae033282fb896853d72782cf7e73a41b34b4",
+      "public_sha256": "9a27307d3a943fbce0a8b4f64489ae033282fb896853d72782cf7e73a41b34b4",
+      "bytes": 16540,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/upper_body_20261016/ARM_SELECT_DECISION.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "ARM_SELECT_DECISION.json",
+      "component": "DOCS",
+      "source_sha256": "ce89ce6f8f819781bcde29fe03e474ac5a70b3809abd0302268f38b6cfe26713",
+      "public_sha256": "ce89ce6f8f819781bcde29fe03e474ac5a70b3809abd0302268f38b6cfe26713",
+      "bytes": 18301,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/upper_body_20261016/FIELD_READINESS_GATES.md",
+      "source_group": "upper_body_20261016",
+      "source_name": "FIELD_READINESS_GATES.md",
+      "component": "DOCS",
+      "source_sha256": "76a6fe7051386198fb7456b8ab9f20052c122af57024c5a5d4aee35d9255d419",
+      "public_sha256": "76a6fe7051386198fb7456b8ab9f20052c122af57024c5a5d4aee35d9255d419",
+      "bytes": 4404,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/upper_body_20261016/PICK_HOLD_TRANSPORT_PLACE_REGRESSION.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "PICK_HOLD_TRANSPORT_PLACE_REGRESSION.json",
+      "component": "DOCS",
+      "source_sha256": "20605585ecd9a928a65baa7f5b70048fa90f9964bd5ed30ec34ff9bae9cf3d55",
+      "public_sha256": "20605585ecd9a928a65baa7f5b70048fa90f9964bd5ed30ec34ff9bae9cf3d55",
+      "bytes": 5023,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/upper_body_20261016/UPPER_BODY_INTERFACE_CONTRACT.md",
+      "source_group": "upper_body_20261016",
+      "source_name": "UPPER_BODY_INTERFACE_CONTRACT.md",
+      "component": "DOCS",
+      "source_sha256": "59a83e98e99a412d6fe38d771e71d53e4df1dc9640feecfe9306275e26a15d70",
+      "public_sha256": "59a83e98e99a412d6fe38d771e71d53e4df1dc9640feecfe9306275e26a15d70",
+      "bytes": 7131,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     }
   ],
   "console17": {

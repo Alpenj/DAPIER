@@ -1,0 +1,43 @@
+# FIELD_READINESS_GATES — 상체 실물 START 전 관문 (2026-10-16)
+
+상태: **현재 모든 실물 경로는 BLOCKED.** 이 문서는 무엇이 있어야 열리는지를 정리한다.
+- 무장치 시험 통과만으로는 어느 관문도 열리지 않는다.
+- '주행 중 물체 들기'는 새로운 물리 위험이다. 별도 현장 승인이 필요하다.
+- 시뮬레이션 성공은 실물 안정성·토크·파지력의 증명이 아니다.
+
+| # | 관문 | 지금 상태 | 열리는 조건 |
+|---|---|---|---|
+| G1 | 기존 FAULT 운영자 복구 | **BLOCKED**: 라이브 콘솔 `20261016_121735_b9241e` FAULT(그리퍼 닫기, closing-sweep 인증 불일치)가 수동 복구 대기 | 운영자가 팔·물체를 지지하고 전원·토크 상태를 확인한 뒤 콘솔에서 복구 확인 |
+| G2 | 베이스 안정·장착·전원·배선 | **UNKNOWN**: TurtleBot3 장착 뒤 확인 기록 없음 | 베이스 정지 상태에서 장착 볼트·케이블 경로·서보 전원 공급을 운영자가 확인하고 기록 |
+| G3 | 팔별 camera + calibration + gripper binding | **UNKNOWN**: 책상 버전의 udev·가림 시험은 있으나 장착 후 USB 경로가 같은지 확인 안 됨 | 장착 후 읽기 전용 장치 확인. USB 경로가 바뀌었으면 손목 가림 시험(`wrist_cover_check.py`)을 다시 한다. calibration 파일은 덮어쓰지 않는다 |
+| G4 | 장착 후 기구 적합성 | **UNKNOWN**: 그리퍼 위치, 손목 카메라 FOV, 상단 카메라 관측, 팔–차체 간섭이 책상과 다를 수 있음 | 장착 상태의 모델(팔 + 베이스 + 탑재체) 충돌 장면을 만들고, 현재 관절 실측과 비교 |
+| G5 | 왼팔 PICK/LIFT 재검증 | **BLOCKED**: 책상 실물 근거만 있음(PICK02 run14, 콘솔 run들). 장착 후 실물 0회. pre-descent FOV는 source-bound context가 없어 fail-closed UNKNOWN(`1cd0444`) | G1–G4 뒤 기존 LEFT_START_TO_LIFT 범위로 감독하 1회(이번 범위의 별도 승인) |
+| G6 | 운반 자세(SECURE_TRANSPORT_POSE) | **BLOCKED**: 검증된 운반 자세 없음 | 자세 후보를 장착 충돌 모델에서 계획한다. 이어서 무부하 실물 왕복, 부하 상태 보유 readback, 그리퍼 보유 증거 계약(B팀)을 갖춘다 |
+| G7 | 운반 중 지속 보유 | **BLOCKED**: 현재 LEFT_START_TO_LIFT는 LIFT 뒤 토크 ON 보유 + 수동 복구로 끝남 | 단일 Owner 유지, 재시작 시 보유 증거, 전원 상실 시 동작, 운반 중 readback 주기, STOP·복구 계약을 설계하고 Fake로 검증한 뒤 정지 상태에서 실물 보유 시험(베이스는 움직이지 않음) |
+| G8 | 2번 장소 투입(PLACE·RELEASE) | **BLOCKED**: 투입 영역 관측, 받침·여유 공간 판정, 분리·안착 관측 계약 없음(B팀) | B팀 검출·증거 계약, 투입 접근 자세 계획, 통제된 개방, 분리 관측, 후퇴 |
+| G9 | 베이스 인터페이스 | **BLOCKED**: 스키마 초안만 있음(`UPPER_BODY_INTERFACE_CONTRACT.md`), 베이스 팀 미합의 | 토픽·서비스 이름, `clock_id` 정의, 정지 증거 형식, STOP 경로를 합의하고 Mock 브리지로 시험 |
+| G10 | 오른팔 독립 PICK | **BLOCKED** (`eligible_for_REAL=false`): 실물 독립 PICK 0회. RECEIVE 결과는 PICK으로 재분류하지 않음 | 왼팔과 같은 관문(G1–G5)을 오른팔 손목 카메라·그리퍼로 따로 통과 |
+| G11 | 이번 범위의 별도 승인 | **없음** | `OPERATOR_AUTHORIZATION`(scope `UPPER_BODY_PICK_TRANSPORT_PLACE`, 이번 Native Manifest SHA, 감독, 복구 상태)과 사람의 STOP 대기 |
+
+## 진행 순서 제안
+
+1. **지금 할 수 있는 무장치 작업**
+   - G6·G7·G8의 Fake 계약
+   - 장착 충돌 모델(G4)
+   - 베이스 팀과 G9 합의
+2. **현장 확인** (G1 → G2 → G3)
+3. **왼팔 실물 재검증** (G5)
+4. **정지 상태에서 운반 자세와 보유 시험** (G6, G7). 베이스는 움직이지 않는다.
+5. **베이스 팀과 Mock 브리지 결합 뒤 주행 포함 시험.** 별도 승인이 필요하다.
+
+## 이번 작업에서 하지 않은 것
+
+- Nav2·RTAB-Map·바퀴 주행·도킹 개발
+- ROS 베이스 모터 제어
+- 오른팔 RECEIVE 강제 연동
+- 기존 성공 기록을 모바일 실물 성공으로 선언하는 것
+- 자동 낙하·방출
+- 모터 제한값 설정
+- Calibration·실행 기록 덮어쓰기
+- 실물 START
+- 활성 Native·Console 배포, main 병합

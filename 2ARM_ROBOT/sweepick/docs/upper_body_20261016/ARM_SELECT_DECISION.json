@@ -1,0 +1,582 @@
+{
+  "schema": "sweepick.arm-select-decision.v1",
+  "date": "2026-10-16",
+  "source_kind": "MOCK/OFFLINE",
+  "rule": "each arm is judged on its own evidence in this order: verified_capability -> mechanical_state -> approach_ik -> collision_and_view -> grasp_room -> transport_pose -> place_pose; the first check that is not True decides that arm (False = REFUSED, missing = UNKNOWN). Only when BOTH are eligible are they compared, by the approach joint travel the existing planner reports; a tie keeps the arm with REAL evidence (left). No straight-line-distance choice.",
+  "real_mode": "verified_capability needs eligible_for_REAL=true; the right arm is false until an independent RIGHT PICK is verified on the real arm",
+  "mock_scenarios": {
+    "left_fit_right_unfit": {
+      "MOCK": {
+        "selected": "left",
+        "decision": "SELECTED",
+        "mode": "MOCK",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": true
+              },
+              "transport_pose": {
+                "ok": true
+              },
+              "place_pose": {
+                "ok": true
+              }
+            },
+            "eligible": true,
+            "decided_by": "all checks",
+            "status": "ELIGIBLE"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": false,
+                "why": "right wrist sees the block cut"
+              }
+            },
+            "eligible": false,
+            "decided_by": "collision_and_view",
+            "status": "REFUSED",
+            "why": "right wrist sees the block cut"
+          }
+        },
+        "why": "only the left arm passed every check"
+      },
+      "REAL": {
+        "selected": "left",
+        "decision": "SELECTED",
+        "mode": "REAL",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": true
+              },
+              "transport_pose": {
+                "ok": true
+              },
+              "place_pose": {
+                "ok": true
+              }
+            },
+            "eligible": true,
+            "decided_by": "all checks",
+            "status": "ELIGIBLE"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": false,
+                "why": "right wrist sees the block cut"
+              }
+            },
+            "eligible": false,
+            "decided_by": "collision_and_view",
+            "status": "REFUSED",
+            "why": "right wrist sees the block cut"
+          }
+        },
+        "why": "only the left arm passed every check"
+      }
+    },
+    "right_fit_left_unfit": {
+      "MOCK": {
+        "selected": "right",
+        "decision": "SELECTED",
+        "mode": "MOCK",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": false,
+                "why": "left FAULT not recovered"
+              }
+            },
+            "eligible": false,
+            "decided_by": "mechanical_state",
+            "status": "REFUSED",
+            "why": "left FAULT not recovered"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": false
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": true
+              },
+              "transport_pose": {
+                "ok": true
+              },
+              "place_pose": {
+                "ok": true
+              }
+            },
+            "eligible": true,
+            "decided_by": "all checks",
+            "status": "ELIGIBLE"
+          }
+        },
+        "why": "only the right arm passed every check"
+      },
+      "REAL": {
+        "selected": null,
+        "decision": "ARM_NOT_READY",
+        "mode": "REAL",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": false,
+                "why": "left FAULT not recovered"
+              }
+            },
+            "eligible": false,
+            "decided_by": "mechanical_state",
+            "status": "REFUSED",
+            "why": "left FAULT not recovered"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": false,
+                "eligible_for_REAL": false,
+                "why": "not verified on the real arm: eligible_for_REAL=false"
+              }
+            },
+            "eligible": false,
+            "decided_by": "verified_capability",
+            "status": "REFUSED",
+            "why": "not verified on the real arm: eligible_for_REAL=false"
+          }
+        },
+        "why": "left: mechanical_state REFUSED (left FAULT not recovered); right: verified_capability REFUSED (not verified on the real arm: eligible_for_REAL=false)"
+      }
+    },
+    "both_fit": {
+      "MOCK": {
+        "selected": "right",
+        "decision": "SELECTED",
+        "mode": "MOCK",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 300
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": true
+              },
+              "transport_pose": {
+                "ok": true
+              },
+              "place_pose": {
+                "ok": true
+              }
+            },
+            "eligible": true,
+            "decided_by": "all checks",
+            "status": "ELIGIBLE"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": false
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 120
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": true
+              },
+              "transport_pose": {
+                "ok": true
+              },
+              "place_pose": {
+                "ok": true
+              }
+            },
+            "eligible": true,
+            "decided_by": "all checks",
+            "status": "ELIGIBLE"
+          }
+        },
+        "comparison": {
+          "left": 300,
+          "right": 120
+        },
+        "why": "both eligible: the right arm needs less approach joint travel by the existing planner"
+      },
+      "REAL": {
+        "selected": "left",
+        "decision": "SELECTED",
+        "mode": "REAL",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 300
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": true
+              },
+              "transport_pose": {
+                "ok": true
+              },
+              "place_pose": {
+                "ok": true
+              }
+            },
+            "eligible": true,
+            "decided_by": "all checks",
+            "status": "ELIGIBLE"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": false,
+                "eligible_for_REAL": false,
+                "why": "not verified on the real arm: eligible_for_REAL=false"
+              }
+            },
+            "eligible": false,
+            "decided_by": "verified_capability",
+            "status": "REFUSED",
+            "why": "not verified on the real arm: eligible_for_REAL=false"
+          }
+        },
+        "why": "only the left arm passed every check"
+      }
+    },
+    "both_refused": {
+      "MOCK": {
+        "selected": null,
+        "decision": "ARM_NOT_READY",
+        "mode": "MOCK",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": false,
+                "why": "IK: no solution"
+              }
+            },
+            "eligible": false,
+            "decided_by": "approach_ik",
+            "status": "REFUSED",
+            "why": "IK: no solution"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": false,
+                "why": "pad room below image resolution"
+              }
+            },
+            "eligible": false,
+            "decided_by": "grasp_room",
+            "status": "REFUSED",
+            "why": "pad room below image resolution"
+          }
+        },
+        "why": "left: approach_ik REFUSED (IK: no solution); right: grasp_room REFUSED (pad room below image resolution)"
+      },
+      "REAL": {
+        "selected": null,
+        "decision": "ARM_NOT_READY",
+        "mode": "REAL",
+        "arms": {
+          "left": {
+            "side": "left",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": false,
+                "why": "IK: no solution"
+              }
+            },
+            "eligible": false,
+            "decided_by": "approach_ik",
+            "status": "REFUSED",
+            "why": "IK: no solution"
+          },
+          "right": {
+            "side": "right",
+            "checks": {
+              "verified_capability": {
+                "ok": true,
+                "eligible_for_REAL": true
+              },
+              "mechanical_state": {
+                "ok": true
+              },
+              "approach_ik": {
+                "ok": true,
+                "joint_travel_ticks": 100
+              },
+              "collision_and_view": {
+                "ok": true
+              },
+              "grasp_room": {
+                "ok": false,
+                "why": "pad room below image resolution"
+              }
+            },
+            "eligible": false,
+            "decided_by": "grasp_room",
+            "status": "REFUSED",
+            "why": "pad room below image resolution"
+          }
+        },
+        "why": "left: approach_ik REFUSED (IK: no solution); right: grasp_room REFUSED (pad room below image resolution)"
+      }
+    }
+  },
+  "current_real_state": {
+    "evidence": {
+      "left": {
+        "verified_capability": {
+          "ok": true,
+          "eligible_for_REAL": true,
+          "why": "REAL PICK/LIFT records on the DESK setup (PICK02 run14 2026-10-08; console runs 2026-10-14..16 reached ready_to_close); not yet on the TurtleBot mount"
+        },
+        "mechanical_state": {
+          "ok": null,
+          "why": "mounted on the TurtleBot3: mount, wiring, power and wrist camera binding not re-verified; live console job 20261016_121735_b9241e is FAULT awaiting operator recovery"
+        },
+        "approach_ik": {
+          "ok": null,
+          "why": "no planner run from a mounted-pose observation yet"
+        },
+        "collision_and_view": {
+          "ok": null,
+          "why": "arm-to-base/payload collision model of the mounted body not built; pre-descent FOV is fail-closed UNKNOWN without source-bound context (1cd0444)"
+        },
+        "grasp_room": {
+          "ok": null,
+          "why": "pending a mounted observation"
+        },
+        "transport_pose": {
+          "ok": null,
+          "why": "no verified transport pose exists"
+        },
+        "place_pose": {
+          "ok": null,
+          "why": "no verified disposal approach exists"
+        }
+      },
+      "right": {
+        "verified_capability": {
+          "ok": true,
+          "eligible_for_REAL": false,
+          "why": "independent RIGHT PICK never run on the real arm; earlier RIGHT RECEIVE results are not reclassified as a PICK"
+        },
+        "mechanical_state": {
+          "ok": null,
+          "why": "as left"
+        },
+        "approach_ik": {
+          "ok": null,
+          "why": "not run"
+        },
+        "collision_and_view": {
+          "ok": null,
+          "why": "right pad X/Y, yaw UNKNOWN (B 0042f8c)"
+        },
+        "grasp_room": {
+          "ok": null,
+          "why": "not run"
+        },
+        "transport_pose": {
+          "ok": null,
+          "why": "none"
+        },
+        "place_pose": {
+          "ok": null,
+          "why": "none"
+        }
+      }
+    },
+    "decision": {
+      "selected": null,
+      "decision": "ARM_NOT_READY",
+      "mode": "REAL",
+      "arms": {
+        "left": {
+          "side": "left",
+          "checks": {
+            "verified_capability": {
+              "ok": true,
+              "eligible_for_REAL": true,
+              "why": "REAL PICK/LIFT records on the DESK setup (PICK02 run14 2026-10-08; console runs 2026-10-14..16 reached ready_to_close); not yet on the TurtleBot mount"
+            },
+            "mechanical_state": {
+              "ok": null,
+              "why": "mounted on the TurtleBot3: mount, wiring, power and wrist camera binding not re-verified; live console job 20261016_121735_b9241e is FAULT awaiting operator recovery"
+            }
+          },
+          "eligible": false,
+          "decided_by": "mechanical_state",
+          "status": "UNKNOWN",
+          "why": "mounted on the TurtleBot3: mount, wiring, power and wrist camera binding not re-verified; live console job 20261016_121735_b9241e is FAULT awaiting operator recovery"
+        },
+        "right": {
+          "side": "right",
+          "checks": {
+            "verified_capability": {
+              "ok": false,
+              "eligible_for_REAL": false,
+              "why": "independent RIGHT PICK never run on the real arm; earlier RIGHT RECEIVE results are not reclassified as a PICK"
+            }
+          },
+          "eligible": false,
+          "decided_by": "verified_capability",
+          "status": "REFUSED",
+          "why": "independent RIGHT PICK never run on the real arm; earlier RIGHT RECEIVE results are not reclassified as a PICK"
+        }
+      },
+      "why": "left: mechanical_state UNKNOWN (mounted on the TurtleBot3: mount, wiring, power and wrist camera binding not re-verified; live console job 20261016_121735_b9241e is FAULT awaiting operator recovery); right: verified_capability REFUSED (independent RIGHT PICK never run on the real arm; earlier RIGHT RECEIVE results are not reclassified as a PICK)"
+    },
+    "note": "an assessment from records, no device read: with the arms mounted on the TurtleBot3 nothing after verified_capability is evidenced yet, so the REAL decision is ARM_NOT_READY"
+  }
+}
