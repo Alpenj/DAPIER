@@ -1,0 +1,587 @@
+{
+  "schema": "sweepick.left-close-fov-root-cause.v1",
+  "run": "20261016_112020_4d7c2b",
+  "source_kind": "REAL (stored files, read only)",
+  "device_access": false,
+  "native_sha_kept": {
+    "RUN_APPROVED_SESSION.py": "9578a1ee (active)",
+    "revision/sweepick_pick01.py": "2228d159cad69dbe4f89da829a56d51a6841efb61479c946c56e78138d0a62db"
+  },
+  "verdict": {
+    "what_failed": "ready_to_close=false at 02_descended: wrist_offset unreadable because wrist_object.touches_border=true (edges [0, 262] on row 227)",
+    "real_block_cut_by_frame": true,
+    "evidence_for_real_cut": [
+      "one red component only (area 29303 px); the right jaw (dark, x >= 265) and the white background are outside it",
+      "rows 102..200 lie inside the image ([54,166] .. [7,255]); the left edge reaches x=0 from row ~205 to 227 and 20 px of column 0 are red",
+      "by eye on the saved frame: the block top face fills the lower image and its near-left corner runs past the left border; the left jaw tip seen in the two earlier looks is hidden"
+    ],
+    "mis_segmentation_with_gripper_shadow_background": false,
+    "clipped_centroid_used": false,
+    "clipped_centre_note": "centre 131 on row 227 is of a clipped region; it is not used as the block centre here either",
+    "why_it_clipped": [
+      "the pre-grasp look passed the existing centring check at -5.15 mm (allowed 5.56 mm: pad room of the 3492-tick opening less 1 mm image uncertainty), so no re-centring ran",
+      "at the final height the block spans 249..274 px of the 320 px image in stored successes; the jaw midline is 152..155 px (left of the image centre 159.5), so the left slack is the smaller one",
+      "every stored REAL success entered the final descent from a pre-grasp error inside [-2.80, +2.87] mm; the eight successes whose first look failed the centring check were re-centred by the existing visual_align first",
+      "the four earlier runs with the wide 5.6 mm allowance (092942, 112218, 140844 and this run) differ in one point: only this run passed the first look inside the allowance"
+    ],
+    "cause_class": "ACCEPTANCE_WIDER_THAN_FINAL_VIEW: the existing centring allowance (pad room) admits lateral errors that the final-height wrist view cannot keep inside the image",
+    "not_the_cause_checked": [
+      "A->final lateral change: -0.25..-1.67 mm in all 16 successes; not explained by the measured joints (model tool_along_jaw changes are small and of both signs); perspective of the measuring row (row 140 -> 230) is a HYPOTHESIS, not confirmed",
+      "descend joint residual of this run: shoulder_pan -6 ticks (successes -7..+5) and wrist_flex +11 ticks, 1 tick beyond the successes (+5..+10); its effect on the image is NOT established",
+      "gripper opening: reference tick 3492 here vs 3497 / 3501 / 3501 in the wide-allowance successes"
+    ],
+    "unconfirmed": [
+      "the physical lateral offset at the final pose (the image is clipped there)",
+      "why the image moves left during the final descent"
+    ]
+  },
+  "looks": {
+    "01_pregrasp_0": {
+      "recorded_wrist_object": {
+        "visible": true,
+        "edges_px": [
+          53,
+          213
+        ],
+        "row": 135,
+        "centre_px": 133.0,
+        "width_px": 160,
+        "mm_per_px": 0.25,
+        "far_edge_slope_deg": 10.45154578507725,
+        "touches_border": false,
+        "stable": true
+      },
+      "offline_rerun_on_saved_jpg": {
+        "visible": true,
+        "edges_px": [
+          53,
+          214
+        ],
+        "row": 123,
+        "centre_px": 133.5,
+        "width_px": 161,
+        "mm_per_px": 0.2484472049689441,
+        "far_edge_slope_deg": 10.468712445041858,
+        "touches_border": false
+      },
+      "red_components": [
+        {
+          "label": 1,
+          "area": 22159,
+          "bbox": [
+            48,
+            47,
+            167,
+            193
+          ]
+        },
+        {
+          "label": 2,
+          "area": 457,
+          "bbox": [
+            106,
+            187,
+            30,
+            27
+          ]
+        }
+      ],
+      "mask_rows": [
+        47,
+        239
+      ],
+      "border_contact_px": {
+        "left_col": 0,
+        "right_col": 0,
+        "bottom_row": 17
+      },
+      "width_by_row": {
+        "50": [
+          80,
+          112
+        ],
+        "60": [
+          75,
+          162
+        ],
+        "70": [
+          70,
+          202
+        ],
+        "80": [
+          64,
+          205
+        ],
+        "90": [
+          59,
+          207
+        ],
+        "100": [
+          54,
+          209
+        ],
+        "110": [
+          53,
+          211
+        ],
+        "120": [
+          53,
+          213
+        ],
+        "123": [
+          53,
+          214
+        ],
+        "130": [
+          53,
+          213
+        ],
+        "140": [
+          53,
+          211
+        ],
+        "150": [
+          53,
+          208
+        ],
+        "160": [
+          50,
+          205
+        ],
+        "170": [
+          50,
+          203
+        ],
+        "180": [
+          49,
+          197
+        ],
+        "190": [
+          49,
+          195
+        ],
+        "200": [
+          49,
+          193
+        ],
+        "210": [
+          48,
+          191
+        ],
+        "220": [
+          50,
+          179
+        ],
+        "230": [
+          80,
+          175
+        ]
+      },
+      "jaw_tips_in_frame": {
+        "left_px": 107,
+        "right_px": 257
+      },
+      "wrist_offset": {
+        "readable": true,
+        "offset_px": -21.0,
+        "offset_mm": -5.25,
+        "uncertainty_mm": 1.0,
+        "reference_confirmed_in_this_frame": true,
+        "confirmed_by": [
+          "right",
+          "gripper reading unchanged since the reference (3492 vs 3492 ticks)"
+        ],
+        "tips_in_this_frame": {
+          "left_px": 107,
+          "right_px": 257
+        },
+        "tips_hidden": false
+      },
+      "lateral_error_mm": -5.153991379692825,
+      "allowed_mm": 5.557731526629558,
+      "check": "ready_to_descend",
+      "ok": true,
+      "why": "the block sits between the jaws within the room the pad meshes leave, in the image and by the measured joints",
+      "left_ticks": {
+        "shoulder_pan": 2376.0,
+        "shoulder_lift": 2267.0,
+        "elbow_flex": 1931.0,
+        "wrist_flex": 3036.0,
+        "wrist_roll": 2513.0,
+        "gripper": 3492.0
+      },
+      "wrist_frame_host_time_local": "11:21:16.754",
+      "wrist_frames": [
+        {
+          "n": 1464,
+          "recv_monotonic_s": 184218.76773295
+        },
+        {
+          "n": 1465,
+          "recv_monotonic_s": 184218.799730964
+        },
+        {
+          "n": 1466,
+          "recv_monotonic_s": 184218.831752343
+        }
+      ],
+      "image_sha256": "969f1f5c5662ad9ae21823b0caaad86de4311533f254ee5b9f93c54b6cea4afd"
+    },
+    "01a_above_block_0": {
+      "recorded_wrist_object": {
+        "visible": true,
+        "edges_px": [
+          42,
+          239
+        ],
+        "row": 141,
+        "centre_px": 140.5,
+        "width_px": 197,
+        "mm_per_px": 0.20304568527918782,
+        "far_edge_slope_deg": 7.21344653477873,
+        "touches_border": false,
+        "stable": true
+      },
+      "offline_rerun_on_saved_jpg": {
+        "visible": true,
+        "edges_px": [
+          42,
+          239
+        ],
+        "row": 147,
+        "centre_px": 140.5,
+        "width_px": 197,
+        "mm_per_px": 0.20304568527918782,
+        "far_edge_slope_deg": 7.149404177827509,
+        "touches_border": false
+      },
+      "red_components": [
+        {
+          "label": 1,
+          "area": 26489,
+          "bbox": [
+            41,
+            56,
+            199,
+            184
+          ]
+        },
+        {
+          "label": 2,
+          "area": 286,
+          "bbox": [
+            112,
+            226,
+            28,
+            14
+          ]
+        }
+      ],
+      "mask_rows": [
+        56,
+        239
+      ],
+      "border_contact_px": {
+        "left_col": 0,
+        "right_col": 0,
+        "bottom_row": 46
+      },
+      "width_by_row": {
+        "60": [
+          79,
+          121
+        ],
+        "70": [
+          74,
+          211
+        ],
+        "80": [
+          69,
+          223
+        ],
+        "90": [
+          63,
+          226
+        ],
+        "100": [
+          57,
+          228
+        ],
+        "110": [
+          52,
+          230
+        ],
+        "120": [
+          42,
+          232
+        ],
+        "130": [
+          41,
+          234
+        ],
+        "140": [
+          42,
+          238
+        ],
+        "147": [
+          42,
+          239
+        ],
+        "150": [
+          42,
+          239
+        ],
+        "160": [
+          44,
+          237
+        ],
+        "170": [
+          45,
+          235
+        ],
+        "180": [
+          44,
+          232
+        ],
+        "190": [
+          45,
+          229
+        ],
+        "200": [
+          50,
+          224
+        ],
+        "210": [
+          66,
+          222
+        ],
+        "220": [
+          78,
+          217
+        ],
+        "230": [
+          82,
+          215
+        ]
+      },
+      "jaw_tips_in_frame": {
+        "left_px": 79,
+        "right_px": 254
+      },
+      "wrist_offset": {
+        "readable": true,
+        "offset_px": -13.5,
+        "offset_mm": -2.7411167512690353,
+        "uncertainty_mm": 0.8121827411167513,
+        "reference_confirmed_in_this_frame": true,
+        "confirmed_by": [
+          "right",
+          "gripper reading unchanged since the reference (3492 vs 3492 ticks)"
+        ],
+        "tips_in_this_frame": {
+          "left_px": 79,
+          "right_px": 254
+        },
+        "tips_hidden": false
+      },
+      "lateral_error_mm": -2.64510813096186,
+      "allowed_mm": 5.745548785512807,
+      "check": "ready_for_final_descent",
+      "ok": true,
+      "why": "current image aligned and centred, pads above the top face by measured joints (candidate model)",
+      "left_ticks": {
+        "shoulder_pan": 2376.0,
+        "shoulder_lift": 2304.0,
+        "elbow_flex": 1965.0,
+        "wrist_flex": 2996.0,
+        "wrist_roll": 2513.0,
+        "gripper": 3492.0
+      },
+      "wrist_frame_host_time_local": "11:21:23.274",
+      "wrist_frames": [
+        {
+          "n": 1658,
+          "recv_monotonic_s": 184225.28374584
+        },
+        {
+          "n": 1659,
+          "recv_monotonic_s": 184225.319905822
+        },
+        {
+          "n": 1660,
+          "recv_monotonic_s": 184225.351845767
+        }
+      ],
+      "image_sha256": "a9c0c3ed309a04098e01e18fcc2b5dfff63747a04184ec05b7e0d4588a0f8f09"
+    },
+    "02_descended": {
+      "recorded_wrist_object": {
+        "visible": true,
+        "edges_px": [
+          0,
+          262
+        ],
+        "row": 227,
+        "centre_px": 131.0,
+        "width_px": 262,
+        "mm_per_px": 0.15267175572519084,
+        "far_edge_slope_deg": 4.519052427278984,
+        "touches_border": true,
+        "stable": true
+      },
+      "offline_rerun_on_saved_jpg": {
+        "visible": true,
+        "edges_px": [
+          0,
+          262
+        ],
+        "row": 227,
+        "centre_px": 131.0,
+        "width_px": 262,
+        "mm_per_px": 0.15267175572519084,
+        "far_edge_slope_deg": 4.588741885783374,
+        "touches_border": true
+      },
+      "red_components": [
+        {
+          "label": 1,
+          "area": 29303,
+          "bbox": [
+            0,
+            101,
+            265,
+            139
+          ]
+        }
+      ],
+      "mask_rows": [
+        102,
+        239
+      ],
+      "border_contact_px": {
+        "left_col": 20,
+        "right_col": 0,
+        "bottom_row": 179
+      },
+      "width_by_row": {
+        "110": [
+          54,
+          166
+        ],
+        "120": [
+          49,
+          233
+        ],
+        "130": [
+          43,
+          237
+        ],
+        "140": [
+          38,
+          239
+        ],
+        "150": [
+          33,
+          242
+        ],
+        "160": [
+          28,
+          244
+        ],
+        "170": [
+          22,
+          247
+        ],
+        "180": [
+          14,
+          249
+        ],
+        "190": [
+          11,
+          252
+        ],
+        "200": [
+          7,
+          255
+        ],
+        "210": [
+          0,
+          258
+        ],
+        "220": [
+          0,
+          260
+        ],
+        "227": [
+          0,
+          262
+        ],
+        "230": [
+          11,
+          262
+        ]
+      },
+      "jaw_tips_in_frame": null,
+      "wrist_offset": {
+        "readable": false,
+        "why": "the block is not visible / not stable over consecutive frames / cut by the image border, or there is no jaw reference"
+      },
+      "lateral_error_mm": null,
+      "allowed_mm": 5.557731526629558,
+      "check": "ready_to_close",
+      "ok": false,
+      "why": "the block is not fully readable in the wrist image after the descent (or no accepted image from before it)",
+      "left_ticks": {
+        "shoulder_pan": 2375.0,
+        "shoulder_lift": 2352.0,
+        "elbow_flex": 2047.0,
+        "wrist_flex": 2873.0,
+        "wrist_roll": 2511.0,
+        "gripper": 3492.0
+      },
+      "wrist_frame_host_time_local": "11:21:31.302",
+      "wrist_frames": [
+        {
+          "n": 1897,
+          "recv_monotonic_s": 184233.315797789
+        },
+        {
+          "n": 1898,
+          "recv_monotonic_s": 184233.347920168
+        },
+        {
+          "n": 1899,
+          "recv_monotonic_s": 184233.379860615
+        }
+      ],
+      "image_sha256": "77b5730628235f30148a23c07850f929bb9ac7f3ab22e6f32add35d71835b0ef"
+    }
+  },
+  "descend_move": {
+    "file": "session/descend/run1/move.json",
+    "result": "HOLDING",
+    "target_reached": true,
+    "end_ticks": {
+      "shoulder_pan": 2375.0,
+      "shoulder_lift": 2352.0,
+      "elbow_flex": 2047.0,
+      "wrist_flex": 2873.0,
+      "wrist_roll": 2511.0,
+      "gripper": 3492.0
+    },
+    "plan_ticks": {
+      "shoulder_pan": 2381.0,
+      "shoulder_lift": 2353.0,
+      "elbow_flex": 2049.0,
+      "wrist_flex": 2862.0,
+      "wrist_roll": 2514.0
+    }
+  },
+  "after_the_stop": {
+    "retreat_arm": "HOLDING",
+    "home_arm": "RETURNED_RELEASED (left torque released)",
+    "native_result": "PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME",
+    "exit_code": 3
+  },
+  "not_changed": "ready_to_close, centring tolerance, IK, collision, torque, speed; no device opened"
+}

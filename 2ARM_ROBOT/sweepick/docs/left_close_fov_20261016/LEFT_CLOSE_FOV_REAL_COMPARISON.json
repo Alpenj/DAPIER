@@ -1,0 +1,783 @@
+{
+  "schema": "sweepick.left-close-fov-real-comparison.v1",
+  "source_kind": "REAL stored STATE.json evidence (no frame-by-frame reanalysis of the 39,941 images)",
+  "selection": "every stored local session with a ready_to_close look (17 readable REAL successes incl. 140844 and 151937, 1 failure); 1 unreadable STATE.json skipped (right_receive_observation_05)",
+  "named_successes": {
+    "20261015_140844_3cc05c": {
+      "session": "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json",
+      "pre_errors_mm": [
+        -6.05,
+        -1.99
+      ],
+      "pre_allowed_mm": 5.61,
+      "realigned": true,
+      "A_err_mm": -1.12,
+      "A_allowed_mm": 5.76,
+      "A_edges": [
+        52,
+        247
+      ],
+      "A_width": 195,
+      "final_err_mm": -1.98,
+      "final_edges": [
+        12,
+        273
+      ],
+      "final_width": 261,
+      "final_row": 236,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 12,
+      "right_margin_px": 46,
+      "drift_A_to_final_mm": -0.87,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2368.0,
+        "shoulder_lift": 2340.0,
+        "elbow_flex": 2068.0,
+        "wrist_flex": 2859.0,
+        "wrist_roll": 2425.0
+      },
+      "gripper_ref_tick": 3497.0
+    },
+    "20261015_151937_81d00c": {
+      "session": "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json",
+      "pre_errors_mm": [
+        -9.84,
+        -1.1
+      ],
+      "pre_allowed_mm": 4.22,
+      "realigned": true,
+      "A_err_mm": 0.29,
+      "A_allowed_mm": 4.39,
+      "A_edges": [
+        58,
+        251
+      ],
+      "A_width": 193,
+      "final_err_mm": -0.47,
+      "final_edges": [
+        26,
+        275
+      ],
+      "final_width": 249,
+      "final_row": 235,
+      "final_border": false,
+      "midline": 152.0,
+      "left_margin_px": 26,
+      "right_margin_px": 44,
+      "drift_A_to_final_mm": -0.76,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2358.0,
+        "shoulder_lift": 2338.0,
+        "elbow_flex": 2069.0,
+        "wrist_flex": 2855.0,
+        "wrist_roll": 2340.0
+      },
+      "gripper_ref_tick": 3422.0
+    }
+  },
+  "failure": {
+    "session": "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json",
+    "pre_errors_mm": [
+      -5.15
+    ],
+    "pre_allowed_mm": 5.56,
+    "realigned": false,
+    "A_err_mm": -2.65,
+    "A_allowed_mm": 5.75,
+    "A_edges": [
+      42,
+      239
+    ],
+    "A_width": 197,
+    "final_err_mm": null,
+    "final_edges": [
+      0,
+      262
+    ],
+    "final_width": 262,
+    "final_row": 227,
+    "final_border": true,
+    "midline": 154.0,
+    "left_margin_px": 0,
+    "right_margin_px": 57,
+    "drift_A_to_final_mm": null,
+    "ok": false,
+    "descend_ticks": {
+      "shoulder_pan": 2375.0,
+      "shoulder_lift": 2352.0,
+      "elbow_flex": 2047.0,
+      "wrist_flex": 2873.0,
+      "wrist_roll": 2511.0
+    },
+    "gripper_ref_tick": 3492.0
+  },
+  "all_runs": [
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_02/STATE.json",
+      "pre_errors_mm": [
+        -2.25,
+        1.42
+      ],
+      "pre_allowed_mm": 4.26,
+      "realigned": true,
+      "A_err_mm": 2.19,
+      "A_allowed_mm": 4.43,
+      "A_edges": [
+        70,
+        263
+      ],
+      "A_width": 193,
+      "final_err_mm": 0.79,
+      "final_edges": [
+        35,
+        287
+      ],
+      "final_width": 252,
+      "final_row": 231,
+      "final_border": false,
+      "midline": 155.5,
+      "left_margin_px": 35,
+      "right_margin_px": 32,
+      "drift_A_to_final_mm": -1.41,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2374.0,
+        "shoulder_lift": 2340.0,
+        "elbow_flex": 2065.0,
+        "wrist_flex": 2863.0,
+        "wrist_roll": 2459.0
+      },
+      "gripper_ref_tick": 3419.0
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_04/STATE.json",
+      "pre_errors_mm": [
+        2.4
+      ],
+      "pre_allowed_mm": 3.96,
+      "realigned": false,
+      "A_err_mm": 3.98,
+      "A_allowed_mm": 4.13,
+      "A_edges": [
+        80,
+        263
+      ],
+      "A_width": 183,
+      "final_err_mm": 2.74,
+      "final_edges": [
+        54,
+        284
+      ],
+      "final_width": 230,
+      "final_row": 237,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 54,
+      "right_margin_px": 35,
+      "drift_A_to_final_mm": -1.24,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2369.0,
+        "shoulder_lift": 2368.0,
+        "elbow_flex": 2024.0,
+        "wrist_flex": 2877.0,
+        "wrist_roll": 2409.0
+      },
+      "gripper_ref_tick": 3407.0
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_05/STATE.json",
+      "pre_errors_mm": [
+        0.46
+      ],
+      "pre_allowed_mm": 3.83,
+      "realigned": false,
+      "A_err_mm": 2.94,
+      "A_allowed_mm": 4.01,
+      "A_edges": [
+        74,
+        261
+      ],
+      "A_width": 187,
+      "final_err_mm": 2.16,
+      "final_edges": [
+        49,
+        284
+      ],
+      "final_width": 235,
+      "final_row": 237,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 49,
+      "right_margin_px": 35,
+      "drift_A_to_final_mm": -0.78,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2365.0,
+        "shoulder_lift": 2350.0,
+        "elbow_flex": 2051.0,
+        "wrist_flex": 2869.0,
+        "wrist_roll": 2429.0
+      },
+      "gripper_ref_tick": 3399.0
+    },
+    {
+      "session": "/home/robot/sweepick_261010_receive_session_06/STATE.json",
+      "pre_errors_mm": [
+        1.2
+      ],
+      "pre_allowed_mm": 3.72,
+      "realigned": false,
+      "A_err_mm": 2.92,
+      "A_allowed_mm": 3.88,
+      "A_edges": [
+        74,
+        261
+      ],
+      "A_width": 187,
+      "final_err_mm": 2.36,
+      "final_edges": [
+        49,
+        287
+      ],
+      "final_width": 238,
+      "final_row": 237,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 49,
+      "right_margin_px": 32,
+      "drift_A_to_final_mm": -0.56,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2365.0,
+        "shoulder_lift": 2332.0,
+        "elbow_flex": 2078.0,
+        "wrist_flex": 2859.0,
+        "wrist_roll": 2453.0
+      },
+      "gripper_ref_tick": 3392.0
+    },
+    {
+      "session": "/home/robot/sweepick_261011_receive_session_07/STATE.json",
+      "pre_errors_mm": [
+        1.23,
+        2.69
+      ],
+      "pre_allowed_mm": 3.65,
+      "realigned": true,
+      "A_err_mm": 3.29,
+      "A_allowed_mm": 3.82,
+      "A_edges": [
+        72,
+        265
+      ],
+      "A_width": 193,
+      "final_err_mm": 2.83,
+      "final_edges": [
+        49,
+        290
+      ],
+      "final_width": 241,
+      "final_row": 235,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 49,
+      "right_margin_px": 29,
+      "drift_A_to_final_mm": -0.45,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2374.0,
+        "shoulder_lift": 2354.0,
+        "elbow_flex": 2046.0,
+        "wrist_flex": 2871.0,
+        "wrist_roll": 2441.0
+      },
+      "gripper_ref_tick": 3386.0
+    },
+    {
+      "session": "/home/robot/sweepick_261011_receive_session_09/STATE.json",
+      "pre_errors_mm": [
+        2.87
+      ],
+      "pre_allowed_mm": 3.53,
+      "realigned": false,
+      "A_err_mm": 2.97,
+      "A_allowed_mm": 3.71,
+      "A_edges": [
+        74,
+        263
+      ],
+      "A_width": 189,
+      "final_err_mm": 1.76,
+      "final_edges": [
+        42,
+        289
+      ],
+      "final_width": 247,
+      "final_row": 236,
+      "final_border": false,
+      "midline": 154.0,
+      "left_margin_px": 42,
+      "right_margin_px": 30,
+      "drift_A_to_final_mm": -1.21,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2372.0,
+        "shoulder_lift": 2319.0,
+        "elbow_flex": 2099.0,
+        "wrist_flex": 2851.0,
+        "wrist_roll": 2485.0
+      },
+      "gripper_ref_tick": 3380.0
+    },
+    {
+      "session": "/home/robot/sweepick_261012_receive_session_17/STATE.json",
+      "pre_errors_mm": [
+        -7.64,
+        -1.31
+      ],
+      "pre_allowed_mm": 3.45,
+      "realigned": true,
+      "A_err_mm": 0.53,
+      "A_allowed_mm": 3.57,
+      "A_edges": [
+        60,
+        251
+      ],
+      "A_width": 191,
+      "final_err_mm": -0.39,
+      "final_edges": [
+        26,
+        275
+      ],
+      "final_width": 249,
+      "final_row": 228,
+      "final_border": false,
+      "midline": 153.0,
+      "left_margin_px": 26,
+      "right_margin_px": 44,
+      "drift_A_to_final_mm": -0.93,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2356.0,
+        "shoulder_lift": 2335.0,
+        "elbow_flex": 2078.0,
+        "wrist_flex": 2855.0,
+        "wrist_roll": 2409.0
+      },
+      "gripper_ref_tick": 3375.0
+    },
+    {
+      "session": "/home/robot/sweepick_261012_receive_session_18/STATE.json",
+      "pre_errors_mm": [
+        -0.63
+      ],
+      "pre_allowed_mm": 3.27,
+      "realigned": false,
+      "A_err_mm": -0.29,
+      "A_allowed_mm": 3.42,
+      "A_edges": [
+        54,
+        247
+      ],
+      "A_width": 193,
+      "final_err_mm": -1.51,
+      "final_edges": [
+        15,
+        269
+      ],
+      "final_width": 254,
+      "final_row": 226,
+      "final_border": false,
+      "midline": 153.0,
+      "left_margin_px": 15,
+      "right_margin_px": 50,
+      "drift_A_to_final_mm": -1.21,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2368.0,
+        "shoulder_lift": 2326.0,
+        "elbow_flex": 2087.0,
+        "wrist_flex": 2849.0,
+        "wrist_roll": 2485.0
+      },
+      "gripper_ref_tick": 3365.0
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_02/STATE.json",
+      "pre_errors_mm": [
+        -2.8
+      ],
+      "pre_allowed_mm": 3.2,
+      "realigned": false,
+      "A_err_mm": -1.66,
+      "A_allowed_mm": 3.38,
+      "A_edges": [
+        44,
+        245
+      ],
+      "A_width": 201,
+      "final_err_mm": -1.91,
+      "final_edges": [
+        10,
+        271
+      ],
+      "final_width": 261,
+      "final_row": 231,
+      "final_border": false,
+      "midline": 152.5,
+      "left_margin_px": 10,
+      "right_margin_px": 48,
+      "drift_A_to_final_mm": -0.25,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2376.0,
+        "shoulder_lift": 2340.0,
+        "elbow_flex": 2065.0,
+        "wrist_flex": 2865.0,
+        "wrist_roll": 2507.0
+      },
+      "gripper_ref_tick": 3356.0
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_06/STATE.json",
+      "pre_errors_mm": [
+        -6.81,
+        -3.56,
+        0.16
+      ],
+      "pre_allowed_mm": 3.2,
+      "realigned": true,
+      "A_err_mm": -0.03,
+      "A_allowed_mm": 3.33,
+      "A_edges": [
+        48,
+        255
+      ],
+      "A_width": 207,
+      "final_err_mm": -1.7,
+      "final_edges": [
+        6,
+        274
+      ],
+      "final_width": 268,
+      "final_row": 219,
+      "final_border": false,
+      "midline": 152.5,
+      "left_margin_px": 6,
+      "right_margin_px": 45,
+      "drift_A_to_final_mm": -1.67,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2377.0,
+        "shoulder_lift": 2314.0,
+        "elbow_flex": 2105.0,
+        "wrist_flex": 2843.0,
+        "wrist_roll": 2499.0
+      },
+      "gripper_ref_tick": 3356.0
+    },
+    {
+      "session": "/home/robot/sweepick_261013_right_receive_observation_08/STATE.json",
+      "pre_errors_mm": [
+        -5.1,
+        -0.13
+      ],
+      "pre_allowed_mm": 3.04,
+      "realigned": true,
+      "A_err_mm": 0.32,
+      "A_allowed_mm": 3.16,
+      "A_edges": [
+        52,
+        253
+      ],
+      "A_width": 201,
+      "final_err_mm": -0.9,
+      "final_edges": [
+        10,
+        279
+      ],
+      "final_width": 269,
+      "final_row": 223,
+      "final_border": false,
+      "midline": 152.0,
+      "left_margin_px": 10,
+      "right_margin_px": 40,
+      "drift_A_to_final_mm": -1.21,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2368.0,
+        "shoulder_lift": 2306.0,
+        "elbow_flex": 2121.0,
+        "wrist_flex": 2835.0,
+        "wrist_roll": 2441.0
+      },
+      "gripper_ref_tick": 3350.0
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261014_155824_d4017e/session/STATE.json",
+      "pre_errors_mm": [
+        -6.04,
+        -0.99
+      ],
+      "pre_allowed_mm": 2.92,
+      "realigned": true,
+      "A_err_mm": -0.02,
+      "A_allowed_mm": 3.07,
+      "A_edges": [
+        50,
+        253
+      ],
+      "A_width": 203,
+      "final_err_mm": -1.53,
+      "final_edges": [
+        6,
+        276
+      ],
+      "final_width": 270,
+      "final_row": 227,
+      "final_border": false,
+      "midline": 152.5,
+      "left_margin_px": 6,
+      "right_margin_px": 43,
+      "drift_A_to_final_mm": -1.51,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2366.0,
+        "shoulder_lift": 2300.0,
+        "elbow_flex": 2129.0,
+        "wrist_flex": 2835.0,
+        "wrist_roll": 2441.0
+      },
+      "gripper_ref_tick": 3344.0
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_092942_a4628c/session/STATE.json",
+      "pre_errors_mm": [
+        -9.57,
+        -0.95
+      ],
+      "pre_allowed_mm": 5.67,
+      "realigned": true,
+      "A_err_mm": -0.41,
+      "A_allowed_mm": 5.81,
+      "A_edges": [
+        52,
+        251
+      ],
+      "A_width": 199,
+      "final_err_mm": -1.4,
+      "final_edges": [
+        7,
+        281
+      ],
+      "final_width": 274,
+      "final_row": 229,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 7,
+      "right_margin_px": 38,
+      "drift_A_to_final_mm": -0.98,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2352.0,
+        "shoulder_lift": 2304.0,
+        "elbow_flex": 2123.0,
+        "wrist_flex": 2837.0,
+        "wrist_roll": 2376.0
+      },
+      "gripper_ref_tick": 3501.0
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_112218_f0d866/session/STATE.json",
+      "pre_errors_mm": [
+        -7.68,
+        -0.34
+      ],
+      "pre_allowed_mm": 5.68,
+      "realigned": true,
+      "A_err_mm": -0.32,
+      "A_allowed_mm": 5.8,
+      "A_edges": [
+        54,
+        251
+      ],
+      "A_width": 197,
+      "final_err_mm": -1.69,
+      "final_edges": [
+        10,
+        276
+      ],
+      "final_width": 266,
+      "final_row": 237,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 10,
+      "right_margin_px": 43,
+      "drift_A_to_final_mm": -1.38,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2360.0,
+        "shoulder_lift": 2318.0,
+        "elbow_flex": 2103.0,
+        "wrist_flex": 2841.0,
+        "wrist_roll": 2358.0
+      },
+      "gripper_ref_tick": 3501.0
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_140844_3cc05c/session/STATE.json",
+      "pre_errors_mm": [
+        -6.05,
+        -1.99
+      ],
+      "pre_allowed_mm": 5.61,
+      "realigned": true,
+      "A_err_mm": -1.12,
+      "A_allowed_mm": 5.76,
+      "A_edges": [
+        52,
+        247
+      ],
+      "A_width": 195,
+      "final_err_mm": -1.98,
+      "final_edges": [
+        12,
+        273
+      ],
+      "final_width": 261,
+      "final_row": 236,
+      "final_border": false,
+      "midline": 153.5,
+      "left_margin_px": 12,
+      "right_margin_px": 46,
+      "drift_A_to_final_mm": -0.87,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2368.0,
+        "shoulder_lift": 2340.0,
+        "elbow_flex": 2068.0,
+        "wrist_flex": 2859.0,
+        "wrist_roll": 2425.0
+      },
+      "gripper_ref_tick": 3497.0
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261015_151937_81d00c/session/STATE.json",
+      "pre_errors_mm": [
+        -9.84,
+        -1.1
+      ],
+      "pre_allowed_mm": 4.22,
+      "realigned": true,
+      "A_err_mm": 0.29,
+      "A_allowed_mm": 4.39,
+      "A_edges": [
+        58,
+        251
+      ],
+      "A_width": 193,
+      "final_err_mm": -0.47,
+      "final_edges": [
+        26,
+        275
+      ],
+      "final_width": 249,
+      "final_row": 235,
+      "final_border": false,
+      "midline": 152.0,
+      "left_margin_px": 26,
+      "right_margin_px": 44,
+      "drift_A_to_final_mm": -0.76,
+      "ok": true,
+      "descend_ticks": {
+        "shoulder_pan": 2358.0,
+        "shoulder_lift": 2338.0,
+        "elbow_flex": 2069.0,
+        "wrist_flex": 2855.0,
+        "wrist_roll": 2340.0
+      },
+      "gripper_ref_tick": 3422.0
+    },
+    {
+      "session": "/home/robot/sweepick_console_runs/20261016_112020_4d7c2b/session/STATE.json",
+      "pre_errors_mm": [
+        -5.15
+      ],
+      "pre_allowed_mm": 5.56,
+      "realigned": false,
+      "A_err_mm": -2.65,
+      "A_allowed_mm": 5.75,
+      "A_edges": [
+        42,
+        239
+      ],
+      "A_width": 197,
+      "final_err_mm": null,
+      "final_edges": [
+        0,
+        262
+      ],
+      "final_width": 262,
+      "final_row": 227,
+      "final_border": true,
+      "midline": 154.0,
+      "left_margin_px": 0,
+      "right_margin_px": 57,
+      "drift_A_to_final_mm": null,
+      "ok": false,
+      "descend_ticks": {
+        "shoulder_pan": 2375.0,
+        "shoulder_lift": 2352.0,
+        "elbow_flex": 2047.0,
+        "wrist_flex": 2873.0,
+        "wrist_roll": 2511.0
+      },
+      "gripper_ref_tick": 3492.0
+    }
+  ],
+  "summary": {
+    "success_last_pre_err_mm_range": [
+      -2.8,
+      2.87
+    ],
+    "failure_pre_err_mm": -5.15,
+    "success_A_err_mm_range": [
+      -1.66,
+      3.98
+    ],
+    "failure_A_err_mm": -2.65,
+    "success_A_to_final_change_mm_range": [
+      -1.67,
+      -0.25
+    ],
+    "success_final_left_edge_min_px": 6,
+    "success_final_right_margin_min_px": 29,
+    "success_final_width_px_range": [
+      230,
+      274
+    ],
+    "failure_final_edges": [
+      0,
+      262
+    ]
+  },
+  "near_limit_question": {
+    "question": "does an initial error near the allowance lead to a view loss at the next descent?",
+    "answer": "in the stored REAL record: yes, once (this run, -5.15 of 5.56 mm); no success started its final descent from a pre-grasp error beyond 2.87 mm in size. One failure is not a rate."
+  },
+  "predictors_tested_leave_one_out": {
+    "from_A_look": {
+      "median": "misses the failure (predicted left edge 1.4 px)",
+      "observed_extreme": "flags the failure and 4 successes"
+    },
+    "from_pregrasp_look": {
+      "median": "flags the failure and 1 success (obs_02, actual left edge 10 px)",
+      "observed_extreme": "flags the failure and 7 successes"
+    }
+  },
+  "camera_occlusion": "left jaw tip hidden by the block in the failure final frame; visible in its earlier looks and in the successes tip reads (wrist_offset tips)"
+}

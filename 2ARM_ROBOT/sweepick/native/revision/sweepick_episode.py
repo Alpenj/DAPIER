@@ -31,6 +31,22 @@ ACT_VIEW = dict(
     relative="anchor-relative action views are computed from this absolute view and kept separate")
 
 
+def _exception_record(exc, stage):
+    """The exception chain of a recorder failure, through the executor's existing bus_open_exception when it can be
+    imported, else the same type/message/errno chain read here. The port is the one in the message, never assumed."""
+    try:
+        from sweepick_move_a import bus_open_exception
+        return bus_open_exception(exc, None, stage)
+    except Exception:
+        chain, seen, e = [], set(), exc
+        while e is not None and id(e) not in seen and len(chain) < 8:
+            seen.add(id(e))
+            chain.append(dict(type=type(e).__name__, message=str(e).strip() or None,
+                              errno=e.errno if isinstance(getattr(e, "errno", None), int) else None))
+            e = e.__cause__ if e.__cause__ is not None else (None if e.__suppress_context__ else e.__context__)
+        return dict(port=None, stage=stage, type=type(exc).__name__, chain=chain, source="sweepick_episode fallback chain")
+
+
 class Lent:
     """A resident reader lent to a stage recorder: closing the loan does not close the camera."""
     def __init__(self, reader):
@@ -200,7 +216,10 @@ class Episode:
                             self.files["joints"].write(json.dumps(row) + "\n")
                         self._count(f"joints_{s}", t0)
                     except Exception as e:
-                        self.errors.append(dict(t_host_s=self.clock(), what=f"{s} arm read: {type(e).__name__}: {e}")); drop(s)
+                        # 2026-10-16: keep the exception chain (lerobot's ConnectionError text is generic; the OS error is its
+                        # __cause__). Recording only: the drop, the next open and every gate are unchanged.
+                        self.errors.append(dict(t_host_s=self.clock(), what=f"{s} arm read: {type(e).__name__}: {e}",
+                                                exception=_exception_record(e, f"recorder {s} arm read"))); drop(s)
                 self.stop.wait(self.arm_period_s)
         finally:
             for s in list(bus):

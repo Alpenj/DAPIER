@@ -361,6 +361,38 @@ function renderSessionSummary() {
   else renderBookmarks();
 }
 
+function hostClock(seconds) {
+  if (!finiteNumber(seconds)) return 'UNKNOWN';
+  const date = new Date(Number(seconds) * 1000);
+  return `${date.toLocaleTimeString('ko-KR', {hour12: false})}.${String(date.getMilliseconds()).padStart(3, '0')}`;
+}
+
+function runEvidenceLines(run) {
+  // Native terminal class, recorder errors and per-arm torque evidence, each on its own line (never merged into one verdict).
+  const lines = [];
+  const terminal = run?.native_terminal;
+  if (terminal && (terminal.exit_code ?? null) !== null && terminal.exit_code !== 0) {
+    lines.push(`Native 종료: ${display(terminal.result)} · exit ${display(terminal.exit_code)}${terminal.exit_code === 3 && terminal.result !== 'UNKNOWN' ? ' (비성공 종료 분류, 실행기 충돌 아님)' : ''}`);
+  }
+  const stages = Array.isArray(run?.stage_results) ? run.stage_results.slice(-3) : [];
+  if (stages.length && run?.failure_point) lines.push(`단계 결과: ${stages.map((s) => `${display(s.stage)} ${display(s.result)}`).join(' → ')}`);
+  (Array.isArray(run?.recorder_errors) ? run.recorder_errors : []).slice(0, 3).forEach((row) => {
+    const status = row.cause_status === 'BUS_OPEN_CAUSE_UNCONFIRMED' ? '원인 미확정(BUS_OPEN_CAUSE_UNCONFIRMED)' : row.cause ? `원인 ${row.cause}` : '메시지만 기록';
+    lines.push(`Recorder 오류(작업 Gate와 별개) ${hostClock(row.t_host_s)}: ${display(row.what).slice(0, 120)} · ${status}`);
+  });
+  const torque = run?.torque_evidence;
+  if (torque && run?.failure_point) {
+    ['left', 'right'].forEach((side) => {
+      const row = torque[side] || {};
+      const arm = side === 'left' ? '왼팔' : '오른팔';
+      if (row.final_release_certified) lines.push(`${arm}: 최종 Torque 해제 확인 (${display(row.final_stage)} RETURNED_RELEASED)`);
+      else if (finiteNumber(row.last_seen_torque_time_s)) lines.push(`${arm}: 최종 해제 확인 없음 · 마지막 관측 ${hostClock(row.last_seen_torque_time_s)} Torque ${row.last_seen_torque_all_zero ? '0' : '켜짐/일부'} (종료 확인 아님)`);
+      else lines.push(`${arm}: 최종 해제 확인 없음 · Torque 관측 기록 없음`);
+    });
+  }
+  return lines;
+}
+
 function renderRuns() {
   const rows = $('runRows');
   rows.replaceChildren();
@@ -404,6 +436,13 @@ function renderRuns() {
         where.append(then);
       }
       result.append(where);
+    }
+    const extra = runEvidenceLines(run);
+    if (extra.length) {
+      const box = document.createElement('div');
+      box.className = 'run-evidence';
+      extra.forEach((text) => { const line = document.createElement('small'); line.textContent = text; box.append(line); });
+      result.append(box);
     }
     result.append(outcome);
 

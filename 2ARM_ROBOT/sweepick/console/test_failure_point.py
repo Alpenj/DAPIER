@@ -54,5 +54,47 @@ class FailurePoint(unittest.TestCase):
         self.assertIsNone(failure_reason(None))
 
 
+
+class SeparateEvidence(unittest.TestCase):
+    """LEFT CLOSE FOV P0-5: native gate, native terminal class, recorder errors and per-arm torque are kept apart."""
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(); self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def test_only_the_check_the_session_ended_on_is_the_native_gate(self):
+        from records import native_gate
+        ev = [{'what': 'ready_to_descend', 'ok': False}, {'what': 'ready_to_descend', 'ok': True}, {'what': 'ready_to_close', 'ok': False, 'look': '02_descended', 'why': 'not readable'}]
+        (self.root / 'STATE.json').write_text(json.dumps({'evidence': ev}))
+        self.assertEqual(native_gate(self.root)['gate'], 'ready_to_close=false')
+        (self.root / 'STATE.json').write_text(json.dumps({'evidence': ev[:2]}))          # re-aligned and went on: no native gate
+        self.assertIsNone(native_gate(self.root))
+
+    def test_exit_3_with_a_native_result_is_its_terminal_class(self):
+        from records import native_terminal
+        (self.root / 'owner.log').write_text('warning line\n{\n "result": "PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME"\n}\n')
+        row = native_terminal(self.root, {'exit_code': 3})
+        self.assertEqual((row['result'], row['exit_code']), ('PAD_PLACEMENT_NOT_CONFIRMED_RETURNED_HOME', 3))
+        self.assertIn('not an executor crash', row['exit_role'])
+        self.assertEqual(native_terminal(self.root / 'none', {'exit_code': 3})['result'], 'UNKNOWN')
+
+    def test_recorder_errors_keep_their_own_cause_status(self):
+        from records import recorder_errors
+        rows = recorder_errors({'errors': [
+            {'t_host_s': 1.0, 'what': "right arm read: ConnectionError: \nCould not connect on port '/dev/dapier/right_arm'."},
+            {'t_host_s': 2.0, 'what': 'right arm read: ConnectionError: x', 'exception': {'summary': 'ConnectionError: x (from OSError errno 16)', 'chain': [{'type': 'ConnectionError'}, {'type': 'OSError'}]}},
+            {'t_host_s': 3.0, 'what': 'right arm read: RuntimeError: motor check failed'}]})
+        self.assertEqual([r['cause_status'] for r in rows], ['BUS_OPEN_CAUSE_UNCONFIRMED', 'RECORDED', 'MESSAGE_ONLY'])
+        self.assertEqual(rows[1]['cause'], 'ConnectionError: x (from OSError errno 16)')
+
+    def test_a_last_seen_torque_register_is_never_a_final_release(self):
+        from records import torque_evidence
+        ep = {'stages': [{'stage': 'retreat_arm', 'side': 'left', 'result': 'HOLDING'}, {'stage': 'home_arm', 'side': 'left', 'result': 'RETURNED_RELEASED'}]}
+        feed = {'sides': {'right': {'torque': {'time_s': 5.0, 'values': {'shoulder_pan': 0, 'gripper': 0}}}}}
+        row = torque_evidence(ep, feed)
+        self.assertTrue(row['left']['final_release_certified'])
+        self.assertFalse(row['right']['final_release_certified']); self.assertTrue(row['right']['last_seen_torque_all_zero'])
+        self.assertIn('not a final torque-off check', row['right']['last_seen_role'])
+
+
 if __name__ == '__main__':
     unittest.main()

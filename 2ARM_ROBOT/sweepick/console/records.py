@@ -117,6 +117,65 @@ def failure_reason(text):
 AFTER_STOP_STEPS = ('retreat', 'retreat_arm', 'away', 'lower', 'open', 'home', 'home_arm', 'put_back_evidence')
 
 
+def native_gate(root):
+    """The last native check of STATE.json evidence that came out false: {gate, look, why}. Read only."""
+    try:
+        evidence = read_json(Path(root) / 'STATE.json').get('evidence') or []
+    except (OSError, ValueError, AttributeError):
+        return None
+    rows = [e for e in evidence if isinstance(e, dict)]
+    row = rows[-1] if rows and rows[-1].get('ok') is False else None     # only the check the session ended on; an earlier one may have been re-aligned
+    if row is None:
+        return None
+    return {'gate': f"{row.get('what') or UNKNOWN}=false", 'look': row.get('look'), 'why': row.get('why'), 'source': 'session/STATE.json evidence'}
+
+
+def native_terminal(directory, ended):
+    """The native result class (owner.log result) kept apart from the wrapper exit code."""
+    result = None
+    try:
+        text = (Path(directory) / 'owner.log').read_text(errors='replace')
+        start = next((i for i, line in enumerate(text.splitlines()) if line.startswith('{')), None)
+        if start is not None:
+            result = json.loads('\n'.join(text.splitlines()[start:])).get('result')
+    except (OSError, ValueError, AttributeError):
+        pass
+    code = (ended or {}).get('exit_code')
+    return {'result': result or UNKNOWN, 'exit_code': code,
+            'exit_role': 'native non-success terminal class (not an executor crash by itself)' if code == 3 and result else
+                         'normal end' if code == 0 else UNKNOWN if code is None else 'wrapper exit status'}
+
+
+def recorder_errors(ep):
+    """Episode recorder errors, kept apart from the first task gate. The exception chain is shown when the native recorded it."""
+    rows = []
+    for row in (ep.get('errors') or [])[:20] if isinstance(ep, dict) else []:
+        if not isinstance(row, dict):
+            continue
+        exc = row.get('exception') if isinstance(row.get('exception'), dict) else None
+        rows.append({'t_host_s': row.get('t_host_s'), 'what': ' '.join(str(row.get('what') or '').split())[:300],
+                     'cause': (exc or {}).get('summary') or ((exc or {}).get('chain') or [{}])[-1].get('type') if exc else None,
+                     'cause_status': 'RECORDED' if exc and len(exc.get('chain') or []) > 1 else
+                                     'BUS_OPEN_CAUSE_UNCONFIRMED' if ': ConnectionError:' in str(row.get('what')) else 'MESSAGE_ONLY'})
+    return rows
+
+
+def torque_evidence(ep, feed):
+    """Per arm: the final release the native certified (RETURNED_RELEASED move) apart from the last torque register a feed saw."""
+    stages = [s for s in (ep.get('stages') or []) if isinstance(s, dict)] if isinstance(ep, dict) else []
+    out = {}
+    for side in ('left', 'right'):
+        last = next((s for s in reversed(stages) if s.get('side') == side), None)
+        seen = ((feed.get('sides') or {}).get(side) or {}).get('torque') if isinstance(feed, dict) else None
+        values = (seen or {}).get('values') if isinstance(seen, dict) else None
+        out[side] = {'final_stage': (last or {}).get('name') or (last or {}).get('stage'), 'final_result': (last or {}).get('result'),
+                     'final_release_certified': bool(last and last.get('result') == 'RETURNED_RELEASED'),
+                     'last_seen_torque_time_s': (seen or {}).get('time_s') if isinstance(seen, dict) else None,
+                     'last_seen_torque_all_zero': bool(values) and all(v == 0 for v in values.values()) if isinstance(values, dict) else None,
+                     'last_seen_role': 'LAST_OBSERVED_REGISTER; not a final torque-off check'}
+    return out
+
+
 def failure_point(root, first_error):
     """{stage, label, reason, detail, then, source} of the step a run stopped at, or None when nothing failed. The retreat/home
     steps the native runs after a stop are listed under `then`, not taken as the stopping step."""
@@ -146,11 +205,16 @@ def failure_point(root, first_error):
         detail = (trail[index].get('why') if index is not None and generic else None) or error_detail
         source = 'SESSION.json trail (last step before retreat/home) + first_error'
     then = [STEP_LABEL.get(row.get('step'), row.get('step')) for row in trail[index + 1:]] if index is not None else []
+    native = native_gate(root)
+    if native and (generic or failed is None):                     # the native check that failed, not the wrapper's exit status
+        error = dict(error, gate=native['gate'])
+        if generic and native.get('why'):
+            detail = native['why']
     before = STEP_LABEL.get(trail[index - 1].get('step'), trail[index - 1].get('step')) if index else None
     return {'stage': step or UNKNOWN, 'label': STEP_LABEL.get(step, step or '단계 기록 없음'),
             'stage_failed': failed is not None, 'gate': error.get('gate'),
             'reason': failure_reason(detail) or error.get('gate') or UNKNOWN,
-            'detail': str(detail)[:2000] if detail else None, 'after': before, 'then': then, 'source': source}
+            'detail': str(detail)[:2000] if detail else None, 'after': before, 'then': then, 'source': source, 'native_gate': native}
 
 
 def receive_summary(events):
@@ -302,6 +366,9 @@ def run_record(directory, *, current=None, owner_alive=False, off_confirmed=Fals
                           'human_review': load(directory / 'DATA_REVIEW.json', []) or None},
               'terminal': terminal,
               'failure_point': failure_point(root, error),
+              'native_terminal': native_terminal(directory, ended), 'recorder_errors': recorder_errors(ep),
+              'torque_evidence': torque_evidence(ep, feed),
+              'stage_results': [{'stage': s.get('stage'), 'side': s.get('side'), 'result': s.get('result')} for s in (ep.get('stages') or []) if isinstance(s, dict)][-12:],
               'replay_session_id': replay_id if replay_ready else None}
     return record, {'episode': ep, 'stages': completed, 'source_snapshot': snapshot,
                     'approval': approval, 'source_manifest': manifest,
