@@ -1,15 +1,21 @@
 """LEFT CLOSE FOV view prediction: synthetic evidence rows shaped like STATE.json. No device, no executor run."""
+import hashlib
 from pathlib import Path
 
 import pytest
 
 import left_fov_check as L
 
+CONTEXT = dict(camera_side='left_wrist', mount_binding_sha256=hashlib.sha256(b'synthetic left wrist mount fixture').hexdigest(),
+               image_size_px=[320, 240], object_width_mm=40.0)
+FRAME = dict(camera_side='left_wrist', frame_id='synthetic-frame-1', raw_rgb_sha256=hashlib.sha256(b'synthetic raw RGB fixture').hexdigest())
 
-def look(what, ok, offset, target, width, touches=False):
+
+def look(what, ok, offset, target, width, touches=False, context=CONTEXT, frame=FRAME):
     return dict(what=what, ok=ok, lateral_error_mm=None if offset is None else offset - target, lateral_target_mm=target,
                 wrist_object=dict(visible=True, stable=True, width_px=width, centre_px=154.0, edges_px=[0, 0], touches_border=touches),
-                wrist_offset=dict(readable=offset is not None, offset_mm=offset, reference_confirmed_in_this_frame=True))
+                wrist_offset=dict(readable=offset is not None, offset_mm=offset, reference_confirmed_in_this_frame=True),
+                fov_context=context, frame_binding=frame)
 
 
 def state(pre_offset, pre_width, final_offset, final_width, final_ok=True, target=0.0):
@@ -36,9 +42,9 @@ def test_raw_offset_and_lateral_error_are_kept_apart():
     assert (a['inputs']['raw_offset_mm'], a['inputs']['lateral_error_mm'], b['inputs']['lateral_error_mm']) == (-2.0, -2.0, -0.5)
 
 
-def test_a_centred_look_that_would_clip_after_the_descent_is_a_candidate_and_never_executable():
+def test_an_out_of_support_look_never_requests_an_extrapolated_correction():
     c = L.candidate(look('ready_to_descend', True, -5.15, 0.0, 160), 154.0, REF)
-    assert c['status'] == 'FOV_REALIGN_CANDIDATE' and c['executable'] is False and c['prediction']['pred_edges_px'][0] <= 1
+    assert c['status'] == 'OUT_OF_SUPPORT' and c['executable'] is False and c['prediction']['pred_edges_px'][0] <= 1
     assert c['prediction']['inside_observed_pre_offset_range'] is False
 
 
@@ -53,10 +59,27 @@ def test_a_clipped_or_unreadable_look_is_never_given_a_centre():
     assert L.candidate(look('ready_to_descend', False, None, 0.0, 160), 154.0, REF)['status'] == 'UNREADABLE'
 
 
+def test_context_resolution_object_width_and_raw_frame_binding_must_match():
+    good = look('ready_to_descend', True, 0.3, 0.0, 165)
+    assert not L.context_issues(good, REF)
+    for changed in (dict(CONTEXT, image_size_px=[640, 480]), dict(CONTEXT, object_width_mm=39.0),
+                    dict(CONTEXT, camera_side='right_wrist'), dict(CONTEXT, mount_binding_sha256='other-mount')):
+        assert L.context_issues(dict(good, fov_context=changed), REF)
+    assert L.context_issues(dict(good, frame_binding=None), REF)
+    incompatible = dict(CONTEXT, camera_side='right_wrist', image_size_px=[640, 480], object_width_mm=80.0)
+    malformed = dict(camera_side='', mount_binding_sha256='', image_size_px=[], object_width_mm='')
+    for context, frame in ((incompatible, dict(FRAME, camera_side='right_wrist')),
+                           (malformed, dict(camera_side='', frame_id='', raw_rgb_sha256='garbage'))):
+        assert L.context_issues(look('ready_to_descend', True, 0.3, 0.0, 165, context=context, frame=frame), dict(REF, context=context))
+
+
 def test_no_real_success_means_no_reference_and_a_missing_file_is_no_reference(tmp_path):
     with pytest.raises(ValueError):
         L.reference_from_states([('failed', state(-5.0, 160, None, 262, final_ok=False))])
     assert L.load_reference(tmp_path / 'missing.json') is None
+    corrupt = tmp_path / 'corrupt.json'; corrupt.write_text('{bad')
+    incomplete = tmp_path / 'incomplete.json'; incomplete.write_text('{"schema":"sweepick.left-fov-reference.v2","runs":[{}]}')
+    assert L.load_reference(corrupt) is None and L.load_reference(incomplete) is None
 
 
 def test_only_the_pre_grasp_gate_of_the_executor_uses_the_prediction():

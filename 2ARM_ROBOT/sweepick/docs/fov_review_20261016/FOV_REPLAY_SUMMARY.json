@@ -1,0 +1,351 @@
+{
+  "schema": "sweepick.a-fov-review.v1",
+  "date": "2026-10-16",
+  "scope": "OFFLINE_CANDIDATE_ONLY",
+  "base": "c15e4344e259e51dc1c19f4cb22624061bb4252a",
+  "executable": false,
+  "motor_write_authorized": false,
+  "hardware_access": false,
+  "actual_device_writes": 0,
+  "classification_rule": "runtime_gate_counts score the status returned by the runtime gate. support_aware_exclusive_counts then classify OUT_OF_SUPPORT and UNKNOWN outside TP/FP/TN/FN. Actual horizontal clip remains a separate label.",
+  "actual_labels": {
+    "horizontal_clip": 1,
+    "no_horizontal_clip": 17,
+    "unknown": 0
+  },
+  "before": {
+    "executor_status": {
+      "FOV_RISK": 2,
+      "FOV_OK": 16,
+      "FOV_UNKNOWN": 0,
+      "OUT_OF_SUPPORT": 0
+    },
+    "runtime_gate_counts": {
+      "TP": 1,
+      "FP": 1,
+      "TN": 16,
+      "FN": 0,
+      "UNKNOWN": 0,
+      "OOD": 0
+    },
+    "support_aware_exclusive_counts": {
+      "TP": 0,
+      "FP": 1,
+      "TN": 16,
+      "FN": 0,
+      "UNKNOWN": 0,
+      "OOD": 1
+    },
+    "note": "The original runtime gate counts the actual clipped FOV_RISK record as TP. The post-hoc support-aware table moves that same record to OOD because inside_observed_pre_offset_range=false; it does not count it twice."
+  },
+  "after": {
+    "executor_status": {
+      "FOV_RISK": 0,
+      "FOV_OK": 0,
+      "FOV_UNKNOWN": 17,
+      "OUT_OF_SUPPORT": 1
+    },
+    "runtime_gate_counts": {
+      "TP": 0,
+      "FP": 0,
+      "TN": 0,
+      "FN": 0,
+      "UNKNOWN": 17,
+      "OOD": 1
+    },
+    "support_aware_exclusive_counts": {
+      "TP": 0,
+      "FP": 0,
+      "TN": 0,
+      "FN": 0,
+      "UNKNOWN": 17,
+      "OOD": 1
+    },
+    "note": "The 17 in-support records lack the required state/reference SHA plus current RAW-frame, mount and measured object-width context. No identity was inferred."
+  },
+  "records": [
+    {
+      "record": "real_01",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_02",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_03",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_04",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_05",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_06",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_07",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_08",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_09",
+      "actual_horizontal_clip": false,
+      "before": "FOV_RISK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_10",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_11",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_12",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_13",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_14",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_15",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_16",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    },
+    {
+      "record": "real_17",
+      "actual_horizontal_clip": true,
+      "before": "FOV_RISK_OUTSIDE_SUPPORT",
+      "after": "OUT_OF_SUPPORT"
+    },
+    {
+      "record": "real_18",
+      "actual_horizontal_clip": false,
+      "before": "FOV_OK",
+      "after": "FOV_UNKNOWN"
+    }
+  ],
+  "fake_bus": {
+    "FOV_RISK": {
+      "align_goal_writes": 26,
+      "total_fake_write_calls": 9045
+    },
+    "FOV_UNKNOWN": {
+      "align_goal_writes": 0,
+      "total_fake_write_calls": 6005
+    },
+    "OUT_OF_SUPPORT": {
+      "align_goal_writes": 0,
+      "total_fake_write_calls": 6005
+    },
+    "note": "These align counts cover only passed-gate fixtures where the FOV result itself can drive alignment. Existing centering corrections for a not-ok but correctable judge remain independent of FOV and are followed by a new passed look. Totals include the fake pregrasp, return-home, and full-session trajectory writes. They are not hardware writes."
+  },
+  "verification": {
+    "FOV_target": {
+      "executed": 27,
+      "passed": 27,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "HARD_gate_allowlist": {
+      "executed": 9,
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "same_sparse_native_before": {
+      "tests": 341,
+      "passed": 310,
+      "failures": 26,
+      "errors": 5,
+      "skips": 0,
+      "bad_ids": {
+        ".revision.test_console17_limited_session": "error",
+        ".revision.test_left_fov_correction": "error",
+        ".revision.test_preapproved_view_fake_bus": "error",
+        ".revision.test_recorder_exception_chain": "error",
+        ".revision.test_vservo_timing_shadow": "error",
+        "revision.test_right_x_metrology.test_real_A_ik_collision_and_normal_reverse_plan_an_x_move_from_saved_actual": "failure",
+        "revision.test_right_x_metrology.test_real_planner_refusals_reach_no_executor": "failure",
+        "revision.test_sweepick_grip.test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage": "failure",
+        "revision.test_sweepick_real_command.test_inverse_reproduces_the_stored_real_sample": "failure",
+        "revision.test_sweepick_real_command.test_dry_run_sends_nothing_and_reports_refusals": "failure",
+        "revision.test_sweepick_real_command.test_classification_separates_hard_from_temporary": "failure",
+        "revision.test_sweepick_real_command.test_arms_only_report_uses_only_the_range_gates_and_heuristics_are_diagnostics": "failure",
+        "tests.test_console17_launch_scope.test_limited_approval_and_manifest_bind_together": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval0-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-approval does not match]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval1-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a LEFT_START_TO_LIFT manifest]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval2-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-automatic_return_after_lift=false]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval3-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-right_arm_commands_permitted=false]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval4-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-unsupported execution_scope]": "failure",
+        "tests.test_console17_launch_scope.test_limited_manifest_must_bind_the_launcher_and_executors": "failure",
+        "tests.test_console17_launch_scope.test_a_changed_source_after_preparation_stops_the_limited_launch": "failure",
+        "tests.test_console17_launch_scope.test_full_chain_approval_without_execution_scope_keeps_the_existing_checks": "failure",
+        "tests.test_right_x_launch.test_right_x_approval_binds_its_config_into_the_plan": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval0-RIGHT_X_FINITE_METROLOGY-None-non-zero]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval1-RIGHT_X_FINITE_METROLOGY-None-declared_motor_writes]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval2-RIGHT_X_FINITE_METROLOGY-None-pre-approval]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval3-RIGHT_X_FINITE_METROLOGY-None-left release]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval4-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a RIGHT_X_FINITE_METROLOGY manifest]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval5-RIGHT_X_FINITE_METROLOGY-plan_extra5-must not carry right_x_metrology]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval6-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-plan_extra6-must not carry right_x_metrology]": "failure",
+        "tests.test_right_x_launch.test_full_chain_approval_carries_no_metrology": "failure",
+        "tests.test_right_x_launch.test_right_x_manifest_must_bind_its_sources": "failure"
+      }
+    },
+    "same_sparse_native_after": {
+      "tests": 342,
+      "passed": 311,
+      "failures": 26,
+      "errors": 5,
+      "skips": 0,
+      "bad_ids": {
+        ".revision.test_console17_limited_session": "error",
+        ".revision.test_left_fov_correction": "error",
+        ".revision.test_preapproved_view_fake_bus": "error",
+        ".revision.test_recorder_exception_chain": "error",
+        ".revision.test_vservo_timing_shadow": "error",
+        "revision.test_right_x_metrology.test_real_A_ik_collision_and_normal_reverse_plan_an_x_move_from_saved_actual": "failure",
+        "revision.test_right_x_metrology.test_real_planner_refusals_reach_no_executor": "failure",
+        "revision.test_sweepick_grip.test_at_model_level_a_trim_goes_through_the_same_validation_as_its_stage": "failure",
+        "revision.test_sweepick_real_command.test_inverse_reproduces_the_stored_real_sample": "failure",
+        "revision.test_sweepick_real_command.test_dry_run_sends_nothing_and_reports_refusals": "failure",
+        "revision.test_sweepick_real_command.test_classification_separates_hard_from_temporary": "failure",
+        "revision.test_sweepick_real_command.test_arms_only_report_uses_only_the_range_gates_and_heuristics_are_diagnostics": "failure",
+        "tests.test_console17_launch_scope.test_limited_approval_and_manifest_bind_together": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval0-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-approval does not match]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval1-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a LEFT_START_TO_LIFT manifest]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval2-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-automatic_return_after_lift=false]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval3-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-right_arm_commands_permitted=false]": "failure",
+        "tests.test_console17_launch_scope.test_a_full_chain_or_mismatched_approval_never_opens_the_limited_scope[approval4-LEFT_START_TO_LIFT-LEFT_START_TO_LIFT-unsupported execution_scope]": "failure",
+        "tests.test_console17_launch_scope.test_limited_manifest_must_bind_the_launcher_and_executors": "failure",
+        "tests.test_console17_launch_scope.test_a_changed_source_after_preparation_stops_the_limited_launch": "failure",
+        "tests.test_console17_launch_scope.test_full_chain_approval_without_execution_scope_keeps_the_existing_checks": "failure",
+        "tests.test_right_x_launch.test_right_x_approval_binds_its_config_into_the_plan": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval0-RIGHT_X_FINITE_METROLOGY-None-non-zero]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval1-RIGHT_X_FINITE_METROLOGY-None-declared_motor_writes]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval2-RIGHT_X_FINITE_METROLOGY-None-pre-approval]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval3-RIGHT_X_FINITE_METROLOGY-None-left release]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval4-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-None-not a RIGHT_X_FINITE_METROLOGY manifest]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval5-RIGHT_X_FINITE_METROLOGY-plan_extra5-must not carry right_x_metrology]": "failure",
+        "tests.test_right_x_launch.test_incomplete_or_foreign_approval_is_refused_before_any_device[approval6-RIGHT_RECEIVE_NONCONTACT_OBSERVATION-plan_extra6-must not carry right_x_metrology]": "failure",
+        "tests.test_right_x_launch.test_full_chain_approval_carries_no_metrology": "failure",
+        "tests.test_right_x_launch.test_right_x_manifest_must_bind_its_sources": "failure"
+      }
+    },
+    "native_bad_ID_delta": {
+      "new": [],
+      "gone": [],
+      "changed_class": []
+    },
+    "independent_root18_replay": {
+      "before": {
+        "runtime_gate_counts": {
+          "TP": 1,
+          "FP": 1,
+          "TN": 16,
+          "FN": 0,
+          "UNKNOWN": 0,
+          "OOD": 0
+        },
+        "executor_status": {
+          "FOV_OK": 16,
+          "FOV_RISK": 2
+        }
+      },
+      "after": {
+        "runtime_gate_counts": {
+          "TP": 0,
+          "FP": 0,
+          "TN": 0,
+          "FN": 0,
+          "UNKNOWN": 17,
+          "OOD": 1
+        },
+        "executor_status": {
+          "FOV_UNKNOWN": 17,
+          "OUT_OF_SUPPORT": 1
+        }
+      }
+    },
+    "pure_AB_join_checks_passed": 4,
+    "review": "four fixed-boundary findings plus oversized-integer case CLOSED; independent read-only review; RAW/clock physical validation not claimed"
+  },
+  "candidate_source_sha256": {
+    "sweepick_pick01.py": "7aa18794abe2fff10e123c1c8eb6e6f2caac47d241aba1538283f6080213a6a1",
+    "left_fov_check.py": "ab3b03d4cfc3a251c58f52a2a2890355cd99b1aa33e06f9dba7b4a1449bd6cb5",
+    "test_left_fov_check.py": "a669080e306b1776e4ebe6f51f13d3d0ebd6e0f9d067d078010b13e104ed745e",
+    "test_left_fov_correction.py": "0ff4f95c12c20169357a2d4009d22630b333a4079baadbfaf1561578d52ea138"
+  },
+  "preserved_core_function_sha256": {
+    "correct": "1b1eed2f595850760e80c81584e230769a96e3cf21c1d35ebba86613321ece28",
+    "plan_pick": "5e62d19fa888a375044e8a83e5faf069edac1eb73fbbf81d04fb9aa814852983",
+    "stage": "28f97e2c545b5fb717262c69d15ca1107fc099f1e78af646399a65e608cefe23"
+  },
+  "reference_sha256": "0910df5444301b0b9e20229489edf439347e176fa31a9fbefcb4f20ab7d93147",
+  "physical_readiness": "BLOCKED_MISSING_SOURCE_BOUND_REAL_CONTEXT",
+  "Correction": null,
+  "unit_test_source_sha256": {
+    "sweepick_pick01.py": "a5102e7f5ca8eb028c3b81b479b23e1b70869e417e0a2aa204cc5c042c690dfd",
+    "left_fov_check.py": "ab3b03d4cfc3a251c58f52a2a2890355cd99b1aa33e06f9dba7b4a1449bd6cb5",
+    "test_left_fov_check.py": "a669080e306b1776e4ebe6f51f13d3d0ebd6e0f9d067d078010b13e104ed745e",
+    "test_left_fov_correction.py": "0ff4f95c12c20169357a2d4009d22630b333a4079baadbfaf1561578d52ea138"
+  },
+  "publication_comment_cleanup": {
+    "file": "native/revision/sweepick_pick01.py",
+    "tested_sha256": "a5102e7f5ca8eb028c3b81b479b23e1b70869e417e0a2aa204cc5c042c690dfd",
+    "published_sha256": "7aa18794abe2fff10e123c1c8eb6e6f2caac47d241aba1538283f6080213a6a1",
+    "whole_module_AST_identical": true,
+    "scope": "remove inherited tool attribution comment only; reuse unchanged semantic test results"
+  }
+}

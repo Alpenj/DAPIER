@@ -9,7 +9,8 @@
     "support sensor whitespace-only lines normalized",
     "review handoff filename normalized",
     "B17 public reports retain anonymized technical findings; private recording values, source paths, model binaries and calibration are excluded",
-    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately"
+    "B17 synthetic large-clock test constants use generic values in the public copy; runtime source identity is retained separately",
+    "Offline FOV review candidate rejects unknown/unsupported evidence and malformed/nonfinite predictions, keeps FOV reference binding separate from motor return dependencies, preserves prior source digests; active deployment, field truth and original data remain unchanged"
   ],
   "files": [
     {
@@ -764,15 +765,22 @@
     },
     {
       "file": "native/revision/sweepick_pick01.py",
-      "source_group": "native_revision",
+      "source_group": "A_FOV_FAIL_CLOSED_REVIEW_OFFLINE_CANDIDATE",
       "source_name": "sweepick_pick01.py",
       "component": "A_CONTROL",
-      "source_sha256": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
-      "public_sha256": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
-      "bytes": 154380,
+      "source_sha256": "7aa18794abe2fff10e123c1c8eb6e6f2caac47d241aba1538283f6080213a6a1",
+      "public_sha256": "7aa18794abe2fff10e123c1c8eb6e6f2caac47d241aba1538283f6080213a6a1",
+      "bytes": 155877,
       "public_copy_changed": false,
       "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
-      "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143"
+      "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
+      "source_history": [
+        {
+          "base_commit": "c15e4344e259e51dc1c19f4cb22624061bb4252a",
+          "source_sha256": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275",
+          "public_sha256": "606d92abfc1a8f19ae3e81ae39ccf5d322c7cd1a586ca82cf5ab0bc649b86275"
+        }
+      ]
     },
     {
       "file": "native/revision/sweepick_progress.py",
@@ -2376,25 +2384,39 @@
     },
     {
       "file": "native/revision/left_fov_check.py",
-      "source_group": "left_close_fov_20261016",
+      "source_group": "A_FOV_FAIL_CLOSED_REVIEW_OFFLINE_CANDIDATE",
       "source_name": "left_fov_check.py",
       "component": "A_CONTROL",
-      "source_sha256": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
-      "public_sha256": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
-      "bytes": 5935,
+      "source_sha256": "ab3b03d4cfc3a251c58f52a2a2890355cd99b1aa33e06f9dba7b4a1449bd6cb5",
+      "public_sha256": "ab3b03d4cfc3a251c58f52a2a2890355cd99b1aa33e06f9dba7b4a1449bd6cb5",
+      "bytes": 9760,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
+      "source_history": [
+        {
+          "base_commit": "c15e4344e259e51dc1c19f4cb22624061bb4252a",
+          "source_sha256": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f",
+          "public_sha256": "f16354ce8eaf2749746ed2fb45f9a2784dfa40d3b6294ac52345b8417fd8f57f"
+        }
+      ]
     },
     {
       "file": "native/revision/test_left_fov_check.py",
-      "source_group": "left_close_fov_20261016",
+      "source_group": "A_FOV_FAIL_CLOSED_REVIEW_OFFLINE_CANDIDATE",
       "source_name": "test_left_fov_check.py",
       "component": "A_CONTROL",
-      "source_sha256": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc",
-      "public_sha256": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc",
-      "bytes": 3903,
+      "source_sha256": "a669080e306b1776e4ebe6f51f13d3d0ebd6e0f9d067d078010b13e104ed745e",
+      "public_sha256": "a669080e306b1776e4ebe6f51f13d3d0ebd6e0f9d067d078010b13e104ed745e",
+      "bytes": 5652,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
+      "source_history": [
+        {
+          "base_commit": "c15e4344e259e51dc1c19f4cb22624061bb4252a",
+          "source_sha256": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc",
+          "public_sha256": "f7a8a4744e1f76e3acd76a3f14ab2e74fbea6bbdcfa9cd615e3d8676a3bb2ccc"
+        }
+      ]
     },
     {
       "file": "native/revision/test_recorder_exception_chain.py",
@@ -2471,14 +2493,21 @@
     },
     {
       "file": "native/revision/test_left_fov_correction.py",
-      "source_group": "left_fov_correction_20261016",
+      "source_group": "A_FOV_FAIL_CLOSED_REVIEW_OFFLINE_CANDIDATE",
       "source_name": "test_left_fov_correction.py",
       "component": "A_CONTROL",
-      "source_sha256": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48",
-      "public_sha256": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48",
-      "bytes": 9662,
+      "source_sha256": "0ff4f95c12c20169357a2d4009d22630b333a4079baadbfaf1561578d52ea138",
+      "public_sha256": "0ff4f95c12c20169357a2d4009d22630b333a4079baadbfaf1561578d52ea138",
+      "bytes": 18349,
       "public_copy_changed": false,
-      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE"
+      "source_location": "LEFT_FOV_CORRECTION_WORKING_COPY_NOT_ACTIVE",
+      "source_history": [
+        {
+          "base_commit": "c15e4344e259e51dc1c19f4cb22624061bb4252a",
+          "source_sha256": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48",
+          "public_sha256": "6a863017262fb94663eb6d9c17fa4807a3a8a34b1aafe7625c14cb2293edab48"
+        }
+      ]
     },
     {
       "file": "docs/left_fov_correction_20261016/LEFT_FOV_CORRECTION_REGRESSION.json",
@@ -2508,6 +2537,26 @@
       "source_sha256": "a9949ba4700609309f9bbb7f2be341acef8539844bae0be849af4ece35d41c36",
       "public_sha256": "a9949ba4700609309f9bbb7f2be341acef8539844bae0be849af4ece35d41c36",
       "bytes": 46527,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/fov_review_20261016/FOV_FAIL_CLOSED_REVIEW.md",
+      "source_name": "FOV_FAIL_CLOSED_REVIEW.md",
+      "component": "A_NATIVE_EXECUTION",
+      "source_group": "A_FOV_FAIL_CLOSED_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "619b0b97d57fbb20957081326111fdd311d4be8e24d2859a5d987cc700b4f76e",
+      "public_sha256": "619b0b97d57fbb20957081326111fdd311d4be8e24d2859a5d987cc700b4f76e",
+      "bytes": 4946,
+      "public_copy_changed": false
+    },
+    {
+      "file": "docs/fov_review_20261016/FOV_REPLAY_SUMMARY.json",
+      "source_name": "FOV_REPLAY_SUMMARY.json",
+      "component": "A_NATIVE_EXECUTION",
+      "source_group": "A_FOV_FAIL_CLOSED_REVIEW_OFFLINE_CANDIDATE",
+      "source_sha256": "8249a130f6a654b95e723b19653399fe375cd03a0cc885d315e4496244047b87",
+      "public_sha256": "8249a130f6a654b95e723b19653399fe375cd03a0cc885d315e4496244047b87",
+      "bytes": 16558,
       "public_copy_changed": false
     }
   ],

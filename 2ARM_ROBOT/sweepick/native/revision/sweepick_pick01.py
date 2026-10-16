@@ -708,7 +708,8 @@ def observe(out):
             why = f"the grasp the arm can make here leaves {plan['room_each_side_m'] * 1000:.1f} mm each side (jaw axis leaning {plan['jaw_lean_deg']:.1f} deg), not more than the wrist image can resolve: the block has to stand differently for this arm"
     state.update(object_geometry=(scene.get("object") or {}).get("geometry"), visible_patch_class_match=(scene.get("object") or {}).get("class_match"),
                  jaw_reference=dict((scene.get("wrist") or {}).get("jaw_reference") or {}, gripper_tick=(scene.get("ticks") or {}).get("left", {}).get("gripper")) if scene["ok"] else None, wrist_record=WRIST, run_name="PICK02", control="SENSOR_PLANNED / SUPERVISED_AUTOMATED (no ACT)", evidence=[],
-                 sources={f: hashlib.sha256((HERE / f).read_bytes()).hexdigest() for f in ("sweepick_pick01.py", "sweepick_move_a.py", "sweepick_progress.py", "sweepick_grasp.py", "sweepick_progress_profile.json", "sweepick_jaw_profile_left.json", "sweepick_motion_profile.json")})
+                 sources={f: hashlib.sha256((HERE / f).read_bytes()).hexdigest() for f in ("sweepick_pick01.py", "sweepick_move_a.py", "sweepick_progress.py", "sweepick_grasp.py", "sweepick_progress_profile.json", "sweepick_jaw_profile_left.json", "sweepick_motion_profile.json")},
+                 fov_sources={f: hashlib.sha256((HERE / f).read_bytes()).hexdigest() for f in ("left_fov_check.py", "sweepick_left_fov_reference.json")})
     home = scene.get("ticks", {}).get("left") if scene["ok"] else None
     home_command, home_basis = home_command_ticks(home, mapping()) if home is not None else (None, None)
     state.update(ready=why is None, why=why, home_ticks=home, home_command_ticks=home_command, home_command_basis=home_basis,
@@ -1276,20 +1277,32 @@ FOV_GATES = ("ready_to_descend",)                                              #
 
 
 def fov_view_check(state, gate, evidence):
-    """{status: FOV_OK | FOV_RISK | FOV_UNKNOWN, ...} for a look that PASSED the gate; None for other gates. Reads only."""
+    """{status: FOV_OK | FOV_RISK | FOV_UNKNOWN | OUT_OF_SUPPORT, ...}; None for other gates. Reads only."""
     if gate not in FOV_GATES:
         return None
     import left_fov_check as lf
     ref = lf.load_reference()
     if ref is None:
-        return dict(status="FOV_UNKNOWN", why="FOV reference file missing or unreadable: the existing behaviour is kept", reference=str(lf.REFERENCE_FILE))
+        return dict(status="FOV_UNKNOWN", why="FOV reference file missing, corrupt, or structurally incomplete", reference=str(lf.REFERENCE_FILE))
     pred = lf.predict_final_view(evidence, (state.get("jaw_reference") or {}).get("midline_px"), ref)
     if pred is None:
-        return dict(status="FOV_UNKNOWN", why="the look gives no readable, stable, uncut block with a confirmed offset: no FOV prediction")
+        return dict(status="FOV_UNKNOWN", why="the look gives no finite, readable, stable, horizontally uncut block with a currently confirmed jaw reference")
+    if not pred["inside_observed_pre_offset_range"]:
+        return dict(status="OUT_OF_SUPPORT", why="the observed pre-grasp offset is outside the reference samples; no prediction authorizes descent or correction", prediction=pred, correctable=False)
+    try:
+        reference_sha = hashlib.sha256(lf.REFERENCE_FILE.read_bytes()).hexdigest()
+    except OSError:
+        return dict(status="FOV_UNKNOWN", why="FOV reference file disappeared while binding this look", reference=str(lf.REFERENCE_FILE), correctable=False)
+    recorded_sha = (state.get("fov_sources") or {}).get(lf.REFERENCE_FILE.name)
+    issues = lf.context_issues(evidence, ref)
+    if recorded_sha != reference_sha:
+        issues.insert(0, "session/reference SHA binding is missing or mismatched")
+    if issues:
+        return dict(status="FOV_UNKNOWN", why="; ".join(issues), prediction=pred, correctable=False, reference_sha256=reference_sha)
     off = evidence.get("wrist_offset") or {}
     correctable = bool(off.get("readable") and off.get("reference_confirmed_in_this_frame") and evidence.get("lateral_error_mm") is not None)
     return dict(status="FOV_RISK" if pred["pred_touches_border"] else "FOV_OK", prediction=pred, correctable=correctable,
-                reference_sha256=hashlib.sha256(lf.REFERENCE_FILE.read_bytes()).hexdigest(),
+                reference_sha256=reference_sha,
                 role="independent of the existing gate; only the existing lateral error is reduced, the grasp target is not changed")
 
 
@@ -1456,14 +1469,19 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
             row["square"] = alignment
             if "unknown" in alignment:
                 row["end"] = alignment["unknown"]; note(**row); return "NOT_ALIGNED"
-            fov = fov_view_check(S(), gate, ev) if ok else None
+            wrist = sc.get("wrist") or {}
+            fov_evidence = dict(ev, fov_context=wrist.get("fov_context", ev.get("fov_context")), frame_binding=wrist.get("frame_binding", ev.get("frame_binding")))
+            fov = fov_view_check(S(), gate, fov_evidence) if ok else None
             if fov is not None:
                 row["fov"] = fov
             if prev is not None and prev.get("fov") is not None:                 # what the last correction did to the predicted view, next to what it did to the error
                 row["fov_before_this_look"] = dict(status=prev["fov"].get("status"), pred_edges_px=(prev["fov"].get("prediction") or {}).get("pred_edges_px"), lateral_error_mm=prev["err_mm"])
             fov_driven = bool(ok and fov is not None and fov["status"] == "FOV_RISK")
-            if ok and not fov_driven:
+            fov_unconfirmed = bool(ok and fov is not None and fov["status"] in ("FOV_UNKNOWN", "OUT_OF_SUPPORT"))
+            if ok and not fov_driven and not fov_unconfirmed:
                 note(**row); _rec(lambda: vservo_shadow_input(out, row, sc), "vservo shadow input"); return "ALIGNED"
+            if fov_unconfirmed:
+                row["end"] = f"pre-descent FOV is {fov['status']}: it does not authorize descent or an automatic correction"; note(**row); return "NOT_ALIGNED"
             if fov_driven and not fov.get("correctable"):
                 row["end"] = "the gate passed but the block is predicted to leave the image after the descent, and this look gives no confirmed offset to correct"; note(**row); return "NOT_ALIGNED"
             if not fov_driven and not ev.get("correctable"):
@@ -1686,7 +1704,7 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
         if full_chain and handoff is None:
             import sweepick_full_chain
             handoff, _owner = sweepick_full_chain.build(out, ep, scope=scope, right_lift_m=right_lift_m, observation_plan=observation_plan, contact_plan=contact_plan)
-            (out / "ACTIVE_SELECTION.json").write_text(json.dumps(sweepick_full_chain.selection(scope), indent=1))      # which native files and which pin THIS process loaded, with their hashes                 # Codex's FullEpisodeHandoff with this process's owner (executor, readers, field records) injected
+            (out / "ACTIVE_SELECTION.json").write_text(json.dumps(sweepick_full_chain.selection(scope), indent=1))      # which native files and which pin THIS process loaded, with their hashes; FullEpisodeHandoff uses this process's owner
         r = session(out, execute=execute, handoff_fn=handoff, **dict(session_kw or {}, **(dict(limit=limit) if limit else {})))
     finally:
         EPISODE = None
