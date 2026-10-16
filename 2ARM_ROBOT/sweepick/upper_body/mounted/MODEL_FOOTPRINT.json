@@ -1,0 +1,144 @@
+{
+ "tb3_base_link_collision": {
+  "type": "box",
+  "xy_min": [
+   -0.197,
+   -0.133
+  ],
+  "xy_max": [
+   0.069,
+   0.133
+  ],
+  "z": [
+   0.01,
+   0.104
+  ]
+ },
+ "tb3_wheel_left_link_collision": {
+  "type": "cyl",
+  "centre": [
+   0.0,
+   0.144
+  ],
+  "r": 0.033,
+  "z": 0.033
+ },
+ "tb3_wheel_right_link_collision": {
+  "type": "cyl",
+  "centre": [
+   0.0,
+   -0.144
+  ],
+  "r": 0.033,
+  "z": 0.033
+ },
+ "tb3_caster_back_right_link_collision": {
+  "type": "box",
+  "xy_min": [
+   -0.192,
+   -0.074
+  ],
+  "xy_max": [
+   -0.162,
+   -0.054
+  ],
+  "z": [
+   0.0,
+   0.01
+  ]
+ },
+ "tb3_caster_back_left_link_collision": {
+  "type": "box",
+  "xy_min": [
+   -0.192,
+   0.054
+  ],
+  "xy_max": [
+   -0.162,
+   0.074
+  ],
+  "z": [
+   0.0,
+   0.01
+  ]
+ },
+ "tb3_base_scan_collision": {
+  "type": "cyl",
+  "centre": [
+   -0.049,
+   0.0
+  ],
+  "r": 0.055,
+  "z": 0.126
+ },
+ "tb3_camera_link_collision": {
+  "type": "box",
+  "xy_min": [
+   0.07,
+   -0.015
+  ],
+  "xy_max": [
+   0.085,
+   0.015
+  ],
+  "z": [
+   0.093,
+   0.12
+  ]
+ },
+ "profile_front": {
+  "type": "box",
+  "xy_min": [
+   -0.12,
+   -0.2
+  ],
+  "xy_max": [
+   -0.1,
+   0.2
+  ],
+  "z": [
+   0.104,
+   0.124
+  ]
+ },
+ "profile_back": {
+  "type": "box",
+  "xy_min": [
+   -0.028,
+   -0.2
+  ],
+  "xy_max": [
+   -0.008,
+   0.2
+  ],
+  "z": [
+   0.104,
+   0.124
+  ]
+ },
+ "os30a_enclosure_UNVERIFIED": {
+  "type": "box",
+  "xy_min": [
+   -0.052,
+   -0.045
+  ],
+  "xy_max": [
+   -0.018,
+   0.045
+  ],
+  "z": [
+   0.473,
+   0.508
+  ]
+ },
+ "left_arm_base": [
+  -0.096,
+  0.15,
+  0.124
+ ],
+ "right_arm_base": [
+  -0.096,
+  -0.15,
+  0.124
+ ]
+}

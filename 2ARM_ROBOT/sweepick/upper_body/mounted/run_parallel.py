@@ -9,10 +9,13 @@ import mounted_pick as mpk, mounted_poses as mp
 STATE = Path('/home/robot/sweepick_console_runs/20261016_121735_b9241e/session/STATE.json')
 st = json.loads(STATE.read_text())
 HOME = dict(left={j: float(st['home_ticks'][j]) for j in mp.ARM}, right={j: float(st['right_ticks'][j]) for j in mp.ARM})
-W2 = 0.153                                              # Waffle Pi half width in the model
-SHELVES = dict(LEFT_SIDE=dict(top_z_m=0.104, centre_xy=[0.0, W2 + 0.02 + 0.15], half_size_xy=[0.30, 0.15]),
-               RIGHT_SIDE=dict(top_z_m=0.104, centre_xy=[0.0, -(W2 + 0.02 + 0.15)], half_size_xy=[0.30, 0.15]),
-               FRONT=dict(top_z_m=0.104, centre_xy=[0.13 + 0.02 + 0.15, 0.0], half_size_xy=[0.15, 0.40]))
+# Shelf placement from the A 'mobile' model (MODEL_FOOTPRINT.json): the mount rails reach y = +-0.200 m, the front camera
+# x = +0.085 m. Each shelf stands 2 cm outside them (a scenario gap, not a measurement); top = base top 0.104 m.
+RAIL_Y, FRONT_X, GAP, TOP = 0.200, 0.085, 0.02, 0.104
+SHELVES = dict(LEFT_SIDE=dict(top_z_m=TOP, centre_xy=[0.0, RAIL_Y + GAP + 0.15], half_size_xy=[0.30, 0.15]),
+               RIGHT_SIDE=dict(top_z_m=TOP, centre_xy=[0.0, -(RAIL_Y + GAP + 0.15)], half_size_xy=[0.30, 0.15]),
+               FRONT=dict(top_z_m=TOP, centre_xy=[FRONT_X + GAP + 0.15, 0.0], half_size_xy=[0.15, 0.40]))
+SUPPORTS = tuple((__import__('os').environ.get('SUPPORTS') or 'floor,shelf').split(','))
 
 
 def inside(sh, x, y):
@@ -35,8 +38,9 @@ if __name__ == '__main__':
     jobs = []
     for side in ('left', 'right'):
         for yaw in (0, 45):
-            jobs += [('floor', None, side, yaw, float(x), float(y)) for x in xs for y in ys]
-            for name, sh in SHELVES.items():
+            if 'floor' in SUPPORTS:
+                jobs += [('floor', None, side, yaw, float(x), float(y)) for x in xs for y in ys]
+            for name, sh in (SHELVES.items() if 'shelf' in SUPPORTS else ()):
                 jobs += [('shelf', name, side, yaw, float(x), float(y)) for x in xs for y in ys if inside(sh, x, y)]
     t0 = time.time(); print('cells', len(jobs), flush=True)
     out = []

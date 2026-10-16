@@ -1,0 +1,729 @@
+{
+ "elapsed_s": 1572.4,
+ "shelves": {
+  "LEFT_SIDE": {
+   "top_z_m": 0.104,
+   "centre_xy": [
+    0.0,
+    0.37
+   ],
+   "half_size_xy": [
+    0.3,
+    0.15
+   ]
+  },
+  "RIGHT_SIDE": {
+   "top_z_m": 0.104,
+   "centre_xy": [
+    0.0,
+    -0.37
+   ],
+   "half_size_xy": [
+    0.3,
+    0.15
+   ]
+  },
+  "FRONT": {
+   "top_z_m": 0.104,
+   "centre_xy": [
+    0.255,
+    0.0
+   ],
+   "half_size_xy": [
+    0.15,
+    0.4
+   ]
+  }
+ },
+ "grid": {
+  "x": [
+   -0.2,
+   -0.15,
+   -0.1,
+   -0.05,
+   -0.0,
+   0.05,
+   0.1,
+   0.15,
+   0.2,
+   0.25,
+   0.3,
+   0.35,
+   0.4,
+   0.45
+  ],
+  "y": [
+   -0.5,
+   -0.45,
+   -0.4,
+   -0.35,
+   -0.3,
+   -0.25,
+   -0.2,
+   -0.15,
+   -0.1,
+   -0.05,
+   -0.0,
+   0.05,
+   0.1,
+   0.15,
+   0.2,
+   0.25,
+   0.3,
+   0.35,
+   0.4,
+   0.45,
+   0.5
+  ]
+ },
+ "groups": {
+  "floor left yaw0": {
+   "cells": 294,
+   "feasible": 56,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.1,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 35,
+    "tilt10/x": 8,
+    "tilt0/y": 4,
+    "tilt20/x": 9
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'left_",
+     4
+    ],
+    [
+     "path collision at u=0.39 [('tb3_base_link_collision', 'left_",
+     3
+    ],
+    [
+     "path collision at u=0.35 [('left_shoulder', 'left_lower_arm'",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ....OOOOOOO..........",
+    "+0.20 ...OOOOOOOOO.........",
+    "+0.15 ..OOOOOOOOOOO........",
+    "+0.10 .OOOOOO.....O........",
+    "+0.05 .OOOOOO..............",
+    "-0.00 .OOOOO...............",
+    "-0.05 .OOOOO...............",
+    "-0.10 .OOOO................",
+    "-0.15 .OO..................",
+    "-0.20 ....................."
+   ]
+  },
+  "floor left yaw45": {
+   "cells": 294,
+   "feasible": 54,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.1,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 36,
+    "tilt10/x": 9,
+    "tilt20/x": 9
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'left_",
+     5
+    ],
+    [
+     "path collision at u=0.70 [('tb3_base_link_collision', 'left_",
+     4
+    ],
+    [
+     "path collision at u=0.57 [('left_pgripper_housing', 'right_p",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ....OOOOOOO..........",
+    "+0.20 ...OOOOOOOOO.........",
+    "+0.15 ..OOOOOOOOOOO........",
+    "+0.10 .OOOOOO..............",
+    "+0.05 .OOOOOO..............",
+    "-0.00 .OOOOO...............",
+    "-0.05 .OOOO................",
+    "-0.10 .OOOO................",
+    "-0.15 .OO..................",
+    "-0.20 ....................."
+   ]
+  },
+  "floor right yaw0": {
+   "cells": 294,
+   "feasible": 55,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    0.1
+   ],
+   "grasps": {
+    "tilt10/x": 8,
+    "tilt0/x": 37,
+    "tilt20/x": 9,
+    "tilt0/y": 1
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'right",
+     4
+    ],
+    [
+     "path collision at u=0.35 [('right_shoulder', 'right_lower_ar",
+     3
+    ],
+    [
+     "path collision at u=0.39 [('tb3_base_link_collision', 'right",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ..........OOOOOOO....",
+    "+0.20 .........OOOOOOOOO...",
+    "+0.15 ........OOOOOOOOOOO..",
+    "+0.10 ..............OOOOOO.",
+    "+0.05 ..............OOOOOO.",
+    "-0.00 ...............OOOOO.",
+    "-0.05 ...............OOOOO.",
+    "-0.10 ................OOOO.",
+    "-0.15 ..................OO.",
+    "-0.20 ....................."
+   ]
+  },
+  "floor right yaw45": {
+   "cells": 294,
+   "feasible": 54,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    0.1
+   ],
+   "grasps": {
+    "tilt10/x": 9,
+    "tilt0/x": 36,
+    "tilt20/x": 9
+   },
+   "top_refusals": [
+    [
+     "path collision at u=0.65 [('tb3_base_link_collision', 'right",
+     4
+    ],
+    [
+     "path collision at u=0.70 [('tb3_base_link_collision', 'right",
+     3
+    ],
+    [
+     "path collision at u=0.35 [('right_shoulder', 'right_lower_ar",
+     3
+    ]
+   ],
+   "map": [
+    "+0.45 .....................",
+    "+0.40 .....................",
+    "+0.35 .....................",
+    "+0.30 .....................",
+    "+0.25 ..........OOOOOOO....",
+    "+0.20 .........OOOOOOOOO...",
+    "+0.15 ........OOOOOOOOOOO..",
+    "+0.10 ..............OOOOOO.",
+    "+0.05 ..............OOOOOO.",
+    "-0.00 ...............OOOOO.",
+    "-0.05 ................OOOO.",
+    "-0.10 ................OOOO.",
+    "-0.15 ..................OO.",
+    "-0.20 ....................."
+   ]
+  },
+  "shelf:FRONT left yaw0": {
+   "cells": 75,
+   "feasible": 23,
+   "x_range": [
+    0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.05,
+    0.35
+   ],
+   "grasps": {
+    "tilt0/x": 12,
+    "tilt10/x": 7,
+    "tilt20/x": 4
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.1331 axis_err=78.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0091 axis_err=33.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0054 axis_err=19.9deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ..OOOOO........   ",
+    "+0.20    OOOOOOOOO......   ",
+    "+0.15    OOOOOOOOO......   "
+   ]
+  },
+  "shelf:FRONT left yaw45": {
+   "cells": 75,
+   "feasible": 23,
+   "x_range": [
+    0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.05,
+    0.35
+   ],
+   "grasps": {
+    "tilt0/x": 12,
+    "tilt10/x": 7,
+    "tilt20/x": 4
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0045 axis_err=20.5deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1330 axis_err=78.9deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0948 axis_err=72.4deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ..OOOOO........   ",
+    "+0.20    OOOOOOOOO......   ",
+    "+0.15    OOOOOOOOO......   "
+   ]
+  },
+  "shelf:FRONT right yaw0": {
+   "cells": 75,
+   "feasible": 24,
+   "x_range": [
+    0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.35,
+    0.1
+   ],
+   "grasps": {
+    "tilt0/x": 12,
+    "tilt10/x": 7,
+    "tilt20/x": 5
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.1128 axis_err=76.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0081 axis_err=31.7deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0119 axis_err=44.7deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ........OOOOO..   ",
+    "+0.20    ......OOOOOOOOO   ",
+    "+0.15    .....OOOOOOOOOO   "
+   ]
+  },
+  "shelf:FRONT right yaw45": {
+   "cells": 75,
+   "feasible": 23,
+   "x_range": [
+    0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.35,
+    0.05
+   ],
+   "grasps": {
+    "tilt0/x": 12,
+    "tilt10/x": 7,
+    "tilt20/x": 4
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0056 axis_err=19.9deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0093 axis_err=33.1deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0065 axis_err=25.7deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.35    ...............   ",
+    "+0.30    ...............   ",
+    "+0.25    ........OOOOO..   ",
+    "+0.20    ......OOOOOOOOO   ",
+    "+0.15    ......OOOOOOOOO   "
+   ]
+  },
+  "shelf:LEFT_SIDE left yaw0": {
+   "cells": 60,
+   "feasible": 34,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    0.25,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 21,
+    "tilt10/x": 6,
+    "tilt20/x": 5,
+    "tilt20/y": 1,
+    "tilt0/y": 1
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0073 axis_err=29.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0072 axis_err=30.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0082 axis_err=34.2deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25 .....O               ",
+    "+0.20 ...OOO               ",
+    "+0.15 ..OOOO               ",
+    "+0.10 .OOOOO               ",
+    "+0.05 .OOOOO               ",
+    "-0.00 .OOOOO               ",
+    "-0.05 .OOOOO               ",
+    "-0.10 .OOOO.               ",
+    "-0.15 .OO...               ",
+    "-0.20 ......               "
+   ]
+  },
+  "shelf:LEFT_SIDE left yaw45": {
+   "cells": 60,
+   "feasible": 33,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    0.25,
+    0.45
+   ],
+   "grasps": {
+    "tilt0/x": 21,
+    "tilt10/x": 6,
+    "tilt20/x": 6
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0079 axis_err=30.2deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0073 axis_err=28.8deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0092 axis_err=33.9deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25 .....O               ",
+    "+0.20 ...OOO               ",
+    "+0.15 ..OOOO               ",
+    "+0.10 .OOOOO               ",
+    "+0.05 .OOOOO               ",
+    "-0.00 .OOOOO               ",
+    "-0.05 .OOOO.               ",
+    "-0.10 .OOOO.               ",
+    "-0.15 .OO...               ",
+    "-0.20 ......               "
+   ]
+  },
+  "shelf:LEFT_SIDE right yaw0": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.0769 axis_err=74.5deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1187 axis_err=74.7deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1790 axis_err=90.2deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25 ......               ",
+    "+0.20 ......               ",
+    "+0.15 ......               ",
+    "+0.10 ......               ",
+    "+0.05 ......               ",
+    "-0.00 ......               ",
+    "-0.05 ......               ",
+    "-0.10 ......               ",
+    "-0.15 ......               ",
+    "-0.20 ......               "
+   ]
+  },
+  "shelf:LEFT_SIDE right yaw45": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.1191 axis_err=74.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1791 axis_err=90.3deg",
+     1
+    ],
+    [
+     "ik pos_err=0.2242 axis_err=94.9deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25 ......               ",
+    "+0.20 ......               ",
+    "+0.15 ......               ",
+    "+0.10 ......               ",
+    "+0.05 ......               ",
+    "-0.00 ......               ",
+    "-0.05 ......               ",
+    "-0.10 ......               ",
+    "-0.15 ......               ",
+    "-0.20 ......               "
+   ]
+  },
+  "shelf:RIGHT_SIDE left yaw0": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.2313 axis_err=96.6deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1571 axis_err=79.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.1229 axis_err=72.5deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25                ......",
+    "+0.20                ......",
+    "+0.15                ......",
+    "+0.10                ......",
+    "+0.05                ......",
+    "-0.00                ......",
+    "-0.05                ......",
+    "-0.10                ......",
+    "-0.15                ......",
+    "-0.20                ......"
+   ]
+  },
+  "shelf:RIGHT_SIDE left yaw45": {
+   "cells": 60,
+   "feasible": 0,
+   "x_range": null,
+   "y_range": null,
+   "grasps": {},
+   "top_refusals": [
+    [
+     "ik pos_err=0.2629 axis_err=97.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0538 axis_err=68.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.3093 axis_err=94.1deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25                ......",
+    "+0.20                ......",
+    "+0.15                ......",
+    "+0.10                ......",
+    "+0.05                ......",
+    "-0.00                ......",
+    "-0.05                ......",
+    "-0.10                ......",
+    "-0.15                ......",
+    "-0.20                ......"
+   ]
+  },
+  "shelf:RIGHT_SIDE right yaw0": {
+   "cells": 60,
+   "feasible": 34,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    -0.25
+   ],
+   "grasps": {
+    "tilt0/x": 22,
+    "tilt10/x": 6,
+    "tilt20/x": 6
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0076 axis_err=30.0deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0069 axis_err=28.6deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0041 axis_err=1.1deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25                O.....",
+    "+0.20                OOO...",
+    "+0.15                OOOO..",
+    "+0.10                OOOOO.",
+    "+0.05                OOOOO.",
+    "-0.00                OOOOO.",
+    "-0.05                OOOOO.",
+    "-0.10                .OOOO.",
+    "-0.15                ...OO.",
+    "-0.20                ......"
+   ]
+  },
+  "shelf:RIGHT_SIDE right yaw45": {
+   "cells": 60,
+   "feasible": 33,
+   "x_range": [
+    -0.15,
+    0.25
+   ],
+   "y_range": [
+    -0.45,
+    -0.25
+   ],
+   "grasps": {
+    "tilt10/x": 6,
+    "tilt0/x": 21,
+    "tilt20/x": 6
+   },
+   "top_refusals": [
+    [
+     "ik pos_err=0.0080 axis_err=34.4deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0146 axis_err=48.6deg",
+     1
+    ],
+    [
+     "ik pos_err=0.0104 axis_err=40.3deg",
+     1
+    ]
+   ],
+   "map": [
+    "+0.25                O.....",
+    "+0.20                OOO...",
+    "+0.15                OOOO..",
+    "+0.10                OOOOO.",
+    "+0.05                OOOOO.",
+    "-0.00                OOOOO.",
+    "-0.05                .OOOO.",
+    "-0.10                .OOOO.",
+    "-0.15                ...OO.",
+    "-0.20                ......"
+   ]
+  }
+ }
+}

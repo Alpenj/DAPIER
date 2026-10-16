@@ -2515,9 +2515,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "run_parallel.py",
       "component": "UPPER_BODY",
-      "source_sha256": "2691eb8c82ae75c46a1a5d596644a4d28f274e67123e51c2d68815464a3ecb01",
-      "public_sha256": "17c713ecaa4fd35bf3929f38b9696cda38c8cb36885b95ebf834b875015b44e9",
-      "bytes": 2725,
+      "source_sha256": "c659ee5acbf723736d6c5ae1250ffa3e8b0e20a676ba33e896b0ba75fa16513a",
+      "public_sha256": "82478125d85b17d2b1b512da02c8436ebb7c02015168fc9922d5d598a2877be2",
+      "bytes": 3086,
       "public_copy_changed": true,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2537,9 +2537,9 @@
       "source_group": "upper_body_20261016",
       "source_name": "start_w6.sh",
       "component": "UPPER_BODY",
-      "source_sha256": "9788dcec6801a6cba8939acab23efd768d21028b2ef868a5e28de045878849b1",
-      "public_sha256": "2c3b554748208eb03ab2b8ddb496e8096af3f4f4cf48872e01f06285a2367e5b",
-      "bytes": 320,
+      "source_sha256": "138df2ffe5e3be648a9157c0710e340b3339e56389abf354d403ac2ae53d7817",
+      "public_sha256": "6c2bd1b73f8ee75008678c66b679d29872a3d2a3ae232d40bc896cbd9b418dc2",
+      "bytes": 354,
       "public_copy_changed": true,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     },
@@ -2551,6 +2551,39 @@
       "source_sha256": "897bbdf0f1fa49f3a754f235e5ec2b1a9b6ecf8245160bb89ae9c739f78fc656",
       "public_sha256": "897bbdf0f1fa49f3a754f235e5ec2b1a9b6ecf8245160bb89ae9c739f78fc656",
       "bytes": 14808,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/plot_feasibility.py",
+      "source_group": "upper_body_20261016",
+      "source_name": "plot_feasibility.py",
+      "component": "UPPER_BODY",
+      "source_sha256": "07ed1c213352ea505cdb820795dc634dea1cae71052e8a27b62ab64c8d57d97a",
+      "public_sha256": "07ed1c213352ea505cdb820795dc634dea1cae71052e8a27b62ab64c8d57d97a",
+      "bytes": 4492,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "upper_body/mounted/MODEL_FOOTPRINT.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "MODEL_FOOTPRINT.json",
+      "component": "UPPER_BODY",
+      "source_sha256": "ff45ffc91dc97f2fcdc770dd3c4071ba0445c006148e0272b447d4459776db1e",
+      "public_sha256": "ff45ffc91dc97f2fcdc770dd3c4071ba0445c006148e0272b447d4459776db1e",
+      "bytes": 1581,
+      "public_copy_changed": false,
+      "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
+    },
+    {
+      "file": "docs/upper_body_20261016/MOUNTED_PICK_FEASIBILITY_V2_SUMMARY.json",
+      "source_group": "upper_body_20261016",
+      "source_name": "MOUNTED_PICK_FEASIBILITY_V2_SUMMARY.json",
+      "component": "DOCS",
+      "source_sha256": "780d8426fd30a2ccde548ddf9c5a07abd6f2cafd6c30234e99c60eb302a99bb3",
+      "public_sha256": "780d8426fd30a2ccde548ddf9c5a07abd6f2cafd6c30234e99c60eb302a99bb3",
+      "bytes": 13620,
       "public_copy_changed": false,
       "source_location": "UPPER_BODY_MOCK_OFFLINE_NOT_ACTIVE"
     }
