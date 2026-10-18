@@ -2751,8 +2751,8 @@
    "source_group": "docs",
    "source_name": "DEEP_RESEARCH_REQUEST.md",
    "component": "DOCS",
-   "source_sha256": "450eb882333f8d9639378b53488fb46acd6d5ee5b871d2b7482a6962616990e2",
-   "public_sha256": "450eb882333f8d9639378b53488fb46acd6d5ee5b871d2b7482a6962616990e2",
+   "source_sha256": "3d4b5d3d2527612bf330be511285182c64c516ea8a08c50cc63593312d6888eb",
+   "public_sha256": "3d4b5d3d2527612bf330be511285182c64c516ea8a08c50cc63593312d6888eb",
    "bytes": 14152,
    "public_copy_changed": false,
    "revision": "2026-10-18 auto teacher"
@@ -2773,9 +2773,9 @@
    "source_group": "docs",
    "source_name": "README.md",
    "component": "DOCS",
-   "source_sha256": "1e0a87726ec98fb391635c97b32248368862e73b022429c54a56d7d362f25e28",
-   "public_sha256": "1e0a87726ec98fb391635c97b32248368862e73b022429c54a56d7d362f25e28",
-   "bytes": 7543,
+   "source_sha256": "1c7d41832fb77b3191665590924ef8d45d411b1684da30701eef6b38d0d96b0d",
+   "public_sha256": "1c7d41832fb77b3191665590924ef8d45d411b1684da30701eef6b38d0d96b0d",
+   "bytes": 7683,
    "public_copy_changed": false,
    "revision": "2026-10-18 auto teacher"
   },
