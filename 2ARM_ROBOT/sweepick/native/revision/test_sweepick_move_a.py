@@ -361,3 +361,78 @@ def test_reverse_trim_waits_for_actual_progress_to_finish_before_settling(tmp_pa
     assert code == 0 and log["result"] == "HOLDING", (log["result"], log.get("reached"))
     assert fake.reversing and log["reached"]["elbow_flex"]["settled"] is True
     assert log["reached"]["elbow_flex"]["minus_target"] == 0
+
+
+class SeedLost(Fake):
+    """the first Goal write of `joint` is applied by the servo but its answer is lost (2026-10-18 field BUS_LOSTs)"""
+    def __init__(self, start, joint, applied=True, lose=1, **kw):
+        super().__init__(start, **kw); self.joint, self.applied, self.lose = joint, applied, lose
+    def write(self, reg, n, v, normalize=True):
+        if reg == "Goal_Position" and n == self.joint and self.lose > 0:
+            self.lose -= 1
+            if self.applied:
+                self.reg[reg][n] = v; self.reg["Torque_Enable"][n] = 1
+            raise ConnectionError("Failed to write 'Goal_Position' [TxRxResult] There is no status packet!")
+        super().write(reg, n, v, normalize)
+
+
+def test_a_lost_seed_answer_that_was_applied_is_confirmed_by_read_back(tmp_path):
+    f = SeedLost(MID, "elbow_flex", applied=True); code, log = go(tmp_path / "o", f, target=dict(elbow_flex=MID["elbow_flex"] - 228), execute=True)
+    assert log["result"] == "HOLDING" and any(e.get("recovery") == "READ_BACK_CONFIRMS_THE_SEED_WAS_APPLIED" for e in log["events"] if isinstance(e, dict))
+
+
+def test_a_lost_seed_that_was_not_applied_is_written_once_more(tmp_path):
+    f = SeedLost(MID, "elbow_flex", applied=False); code, log = go(tmp_path / "o", f, target=dict(elbow_flex=MID["elbow_flex"] - 228), execute=True)
+    assert log["result"] == "HOLDING" and any(e.get("recovery") == "SAME_SEED_WRITTEN_ONCE_MORE_AND_ACKNOWLEDGED" for e in log["events"] if isinstance(e, dict))
+
+
+def test_two_lost_seed_answers_stay_a_bus_lost_stop(tmp_path):
+    f = SeedLost(MID, "elbow_flex", applied=False, lose=2); code, log = go(tmp_path / "o", f, target=dict(elbow_flex=MID["elbow_flex"] - 228), execute=True)
+    assert log["result"] == "BUS_LOST"
+
+
+def test_a_lost_answer_during_the_motion_is_not_retried(tmp_path):
+    f = SeedLost(MID, "elbow_flex", applied=False, lose=0); f.lose_later = True
+    orig = f.write; n_goal = [0]
+    def write(reg, n, v, normalize=True):
+        if reg == "Goal_Position" and n == "elbow_flex":
+            n_goal[0] += 1
+            if n_goal[0] == 5:
+                raise ConnectionError("Failed to write 'Goal_Position' [TxRxResult] Incorrect status packet!")
+        return orig(reg, n, v, normalize)
+    f.write = write
+    code, log = go(tmp_path / "o", f, target=dict(elbow_flex=MID["elbow_flex"] - 228), execute=True)
+    assert log["result"] == "BUS_LOST" and not any(isinstance(e, dict) and "recovery" in e for e in log["events"])
+
+
+class StaleAfterSeeds(Fake):
+    """the first read after the seed writes gets another servo's late answer once (2026-10-18 163849_right)"""
+    def __init__(self, start, fail_reads=1, **kw):
+        super().__init__(start, **kw); self.goals_written, self.fail_reads = 0, fail_reads
+    def write(self, reg, n, v, normalize=True):
+        if reg == "Goal_Position": self.goals_written += 1
+        super().write(reg, n, v, normalize)
+    def sync_read(self, reg, normalize=True):
+        if self.goals_written >= 1 and self.fail_reads > 0 and reg in ("Present_Position", "Goal_Position"):
+            self.fail_reads -= 1; raise ConnectionError("response_contract: expected ID=1 LENGTH=4; received packet=ffff020400ec030a")
+        return super().sync_read(reg, normalize)
+
+
+def test_a_stale_answer_after_the_seeds_is_read_once_more_and_the_move_goes_on(tmp_path):
+    f = StaleAfterSeeds(MID); code, log = go(tmp_path / "o", f, target=dict(elbow_flex=MID["elbow_flex"] - 228), execute=True)
+    assert log["result"] == "HOLDING" and any(isinstance(e, dict) and (e.get("recovery") == "READ_REPEATED_AND_ANSWERED" or e.get("event") == "loop_read_recovered") for e in log["events"])   # 194127: the loop read itself is asked again first
+
+
+def test_two_stale_answers_after_the_seeds_stay_a_bus_lost_stop(tmp_path):
+    f = StaleAfterSeeds(MID, fail_reads=40); code, log = go(tmp_path / "o", f, target=dict(elbow_flex=MID["elbow_flex"] - 228), execute=True)   # 194127: reads that STAY unanswered (each loop read is asked 3 times)
+    assert log["result"] == "BUS_LOST"
+
+
+def test_the_seed_writes_are_spaced_one_servo_at_a_time(tmp_path):
+    f = Fake(MID); c = __import__("test_sweepick_move_a").Clock(); slept = []
+    mp = rc.load_mapping(IN / "CANDIDATE_Q12_CONFIG.json", Path.home() / ".config/dapier/lerobot-calibration", IN / "ASSEMBLED_ZERO_AND_PGRIPPER.json")
+    def sl(s_):
+        slept.append(s_); c.sleep(s_)
+    a.run("out", "left", tmp_path / "o", open_bus=lambda port: f, owner=lambda p: "", mapping=mp, mapping_sha="m", sleep=sl, clock=c.now,
+          target=dict(elbow_flex=MID["elbow_flex"] - 228, wrist_flex=MID["wrist_flex"] + 50), torque_joints=["elbow_flex", "wrist_flex"], execute=True)
+    assert slept.count(a.SEED_STAGGER_S) >= 1

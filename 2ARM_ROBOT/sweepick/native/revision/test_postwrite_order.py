@@ -62,7 +62,7 @@ def test_failed_postwrite_read_stops_before_any_later_actuation(tmp_path):
     first_write = next(i for i, event in enumerate(fake.events) if event[0] == "write")
     assert code == 15 and log["stopped_by"]["gate"] == "bus_lost"
     assert fake.writes == [("Goal_Position", "gripper", MID["gripper"])]
-    assert reads_after(fake.events, first_write) == POSTWRITE_READS[:3] + POSTWRITE_READS[:3]
+    assert reads_after(fake.events, first_write) == POSTWRITE_READS[:3] * 17           # 2026-10-18: the drive-initialization read is repeated up to 3 times (no write is); then the record read; 194127 + 215335: each loop read is asked up to 4 times
     assert log["read_after_loss"]["answered"] is False
     assert log["read_after_loss"]["failed_register"] == "Status"
     assert log["end"]["goal_register"] == fake.reg["Goal_Position"]

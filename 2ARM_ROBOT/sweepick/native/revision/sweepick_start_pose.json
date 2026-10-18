@@ -1,0 +1,37 @@
+{
+ "schema": "sweepick.start-pose.v1",
+ "meaning": "The pose a session starts from: arm folded at rest, gripper open at an opening whose wrist jaw reference is stored. `sweepick_pick01.py prepare <out> <side>` moves an arm there (and releases it) when the read pose is off; observe never needs a person to set it.",
+ "right": {
+  "arm": {
+   "shoulder_pan": 2100,
+   "shoulder_lift": 1033,
+   "elbow_flex": 3134,
+   "wrist_flex": 2074,
+   "wrist_roll": 2087
+  },
+  "arm_source": "home_ticks of the eight right sessions of 2026-10-18 (12:03..14:06, incl. 14:00 / 14:06), median; spread 2096..2134 / 1017..1047 / 3134..3137 / 2040..2092 / 2080..2094",
+  "gripper_open_tick": 3000,
+  "gripper_source": "6 ticks inside the right gripper servo range [1490, 3006] (3014..3017, the hand-opened starts of 2026-10-18, lie above it and cannot be commanded). No stored jaw reference at 3000 yet: observe reads it live (the live read agreed with the stored 3014 one at 14:06); 3014 +-5 stays accepted as it is",
+  "gripper_mechanical_open_tick": 2998,
+  "gripper_mechanical_open_source": "MEASURED 2026-10-18 ~19:55: torque off, jaws opened by hand until they stopped, read-only Present_Position twice (2998, 2998); servo Max_Position_Limit 3006 is above it, so the calibrated range does not limit the opening (no EEPROM change). ~/sweepick_261018_gripper_recal"
+ },
+ "left": {
+  "arm": {
+   "shoulder_pan": 2064,
+   "shoulder_lift": 1044,
+   "elbow_flex": 3147,
+   "wrist_flex": 2018,
+   "wrist_roll": 2026
+  },
+  "arm_source": "home_ticks of the four left console sessions 2026-10-15/16, median; spread 2006..2122 / 1036..1065 / 3144..3164 / 1970..2115 / 2018..2074",
+  "gripper_open_tick": 3366,
+  "gripper_source": "the left jaw reference stored at 3366 (PICK01 2026-10-08, three frames); 3433 is stored too but lies above the left gripper servo range [2001, 3431] (found by test_prepare_start, 2026-10-18)",
+  "gripper_mechanical_open_tick": 3364,
+  "gripper_mechanical_open_source": "MEASURED 2026-10-18 ~19:55: torque off, jaws opened by hand until they stopped, read-only Present_Position twice (3364, 3364); servo Max_Position_Limit 3431 is above it, so the calibrated range does not limit the opening (no EEPROM change). ~/sweepick_261018_gripper_recal"
+ },
+ "arm_tolerance_ticks": 14,
+ "arm_tolerance_basis": "the executor's own 'reached' tolerance (sweepick_progress_profile reach = 14 ticks). 2026-10-18 (user): even a slightly different rest is brought to the start pose; the earlier 120 ticks (spread of the recorded rests, up to 116) left it as it was",
+ "gripper_rule": "accepted as it is when within 5 ticks of an opening with a stored jaw reference or within 20 ticks of gripper_open_tick; otherwise opened to gripper_open_tick (always inside the servo range)",
+ "release_sag_allowance_ticks": 20,
+ "release_sag_basis": "2026-10-18 174444: the left wrist_flex reached the start pose 14 ticks off with torque on and settled 16 ticks off once released (its own weight). The move aims at 14; after the release the start pose is accepted within 14 + 20"
+}

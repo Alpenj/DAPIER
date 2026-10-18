@@ -40,30 +40,30 @@ def after_loss(f):
     i = max(k for k, e in enumerate(f.log) if e[0] == "write"); return f.log[i + 1:] if f.fail.get("lost_goal_write") else f.log[next(k for k, e in enumerate(f.log) if e == ("read", "Goal_Position") and k > i) + 1:]
 
 
-def test_observation_09_third_seed_write_unanswered_is_read_once_and_nothing_more_is_sent(tmp_path):
+def test_observation_09_third_seed_write_unanswered_is_written_once_more_with_the_same_seed(tmp_path):
+    """2026-10-18 contract change (three field BUS_LOSTs on seed writes): a SEED write that got no answer is read back and,
+    the joint still standing on that seed, written once more with the SAME value; then the move goes on."""
     f = Stored(OBS09, lost_goal_write=3); code, log = go(tmp_path / "o", f, target=OBS09["target"], execute=True)
-    assert code == 15 and log["result"] == "BUS_LOST" and log["stopped_by"]["gate"] == "bus_lost" and log["writes"] == dict(Goal_Position=2, Torque_Enable=0)
-    assert log["last_acknowledged_goal"] == dict(shoulder_pan=2080, shoulder_lift=1108) and log["last_goal_write_attempt"] == dict(joint="elbow_flex", requested_tick=3142, acknowledgement="UNKNOWN")
-    assert [e for e in f.log if e[0] == "write"] == [("write", "Goal_Position", "shoulder_pan", 2080), ("write", "Goal_Position", "shoulder_lift", 1108), ("write", "Goal_Position", "elbow_flex", 3142)]   # no retransmission, no next joint, no torque write
-    assert after_loss(f) == [("read", reg) for _, reg in a.POSTWRITE_READS] and f.disconnected is False
-    r = log["read_after_loss"]
-    assert r["answered"] and r["torque_on"] == ["shoulder_pan", "shoulder_lift"] and r["unanswered_goal_write"] == dict(joint="elbow_flex", requested_tick=3142, goal_register_after=3144.0, register_equals_request=False)
-    assert log["end"]["torque_on"] == ["shoulder_pan", "shoulder_lift"] and log["end"]["goal_register"]["elbow_flex"] == 3144.0 and log["outcome"]["torque_released"] is False
-    assert "release" not in log and "recovery" not in log and "read, not assumed" in log["needs_a_person"]
+    writes = [e for e in f.log if e[0] == "write"]
+    assert writes[:4] == [("write", "Goal_Position", "shoulder_pan", 2080), ("write", "Goal_Position", "shoulder_lift", 1108), ("write", "Goal_Position", "elbow_flex", 3142), ("write", "Goal_Position", "elbow_flex", 3142)]
+    rec = [e for e in log["events"] if isinstance(e, dict) and e.get("seed_write_answer_lost") == "elbow_flex"]
+    assert rec and rec[0]["recovery"] == "SAME_SEED_WRITTEN_ONCE_MORE_AND_ACKNOWLEDGED" and log["result"] != "BUS_LOST"
 
-
-def test_observation_07_failed_read_after_five_seed_writes_is_read_once_more_and_nothing_is_written(tmp_path):
+def test_observation_07_failed_read_after_five_seed_writes_is_read_once_more_and_the_move_goes_on(tmp_path):
+    """2026-10-18 contract change: a read in drive initialization that fails once (a late answer of another servo) is read
+    once more after the stale bytes are dropped; no write is repeated for it."""
     f = Stored(OBS07, lost_read_after_goals=5); code, log = go(tmp_path / "o", f, target=OBS07["target"], execute=True)
-    assert code == 15 and log["result"] == "BUS_LOST" and "response_contract" in log["stopped_by"]["detail"] and log["writes"] == dict(Goal_Position=5, Torque_Enable=0)
-    assert len([e for e in f.log if e[0] == "write"]) == 5 and after_loss(f) == [("read", reg) for _, reg in a.POSTWRITE_READS]
-    assert log["read_after_loss"]["torque_on"] == ARM and "unanswered_goal_write" not in log["read_after_loss"] and log["outcome"]["torque_released"] is False
-
+    rec = [e for e in log["events"] if isinstance(e, dict) and (e.get("init_read_lost") or e.get("event") == "loop_read_recovered")]
+    assert rec and (rec[0].get("recovery") == "READ_REPEATED_AND_ANSWERED" or rec[0].get("event") == "loop_read_recovered") and log["result"] != "BUS_LOST"   # 194127: the loop read itself is asked again first
+    seeds = [e for e in f.log if e[0] == "write" and e[1] == "Goal_Position"][:5]
+    assert len(seeds) == 5 and len({e[2] for e in seeds}) == 5                 # each seed written once, none repeated
 
 @pytest.mark.parametrize("rec, fail", [(OBS09, dict(lost_goal_write=3)), (OBS07, dict(lost_read_after_goals=5))])
 def test_when_the_bus_stays_silent_the_record_is_the_previous_one(tmp_path, rec, fail):
     f = Stored(rec, then_dead=True, **fail); code, log = go(tmp_path / "o", f, target=rec["target"], execute=True)
     assert code == 15 and log["result"] == "BUS_LOST" and log["end"] == dict(error="no read possible", torque="UNKNOWN") and log["outcome"]["torque_released"] == "UNKNOWN"
-    assert log["read_after_loss"]["answered"] is False and "NOT known" in log["needs_a_person"] and len(after_loss(f)) == 1 and after_loss(f)[0][0] == "read"   # one attempt, not repeated
+    reads = after_loss(f)                                                    # 2026-10-18: a lost SEED adds the recovery's one read-back; still nothing is written
+    assert log["read_after_loss"]["answered"] is False and "NOT known" in log["needs_a_person"] and 1 <= len(reads) <= 16 and all(e[0] == "read" for e in reads)   # 194127 + 215335: a loop read is asked up to 4 times
 
 
 def test_the_answered_seed_path_is_unchanged(tmp_path):

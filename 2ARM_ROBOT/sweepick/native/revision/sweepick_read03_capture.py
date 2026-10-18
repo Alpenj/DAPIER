@@ -7,7 +7,7 @@ import numpy as np
 import sweepick_field_r6 as f6, sweepick_sdk_top as st
 
 HELPER = Path.home() / "DAPIER/tjj-calibration-package/v2/camera/build/registered-capture-helper-read03"
-SERIAL = "DEVICE_ID_REDACTED"
+SERIAL = "OS30AA2X2CG0180"
 DEVICE = dict(usb="3438:0173 Etron HP-ASC-H201", serial=SERIAL, alias="/dev/dapier/workspace_rgbd")
 ROIS = dict(workspace=[180, 120, 500, 400], board=[212, 200, 485, 375], cube_20260923=[306, 131, 346, 165])
 ROI_NOTE = dict(workspace="table area between the two arms (pick / place region), chosen from the READ02 image", board="printed board as seen in READ02", cube_20260923="cube top face from the 2026-09-23 record; the cube was seen at about the same place in READ02")

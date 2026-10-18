@@ -1,6 +1,6 @@
 """The FULL-CHAIN mode of the PICK02 session, bound to the functions that exist.
 
-ONE state machine runs the part after the lift: the implementation's FullEpisodeHandoff -> TaskManager -> ReceiveManipulation ->
+ONE state machine runs the part after the lift: Codex's FullEpisodeHandoff -> TaskManager -> ReceiveManipulation ->
 ReceiveSession (COORDINATE -> RELEASE -> PLACE -> VERIFY_PLACE -> ARM_STOW -> REOBSERVE_CLEAR -> CLEAN_RESUME_REQUEST).
 This module does not run a second one. It is the LOCAL OWNER that state machine is given: the same process that picked
 and holds the block, and the only one that reads or writes an arm.
@@ -9,7 +9,7 @@ and holds the block, and the only one that reads or writes an arm.
                                          motion profile, progress watch, settle, torque state) once per planned waypoint or
                                          per commanded gripper / arm target. No goal stream of its own.
   observation   Owner.observation     -> read-only registers of both arms + the session recorder's camera frames
-  plan          the implementation's adapter + receive planner over the SIM teacher (carry, right approach, right insert)
+  plan          Codex's adapter + receive planner over the SIM teacher (carry, right approach, right insert)
   load transfer LoadTransfer          -> the left Jaw's hold command backed off by the left profile's own squeeze step
   release       Release               -> left jaws to their open tick, then the teacher's own retreat directions / hops
   PLACE / STOW  Downstream            -> teacher.plan_move with the block carried by the right hand; executor 'return'
@@ -30,8 +30,8 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-PIN_ORIGINAL = HERE / "_codex_receive_pin_2303"      # kept as it was: the implementation's receive modules at 23:03 on 2026-10-08 (the pin of the 2026-10-08 integration)
-PIN = HERE / "_codex_receive_pin_final_0107"        # SELECTED 2026-10-09: the implementation's final_connections pin (01:07; entry / session / full_episode changed, six modules identical to the original pin; SHA256SUMS inside). Re-pinned deliberately, never silently
+PIN_ORIGINAL = HERE / "_codex_receive_pin_2303"      # kept as it was: Codex's receive modules at 23:03 on 2026-10-08 (the pin of the 2026-10-08 integration)
+PIN = HERE / "_codex_receive_pin_final_0107"        # SELECTED 2026-10-09: Codex's final_connections pin (01:07; entry / session / full_episode changed, six modules identical to the original pin; SHA256SUMS inside). Re-pinned deliberately, never silently
 CODEX = Path(os.environ.get("SWEEPICK_RECEIVE_DIR", PIN if PIN.exists() else Path.home() / "sweepick_261008_receive_real"))
 RUNTIME = Path.home() / "DAPIER/tjj-runtime/v1"
 MJCF = Path.home() / "DAPIER/.local-workspaces/so101/lerobot/src/lerobot/envs/so101_mujoco/assets/so101_new_calib.xml"
@@ -51,7 +51,7 @@ STOPPING = ("FAULT_HOLDING", "FAULT_JOINTS_RELEASED", "BUS_LOST", "STOPPED_HOLDI
 
 
 def observation_plan_missing(plan):
-    """The plan of a SUPPORT_OBSERVATION session (the implementation's contract): an explicit motion and object-support plan is the INPUT; the
+    """The plan of a SUPPORT_OBSERVATION session (Codex's contract): an explicit motion and object-support plan is the INPUT; the
     support thresholds are what the session is run to find, never an input. `end_state` names the state at the OBSERVATION
     POINT (both hands on the block, nothing released); what the session does afterwards is this owner's planned return."""
     if not isinstance(plan, dict):
@@ -198,7 +198,7 @@ def save_wrist_surface_diagnostics(folder, frames, features):
 
 
 def camera_valid(frame):
-    """Whether this camera record is usable under the reader's own cadence/status result (the implementation's function)."""
+    """Whether this camera record is usable under the reader's own cadence/status result (Codex's function)."""
     return bool(isinstance(frame, dict)
                 and frame.get("reader_valid") is True and frame.get("fresh") is True
                 and isinstance(frame.get("n"), int) and not isinstance(frame.get("n"), bool)
@@ -208,7 +208,7 @@ def camera_valid(frame):
 
 
 def camera_identity(frame):
-    """Copy only the reader-owned identity/validity, never the bus observation identity (the implementation's function)."""
+    """Copy only the reader-owned identity/validity, never the bus observation identity (Codex's function)."""
     keys = ("n", "recv_monotonic_s", "frame_number", "sdk_color_stamp_s", "sdk_depth_stamp_s",
             "helper_receipt_monotonic_s", "reader_valid", "reader_reason", "freshness_limit_s")
     out = {k: frame[k] for k in keys if isinstance(frame, dict) and k in frame}
@@ -217,7 +217,7 @@ def camera_identity(frame):
 
 
 def camera_evidence(frame, observed, source):
-    """A vision child keeps the camera identity of the pixels it evaluated (the implementation's function)."""
+    """A vision child keeps the camera identity of the pixels it evaluated (Codex's function)."""
     valid = camera_valid(frame)
     return dict(camera_identity(frame), observed=bool(observed) if valid else False,
                 source=source if valid else str((frame or {}).get("reader_reason") or "camera frame is not valid"))
@@ -225,7 +225,7 @@ def camera_evidence(frame, observed, source):
 
 def reader_frame(reader, packet, now, **images):
     """A reader's frame with its own sequence and receipt times, judged at `now` (the clock read right after the frame was
-    fetched) by the reader's own state and its own measured cadence (sweepick_local_loop.cadence_limit). the implementation's function,
+    fetched) by the reader's own state and its own measured cadence (sweepick_local_loop.cadence_limit). Codex's function,
     with two things kept from the active executor: a recorder's lent reader is looked through to the real reader, and a
     stream whose cadence is not known yet is NOT valid (no frame is called fresh on its own say-so)."""
     if packet is None:
@@ -274,7 +274,7 @@ def selection(scope=None):
 
 
 def codex():
-    """the implementation's modules from where they were delivered; imported, not copied or changed."""
+    """Codex's modules from where they were delivered; imported, not copied or changed."""
     os.environ.setdefault("FACTORY_ROOT", str(RUNTIME)); os.environ.setdefault("DAPIER_SO101_MJCF", str(MJCF))
     if str(CODEX) not in sys.path:
         sys.path.insert(0, str(CODEX))
@@ -293,7 +293,7 @@ def tool_pose(model, q12, site="left_cube_grasp"):
 def held_pose(q12_at_close, q12_now, block_centre_desk, block_yaw, *, model, pad_geoms, source):
     """What this session knows about the block in the left hand, with every part named by what it is:
     OBSERVED (read by a sensor in this state), ESTIMATED (computed from observations of an earlier state), ASSUMED
-    (a physical assumption), UNIDENTIFIED. Same vocabulary as the implementation's version of this function: `known`, `missing`,
+    (a physical assumption), UNIDENTIFIED. Same vocabulary as Codex's version of this function: `known`, `missing`,
     `object_pose_model` is None until the pose in the hand has been OBSERVED. The 4x4 put together from the estimated and
     assumed parts is given separately as `coarse_preview_pose`: good for previewing the carry and the right approach,
     not for putting the right jaws around the block."""
@@ -600,7 +600,7 @@ def save_vision_diagnostics(folder, rgb, held, relative):
 
 
 def scene_bindings(model, look_scene, table_z, *, model_sha, source_sha):
-    """The frames the implementation's adapter asks for: the table's own centre and orientation with the recorded candidate surface height (the implementation's version of this function)."""
+    """The frames Codex's adapter asks for: the table's own centre and orientation with the recorded candidate surface height (Codex's version of this function)."""
     import mujoco
     d = mujoco.MjData(model); mujoco.mj_forward(model, d)
     def body(n):
@@ -626,7 +626,7 @@ def field_refs():
 
 
 class Scoped:
-    """the implementation's FullEpisodeHandoff with the scope of this session said out loud. FULL_TASK: unchanged. SUPPORT_OBSERVATION: the
+    """Codex's FullEpisodeHandoff with the scope of this session said out loud. FULL_TASK: unchanged. SUPPORT_OBSERVATION: the
     same state machine, told that scope, runs up to the right contact and the load-transfer lift and ends at the observation
     point by its own contract (no support record is asked for, no release is possible). Then the owner's planned return."""
     def __init__(self, inner, owner, scope):
@@ -723,7 +723,6 @@ class Scoped:
             return answer("NOT_READY", ("receive-contact" if is_contact else "receive-approach") + " input is incomplete", missing=list(dict.fromkeys(missing)))
 
         preparation, path, suffix, stages, approach_observation, contact_log, insertion = None, None, None, [], None, None, None
-        metrology = None
         try:
             with inner.recorder.lease("left", "right"):
                 preparation = inner.prepare(snapshot, context["scene"], context["evidence"])
@@ -821,8 +820,6 @@ class Scoped:
                         if isinstance(o.insert, dict):
                             o.insert["record"] = dict(insertion)
                         o.note("observation_only_insertion_decision", record=insertion)
-                        if (o.contact_plan or {}).get("right_x_metrology") is not None:
-                            metrology = o.run_right_x_metrology(path, live, stages)   # its executed moves are undone by the normal reverse below
                     approach_observation["insertion"] = _plain(insertion)
                     (o.out / observation_file).write_text(json.dumps(approach_observation, indent=1))
                     if insertion_ready and not observation_only:
@@ -913,9 +910,7 @@ class Scoped:
                            else f"{len(o.contact_insert_history)} insert hops completed; the remaining insert/close was withheld and the actual-state normal return completed" if normal and o.contact_insert_history
                            else "no insert/close was sent; the observation gap was recorded and the healthy planned return completed" if normal
                            else "the contact scope or its normal return lacked an actual motion/readback condition")
-                    if metrology is not None:
-                        why += f"; RIGHT_X_FINITE_METROLOGY {metrology['status']}: {metrology.get('why')}"
-                    return answer(result, why, preparation=preparation, path=path, suffix=suffix, stages=stages, right_x_metrology=metrology,
+                    return answer(result, why, preparation=preparation, path=path, suffix=suffix, stages=stages,
                                   approach_observation=approach_observation, observation_file=observation_file, insertion=insertion,
                                   contact=None if contact_log is None else dict(result=contact_log.get("result"), outcome=contact_log.get("outcome"), candidate=contact_log.get("contact_candidate"), folder=contact_log.get("folder")),
                                   contact_candidate=candidate, grasp_confirmed=False, real_arm_motion=right_motion,
@@ -931,18 +926,14 @@ class Scoped:
             if writes:
                 o.block_owner = "unknown"
                 o.on_stop(type("D", (), dict(reasons=[f"{'RECEIVE_CONTACT' if is_contact else 'RECEIVE_APPROACH'}: {type(exc).__name__}: {exc}"]))(), None)
-            record = getattr(o, "right_x_record", None)
-            if isinstance(record, dict) and record.get("status") == "STARTED":
-                record.update(status="STOPPED_BY_FAULT", why=f"{type(exc).__name__}: {exc}")
-                o._safe(lambda: (o.out / "RIGHT_X_METROLOGY.json").write_text(json.dumps(_plain(record), indent=1, default=str)))
             return answer("FAILED", f"{'receive contact' if is_contact else 'receive approach'} stopped: {type(exc).__name__}: {exc}",
-                          preparation=preparation, path=path, suffix=suffix, stages=stages, approach_observation=approach_observation, right_x_metrology=record,
+                          preparation=preparation, path=path, suffix=suffix, stages=stages, approach_observation=approach_observation,
                           end=dict(returned=False, right_released=False, left_at_lift=False,
                                    state="AS_LEFT_BY_THE_EXECUTOR_A_PERSON_DECIDES"))
 
 
 class LoadTransfer:
-    """The 'controlled load transfer' reference inside the implementation's contract (the left Jaw's hold command is kept until support is
+    """The 'controlled load transfer' reference inside Codex's contract (the left Jaw's hold command is kept until support is
     confirmed; arm postures may change): the right hand, closed on the block, is raised by the short lift named in the
     support reference, as one checked hop of the teacher's own straight-line planner, run once by the executor. Whether the
     load went over is then read from the left arm's Present_Load against its value at the start (Owner.support). Without the
@@ -1084,7 +1075,7 @@ class Owner:
         r.update(t_bus_monotonic=self.clock(), bus_seq=self.seq, cycle_start=t0, usable=True, snapshot_only=False); return r
 
     def observation(self, stage, task, now):
-        """One observation packet in the shape the implementation's session takes. Every record that claims something (motion result, insert,
+        """One observation packet in the shape Codex's session takes. Every record that claims something (motion result, insert,
         support, left away, acknowledgement) was made by a function of this owner from this read; it is stamped with this read."""
         tg = codex()["receive_session"].tg
         if self.cycle is None:                                                  # a second observation in the same step of the task manager: a new read (it will be stamped later than that step's 'now' and the session will wait for the next cycle)
@@ -1541,7 +1532,7 @@ class Owner:
 
     def held_packet(self, obs, raw, fr, stamp, seq):
         """The held-object record of this cycle. Before the right insert the coarse estimate is not enough: the block has to be
-        OBSERVED in the hand (top depth) or the record carries no pose, and the implementation's session then waits (NOT_READY)."""
+        OBSERVED in the hand (top depth) or the record carries no pose, and Codex's session then waits (NOT_READY)."""
         if self.held is None:
             return None
         need_seen = getattr(self, "_contact_visual_refresh", False) or ("RIGHT_APPROACH" in self.done and "RIGHT_INSERT" not in self.done)
@@ -1681,7 +1672,7 @@ class Owner:
         from sim_data_factory.task_success import separation_lower_bound
         p1 = self.p1; T = None if self.last_held_pose is None else np.array(self.last_held_pose); m = p1.model(None if T is None else (T[:3, 3], float(np.arctan2(T[1, 0], T[0, 0])))); t = HandoverTeacher(m); d = mujoco.MjData(m); traj = doc["trajectory"]
         adr = t.cm.block_qpos; block_q = m.qpos0[adr:adr + 7].copy(); other = "right" if side == "left" else "left"; allow = ("left", "right") if self.block_owner in ("both", "right") or self.near_handover or doc.get("purpose") == "RIGHT_CLOSE" else ("left",)
-        if T is not None:                                                       # the block as it is held: its whole orientation, not only its yaw (the implementation's repair)
+        if T is not None:                                                       # the block as it is held: its whole orientation, not only its yaw (Codex's repair)
             quat = np.empty(4); mujoco.mju_mat2Quat(quat, np.ascontiguousarray(T[:3, :3]).ravel()); block_q = np.r_[T[:3, 3], quat]
         def ctrl(arm):
             q = p1.rc.ticks_to_q12(self.mp, {side: arm, other: raw["ticks"][other]}); sweepick_kin.set_q12(m, d, q); return d.qpos.copy(), d.qpos[t.plan.adr].copy()
@@ -2311,11 +2302,6 @@ class Owner:
         if observation_only:
             if self.stopped is not None or Path(str(self.out) + ".STOP").exists():
                 raise RuntimeError("owner STOP; observation branch must not move or recover")
-            metrology = (self.contact_plan or {}).get("right_x_metrology")
-            if isinstance(metrology, dict) and metrology.get("t_pose") == "AFTER_RIGHT_PREGRASP":
-                self.note("right_x_metrology_skips_adopted_view",
-                          why="T is the measured state after RIGHT_APPROACH; the adopted clearance+roll view is not run")
-                return observed, self.last_raw, False
             if getattr(self, "observation_only_candidate_consumed", False):
                 self.note("observation_candidates_exhausted", missing_components=self.observation_deficits(observed),
                           why="the one observation-only receiver-inner-pad proposal was already consumed")
@@ -2426,124 +2412,6 @@ class Owner:
                   why="no unused checked view yielded insertion-ready evidence; existing normal-return conditions still apply")
         return observed, self.last_raw, False
 
-    @staticmethod
-    def x_split(T0, T1, basis):
-        """T1 relative to T0, in T0's tool frame, split into the approved X basis, the off-axis remainder and rotation."""
-        D = np.linalg.inv(np.asarray(T0, float)) @ np.asarray(T1, float); t = D[:3, 3]; b = np.asarray(basis, float)
-        along = float(t @ b); off = t - along * b
-        angle = float(np.arccos(np.clip((np.trace(D[:3, :3]) - 1) / 2, -1, 1)))
-        return dict(translation_tool_m=t.tolist(), along_x_m=along, off_axis_tool_m=off.tolist(), off_axis_norm_m=float(np.linalg.norm(off)),
-                    rotation_deg=float(np.degrees(angle)), frame="previous endpoint's right_cube_grasp tool frame (candidate FK)")
-
-    def right_x_endpoint(self, role, observed, raw, frames, cfg, reference, previous, move):
-        """One endpoint: both arms' actual, openings, the three cameras' own identities/clocks, candidate FK of the actual."""
-        model = self.p1.model()
-        sides = ("left", "right")
-        q12 = np.asarray(self.p1.rc.ticks_to_q12(self.mp, {s: raw["ticks"][s] for s in sides}), float)
-        T, _ = tool_pose(model, q12, site="right_cube_grasp")
-        row = dict(role=role, decision_record=observed.get("decision_record"),
-                   actual=dict(ticks={s: dict(raw["ticks"][s]) for s in sides}, goal={s: dict(raw["goal"][s]) for s in sides},
-                               torque={s: dict(raw["torque"][s]) for s in sides}, status={s: dict(raw["status"][s]) for s in sides},
-                               bus_seq=raw.get("bus_seq"), t_bus_monotonic=raw.get("t_bus_monotonic"), cycle_start=raw.get("cycle_start"), q12=q12.tolist()),
-                   opening=dict(right_present_tick=raw["ticks"]["right"]["gripper"], right_goal_tick=raw["goal"]["right"]["gripper"],
-                                left_present_tick=raw["ticks"]["left"]["gripper"], left_goal_tick=raw["goal"]["left"]["gripper"],
-                                basis="raw gripper Present_Position/Goal_Position ticks; jaw gap in mm UNKNOWN"),
-                   cameras={name: camera_identity(f) for name, f in (frames or {}).items()},
-                   observation_missing=dict(observed.get("observation_missing") or {}),
-                   time_basis="each camera keeps its own receipt clock and frame number; the joint read keeps its bus clock; they are not equated",
-                   right_tool_pose_fk=T.tolist(), fk_role="candidate mapping FK of the measured ticks (verified=false), not a physical measurement")
-        if previous is not None:
-            row["actual_fk_from_previous"] = self.x_split(previous["right_tool_pose_fk"], T, cfg["x_basis_tool"])
-            row["actual_fk_from_T"] = self.x_split(reference["right_tool_pose_fk"], T, cfg["x_basis_tool"])
-        if move is not None:
-            start = move["planned_from"]; target = dict(start["ticks"]["right"]); target.update(move["forward"][0]["target_ticks"])
-            q0 = self.p1.rc.ticks_to_q12(self.mp, start["ticks"]); q1 = self.p1.rc.ticks_to_q12(self.mp, dict(start["ticks"], right=target))
-            row["command"] = dict(commanded_tool_displacement_m=move["candidate"]["commanded_tool_displacement_m"], target_ticks=move["forward"][0]["target_ticks"],
-                                  command_fk_from_planning_actual=self.x_split(tool_pose(model, q0, site="right_cube_grasp")[0], tool_pose(model, q1, site="right_cube_grasp")[0], cfg["x_basis_tool"]),
-                                  basis="commanded displacement and the FK of the rounded command ticks; kept apart from the actual FK above")
-            view = move.get("observation_view") or {}
-            row["executor"] = dict(result=move.get("result"), nominal_target_reached=view.get("nominal_target_reached"),
-                                   actual_settled=view.get("actual_settled"), command_state_resolved=view.get("command_state_resolved"), writes=move.get("writes"))
-        return row
-
-    def run_right_x_metrology(self, prefix, live, stages):
-        """RIGHT_X_FINITE_METROLOGY: observe T, then each X move (F, V) planned from the latest actual by the existing view path,
-        explicitly approved, run by segment(purpose=OBSERVATION_VIEW) and observed once. A refused plan, decline or missing view
-        ends the measurement without further motion; STOP, servo/bus fault or unconfirmed left support raise into the existing
-        stop contract. The caller's existing normal reverse undoes every executed move. No correction is generated."""
-        import right_x_metrology as rx
-        cfg = (self.contact_plan or {}).get("right_x_metrology")
-        record = dict(schema="sweepick.right-x-metrology.v1", scope=rx.SCOPE, config=copy.deepcopy(cfg), source_kind=self.record_kind,
-                      endpoints=[], moves=[], status="STARTED",
-                      jacobian=dict(delta_u_px=None, J_uX_px_per_mm=None, REAL_J_VALIDATED=False, validated=False, Correction=None,
-                                    estimated_tool_correction=None, reason="FIELD_VERIFIED_TARGET_IMAGE and its u feature are not defined; endpoints are recorded only"),
-                      correction_command_generated=False)
-        self.right_x_record = record
-
-        def save():
-            (self.out / "RIGHT_X_METROLOGY.json").write_text(json.dumps(_plain(record), indent=1, default=str))
-
-        def end(status, why):
-            record.update(status=status, why=why); self.note("right_x_metrology_ended", status=status, why=why); save()
-            return record
-        errors = rx.config_errors(cfg)
-        if errors:
-            return end("REFUSED_CONFIG", "; ".join(errors))
-        if cfg["t_pose"] == "AFTER_ADOPTED_VIEW" and (getattr(self, "last_observation_view", None) or {}).get("fresh_observation_acquired") is not True:
-            return end("REFUSED_T_POSE", "t_pose=AFTER_ADOPTED_VIEW but no adopted view was executed and freshly observed in this session")
-        reference = previous = None
-        for role in rx.ROLES:
-            if self.stopped is not None or Path(str(self.out) + ".STOP").exists():
-                raise RuntimeError("owner STOP; right X metrology must not move or recover")
-            raw = self._read(); live(raw, f"before right X {role}"); self.last_raw = raw
-            ok, why = self.recovery_ready(f"before right X {role}", observation=raw)
-            if not ok:
-                raise RuntimeError(f"current left hold/bus is unconfirmed before right X {role}; no move: {why}")
-            move = None
-            if role != "T":
-                candidate = rx.move_candidate(role, cfg)
-                plan = self.plan_observation_candidate(candidate, raw, prefix)
-                move = dict(role=role, candidate=candidate, plan_ready=plan.get("ready"), why=plan.get("why"), failure=plan.get("failure"),
-                            planned_from=dict(bus_seq=raw.get("bus_seq"), t_bus_monotonic=raw.get("t_bus_monotonic"),
-                                              ticks={s: dict(raw["ticks"][s]) for s in ("left", "right")}),
-                            forward=[dict(start_ticks=s["start_ticks"], target_ticks=s["target_ticks"], ik=s.get("ik"),
-                                          collision=s["certificate"].get("nominal_verdict"), native_executable=s["native_validation"].get("executable"))
-                                     for s in plan.get("forward", [])],
-                            normal_return_ready=(plan.get("normal_return") or {}).get("ready"))
-                record["moves"].append(move)
-                self.note("right_x_metrology_planned", role=role, plan=plan)
-                if not plan.get("ready") or len(plan.get("forward", [])) != 1:
-                    return end("REFUSED_PLAN", f"{role}: {plan.get('why') or 'not exactly one planned X target'}")
-                authorize = getattr(self, "authorize_right_x_move", None)
-                try:
-                    approved = callable(authorize) and authorize(plan, raw, candidate) is True
-                except Exception as exc:
-                    self.note("right_x_metrology_authorization_failed", role=role, reason=f"{type(exc).__name__}: {exc}"); save()
-                    raise
-                move["approved"] = approved
-                self.note("right_x_metrology_authorization", role=role, approved=approved)
-                if not approved:
-                    return end("DECLINED", f"{role}: no explicit operator approval of this actual-bound move")
-                step = plan["forward"][0]
-                log = self.segment(f"right_x_{role.lower()}", "right", target=step["target_ticks"], purpose="OBSERVATION_VIEW")
-                move.update(result=log.get("result"), writes=log.get("writes"), folder=log.get("folder"), observation_view=log.get("observation_view"))
-                raw = self._read(); live(raw, f"after right X {role}"); self.track_held(raw); self.last_raw = raw
-                supported, why = self.recovery_ready(f"after settled right X {role}", observation=raw)
-                if not supported:
-                    save()
-                    raise RuntimeError(f"left support unconfirmed after right X {role}; no further motion: {why}")
-                stages.append(dict(stage=f"RIGHT_X_{role}", side="right", result=log.get("result")))
-            completed, before = self.clock(), copy.deepcopy(getattr(self, "last_images", None) or {})
-            observed, raw, frames = self.contact_observation(f"RIGHT_X_{role}", after=completed, previous=before)
-            live(raw, f"after right X {role} observation"); self.track_held(raw); self.last_raw = raw
-            endpoint = self.right_x_endpoint(role, observed, raw, frames, cfg, reference, previous, move)
-            record["endpoints"].append(endpoint); save()
-            missing = sorted(k for k in (observed.get("observation_missing") or {}) if k in ("top", "left_wrist", "right_wrist"))
-            if missing:
-                return end("OBSERVATION_MISSING", f"{role}: no new frame for {missing}; no further X move")
-            reference = reference or endpoint; previous = endpoint
-        return end("ENDPOINTS_RECORDED", "T, F and V endpoints recorded; the existing normal reverse follows; no correction is generated")
-
     def contact_close(self):
         """Run the finite right-ID6 close with the baseline-bound early observer; this method never opens or returns."""
         if self.scope == "contact" and (self.contact_plan or {}).get("observation_only") is True:
@@ -2597,7 +2465,7 @@ class Owner:
             self._safe(lambda: self.session.applier.relax({s: raw["ticks"][s] for s in ("left", "right")}))      # the proposal generator starts its next proposal from where the executor left the arms
 
     def apply_dispatch(self, dispatch, observation):
-        """The writer the implementation's ReceiveManipulation calls with each SEND proposal. The proposal is recorded by the caller; what is
+        """The writer Codex's ReceiveManipulation calls with each SEND proposal. The proposal is recorded by the caller; what is
         SENT is the executor's own checked run to the target the proposal is heading for:
           COORDINATE     the planned waypoint the corrector is on (once), then the right close by the Jaw (once)
           LOAD_TRANSFER  the left gripper command of the proposal
@@ -2616,7 +2484,7 @@ class Owner:
                 self.near_handover = wp["label"] == "RIGHT_INSERT"
                 moved = [side for side, sl in (("left", slice(0, 5)), ("right", slice(6, 11))) if not np.allclose(np.array(wp["q12"])[sl], np.array(observation["q12"])[sl], atol=2e-3)]
                 if wp["label"] == "RIGHT_INSERT" and "right" not in moved:
-                    moved.append("right")                                       # the pre-grasp move changed the arm since this observation: the executor's own fresh read decides whether the insert is a move (the implementation's repair)
+                    moved.append("right")                                       # the pre-grasp move changed the arm since this observation: the executor's own fresh read decides whether the insert is a move (Codex's repair)
                 grips = ["right"] if abs(wp["q12"][11] - observation["q12"][11]) > 2e-3 and wp["label"] == "RIGHT_OPEN" else []
                 logs = self.go(wp["label"].lower(), wp["q12"], arms=moved, grippers=grips); self.done.add(wp["label"])
                 rec = self.result(wp["label"], wp["q12"], "sweepick_move_a.run result HOLDING for this waypoint")
@@ -3047,7 +2915,7 @@ class Owner:
 
 
 class Downstream:
-    """PLACE and STOW for the implementation's ReceiveManipulation, with the same executor."""
+    """PLACE and STOW for Codex's ReceiveManipulation, with the same executor."""
     def __init__(self, owner):
         self.o, self.context = owner, None
 
@@ -3163,7 +3031,7 @@ class Area:
 
 
 def complete(c, doc=None):
-    """A CLEAR counts only when every required sample was really checked; otherwise the verdict is UNKNOWN (the implementation's rule)."""
+    """A CLEAR counts only when every required sample was really checked; otherwise the verdict is UNKNOWN (Codex's rule)."""
     need = c.get("samples_required")
     if need is None and doc is not None:
         need = max(1, int(doc["trajectory"]["steps"]))
@@ -3211,7 +3079,7 @@ SCOPES = dict(full="full", FULL_TASK="full", observe="observe", SUPPORT_OBSERVAT
 
 
 def build(out, episode, *, p1=None, run_kw=None, read=None, frames=None, look=None, check=None, refs=None, run=None, grip=None, clock=time.monotonic, sleep=time.sleep, applier=None, rig=None, scope="full", right_lift_m=None, observation_plan=None, contact_plan=None, record_kind=None, partial_observer=None):
-    """The hand-over callback for sweepick_pick01.run_session(full_chain=True): the implementation's FullEpisodeHandoff with this process's owner injected. Returns (handoff, owner)."""
+    """The hand-over callback for sweepick_pick01.run_session(full_chain=True): Codex's FullEpisodeHandoff with this process's owner injected. Returns (handoff, owner)."""
     if p1 is None:
         import sweepick_pick01 as p1
     cx = codex(); entry, sess, tm, tg = cx["receive_entry"], cx["receive_session"], cx["receive_session"].tm, cx["receive_session"].tg
@@ -3222,7 +3090,7 @@ def build(out, episode, *, p1=None, run_kw=None, read=None, frames=None, look=No
         o.note("observation_immutable_prepare", identity=o.face_geometry_prepared["identity"],
                timings=globals().get("PREPARED_FACE_GEOMETRY_TIMINGS"), prepared_before_camera=True)
     assert scope in SCOPES, scope; scope = SCOPES[scope]; plan_missing = []
-    if scope == "observe":                                                  # the motion and object-support plan is an explicit input (the implementation's contract); a bare number is not a plan
+    if scope == "observe":                                                  # the motion and object-support plan is an explicit input (Codex's contract); a bare number is not a plan
         plan_missing = observation_plan_missing(observation_plan)
         if not plan_missing:
             right_lift_m = float(observation_plan["right_lift_m"])
@@ -3298,7 +3166,7 @@ def build(out, episode, *, p1=None, run_kw=None, read=None, frames=None, look=No
         return tm.Task(f"sweepick-{episode.id}", tm.Region("source", "model", (float(c[0]), float(c[1])), 0.04, float(p1.BOARD_Z_IN_WORLD)), tm.Region(tgt.get("name", "place"), "model", tuple(tgt.get("centre_xy_m", (0.0, 0.0))), float(tgt.get("radius_m", 0.04)), float(tgt.get("surface_z_m", p1.BOARD_Z_IN_WORLD))), needs_two_arm_coordination=True)
 
     def preflight(o_, state):
-        """Before the first motor command: the field records, then the implementation's own reference check on exactly the objects the hand-over will use."""
+        """Before the first motor command: the field records, then Codex's own reference check on exactly the objects the hand-over will use."""
         items = {n: dict(present=r["present"], usable=r["usable"], file=r["file"], what=r["what"], blocks=r["blocks"]) for n, r in refs.items()}
         missing = [f"FIELD {n}: {r['what']} -> {r['file']}" for n, r in refs.items() if not r["usable"] and n in NEEDS[scope]]; items["scope"] = dict(scope=scope, needs=NEEDS[scope], left_release="NOT POSSIBLE in this scope" if scope in ("observe", "approach", "contact") else "after a confirmed support record")
         missing += [f"PLAN {m}" for m in plan_missing]; items["observation_plan"] = dict(given=observation_plan is not None, missing=plan_missing) if scope == "observe" else None
@@ -3340,7 +3208,7 @@ def build(out, episode, *, p1=None, run_kw=None, read=None, frames=None, look=No
             items["fresh_left_grasp"] = "checked after this session's lift from HANDOFF_SNAPSHOT plus fresh Goal_Position/Torque/Status; no saved run is live input"
             now_sha = {n: hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest() for n, m in cx.items()}; items["codex_modules"] = dict(sha256=codex_sha, dir=str(CODEX))
             if now_sha != codex_sha:
-                code_missing.append("the implementation's receive modules changed on disk since this process imported them: " + ", ".join(n for n in cx if now_sha[n] != codex_sha[n]) + " (a session runs on the files it started with)")
+                code_missing.append("Codex's receive modules changed on disk since this process imported them: " + ", ".join(n for n in cx if now_sha[n] != codex_sha[n]) + " (a session runs on the files it started with)")
             return dict(ready=not missing and not code_missing, missing=missing + [f"CODE {m}" for m in code_missing], items=items)
         handoff.task = o.task = task_of(state)
         present = dict(left=state["home_ticks"], right=state["right_ticks"])
@@ -3352,7 +3220,7 @@ def build(out, episode, *, p1=None, run_kw=None, read=None, frames=None, look=No
         items["code_references"] = dict(missing=code_missing, checked_by="sweepick_261008_receive_entry.receive_references_ready")
         now_sha = {n: hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest() for n, m in cx.items()}; items["codex_modules"] = dict(sha256=codex_sha, dir=str(CODEX))
         if now_sha != codex_sha:
-            code_missing.append("the implementation's receive modules changed on disk since this process imported them: " + ", ".join(n for n in cx if now_sha[n] != codex_sha[n]) + " (a session runs on the files it started with)")
+            code_missing.append("Codex's receive modules changed on disk since this process imported them: " + ", ".join(n for n in cx if now_sha[n] != codex_sha[n]) + " (a session runs on the files it started with)")
         return dict(ready=not missing and not code_missing, missing=missing + [f"CODE {m}" for m in code_missing], items=items)
 
     def prepare(snapshot, scene, evidence):
@@ -3421,6 +3289,6 @@ def build(out, episode, *, p1=None, run_kw=None, read=None, frames=None, look=No
 
 
 def _prepare(entry, snapshot, b, kw, o, down, *, planning_kw=None):
-    """the implementation's prepare_receive on this owner's references."""
+    """Codex's prepare_receive on this owner's references."""
     return entry.prepare_receive(snapshot, b, session_kwargs=kw, observation_source=o.observation, downstream=down, real_stow_profile=dict(kind="return to the start poses of this session", home=o.home_command),
                                  apply_dispatch=o.apply_dispatch, on_stop=o.on_stop, record_event=o.note, **(planning_kw or {}))

@@ -93,7 +93,16 @@ def validate(side, mp_side, traj, prof, *, mapping_sha, level="device", cert=Non
             hard.append(G.hard("servo_range", f"{n}: commanded {commanded.min():.1f}..{commanded.max():.1f} outside the servo range [{m['lo']}, {m['hi']}]", joint=n))
         model_values = commanded if "command_start" in traj else g
         q = [rc.tick_to_model(n, m, t) for t in (model_values.min(), model_values.max())]
-        if commanded_joint and (min(q) < m["model_range"][0] or max(q) > m["model_range"][1]):
+        # 2026-10-18 205318_auto: a hand-placed right wrist_flex at 887 ticks (inside the servo range 862..3197) was outside the model range, so the
+        # move BACK to the start pose was refused and the session never began. A path whose out-of-range samples are only its first ones, each
+        # nearer the range than the one before, and whose target is inside, ENTERS the model range: a diagnostic, not a gate.
+        qs = np.array([rc.tick_to_model(n, m, t) for t in model_values]); lo_, hi_ = m["model_range"]
+        outside = (qs < lo_) | (qs > hi_); dist = np.where(qs < lo_, lo_ - qs, np.where(qs > hi_, qs - hi_, 0.0))
+        entering = bool(outside.any() and not outside[-1] and outside[: int(np.argmin(outside)) if not outside.all() else len(outside)].all()
+                        and not outside[int(np.argmin(outside)):].any() and np.all(np.diff(dist[: int(np.argmin(outside)) + 1]) <= 1e-9))
+        if commanded_joint and entering:
+            diag.append(G.diagnostic("model_range_entry", f"{n}: starts outside the dual model range and only moves into it", joint=n, start_model=float(qs[0]), model_range=[float(lo_), float(hi_)]))
+        elif commanded_joint and (min(q) < m["model_range"][0] or max(q) > m["model_range"][1]):
             if level == "model":
                 prov.append(G.provisional("model_joint_range_candidate", f"{n}: outside the dual model range through the candidate mapping", joint=n))
             else:

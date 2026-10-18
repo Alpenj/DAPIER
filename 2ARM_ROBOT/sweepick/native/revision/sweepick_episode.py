@@ -45,7 +45,7 @@ class Lent:
 
 class Episode:
     def __init__(self, out, *, wrists=None, top=None, open_arm=None, session_id=None, source_kind="REAL", mode="BASELINE_PICK_AND_PUT_BACK",
-                 arm_period_s=0.1, top_depth_every=5, clock=time.time, save_image=None, identifiers=None, arm_feedback=False):
+                 arm_period_s=0.1, top_depth_every=6, top_rgb_every=3, top_rgb_width=640, clock=time.time, save_image=None, identifiers=None, arm_feedback=False):
         """wrists: {name: reader} with get() -> (latest, previous), latest = dict(n, recv_monotonic_s, frame).
         top: reader with get() -> dict(n, bgr, zd, sdk_color_stamp_s, sdk_depth_stamp_s, helper_receipt_monotonic_s, recv_monotonic_s) or None.
         open_arm(side) -> a read-only bus with sync_read(name, normalize=False) and disconnect()."""
@@ -54,6 +54,9 @@ class Episode:
         self.wrists, self.top, self.open_arm, self.clock, self.kind, self.mode = dict(wrists or {}), top, open_arm, clock, source_kind, mode
         self.arm_period_s, self.top_depth_every, self.identifiers = arm_period_s, top_depth_every, identifiers or {}
         self.arm_feedback = arm_feedback
+        # 2026-10-18 184014_auto: the head RGB at 1280x920 and every FrameSet (~30 Hz) was 2.8 GB of a 3.6 GB run. Kept: every 3rd FrameSet
+        # (~10 Hz, the policy rate) at 640 px wide; depth every 6th, so each saved depth has its colour image.
+        self.top_rgb_every, self.top_rgb_width = max(1, int(top_rgb_every)), top_rgb_width
         self.offset = time.time() - time.monotonic()                              # readers stamp with the monotonic clock; rows of the executor are wall time
         self.started_host_s = self.clock()
         self.stop, self.lock = threading.Event(), threading.Lock()
@@ -151,12 +154,17 @@ class Episode:
                 fs = self.top.get()
                 if fs is not None and fs["n"] != last:
                     missed = fs["n"] - last - 1 if last else 0; last = fs["n"]; row = dict(camera="top", n=last, not_saved_before_this=missed, **{k: fs[k] for k in ("sdk_color_stamp_s", "sdk_depth_stamp_s", "helper_receipt_monotonic_s", "recv_monotonic_s") if k in fs})
-                    row["recv_host_s"] = fs["recv_monotonic_s"] + self.offset
-                    if fs.get("bgr") is not None:
-                        row["file"] = f"top/top_{last:06d}.jpg" if self._save(folder / f"top_{last:06d}.jpg", fs["bgr"]) else None
-                    if fs.get("zd") is not None and last % self.top_depth_every == 0:      # every FrameSet's image is kept; the depth of every n-th one (stated in the manifest)
+                    row["recv_host_s"] = fs["recv_monotonic_s"] + self.offset; row["kept_every"] = self.top_rgb_every
+                    if fs.get("bgr") is not None and last % self.top_rgb_every == 0:
+                        img = fs["bgr"]
+                        if self.top_rgb_width and getattr(img, "shape", None) is not None and img.shape[1] > self.top_rgb_width:
+                            import cv2
+                            img = cv2.resize(img, (self.top_rgb_width, int(round(img.shape[0] * self.top_rgb_width / img.shape[1]))), interpolation=cv2.INTER_AREA)
+                        row["file"] = f"top/top_{last:06d}.jpg" if self._save(folder / f"top_{last:06d}.jpg", img) else None
+                    if fs.get("zd") is not None and last % self.top_depth_every == 0:      # the colour of every top_rgb_every-th FrameSet, the depth of every top_depth_every-th one (both in the manifest)
                         row["depth_file"] = f"top/depth_{last:06d}.png" if self._save(folder / f"depth_{last:06d}.png", np.asarray(fs["zd"], np.uint16)) else None
-                    self._count("top", fs["recv_monotonic_s"]); self._frame(row)
+                    if "file" in row or "depth_file" in row:                            # a FrameSet that is not kept is not a recorded frame (its number still shows in not_saved_before_this)
+                        self._count("top", fs["recv_monotonic_s"]); self._frame(row)
                 done = getattr(self.top, "done", None)
                 if done is not None and done.is_set() and not self.stop.is_set():
                     status = self.top.status() if hasattr(self.top, "status") else {}
@@ -238,7 +246,7 @@ class Episode:
         if self.kind == "REAL" and not quality["complete_three_view_coverage"]:
             quality["training_eligibility"] = "NOT_ELIGIBLE_AS_COMPLETE_THREE_VIEW_EPISODE: incomplete or unknown coverage; preserve the actual partial traces"
         self.closed = dict(schema=SCHEMA, session_id=self.id, mode=self.mode, source_kind=self.kind, task_outcome=task_outcome, stage_outcomes=stage_outcomes or [], human_intervention=human_intervention, stopped_by=stopped_by, data_quality=quality,
-                           cameras=cams, joints={s: self.counts.get(f"joints_{s}", (0, None))[0] for s in ("left", "right")}, top_depth_saved_every_n_framesets=self.top_depth_every,
+                           cameras=cams, joints={s: self.counts.get(f"joints_{s}", (0, None))[0] for s in ("left", "right")}, top_depth_saved_every_n_framesets=self.top_depth_every, top_rgb_saved_every_n_framesets=self.top_rgb_every, top_rgb_saved_width_px=self.top_rgb_width,
                            stages=self.stages, files=dict(events="episode/events.jsonl", frames="episode/frames.jsonl", joints="episode/joints.jsonl", executor_rows="<stage folder>/run*/move.json rows: t, present (MEASURED), commanded (controller target), goal (sent), status"),
                            clocks=dict(recv_monotonic_s="this process's monotonic clock at receipt", recv_host_s="the same plus a wall-clock offset read once at start", sdk_stamps="the camera SDK's own stamps", t_host_s="wall time (executor rows use the same clock)"),
                            errors=self.errors[:200], identifiers=self.identifiers, act_view=ACT_VIEW, notes=notes or [])
@@ -311,9 +319,10 @@ def camera_coverage(folder, *, window):
         tail = None if last is None else max(0.0, window["end_host_s"]-last)
         failed = len(rows)-len(saved)
         window_failed = sum(not (r.get("file") and (Path(folder) / "episode" / r["file"]).is_file()) for r in rows if window["start_host_s"] <= r["recv_host_s"] <= window["end_host_s"])
-        sequence_gaps = [dict(start_host_s=a["recv_host_s"], end_host_s=b["recv_host_s"], missing=b["n"]-a["n"]-1,
+        step = lambda r: int(r.get("kept_every") or 1)                       # the head keeps every n-th FrameSet on purpose (2026-10-18); a gap is a KEPT number that is missing
+        sequence_gaps = [dict(start_host_s=a["recv_host_s"], end_host_s=b["recv_host_s"], missing=(b["n"]-a["n"]) // step(b) - 1,
                              overlaps_window=b["recv_host_s"] >= window["start_host_s"] and a["recv_host_s"] <= window["end_host_s"])
-                         for a, b in zip(rows, rows[1:]) if b["n"]-a["n"] > 1]
+                         for a, b in zip(rows, rows[1:]) if (b["n"]-a["n"]) // step(b) > 1]
         skipped = sum(g["missing"] for g in sequence_gaps if g["overlaps_window"])
         reasons = []
         if not saved: reasons.append("no saved frames")

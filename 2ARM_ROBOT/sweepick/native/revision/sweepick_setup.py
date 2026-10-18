@@ -39,7 +39,36 @@ FLOOR_Z = 0.0                                                   # the floor in t
 CAMERA = 'os30a_UNVERIFIED'
 
 
+MEASURED_HEAD_EXTRINSIC = HERE / 'sweepick_head_extrinsic_measured.json'
+
+
+def measured_head_extrinsic():
+    """The measured top-camera pose (2026-10-18: ICP of the head depth on the arms, validated on poses and grasps not used in the
+    fit), or None when the file is absent. A file that is present but malformed is an error, never a silent fallback."""
+    if not MEASURED_HEAD_EXTRINSIC.exists():
+        return None
+    doc = json.loads(MEASURED_HEAD_EXTRINSIC.read_text())
+    if doc.get('schema') != 'sweepick.head-extrinsic.v1':
+        raise RuntimeError(f'{MEASURED_HEAD_EXTRINSIC.name}: unknown schema {doc.get("schema")!r}')
+    T = np.asarray(doc['T_robot_from_camera'], float)
+    if T.shape != (4, 4) or not np.allclose(T[3], [0, 0, 0, 1]) or not np.allclose(T[:3, :3].T @ T[:3, :3], np.eye(3), atol=1e-6) or abs(np.linalg.det(T[:3, :3]) - 1) > 1e-6:
+        raise RuntimeError(f'{MEASURED_HEAD_EXTRINSIC.name}: T_robot_from_camera is not a rigid transform')
+    return T, doc
+
+
+def mounted_camera_source():
+    m = measured_head_extrinsic()
+    return dict(source='MEASURED', file=MEASURED_HEAD_EXTRINSIC.name, status=m[1].get('status')) if m else dict(source='SCENE_CAMERA', camera=CAMERA, status='UNVERIFIED')
+
+
 def mounted_robot_from_camera(m=None):
+    measured = measured_head_extrinsic()
+    if measured is not None:                                    # the measured pose replaces the scene camera (USER_DIMENSIONS_UNVERIFIED) when present
+        return measured[0].copy()
+    return scene_robot_from_camera(m)
+
+
+def scene_robot_from_camera(m=None):
     """T (4x4) from the top camera's OpenCV frame (x right, y down, z forward) to the robot base frame of the mounted scene."""
     import mujoco
     m = m or mujoco.MjModel.from_binary_path(str(MOUNTED_SCENE))

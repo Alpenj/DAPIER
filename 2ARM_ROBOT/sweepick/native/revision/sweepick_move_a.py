@@ -30,7 +30,7 @@ from sweepick_commission import IN, CAL, READS, RELEASE_TRIES, real_bus, port_ow
 # RECOVERY heuristics: used only AFTER a hard stop to choose between holding and releasing. They never start, allow or
 # stop a normal move.
 SETTLE_CYCLES, STEADY_TICKS = 15, 3
-POST_READS = 15         # fewest reads after the last command; reading goes on while a joint still advances (progress_profile start_delay_s without progress ends it)
+POST_READS = 8          # 2026-10-18 timing: 15 reads were ~2.7 s after every move; fewest reads after the last command; reading goes on while a joint still advances (progress_profile start_delay_s without progress ends it)
 POSTWRITE_READS = (("goal", "Goal_Position"), ("torque", "Torque_Enable"), ("status", "Status"), ("moving", "Moving"),
                    ("velocity", "Present_Velocity"), ("load", "Present_Load"), ("current", "Present_Current"), ("present", "Present_Position"))
 # exit 0 only when the measured state is what the mode promises: HOLDING = target reached and holding; RETURNED_RELEASED =
@@ -83,6 +83,11 @@ def bus_open_exception(exc, port, stage):
                 summary=f"{type(exc).__name__}: {lines[0] if lines else ''}" + (f" (from {root['type']}" + (f" errno {first['errno']} {first['strerror']}" if first else "") + ")" if len(chain) > 1 else ""))
 
 
+SEED_STAGGER_S = 0.1                                                          # between the seed writes of a drive initialization (each may power its servo)
+LOOP_READ_RETRY_WAITS_S = (0.05, 0.2, 0.5)   # 215335_auto: 0.03 / 0.1 s did not bridge a right-arm silence in home_arm; a start read answered after 0.6 s before (164707);                                      # reads only, inside a move: a lost answer is asked again twice before it is a bus loss
+INIT_READ_RETRY_WAITS_S = (0.15, 0.3, 0.6)                                   # reads only, after a failed drive-initialization read; never a write
+
+
 def write_goal_position(bus, log, joint, requested):
     """The existing unicast Goal write and ACK contract, also used by the seed-only field entry."""
     log["last_goal_write_attempt"] = dict(joint=joint, requested_tick=requested, acknowledgement="UNKNOWN")
@@ -117,7 +122,7 @@ def read_feedback_once(bus, reads=POSTWRITE_READS):
 
 
 def record_read_after_loss(bus, log):
-    """Post-loss termination record: observe once without changing BUS_LOST or sending recovery commands."""
+    """Opus termination patch: observe once without changing BUS_LOST or sending recovery commands."""
     record = read_feedback_once(bus)
     state = record["state"]
     torque = state.get("torque", {})
@@ -232,12 +237,33 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
         nonlocal last_feedback
         """One fresh readback. Any failure of the driver (its own packet timeout included) is a bus loss."""
         t0 = clock(); r = {}
-        try:
-            reads = POSTWRITE_READS if writes_after_read else READS + (("status", "Status"), ("moving", "Moving"))
-            for k, reg in reads:
-                r[k] = {n: float(v) for n, v in bus.sync_read(reg, normalize=False).items()}
-        except Exception as e:
-            raise Stop(G.hard("bus_lost", f"read failed: {type(e).__name__}: {str(e).splitlines()[0]}"))
+        reads = POSTWRITE_READS if writes_after_read else READS + (("status", "Status"), ("moving", "Moving"))
+        # 2026-10-18 194127_auto: the first auto grasp ended in the lift on ONE unanswered 'Present_Velocity' read while the arm stood still
+        # holding the block. A read changes nothing on the servos (they keep their last goal), so a lost READ answer is asked again
+        # (LOOP_READ_RETRY_WAITS_S, the port cleared between); only reads that stay unanswered are a bus loss. Writes are never repeated here.
+        first_err = None
+        for attempt, wait in enumerate((0.0,) + LOOP_READ_RETRY_WAITS_S):
+            if wait:
+                time.sleep(wait)
+                try:
+                    if attempt == len(LOOP_READ_RETRY_WAITS_S):
+                        # 215335 / 222416 (right, end of home_arm, arm at rest, current 1-2): three re-reads over 0.25 s stayed silent. Both arms and
+                        # both wrist cameras share one USB hub (1-1); the last try re-opens the serial port (no servo register is written by it).
+                        ph_ = bus.port_handler; ph_.closePort(); time.sleep(0.05); ph_.openPort(); ph_.setBaudRate(ph_.getBaudRate())
+                        log["events"].append(dict(event="loop_read_port_reopened", t=clock()))
+                    bus.port_handler.clearPort()
+                except Exception as e_:
+                    log["events"].append(dict(event="loop_read_port_reopen_failed", error=f"{type(e_).__name__}: {e_}", t=clock()))
+            try:
+                for k, reg in reads:
+                    r[k] = {n: float(v) for n, v in bus.sync_read(reg, normalize=False).items()}
+                if attempt:
+                    log["events"].append(dict(event="loop_read_recovered", attempts=attempt + 1, first_error=first_err, t=clock()))
+                break
+            except Exception as e:
+                first_err = first_err if attempt else f"{type(e).__name__}: {str(e).splitlines()[0]}"; r = {}
+                if attempt == len(LOOP_READ_RETRY_WAITS_S):
+                    raise Stop(G.hard("bus_lost", f"read failed {attempt + 1} times: {first_err}"))
         r["t"], r["read_s"] = t0, clock() - t0
         last_feedback = r
         writes_after_read.clear()
@@ -252,6 +278,63 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
             return
         writes_after_read.add(n)
         write_goal_position(bus, log, n, requested)
+
+    def init_read(what):
+        """A read during drive initialization (after the seed / torque writes). 2026-10-18 163849_right: six seed writes
+        acknowledged, then the read got servo 2's late answer while asking servo 1 ('response_contract: expected ID=1').
+        A read moves nothing, so this one read is repeated ONCE after the stale bytes are dropped; a write is never repeated
+        here. A second failure is the BUS_LOST stop it always was."""
+        try:
+            return read()
+        except Stop as first:
+            if first.gate.get("gate") != "bus_lost":
+                raise
+            ev = dict(init_read_lost=what, error=first.gate.get("detail"), attempts=[])
+            for wait in INIT_READ_RETRY_WAITS_S:                              # 2026-10-18 164707_left: one retry after 50 ms failed too; the bus answered again later
+                sleep(wait)
+                for holder in (bus, getattr(bus, "bus", None)):
+                    ph = getattr(holder, "port_handler", None) if holder is not None else None
+                    if ph is not None and hasattr(ph, "clearPort"):
+                        try:
+                            ph.clearPort(); ev["input_cleared"] = True
+                        except Exception as e:
+                            ev["input_clear_error"] = f"{type(e).__name__}: {e}"
+                        break
+                try:
+                    r = read(); ev["attempts"].append(dict(after_s=wait, answered=True)); ev["recovery"] = "READ_REPEATED_AND_ANSWERED"; log["events"].append(ev); return r
+                except Stop as again:
+                    ev["attempts"].append(dict(after_s=wait, answered=False, error=again.gate.get("detail")))
+            ev["recovery"] = f"FAILED: {len(INIT_READ_RETRY_WAITS_S)} repeated reads were not answered either"; log["events"].append(ev); raise first
+
+    def seed_goal(n, tick, measured):
+        """The FIRST Goal write of a joint (its seed = where it stands). 2026-10-18: three BUS_LOSTs, all on a seed write right
+        after the previous joints had powered up (id 4, id 5: 'Incorrect status packet' / 'no status packet'). Re-sending a seed
+        is idempotent: the goal equals the measured position, so applied twice it moves nothing. Only here, and only when the
+        joint still stands within the stationary lead of the seed: read back; if the goal register already holds the seed,
+        the write was applied; otherwise write the same seed once more. Anything else stays the BUS_LOST stop it was."""
+        try:
+            return goal(n, tick)
+        except Stop as first:
+            if first.gate.get("gate") != "bus_lost":
+                raise
+            requested = int(round(tick)); ev = dict(seed_write_answer_lost=n, requested=requested, error=first.gate.get("detail"))
+            stationary = float(pg["lead"])                                # the stationary lead of the progress profile (17 ticks): a joint within it is standing
+            if abs(float(measured[n]) - requested) > stationary:
+                ev["recovery"] = "NOT_ATTEMPTED: the seed is not where the joint stands"; log["events"].append(ev); raise
+            sleep(0.05)
+            try:
+                back = read()
+            except Stop:
+                ev["recovery"] = "NOT_ATTEMPTED: the read-back after the lost answer failed too"; log["events"].append(ev); raise first
+            faults = {k: v for k, v in back["status"].items() if v}
+            if faults or abs(float(back["present"][n]) - requested) > stationary:
+                ev["recovery"] = f"NOT_ATTEMPTED: faults {faults} or the joint moved ({back['present'][n]})"; log["events"].append(ev); raise first
+            if back["goal"][n] == requested:
+                ev["recovery"] = "READ_BACK_CONFIRMS_THE_SEED_WAS_APPLIED"; log["events"].append(ev); log.setdefault("last_acknowledged_goal", {})[n] = requested; return
+            try:
+                write_goal_position(bus, log, n, requested); ev["recovery"] = "SAME_SEED_WRITTEN_ONCE_MORE_AND_ACKNOWLEDGED"; log["events"].append(ev); return
+            except Stop:
+                ev["recovery"] = "FAILED: the second seed write was not acknowledged either"; log["events"].append(ev); raise
 
     def torque(n, v):
         if stop_requested():
@@ -496,9 +579,11 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
                 raise Stop(G.hard("operator_stop", "stop requested before the first actuator write"))
             if mode in ("out", "next"):                                      # next: the joints already held stay as they are; only newly powered joints are seeded
                 seed = traj.get("command_start", now)
-                for n in new:                                                 # A seed write may power the servo; use only its checked, range-valid command.
-                    goal(n, seed[n])
-                back = read()
+                for i_, n in enumerate(new):                                   # A seed write may power the servo; use only its checked, range-valid command.
+                    if i_:
+                        sleep(SEED_STAGGER_S)                                 # one servo powers up at a time (2026-10-18: six at once disturbed the bus for some 100 ms)
+                    seed_goal(n, seed[n], now)
+                back = init_read("after the seed writes")
                 faults = {n: v for n, v in back["status"].items() if v}
                 if faults:
                     raise Stop(G.hard("servo_fault", f"Status register non-zero during drive initialization: {faults}", joints=sorted(faults)))
@@ -510,7 +595,7 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
                                            torque_read_after_the_goal_write={n: back["torque"][n] for n in new}, explicit_torque_writes_follow=True)
                 for n in new:
                     torque(n, 1)
-                on_reads = [read() for _ in range(5)]
+                on_reads = [init_read("after the torque writes") for _ in range(5)]
                 log["drive_enable"]["actual_reads"] = on_reads
                 faults = {n: v for r in on_reads for n, v in r["status"].items() if v}
                 if faults:

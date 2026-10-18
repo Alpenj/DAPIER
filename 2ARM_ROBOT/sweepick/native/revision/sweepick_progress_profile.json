@@ -47,8 +47,8 @@
   }
  },
  "following_lead_ticks": {
-  "value": 50,
-  "basis": "largest lead at which a loaded ARM joint was seen following or standing before it moved, in the PICK01 traces of 2026-10-08: elbow 40 (approach), shoulder_lift 50 (return of attempt 1), settled shortfalls 21 .. 43. Up to here a joint is not timed; beyond it the clock runs unless the lead comes down again",
-  "scope": "left arm joints, the selected slow profile, the arm's own links and a 20 g block. PROVISIONAL (one session). Not used for a gripper closing on an object"
+  "value": 60,
+  "basis": "largest lead at which a loaded ARM joint was seen following or standing before it moved, in the PICK01 traces of 2026-10-08: elbow 40 (approach), shoulder_lift 50 (return of attempt 1), settled shortfalls 21 .. 43. Up to here a joint is not timed; beyond it the clock runs unless the lead comes down again | 2026-10-18 20261018_210347_auto: the RIGHT shoulder_lift stood 49 ticks behind at rest (align1 end, load 208 raw) and 53 behind while following (align3, load 224) - the P-only servo's offset under the arm's own weight at a stretched pose (about 4.4 raw per tick); 50 stopped that move as NO_PROGRESS. 60 = the largest measured 53 plus the 7-tick margin the left evidence had (43 settled -> 50)",
+  "scope": "both arms (right shoulder evidence 2026-10-18), the arm's own links and a 20 g block. PROVISIONAL"
  }
 }

@@ -105,13 +105,13 @@ class SdkTop:
     the factory rectification log of the SAME FrameSet, streamed over a pipe. Same record format and decoder constants as
     sweepick_sdk_top (READ03). Stamps kept apart: the SDK's own stamp, the helper's host-monotonic receipt, this process's receipt."""
     HELPER = Path.home() / "DAPIER/tjj-calibration-package/v2/camera/build/registered-capture-helper-live"
-    SERIAL = "DEVICE_ID_REDACTED"
+    SERIAL = "OS30AA2X2CG0180"
 
     def __init__(self, workdir, framesets):
         import os, struct, subprocess, threading
         import sweepick_sdk_top as st
         self.st, self.struct, self.os = st, struct, os
-        self.workdir = Path(workdir); self.workdir.mkdir(parents=True, exist_ok=True)
+        self.workdir = Path(workdir).resolve(); self.workdir.mkdir(parents=True, exist_ok=True)   # absolute: the helper runs with cwd=workdir and would resolve a relative trace path a second time (exit 10, no FrameSet; 2026-10-18)
         self.stop_file = self.workdir / "SDK_STOP"
         r, w = os.pipe()
         env = dict(os.environ, READ03_LIVE="1", READ03_FRAMESETS=str(framesets), READ03_FULL_LAST=str(framesets), READ03_NO_PC="1", READ03_STOP_FILE=str(self.stop_file))
@@ -224,12 +224,21 @@ def resolve_wrist_device(name, device):
         path = paths[name]
         if not path.exists():
             raise ValueError(f"paired camera is missing: {path}; no fallback to another wrist")
-        connection = wrists[name].get("connection")
+        connection = wrists[name].get("connection"); reconnected = None
         if connection is not None:
             if Path("/proc/sys/kernel/random/boot_id").read_text().strip() != connection["boot_id"] or (Path(connection["usb_sysfs"]) / "devnum").read_text().strip() != connection["devnum"]:
-                raise ValueError("USB connection changed; the saved physical pairing does not identify the new camera")
+                # 2026-10-18: the right wrist camera dropped and came back on the SAME physical port (1-1.1) twice; the pairing is by
+                # port path. Same port, same camera model, and the other wrist still on its own confirmed port -> the same camera
+                # (a left/right swap needs both cables moved). Any other change still needs the cover test.
+                other_name = "right_wrist" if name == "left_wrist" else "left_wrist"; oc = wrists[other_name].get("connection") or {}
+                sysfs = Path(connection["usb_sysfs"])
+                same_model = all((sysfs / f).exists() for f in ("idVendor", "idProduct")) and (sysfs / "idVendor").read_text().strip() == "090c" and (sysfs / "idProduct").read_text().strip() == "b371"
+                other_ok = bool(oc.get("usb_sysfs")) and Path(oc["usb_sysfs"]).exists() and paths[other_name].exists() and Path(oc["usb_sysfs"]) != sysfs
+                if not (same_model and other_ok and path.exists()):
+                    raise ValueError("USB connection changed; the saved physical pairing does not identify the new camera")
+                reconnected = dict(rule="RECONNECTED_ON_THE_SAME_CONFIRMED_PORT", usb_sysfs=str(sysfs), devnum_now=(sysfs / "devnum").read_text().strip(), devnum_paired=connection["devnum"])
         # shortcut: these cameras expose no unique serial; a new USB route needs pairing evidence.
-        return str(path), dict(wrists[name], registry=str(WRIST_PAIRING), registry_sha256=hashlib.sha256(raw).hexdigest(), requested_alias=str(device))
+        return str(path), dict(wrists[name], registry=str(WRIST_PAIRING), registry_sha256=hashlib.sha256(raw).hexdigest(), requested_alias=str(device), reconnected=reconnected)
     except (OSError, ValueError, KeyError, TypeError) as e:
         raise RuntimeError(f"{name}: camera pairing unavailable: {e}") from e
 
@@ -238,10 +247,12 @@ class WristCam:
     def __init__(self, name, device, open_capture=None):
         import threading
         import collections
+        self.alias, self.reopens = device, []
         device, pairing = resolve_wrist_device(name, device) if open_capture is None else (device, None)
         self.name, self.device, self.stop, self.lock, self.latest, self.prev, self.n, self.info = name, device, threading.Event(), threading.Lock(), None, None, 0, {}
         self.reader_error, self.reader_ended_monotonic_s, self.owner_stop_monotonic_s, self.closed = None, None, None, None
         self.intervals = collections.deque(maxlen=60)
+        self._injected = open_capture is not None
         self.cap = (open_capture or self._open)(device)
         if not self.cap.isOpened():
             self.cap.release()
@@ -259,16 +270,42 @@ class WristCam:
         self.info = dict(device=device, requested="YUYV 320x240", fourcc="".join(chr((f >> 8 * i) & 0xFF) for i in range(4)), width=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), height=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), driver_fps=cap.get(cv2.CAP_PROP_FPS))
         return cap
 
+    def _reopen(self, why):
+        """2026-10-18 223747_auto: the right wrist camera re-enumerated on the shared USB hub during a run (/dev/video4 recreated 35 s in) and
+        the reader stopped for good; the next look had no wrist image. Re-open on the SAME confirmed port (resolve_wrist_device accepts only
+        that), for up to 10 s; every attempt is recorded. Readers built with an injected capture (tests) do not re-open."""
+        if self.alias is None or getattr(self, "_injected", False):
+            return False
+        t_end = time.monotonic() + 10.0
+        while not self.stop.is_set() and time.monotonic() < t_end:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            time.sleep(0.5)
+            try:
+                dev, pairing = resolve_wrist_device(self.name, self.alias); cap = self._open(dev)
+                if cap.isOpened():
+                    self.cap, self.device = cap, dev; self.reopens.append(dict(t=time.monotonic(), why=why, device=dev, pairing=pairing)); return True
+                cap.release()
+            except Exception as e:
+                self.reopens.append(dict(t=time.monotonic(), why=why, failed=f"{type(e).__name__}: {e}"))
+        return False
+
     def _run(self):
         try:
             while not self.stop.is_set():
                 try:
                     ok, frame = self.cap.read()
                 except Exception as e:
+                    if not self.stop.is_set() and self._reopen(f"{type(e).__name__}: {e}"):
+                        continue
                     if not self.stop.is_set():
                         self.reader_error = f"{type(e).__name__}: {e}"
                     break
                 if not ok:
+                    if not self.stop.is_set() and self._reopen("capture.read returned no frame"):
+                        continue
                     if not self.stop.is_set():
                         self.reader_error = "capture.read returned no frame"
                     break
@@ -292,7 +329,7 @@ class WristCam:
 
     def status(self):
         latest, _ = self.get()
-        return dict(frames_read=self.n, reader_error=self.reader_error,
+        return dict(frames_read=self.n, reader_error=self.reader_error, reopens=list(self.reopens),
                     reader_ended_monotonic_s=self.reader_ended_monotonic_s, owner_stop_monotonic_s=self.owner_stop_monotonic_s,
                     ended_before_owner_stop=self.reader_ended_monotonic_s is not None and (self.owner_stop_monotonic_s is None or self.reader_ended_monotonic_s < self.owner_stop_monotonic_s),
                     last_frame=None if latest is None else {k: latest[k] for k in ("n", "recv_monotonic_s")}, thread_alive=self.thread.is_alive())

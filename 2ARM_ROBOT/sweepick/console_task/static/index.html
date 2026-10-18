@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="data:,">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sweepick Task 콘솔</title>
+  <link rel="stylesheet" href="/static/style.css?v=20261018-clean">
+  <script src="/static/task.js?v=20261018-clean" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">SWEEPICK · LOCAL OPERATOR</p>
+      <h1>Task 콘솔</h1>
+    </div>
+    <div class="system-state">
+      <a href="/legacy" title="이전 세션 체계의 실행 이력·검수·OS30A depth 점검">이전 콘솔(기록·검수·depth 점검)</a>
+    </div>
+  </header>
+  <main id="main">
+    <section id="taskPanel" class="panel task-panel" aria-label="Task 실행">
+      <div class="task-head">
+        <h2>Task 실행</h2>
+        <span id="taskState" class="badge neutral">대기</span>
+        <span class="meta-label">집기 결과</span><strong id="taskGripped">—</strong>
+        <span id="taskDisk" class="task-disk"></span>
+      </div>
+      <div class="task-buttons">
+        <button id="taskLeft" class="button primary task-big" type="button">왼팔 실행</button>
+        <button id="taskRight" class="button primary task-big" type="button">오른팔 실행</button>
+        <button id="taskAuto" class="button primary task-big" type="button" title="헤드로 블록 위치 파악 → 성공 가능성이 높은 팔 선택 → 손목 화면을 가르친 화면에 맞춰 집기 (시험 단계)">자동 선택 실행 (영상 정렬·시험)</button>
+        <button id="taskStop" class="button danger task-big" type="button" disabled>정지</button>
+        <label class="task-record"><input id="taskRecord" type="checkbox" checked> 3-view 녹화 (데이터 수집용 · 시연 때는 끄기)</label>
+      </div>
+      <div id="taskMessage" class="banner info" role="status" hidden></div>
+      <div class="task-body">
+        <div class="task-col">
+          <h3>진행 단계</h3>
+          <ol id="taskSteps" class="task-steps"></ol>
+          <h3>로그</h3>
+          <pre id="taskLog" class="task-log"></pre>
+        </div>
+        <div class="task-col">
+          <h3>기준 자세 기록 <small>(토크 꺼진 팔을 손으로 잡고 누르기 · 블록은 그대로)</small></h3>
+          <div class="task-teach"><b>왼팔</b>
+            <button id="teach_left_grasp" class="button secondary" type="button">① 집기 자세</button>
+            <button id="teach_left_above" class="button secondary" type="button">② 블록 바로 위</button>
+            <button id="teach_left_pregrasp" class="button secondary" type="button">③ pregrasp</button>
+            <button id="teach_left_carry" class="button secondary" type="button" title="블록을 쥔 채(손으로 쥐게 하고) 팔을 베이스 위로 접은 자세 · LiDAR·헤드 카메라를 가리지 않게">④ 운반 자세</button></div>
+          <div class="task-teach"><b>오른팔</b>
+            <button id="teach_right_grasp" class="button secondary" type="button">① 집기 자세</button>
+            <button id="teach_right_above" class="button secondary" type="button">② 블록 바로 위</button>
+            <button id="teach_right_pregrasp" class="button secondary" type="button">③ pregrasp</button>
+            <button id="teach_right_carry" class="button secondary" type="button" title="블록을 쥔 채(손으로 쥐게 하고) 팔을 베이스 위로 접은 자세 · LiDAR·헤드 카메라를 가리지 않게">④ 운반 자세</button></div>
+          <h3>쌓인 데이터</h3>
+          <p id="taskPending" class="notice"></p>
+          <table class="task-runs"><thead><tr><th>실행</th><th>결과</th><th>잡음</th><th>크기</th><th>분석</th><th>위치</th></tr></thead><tbody id="taskRuns"></tbody></table>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
