@@ -244,7 +244,9 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
         first_err = None
         for attempt, wait in enumerate((0.0,) + LOOP_READ_RETRY_WAITS_S):
             if wait:
-                time.sleep(wait)
+                sleep(wait)                                                    # the injected sleep (tests drive it); review 2026-10-19
+                if stop_requested():                                           # a STOP during the re-read waits ends the move as a STOP, not as more waiting
+                    raise Stop(G.hard("operator_stop", f"stop requested while re-reading after a lost answer ({first_err})"))
                 try:
                     if attempt == len(LOOP_READ_RETRY_WAITS_S):
                         # 215335 / 222416 (right, end of home_arm, arm at rest, current 1-2): three re-reads over 0.25 s stayed silent. Both arms and
@@ -331,6 +333,8 @@ def run(mode, side, out, *, target=None, clear_range_end=None, rest=None, cert=N
                 ev["recovery"] = f"NOT_ATTEMPTED: faults {faults} or the joint moved ({back['present'][n]})"; log["events"].append(ev); raise first
             if back["goal"][n] == requested:
                 ev["recovery"] = "READ_BACK_CONFIRMS_THE_SEED_WAS_APPLIED"; log["events"].append(ev); log.setdefault("last_acknowledged_goal", {})[n] = requested; return
+            if stop_requested():                                          # review 2026-10-19: the one bounded seed re-send obeys the same STOP as every other goal write
+                ev["recovery"] = "NOT_ATTEMPTED: stop requested"; log["events"].append(ev); raise Stop(G.hard("operator_stop", "stop requested before the seed re-send"))
             try:
                 write_goal_position(bus, log, n, requested); ev["recovery"] = "SAME_SEED_WRITTEN_ONCE_MORE_AND_ACKNOWLEDGED"; log["events"].append(ev); return
             except Stop:

@@ -1,0 +1,38 @@
+{
+ "schema": "sweepick.auto-teacher-correctness.v1",
+ "date": "2026-10-19",
+ "base_commit": "d98fd9a",
+ "candidate": "local MOUNTED_FLOOR native (not deployed)",
+ "suite": {
+  "summary": "44 failed, 498 passed, 31 skipped, 1 error",
+  "command": "pytest -q --continue-on-collection-errors (env without ROS paths)"
+ },
+ "failed_node_ids_identical_to_baseline": true,
+ "failed_count": 44,
+ "new_failures": [],
+ "fixed_failures": [],
+ "collection_errors_now": [
+  "ERROR test_capture_right_wrist_calibration.py"
+ ],
+ "collection_errors_baseline": [
+  "ERROR test_capture_right_wrist_calibration.py",
+  "ERROR test_direct_joint.py",
+  "ERROR test_left_seed_diagnostic.py",
+  "ERROR test_observation_approval_wait.py"
+ ],
+ "new_tests": "native/revision/test_review_20261019_correctness.py (8 passed)",
+ "fixes": {
+  "P0-1 STOP chain": "prepare takes the run-level <RUN>.STOP (session and taught replay pass it); the bounded seed re-send checks STOP first (NOT_ATTEMPTED: stop requested); loop re-read waits use the injected sleep and end as operator_stop on STOP",
+  "P0-2 required observations": "taught-view gate: row required; angle required unless the judge's own alignment check passed on the look; pads-above evidence must be present and True above the block",
+  "P0-3 ARM5 / zero / finite": "arm5_within() needs all five finite joints within tol; lateral error 0.0 is valid (None check); head extrinsic must be finite",
+  "P0-4 hold status": "carry watch returns HELD/DROPPED/FAULT/STOP/UNKNOWN (valid reads, error reads, longest gap); session and taught replay continue only on HELD",
+  "P0-5 start overlap": "every contact sample keeps all pairs; the exception holds only when every sample's pairs are a subset of the step-0 own-arm pairs, contiguous from the start, clear after; raw CONTACT kept as nominal_verdict_raw; penetration depth not available (limit)"
+ },
+ "success_runs_preserved": "gate inputs of the success runs (200250, 203018, 212830, 224707, 211928, 194127) re-checked from their trails: row always present, the one missing angle (203018 above) had judge alignment OK, pads-above True -> same decisions",
+ "not_done": [
+  "P1: atomic teach (temp capture -> activate), result labels in the Task UI (CONTACT_CANDIDATE vs HELD), ACT raw/label split",
+  "penetration-depth growth in the start-overlap exception",
+  "live HTTP STOP relay test (console app routes not in the public copy)"
+ ],
+ "device_writes": 0
+}

@@ -52,7 +52,7 @@ def main(argv=None):
         t_obs = time.time(); now0 = pk.read_ticks(); fs0 = pk.top_frame(str(out / "top")); sc0 = pk.analyse(fs0["bgr"], fs0["depth_mm"], fs0["K"], {s: now0[s]["ticks"] for s in ("left", "right")})
         log["start_observation_s"] = round(time.time() - t_obs, 1); shared_scene = lambda folder, now_: sc0      # ONE head observation for both prepares and the replay (start-up time, 2026-10-18)
         for s_ in (other, side):                                               # both arms: the other one first, so it is folded away before this one moves
-            pr = pk.prepare(out / f"prepare_{s_}", s_, execute=True, run=leased_run, scene_of=shared_scene)
+            pr = pk.prepare(out / f"prepare_{s_}", s_, execute=True, run=leased_run, scene_of=shared_scene, stop_file=Path(str(out) + ".STOP"))
             log["prepare"][s_] = {k: pr.get(k) for k in ("result", "why", "target", "controller_result", "at_start_pose", "needs_a_person")}; save()
             if pr["result"] not in ("ALREADY_AT_START",) and not (pr["result"] == "RAN" and pr.get("at_start_pose")):
                 log["result"] = f"NOT_RUN: prepare {s_} {pr['result']} {pr.get('why') or pr.get('needs_a_person')}"; save(); print(log["result"])
@@ -199,23 +199,38 @@ def main(argv=None):
 
     def watch_grip(seconds):
         """Hold in the carry pose and watch the jaws: a block slipping out lets the held gripper close further (present
-        drops) and its load fall. DROPPED when present falls more than 25 ticks below the reading at the start of the
-        hold or |load| falls below 40 % of it, two reads in a row."""
+        drops) and its load fall. review 2026-10-19: a STATUS as in the session's watch - HELD / DROPPED / FAULT / STOP /
+        UNKNOWN (no reference read, too few valid reads or a long gap); a failed read is counted, never read as 'held'."""
         from sweepick_local_loop import open_readonly_bus
-        rows, bad = [], 0; t_end = time.monotonic() + seconds; start = None
+        rows, bad, start, valid, gap_max = [], 0, None, 0, 0.0; last_ok = time.monotonic(); t_end = time.monotonic() + seconds
+        def res(status, **kw):
+            return dict(status=status, dropped=status == "DROPPED", start=start, rows=rows, valid_reads=valid, error_reads=len(rows) - valid, longest_gap_s=gap_max, **kw)
         while time.monotonic() < t_end:
-            with (ep.lease("left", "right") if ep is not None else __import__("contextlib").nullcontext()):
-                b = open_readonly_bus(side)
-                try:
-                    pos = float(b.sync_read("Present_Position", normalize=False)["gripper"]); load = float(b.sync_read("Present_Load", normalize=False)["gripper"])
-                finally:
-                    b.disconnect()
-            start = start or dict(pos=pos, load=abs(load) or 1.0); rows.append(dict(t=time.time(), pos=pos, load=load))
+            if Path(str(out) + ".STOP").exists():
+                return res("STOP")
+            try:
+                with (ep.lease("left", "right") if ep is not None else __import__("contextlib").nullcontext()):
+                    b = open_readonly_bus(side)
+                    try:
+                        pos = float(b.sync_read("Present_Position", normalize=False)["gripper"]); load = float(b.sync_read("Present_Load", normalize=False)["gripper"])
+                        tq = int(b.sync_read("Torque_Enable", normalize=False)["gripper"]); stv = int(b.sync_read("Status", normalize=False)["gripper"])
+                    finally:
+                        b.disconnect()
+            except Exception as e:
+                rows.append(dict(t=time.time(), error=f"{type(e).__name__}: {e}")); gap_max = max(gap_max, time.monotonic() - last_ok); time.sleep(0.2); continue
+            gap_max = max(gap_max, time.monotonic() - last_ok); last_ok = time.monotonic(); valid += 1
+            rows.append(dict(t=time.time(), pos=pos, load=load, torque=tq, status=stv))
+            if tq != 1 or stv != 0:
+                return res("FAULT", why=f"gripper torque {tq}, status {stv}")
+            start = start or dict(pos=pos, load=abs(load) or 1.0)
             slip = pos < start["pos"] - 25 or abs(load) < 0.4 * start["load"]; bad = bad + 1 if slip else 0
             if bad >= 2:
-                return dict(dropped=True, start=start, rows=rows)
+                return res("DROPPED")
             time.sleep(0.2)
-        return dict(dropped=False, start=start, rows=rows)
+        gap_max = max(gap_max, time.monotonic() - last_ok)
+        if start is None or valid < pk.GRIP_WATCH_MIN_VALID or gap_max > pk.GRIP_WATCH_MAX_GAP_S:
+            return res("UNKNOWN", why=f"valid reads {valid}, longest gap {gap_max:.2f} s")
+        return res("HELD")
 
     tgt = lambda k: {n: float(taught[k][n]) for n in ARM}
     ok = (move("pregrasp", "out", dict(tgt("pregrasp"), gripper=open_tick), ALL)
@@ -233,8 +248,10 @@ def main(argv=None):
         if ok and "carry" in taught:                                           # fold the held block over the base, hold (the base would drive), come back over the place
             ok = move("carry", "next", tgt("carry"), ALL, carried=True)
             if ok and a.execute:
-                w = watch_grip(a.carry_hold_s); log["carry_watch"] = dict(dropped=w["dropped"], start=w["start"], n=len(w["rows"]), last=w["rows"][-1] if w["rows"] else None); save()
-                log["steps"].append(dict(step="carry_hold", result="DROPPED" if w["dropped"] else "HELD", why="the jaws closed further / lost load while holding" if w["dropped"] else None)); save()
+                w = watch_grip(a.carry_hold_s); log["carry_watch"] = {k: w.get(k) for k in ("status", "start", "valid_reads", "error_reads", "longest_gap_s", "why")}; log["carry_watch"]["last"] = w["rows"][-1] if w["rows"] else None; save()
+                log["steps"].append(dict(step="carry_hold", result=w["status"], why=w.get("why"))); save()
+                if w["status"] != "HELD":                                      # review 2026-10-19: DROPPED / UNKNOWN / FAULT / STOP end the run where it is (nothing further is commanded)
+                    ok = False; log["needs_a_person"] = f"carry hold {w['status']}: the arm holds where it is"
             ok = ok and move("back_over_place", "next", tgt(a.lift_to), ALL, carried=True)
         ok = ok and move("lower", "next", tgt("grasp"), ALL, carried=True)
     if ok and (gripped or not a.execute):

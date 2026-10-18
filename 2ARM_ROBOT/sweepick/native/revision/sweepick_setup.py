@@ -51,7 +51,7 @@ def measured_head_extrinsic():
     if doc.get('schema') != 'sweepick.head-extrinsic.v1':
         raise RuntimeError(f'{MEASURED_HEAD_EXTRINSIC.name}: unknown schema {doc.get("schema")!r}')
     T = np.asarray(doc['T_robot_from_camera'], float)
-    if T.shape != (4, 4) or not np.allclose(T[3], [0, 0, 0, 1]) or not np.allclose(T[:3, :3].T @ T[:3, :3], np.eye(3), atol=1e-6) or abs(np.linalg.det(T[:3, :3]) - 1) > 1e-6:
+    if T.shape != (4, 4) or not np.isfinite(T).all() or not np.allclose(T[3], [0, 0, 0, 1]) or not np.allclose(T[:3, :3].T @ T[:3, :3], np.eye(3), atol=1e-6) or abs(np.linalg.det(T[:3, :3]) - 1) > 1e-6:
         raise RuntimeError(f'{MEASURED_HEAD_EXTRINSIC.name}: T_robot_from_camera is not a rigid transform')
     return T, doc
 

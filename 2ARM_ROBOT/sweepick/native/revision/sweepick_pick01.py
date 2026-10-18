@@ -1215,7 +1215,7 @@ def object_check(doc, block, *, carried, right_ticks, grasp_arm_ticks=None, all_
     if carried:
         base, c = ctrl(grasp_arm_ticks); t.plan.pose(base, c, block_q); ps, rot = t.plan.site_frame(SIDE)
         rb = np.empty(9); mujoco.mju_quat2Mat(rb, block_q[3:]); rel = np.eye(4); rel[:3, :3] = rot.T @ rb.reshape(3, 3); rel[:3, 3] = rot.T @ (block_q[:3] - ps)
-    first = None; steps = traj["steps"]; contact_steps = []
+    first = None; steps = traj["steps"]; contact_steps = []; contact_pairs = []
     entry = None
     if traj.get("command_start") is not None:
         entry = tt.make(traj["start"], {n: v for n, v in traj["command_start"].items() if v != traj["start"][n]}, doc.get("profile") or tt.load_profile())
@@ -1230,10 +1230,10 @@ def object_check(doc, block, *, carried, right_ticks, grasp_arm_ticks=None, all_
                 first = dict(step=checked_steps, phase=phase, pairs=[list(map(str, b)) for b in bad[:4]])
             if not all_contacts:
                 break
-            contact_steps.append(checked_steps)
+            contact_steps.append(checked_steps); contact_pairs.append(sorted({tuple(sorted(map(str, b_[:2]))) for b_ in bad}))   # every pair of every contact sample (review 2026-10-19)
         checked_steps += 1
     msha = hashlib.sha256(CAND.read_bytes()).hexdigest()
-    return dict(schema="tjj.object-collision-result.v1", identity=tt.identity(doc["side"], traj, msha), nominal_verdict="CLEAR" if first is None else "CONTACT", contact_steps=contact_steps if all_contacts else None, first_nominal_contact=first, nominal_steps_checked=checked_steps,
+    return dict(schema="tjj.object-collision-result.v1", identity=tt.identity(doc["side"], traj, msha), nominal_verdict="CLEAR" if first is None else "CONTACT", contact_steps=contact_steps if all_contacts else None, contact_pairs=[[list(p_) for p_ in ps_] for ps_ in contact_pairs] if all_contacts else None, first_nominal_contact=first, nominal_steps_checked=checked_steps,
                 range_entry_checked=entry is not None and first is None, range_entry_identity=tt.identity(doc["side"], traj, msha) if entry is not None else None,
                 range_entry_actual_start=traj["start"] if entry is not None else None, range_entry_command_seed=traj.get("command_start"), range_entry_samples=0 if entry is None else entry["steps"]+1,
                 scene="assembled dual model, desk at the real height, block " + (f"carried by the {SIDE} tool point" if carried else "on the desk"), allowed=[f"{SIDE} pad - block", "block - desk"], not_allowed="every other pair, housings and arm links on the block included",
@@ -1376,6 +1376,16 @@ def current_wrist_alignment(plan, scene):
     return rec
 
 
+def arm5_within(reached, tol_ticks):
+    """review 2026-10-19: all five arm joints must be present with a finite shortfall within tol (a gripper-only or one-joint record is not
+    'the arm is at the target'; all([]) would say True)."""
+    try:
+        return bool(reached) and all(n in reached and reached[n].get("minus_target") is not None and np.isfinite(float(reached[n]["minus_target"]))
+                                     and abs(float(reached[n]["minus_target"])) <= tol_ticks for n in ARM)
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
 def judge(out, state, what, scene):
     """Observation gates. Each returns (ok, record); the record goes into STATE['evidence'] with the numbers it used."""
     import sweepick_grasp as tg
@@ -1453,9 +1463,10 @@ def judge(out, state, what, scene):
             # where it was in the image (centred within the close limit below), the pads are beside it; the model gap is then a diagnostic.
             pb_ = checks["pads_beside_the_block_by_measured_joints"]
             dsc0_ = ((state["stages"].get("descend_settle") or {}).get("reached") or (state["stages"].get("descend") or {}).get("reached") or {})
-            at_target_ = bool(dsc0_) and all(abs(float(v.get("minus_target", 1e9))) <= 20.0 for n_, v in dsc0_.items() if n_ in ARM)
+            at_target_ = arm5_within(dsc0_, 20.0)
             below_top_ = bool(pb_.get("lowest_above_top_mm")) and all(v_ is not None and v_ < -2.0 for v_ in pb_["lowest_above_top_mm"])
-            if not pb_["ok"] and at_target_ and below_top_ and abs(rec.get("lateral_error_mm") or 1e9) <= float(plan["room_each_side_m"]) * 1000.0 + CLOSE_CENTRING_EXTRA_MM:
+            lat_ = rec.get("lateral_error_mm")                                  # review: an exact 0.0 is a valid error, only None is missing
+            if not pb_["ok"] and at_target_ and below_top_ and lat_ is not None and abs(lat_) <= float(plan["room_each_side_m"]) * 1000.0 + CLOSE_CENTRING_EXTRA_MM:
                 pb_.update(ok=True, by="joints at the grasp target, both pads below the top face, block centred in the image (the model gap is a diagnostic: its block position is cm-level)")
             pads_down_ = checks["pads_beside_the_block_by_measured_joints"]["ok"]
             # Squeeze grasp (Goldberg 1993, 'Orienting polygonal parts without sensors'): two flat parallel jaws closing on a square part turn it until
@@ -1473,7 +1484,7 @@ def judge(out, state, what, scene):
             # was cut by the image bottom / the jaws there, its width read 231 px as above it (215 after the settle) -> 'not approached', home.
             # The width is auxiliary: the descent counts as made when the measured arm joints ended within 20 ticks of the grasp target.
             dsc_ = ((state["stages"].get("descend_settle") or {}).get("reached") or (state["stages"].get("descend") or {}).get("reached") or {})
-            down_ = bool(dsc_) and all(abs(float(v.get("minus_target", 1e9))) <= 20.0 for n_, v in dsc_.items() if n_ in ARM)
+            down_ = arm5_within(dsc_, 20.0)
             checks["approached"] = dict(width_px=[po["width_px"], obj["width_px"]], joints_at_grasp_within_20_ticks=down_, ok=bool(obj["width_px"] > po["width_px"] or down_), basis="auxiliary only: larger than at the last stop above the block, or the measured arm joints at the grasp target")
         ok = not unknown and all(c["ok"] for c in checks.values())
         # Preserve the stricter existing settle-retry heuristic; current alignment does not authorize a retry.
@@ -1521,6 +1532,7 @@ def jaw_during(log, jaw_floor_ticks):
 FAST_STAGES = ("pregrasp", "carry", "carry_back", "retreat", "home", "home_arm", "abort_home")   # 203018_auto (user): carry 35 s each way at the near profile was too slow; the grip held
 GRASP_ABOVE_TAUGHT_M = 0.004   # 203018_auto: at the taught grasp height the wrist still stood 15 ticks short with load 72 (pads on the floor) and the hand slid forward; 4 mm higher on a 40 mm block
 CARRY_HOLD_S = 5.0
+GRIP_WATCH_MIN_VALID, GRIP_WATCH_MAX_GAP_S = 5, 1.0                           # a hold is HELD only with this many valid reads and no longer gap (review 2026-10-19)
 HEAD_RECT_YAW_TRUST_DEG = 12.0                                                 # head top-face rectangle yaw used only when it differs more than this from the taught yaw
 YAW_STEP_WHOLE_DEG = 30.0                                                      # largest wrist turn per look when the block outline is whole (the image-Jacobian loop)
 SQUEEZE_SQUARES_DEG = 15.0                                                     # ready_to_close with the pads down: the closing squares this much block yaw (squeeze grasp)
@@ -2197,11 +2209,17 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
             room_mm = float(S()["plan"].get("room_each_side_m") or 0.003) * 1000.0
             # the pre-grasp stop is coarse (the stop above the block is aligned again, closer): 5 mm there; above the block the pad room less 0.3 mm
             cx_tol_mm = ACROSS_TOL_MM if key_h == "pregrasp" else max(1.5, room_mm - 0.3)
-            fine = (abs(e.get("row", 0.0)) / g <= ACROSS_TOL_MM and abs(e.get("ang", 0.0)) <= WRIST["slope_tolerance_deg"] and ck == "cx"
-                    and abs(e["cx"]) / g <= cx_tol_mm
-                    and (key_h != "pregrasp" or abs(e["logA"]) <= np.log(1.35)))
-            above_ok = ((ev.get("checks") or {}).get("pads_above_the_top_face") or {}).get("ok", True) if gate == "ready_for_final_descent" else True
-            row["taught_view_gate"] = dict(fine=bool(fine), cx_mm=float(abs(e["cx"]) / g) if "cx" in e else None, allowed_mm=cx_tol_mm, pads_above_top=above_ok, judge_ok=ok)
+            # review 2026-10-19: a feature that was not measured is UNKNOWN, never a zero error. The across row is required; the angle is required
+            # unless the judge's own alignment check passed on this look (203018 above: no outline angle, judge alignment OK); above the block the
+            # pads-above-the-top evidence must be present and True.
+            ca_now = ((ev.get("checks") or {}).get("current_alignment") or {})
+            row_ok = "row" in e and abs(e["row"]) / g <= ACROSS_TOL_MM
+            ang_ok = (abs(e["ang"]) <= WRIST["slope_tolerance_deg"]) if "ang" in e else (ca_now.get("ok") is True)
+            fine = (row_ok and ang_ok and ck == "cx" and "cx" in e and abs(e["cx"]) / g <= cx_tol_mm
+                    and (key_h != "pregrasp" or ("logA" in e and abs(e["logA"]) <= np.log(1.35))))
+            above_ok = (((ev.get("checks") or {}).get("pads_above_the_top_face") or {}).get("ok") is True) if gate == "ready_for_final_descent" else True
+            row["taught_view_gate"] = dict(fine=bool(fine), cx_mm=float(abs(e["cx"]) / g) if "cx" in e else None, allowed_mm=cx_tol_mm, pads_above_top=above_ok, judge_ok=ok,
+                                           row="UNKNOWN" if "row" not in e else bool(row_ok), angle=("judge alignment" if "ang" not in e else "taught view") + (" OK" if ang_ok else " not OK"))
             if fine and above_ok:
                 if not ok:                                                      # the descent stages read the last ACCEPTED evidence: record this acceptance as such
                     st_ = S(); st_.setdefault("evidence", []).append(dict(ev, what=gate, ok=True, accepted_by="taught-view gate (image Jacobian loop)", judge_ok=False)); (out / "STATE.json").write_text(json.dumps(st_, indent=1, default=str))
@@ -2281,25 +2299,40 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
 
     def watch_grip(seconds):
         """Hold in the carry pose and watch the jaws (read-only): a block slipping out lets the held gripper close further and its load fall.
-        DROPPED when present falls more than 25 ticks below the start of the hold or |load| below 40 % of it, two reads in a row (as the taught replay)."""
+        review 2026-10-19: the result is a STATUS - HELD (enough valid reads, no slip), DROPPED (two slip reads in a row), FAULT (gripper torque
+        off or a servo status bit), STOP (operator stop) or UNKNOWN (no reference read, too few valid reads, or a gap without reads longer than
+        GRIP_WATCH_MAX_GAP_S). 'Not dropped' is never inferred from reads that failed."""
         from sweepick_local_loop import open_readonly_bus
-        rows, bad, start = [], 0, None; t_end = time.monotonic() + seconds
+        rows, bad, start, valid, last_ok = [], 0, None, 0, time.monotonic(); t0 = time.monotonic(); t_end = t0 + seconds; gap_max = 0.0
+        stop_f = Path(str(out) + ".STOP")
+        def res(status, **kw):
+            return dict(status=status, dropped=status == "DROPPED", start=start, rows=rows, valid_reads=valid, error_reads=len(rows) - valid, longest_gap_s=gap_max, **kw)
         while time.monotonic() < t_end:
+            if stop_f.exists():
+                return res("STOP")
             try:
                 with EPISODE.lease("left", "right") if EPISODE is not None else contextlib.nullcontext():
                     b_ = open_readonly_bus(SIDE)
                     try:
                         pos = float(b_.sync_read("Present_Position", normalize=False)["gripper"]); load = float(b_.sync_read("Present_Load", normalize=False)["gripper"])
+                        tq = int(b_.sync_read("Torque_Enable", normalize=False)["gripper"]); stv = int(b_.sync_read("Status", normalize=False)["gripper"])
                     finally:
                         b_.disconnect()
-            except Exception as e:                                             # a lost read while holding: not a drop; read again
-                rows.append(dict(t=time.time(), error=f"{type(e).__name__}: {e}")); time.sleep(0.2); continue
-            start = start or dict(pos=pos, load=abs(load) or 1.0); rows.append(dict(t=time.time(), pos=pos, load=load))
+            except Exception as e:                                             # a lost read is not a drop and not a hold: counted apart
+                rows.append(dict(t=time.time(), error=f"{type(e).__name__}: {e}")); gap_max = max(gap_max, time.monotonic() - last_ok); time.sleep(0.2); continue
+            gap_max = max(gap_max, time.monotonic() - last_ok); last_ok = time.monotonic(); valid += 1
+            rows.append(dict(t=time.time(), pos=pos, load=load, torque=tq, status=stv))
+            if tq != 1 or stv != 0:
+                return res("FAULT", why=f"gripper torque {tq}, status {stv}")
+            start = start or dict(pos=pos, load=abs(load) or 1.0)
             slip = pos < start["pos"] - 25 or abs(load) < 0.4 * start["load"]; bad = bad + 1 if slip else 0
             if bad >= 2:
-                return dict(dropped=True, start=start, rows=rows)
+                return res("DROPPED")
             time.sleep(0.2)
-        return dict(dropped=False, start=start, rows=rows)
+        gap_max = max(gap_max, time.monotonic() - last_ok)
+        if start is None or valid < GRIP_WATCH_MIN_VALID or gap_max > GRIP_WATCH_MAX_GAP_S:
+            return res("UNKNOWN", why=f"valid reads {valid}, longest gap {gap_max:.2f} s")
+        return res("HELD")
 
     def stalled_home(label):
         """2026-10-18 (user): an arm move that stalled ABOVE the block with the jaws never closed (NO_PROGRESS / short of
@@ -2431,9 +2464,9 @@ def session(out, *, execute=False, stage_fn=None, look_fn=None, observe_fn=None,
                 done_ = back(["lower", "open", "retreat", "home"])
                 return done_ or dict(result="PICKED_AND_PUT_BACK_WITHOUT_CARRY", trail=trail)
             return stalled_home("CARRY") if "close" not in S()["stages"] else dict(result="STOPPED_IN_CARRY_HOLDING_NEEDS_A_PERSON", trail=trail)
-        w = watch_grip(CARRY_HOLD_S); note(step="carry_hold", result="DROPPED" if w["dropped"] else "HELD", start=w["start"], reads=len(w["rows"]), last=w["rows"][-1] if w["rows"] else None)
-        if w["dropped"]:
-            return dict(result="DROPPED_IN_CARRY_HOLDING_NEEDS_A_PERSON", trail=trail)
+        w = watch_grip(CARRY_HOLD_S); note(step="carry_hold", result=w["status"], start=w["start"], valid_reads=w["valid_reads"], error_reads=w["error_reads"], longest_gap_s=w["longest_gap_s"], why=w.get("why"), last=w["rows"][-1] if w["rows"] else None)
+        if w["status"] != "HELD":                                              # DROPPED / UNKNOWN / FAULT / STOP: the carried-object plan does not go on by itself
+            return dict(result=f"CARRY_HOLD_{w['status']}_NEEDS_A_PERSON", trail=trail)
         if not run_stage("carry_back"):
             return dict(result="STOPPED_IN_CARRY_BACK_HOLDING_NEEDS_A_PERSON", trail=trail)
     done_ = back(["lower", "open", "retreat", "home"])                         # as planned, whatever the snapshot is for: the block is not kept in the air
@@ -2532,7 +2565,7 @@ def run_session(out, *, execute, record=False, full_chain=False, episode_fn=None
                 return mv.run(*a_, **k_)
         for s_ in ("left", "right"):
             try:
-                pr = prepare(Path(out) / f"prepare_{s_}", s_, execute=True, run=leased_run)
+                pr = prepare(Path(out) / f"prepare_{s_}", s_, execute=True, run=leased_run, stop_file=Path(str(out) + ".STOP"))
             except Exception as e:
                 pr = dict(result="NOT_RUN", why=f"{type(e).__name__}: {e}")
             off_ = (pr.get("start_pose_check") or {}).get("arm_off_ticks") or {}; after_ = (pr.get("start_pose_after") or {}).get("arm_off_ticks")
@@ -2605,13 +2638,15 @@ def start_pose_targets(side, ticks, doc=None):
     return target, dict(arm_off_ticks=off, arm_tolerance_ticks=tol, gripper_tick=float(ticks["gripper"]), gripper_reference_ticks=refs, gripper_at_reference=at_ref)
 
 
-def prepare(out, side, *, execute=False, run=mv.run, cert=certify, reads=None, scene_of=None):
+def prepare(out, side, *, execute=False, run=mv.run, cert=certify, reads=None, scene_of=None, stop_file=None):
     """Bring `side` to the start pose before observe: plan (default) or execute. The move is the executor's own 'out'
     (only the joints that go somewhere, plus the other arm joints when the arm moves, so it does not sag), checked for
     collisions in a scene with the block where the head camera sees it now, then a 'return' to the reached pose that
     releases the torque (confirmed by a read). Nothing else is commanded; the other arm is not opened."""
     import mujoco
-    out = Path(out); out.mkdir(parents=True, exist_ok=True); set_side(side)
+    out = Path(out)
+    stop_ = Path(stop_file) if stop_file is not None else Path(str(out) + ".STOP")   # review 2026-10-19: the Task STOP is <RUN>.STOP; a prepare inside a run listens to that one
+    out.mkdir(parents=True, exist_ok=True); set_side(side)
     rec = dict(schema="sweepick.prepare-start.v1", side=side, execute=bool(execute), t=time.time(), start_pose_file=START_POSE.name)
     def done(result, **kw):
         rec.update(result=result, **kw); (out / "PREPARE.json").write_text(json.dumps(rec, indent=1, default=str)); return rec
@@ -2645,8 +2680,15 @@ def prepare(out, side, *, execute=False, run=mv.run, cert=certify, reads=None, s
                 # and the lower arm into each other at that measured pose (step 0) - the arm is physically there. Contacts only on a run of the
                 # first samples, all inside this arm, and clear after it: the path only leaves a model overlap of where the arm already is.
                 ca_ = object_check(doc, block, carried=False, right_ticks=now[other(side)]["ticks"], all_contacts=True); cs_ = ca_.get("contact_steps") or []
-                if cs_ and cs_ == list(range(len(cs_))) and len(cs_) < (ca_.get("nominal_steps_checked") or 0):
-                    c_ = dict(c_, nominal_verdict="CLEAR", range_entry_checked=c_.get("range_entry_identity") is not None, start_overlap_left=dict(contact_steps=len(cs_), of=ca_.get("nominal_steps_checked"), pairs=fc_.get("pairs"),
+                # review 2026-10-19: every contact sample must hold ONLY pairs that were already there at the measured start (step 0), all inside this
+                # arm; a new pair (object, floor, body, other arm, another own pair) anywhere refuses the exception. Penetration depth is not available
+                # from this checker: a deepening overlap is not detected (recorded as a limit).
+                cp_ = [{tuple(p_) for p_ in ps_} for ps_ in (ca_.get("contact_pairs") or [])]
+                init_ = cp_[0] if cp_ else set()
+                own_only_ = bool(init_) and all(all(str(x).startswith(side) for x in p_) for p_ in init_)
+                no_new_ = all(ps_ <= init_ for ps_ in cp_)
+                if cs_ and own_only_ and no_new_ and cs_ == list(range(len(cs_))) and len(cs_) < (ca_.get("nominal_steps_checked") or 0):
+                    c_ = dict(c_, nominal_verdict="CLEAR", nominal_verdict_raw="CONTACT", range_entry_checked=c_.get("range_entry_identity") is not None, start_overlap_left=dict(contact_steps=len(cs_), of=ca_.get("nominal_steps_checked"), pairs=sorted(map(list, init_)), depth_checked=False,
                                                                                    basis="the measured start pose overlaps in the model (own links only); the path leaves it and stays clear"))
         else:
             c_ = cert(folder / f"{tag}.TRAJECTORY.json", folder / f"{tag}.CERT.json", scene_file)
@@ -2665,7 +2707,7 @@ def prepare(out, side, *, execute=False, run=mv.run, cert=certify, reads=None, s
     n_trim = [0]
     def trim_check(doc):
         n_trim[0] += 1; return check(doc, out / "run_out", f"trim{n_trim[0]}")
-    code, log = run("out", side, out / "run_out", target=target, execute=True, cert=c, start_recheck=lambda doc: check(doc, out / "run_out", "start"), stop_requested=Path(str(out) + ".STOP").exists,
+    code, log = run("out", side, out / "run_out", target=target, execute=True, cert=c, start_recheck=lambda doc: check(doc, out / "run_out", "start"), stop_requested=stop_.exists,
                     settle_trim=[n for n in ARM if n in target], trim_check=trim_check, **kw)     # a loaded joint that settles short is trimmed onto the start pose
     rec["out"] = dict(controller_result=log["result"], writes=log.get("writes"), reached=log.get("reached"), stopped_by=log.get("stopped_by"), refused=log.get("refused"), needs_a_person=log.get("needs_a_person"))
     if log["result"] == "REFUSED" and not any((log.get("writes") or {}).values()):
@@ -2679,7 +2721,7 @@ def prepare(out, side, *, execute=False, run=mv.run, cert=certify, reads=None, s
     c2 = check(json.loads(traj2.read_text()), out / "plan_release", "path") if traj2.exists() else None
     if c2 is not None and c2.get("nominal_verdict") != "CLEAR":
         return done("RAN", controller_result="HOLDING", needs_a_person=f"the arm holds at the start pose; the release path touches something: {c2.get('first_nominal_contact')}")
-    code2, log2 = run("return", side, out / "run_release", execute=True, cert=c2, start_recheck=lambda doc: check(doc, out / "run_release", "start"), stop_requested=Path(str(out) + ".STOP").exists, **rkw)
+    code2, log2 = run("return", side, out / "run_release", execute=True, cert=c2, start_recheck=lambda doc: check(doc, out / "run_release", "start"), stop_requested=stop_.exists, **rkw)
     after = (reads or read_ticks)()[side]
     doc_ = json.loads(START_POSE.read_text()); sag = float(doc_.get("release_sag_allowance_ticks", 0))
     loose = dict(doc_, arm_tolerance_ticks=float(doc_["arm_tolerance_ticks"]) + sag)        # released: the arm settles under its own weight

@@ -775,25 +775,25 @@
    "source_group": "native_revision",
    "source_name": "sweepick_move_a.py",
    "component": "A_CONTROL",
-   "source_sha256": "dda8ab8f7167576ac25a787467f9d7a5cd7fbb37d78a41668c536320f9e61b1b",
-   "public_sha256": "dda8ab8f7167576ac25a787467f9d7a5cd7fbb37d78a41668c536320f9e61b1b",
-   "bytes": 94391,
+   "source_sha256": "19ecabee1d321a10e30b99477e7fad79e40f3be6a8e09808a46019897fa99d61",
+   "public_sha256": "19ecabee1d321a10e30b99477e7fad79e40f3be6a8e09808a46019897fa99d61",
+   "bytes": 95118,
    "public_copy_changed": false,
    "source_location": "A_P0_FINAL_WORKING_COPY_NOT_ACTIVE",
-   "revision": "2026-10-18 auto teacher"
+   "revision": "2026-10-19 correctness"
   },
   {
    "file": "native/revision/sweepick_pick01.py",
    "source_group": "native_revision",
    "source_name": "sweepick_pick01.py",
    "component": "A_CONTROL",
-   "source_sha256": "d552a03412dc98f5d43103bd476b62f0d165a9ecc6c949cf44fa77376914aec6",
-   "public_sha256": "d552a03412dc98f5d43103bd476b62f0d165a9ecc6c949cf44fa77376914aec6",
-   "bytes": 246905,
+   "source_sha256": "3c0e1032cb8ee6b8e472536d65b188bc739d18d9f54099c8986dddee1fb5faef",
+   "public_sha256": "3c0e1032cb8ee6b8e472536d65b188bc739d18d9f54099c8986dddee1fb5faef",
+   "bytes": 251049,
    "public_copy_changed": false,
    "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE",
    "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
-   "revision": "2026-10-18 auto teacher"
+   "revision": "2026-10-19 correctness"
   },
   {
    "file": "native/revision/sweepick_progress.py",
@@ -2604,12 +2604,12 @@
    "source_group": "mounted_floor_20261016",
    "source_name": "sweepick_setup.py",
    "component": "A_CONTROL",
-   "source_sha256": "d5a265c38240c819edf4a534e7d2f29b435cfcb1e17d167f89be46adfa1593b8",
-   "public_sha256": "d5a265c38240c819edf4a534e7d2f29b435cfcb1e17d167f89be46adfa1593b8",
-   "bytes": 4507,
+   "source_sha256": "a30caec51c84947a21249c680a02f0a111a6fc31b450f6b1ee38f247b07d7283",
+   "public_sha256": "a30caec51c84947a21249c680a02f0a111a6fc31b450f6b1ee38f247b07d7283",
+   "bytes": 4535,
    "public_copy_changed": false,
    "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE",
-   "revision": "2026-10-18 auto teacher"
+   "revision": "2026-10-19 correctness"
   },
   {
    "file": "native/revision/sweepick_setup.json",
@@ -2773,22 +2773,22 @@
    "source_group": "docs",
    "source_name": "README.md",
    "component": "DOCS",
-   "source_sha256": "1c7d41832fb77b3191665590924ef8d45d411b1684da30701eef6b38d0d96b0d",
-   "public_sha256": "1c7d41832fb77b3191665590924ef8d45d411b1684da30701eef6b38d0d96b0d",
-   "bytes": 7683,
+   "source_sha256": "074138c3f06ed1b590fa4687eff5f952dcbd52f9bff7da379b87dfb1ef16b95f",
+   "public_sha256": "074138c3f06ed1b590fa4687eff5f952dcbd52f9bff7da379b87dfb1ef16b95f",
+   "bytes": 9711,
    "public_copy_changed": false,
-   "revision": "2026-10-18 auto teacher"
+   "revision": "2026-10-19 correctness"
   },
   {
    "file": "native/revision/sweepick_261018_taught_replay.py",
    "source_group": "native",
    "source_name": "sweepick_261018_taught_replay.py",
    "component": "NATIVE",
-   "source_sha256": "abc68c3cb3194443b2038194f351f0a80aff7c7f4ec257197e1242e7d8546944",
-   "public_sha256": "abc68c3cb3194443b2038194f351f0a80aff7c7f4ec257197e1242e7d8546944",
-   "bytes": 20288,
+   "source_sha256": "ce8ee8d9ccf8bb46c3fa8c1aa56486a95ca7172b9ce9bafd2b101eb6061ef8ce",
+   "public_sha256": "ce8ee8d9ccf8bb46c3fa8c1aa56486a95ca7172b9ce9bafd2b101eb6061ef8ce",
+   "bytes": 21815,
    "public_copy_changed": false,
-   "revision": "2026-10-18 auto teacher"
+   "revision": "2026-10-19 correctness"
   },
   {
    "file": "native/revision/sweepick_image_jacobian_left.json",
@@ -2877,6 +2877,28 @@
    "bytes": 4643,
    "public_copy_changed": false,
    "revision": "2026-10-18 auto teacher"
+  },
+  {
+   "file": "native/revision/test_review_20261019_correctness.py",
+   "source_group": "native",
+   "source_name": "test_review_20261019_correctness.py",
+   "component": "NATIVE",
+   "source_sha256": "4391cd868b1b83875cc4926f0fb8fb0e6277186ce09ec83059088040258cc012",
+   "public_sha256": "4391cd868b1b83875cc4926f0fb8fb0e6277186ce09ec83059088040258cc012",
+   "bytes": 5082,
+   "public_copy_changed": false,
+   "revision": "2026-10-19 correctness"
+  },
+  {
+   "file": "docs/auto_teacher_20261018/AUTO_TEACHER_CORRECTNESS_RESULT.json",
+   "source_group": "docs",
+   "source_name": "AUTO_TEACHER_CORRECTNESS_RESULT.json",
+   "component": "DOCS",
+   "source_sha256": "8774d357f9d359df27dcaababc27656c8427b02698df77c3287ca67c452783e6",
+   "public_sha256": "8774d357f9d359df27dcaababc27656c8427b02698df77c3287ca67c452783e6",
+   "bytes": 2430,
+   "public_copy_changed": false,
+   "revision": "2026-10-19 correctness"
   }
  ],
  "console17": {
