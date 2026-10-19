@@ -2773,9 +2773,9 @@
    "source_group": "docs",
    "source_name": "README.md",
    "component": "DOCS",
-   "source_sha256": "074138c3f06ed1b590fa4687eff5f952dcbd52f9bff7da379b87dfb1ef16b95f",
-   "public_sha256": "074138c3f06ed1b590fa4687eff5f952dcbd52f9bff7da379b87dfb1ef16b95f",
-   "bytes": 9711,
+   "source_sha256": "f432696c24af3e05caebaf29a90e82a3f0150e3e42e4e59aca67d18f2172b040",
+   "public_sha256": "f432696c24af3e05caebaf29a90e82a3f0150e3e42e4e59aca67d18f2172b040",
+   "bytes": 11017,
    "public_copy_changed": false,
    "revision": "2026-10-19 correctness"
   },
