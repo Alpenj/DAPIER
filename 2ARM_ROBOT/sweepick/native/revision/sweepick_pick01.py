@@ -34,7 +34,11 @@ SCENE = setup.MOUNTED_SCENE if MOUNTED else RT / "model/dual_scene_desk_both.mjb
 T_DATUM_FROM_BOARD = np.array([[0, -1, 0, 0.201], [-1, 0, 0, -0.034], [0, 0, -1, -0.04], [0, 0, 0, 1.0]])
 DATUM_IN_MODEL_BASE = np.array([0.0388353, 0.0, 0.0254])                       # motor-1 lower shaft face in the model base (motor1-cad-datum-audit.json)
 BOARD_Z_IN_WORLD = setup.FLOOR_Z if MOUNTED else float(DATUM_IN_MODEL_BASE[2] + T_DATUM_FROM_BOARD[2, 3])    # the support top in the model's world: desk -14.6 mm / mounted: the floor
-BLOCK_HALF_M = 0.02                                                             # the existing A block model (40 mm)
+OBJECT_FILE = Path(__file__).resolve().parent / "sweepick_object.json"          # 2026-10-19: the object is configuration (size, colour), not code
+OBJECTS = json.loads(OBJECT_FILE.read_text())
+OBJECT = dict(OBJECTS["objects"][OBJECTS["active"]], name=OBJECTS["active"])
+OBJECT_COLOUR_RULE = OBJECTS["colour_rules"][OBJECT["colour"]]
+BLOCK_HALF_M = float(OBJECT["size_m"]) / 2                                      # half the cube side (the A block model was 40 mm)
 # MOUNTED_FLOOR: the OS30A depth reads long. On the printed board of run 20261016_164052_9b3c13 the board pose from its markers
 # (image geometry, marker size; no depth) put the board top at -14.6 mm in the robot frame and the depth points on it at
 # -24.5 mm, 0.612 m from the camera: 1.6 % long (READ02 measured about 2 %). The depth is scaled by this before use.
@@ -133,9 +137,12 @@ def model(block=None, table_z=None):
     if MOUNTED:                                                                 # the mobile scene's ground plane is a static world plane fixed at z 0 (moving its pos does not move it:
         g = m.geom("floor").id                                                  # MuJoCo 3.3.7 keeps its xpos); the 'table' box at the observed floor is the floor instead
         m.geom_contype[g] = 0; m.geom_conaffinity[g] = 0
+    for g in range(m.ngeom):                                                    # the scene's block is the 40 mm A block: give it the active object's size
+        if m.geom_bodyid[g] == m.body("red_block").id and m.geom_type[g] == mujoco.mjtGeom.mjGEOM_BOX:
+            m.geom_size[g][:] = BLOCK_HALF_M                                     # (geom_rbound stays the larger 40 mm bound: conservative for the broad phase)
     adr = m.jnt_qposadr[m.body_jntadr[m.body("red_block").id]]
     if block is None:
-        m.qpos0[adr:adr + 3] = [2.0, 0.0, 0.02]
+        m.qpos0[adr:adr + 3] = [2.0, 0.0, BLOCK_HALF_M]
     else:
         (x, y, z), yaw = block
         m.qpos0[adr:adr + 7] = [x, y, z, np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
@@ -198,7 +205,7 @@ def block_sized_patch(top, object_half, cell=0.01, min_points=50):
     return best, out
 
 
-def analyse(bgr, depth_mm, K, ticks, *, object_half=0.02, lite=False):
+def analyse(bgr, depth_mm, K, ticks, *, object_half=BLOCK_HALF_M, lite=False):
     """Scene from one top FrameSet and the joint readings: frame chain, how well the depth points of the arms fall on the
     model arms (the joint mapping and the chain are both in this number), and the object's top face."""
     import mujoco, tjj_perception as tp
@@ -306,7 +313,7 @@ def geom_vertices(m, d, name):
     return d.geom_xpos[g] + m.mesh_vert[m.mesh_vertadr[k]:m.mesh_vertadr[k] + m.mesh_vertnum[k]] @ R.T
 
 
-def pad_placement(m, d, centre, yaw, half=0.02, side="left"):
+def pad_placement(m, d, centre, yaw, half=BLOCK_HALF_M, side="left"):
     """Where the two pads of the left gripper are against the block, from the pad meshes at the pose in d, in one frame:
       vertical_mm   lowest pad vertex that is over the block's top face (or within 3 mm of its edge), above the top face
       gaps_mm       per pad: distance along the jaw axis from the pad's vertices at or below the top face to the block's side
@@ -375,7 +382,7 @@ def plan_pick(scene, cfg=None, tool_offset=None, above_b=None, keep=None, side="
     import mujoco
     import sweepick_trajectory as tt
     from sim_data_factory.teacher import HandoverTeacher, TeacherFailure, UP
-    o = scene["object"]; yaw = o["yaw_rad"] or 0.0; centre = np.array(o["centre_world"]); width = 0.04
+    o = scene["object"]; yaw = o["yaw_rad"] or 0.0; centre = np.array(o["centre_world"]); width = 2 * BLOCK_HALF_M
     if keep is None and o.get("yaw_source") != "wrist":                         # a first plan: the taught grasp's block yaw, not the head-depth one (see taught_block_yaw)
         ty_ = taught_block_yaw(side)
         if ty_ is not None:
@@ -798,7 +805,8 @@ def set_side(side):
 def _wrist_red_components(bgr):
     """The existing red-block mask and its connected components."""
     import cv2
-    mask = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[..., 1].astype(int) >= 140
+    ch = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[..., int(OBJECT_COLOUR_RULE["lab_channel"])].astype(int)          # sweepick_object.json (red: a >= 140, the existing prior)
+    mask = ch >= OBJECT_COLOUR_RULE["value"] if OBJECT_COLOUR_RULE["op"] == ">=" else ch <= OBJECT_COLOUR_RULE["value"]
     mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
     return (mask,) + cv2.connectedComponentsWithStats(mask)[1:3]
 
@@ -850,7 +858,7 @@ def block_edge_angle(mask, border=3, min_seg=25):
     return float(np.degrees(np.arctan2((w * np.sin(th)).sum(), (w * np.cos(th)).sum())) / 4), float(w.sum())
 
 
-def wrist_object(bgr, object_width_m=0.04):
+def wrist_object(bgr, object_width_m=2 * BLOCK_HALF_M):
     """The block in the wrist image: left / right edge on its widest row, centre, width, slope of its far top edge."""
     import cv2
     a, lab, st = _wrist_red_components(bgr); n = len(st)
@@ -1061,7 +1069,7 @@ def observe(out):
     elif any(v for s in scene["arms"].values() for v in s["torque"].values()):
         why = "torque is already on somewhere: another controller may own an arm"
     elif scene["object"] is None:
-        why = "no current supported-block depth observation was found " + ("on the floor (no 40 mm block standing on the fitted floor)" if MOUNTED else "on the desk")
+        why = "no current supported-block depth observation was found " + (f"on the floor (no {OBJECT['size_m'] * 1000:.0f} mm {OBJECT['colour']} block standing on the fitted floor)" if MOUNTED else "on the desk")
     else:
         if MOUNTED:                                                            # the block may be within either arm's reach: plan both, choose by the same cost
             sel = select_arm(scene); plan = sel["plans"][sel["selected"]] if sel["selected"] else sel["plans"]["left"]; state["arm_selection"] = {k: v for k, v in sel.items() if k != "plans"}
@@ -1817,7 +1825,7 @@ def snapshot(out, scene, evidence):
                q12_measured=scene.get("q12"), ticks_measured=scene.get("ticks"), joint_reads=scene.get("joint_reads"), top_stamps=scene.get("stamps"), wrist_frames=(scene.get("wrist") or {}).get("frames"),
                last_applied=dict(left_goal_ticks=goal, left_goal_q=None if not goal or not right else [float(v) for v in rc.ticks_to_q12(mp, dict(left=goal, right=right))[:6]], source="Goal_Position registers read by the executor at the end of the lift stage",
                                  jaw_hold_command_tick=(close.get("grip") or {}).get("hold_command_tick"), right_arm="not commanded in this session"),
-               object=dict(observed_on_the_desk_world_m=[float(v) for v in state_object(out, st)[0]], yaw_rad=float(state_object(out, st)[1]), size_m=[0.04, 0.04, 0.04], kind="red 40 mm development block", frame="assembled dual model world (left base at its model pose), through the candidate chain camera <- board <- ruler datum",
+               object=dict(observed_on_the_desk_world_m=[float(v) for v in state_object(out, st)[0]], yaw_rad=float(state_object(out, st)[1]), size_m=[2 * BLOCK_HALF_M] * 3, kind=f"{OBJECT['colour']} {OBJECT['size_m'] * 1000:.0f} mm development block ({OBJECT['name']})", frame="assembled dual model world (left base at its model pose), through the candidate chain camera <- board <- ruler datum",
                            size_source="MODEL_PRIOR: existing A block model; not measured hidden dimensions",
                            geometry=st.get("object_geometry"),
                            hand_target_offset_world_m=[float(v) for v in tool_offset(st)], in_hand="not measured as a pose: at the tool point of the left gripper by the wrist image; the tool point comes from the candidate joint mapping",
@@ -1855,7 +1863,7 @@ def recorded_stage(stage_fn):
         ep = EPISODE
         if ep is None or not execute:
             return stage_fn(o, n, execute=execute)
-        _rec(lambda: ep.mark(n, skill=SKILL.get(n), owner="sweepick_move_a (left arm)" if n not in ("close", "open") else "sweepick_grasp.Jaw through sweepick_move_a.grip (left gripper)"), f"mark {n}")
+        _rec(lambda: ep.mark(n, skill=SKILL.get(n), owner=f"sweepick_move_a ({SIDE} arm)" if n not in ("close", "open") else f"sweepick_grasp.Jaw through sweepick_move_a.grip ({SIDE} gripper)"), f"mark {n}")
         with ep.lease("left", "right"):                                         # The writer owns current reads of both arms; pause duplicate background polling.
             r = stage_fn(o, n, execute=execute)
         # the stage has ended and its result is what the session acts on; nothing below may replace or lose it
@@ -1864,7 +1872,7 @@ def recorded_stage(stage_fn):
                 folder = n if n != "align" else f"align{len(json.loads((Path(o) / 'STATE.json').read_text()).get('correction') or [])}"
             except Exception:
                 folder = n
-            ep.stage(n, Path(o) / folder, "left", r.get("controller_result") or r.get("result")); ep.mark(f"after_{n}", owner=None)
+            ep.stage(n, Path(o) / folder, SIDE, r.get("controller_result") or r.get("result")); ep.mark(f"after_{n}", owner=None)
         _rec(after, f"stage record {n}")
         return r
     return run
@@ -1883,7 +1891,7 @@ def put_back_evidence(state, scene):
               place_validly_observed=bool(reg.get("valid")) if reg else None, place_occupied=(reg.get("state") == "OCCUPIED") if reg.get("valid") else None,
               object_seen=o is not None, object_top_height_m=None if o is None else o.get("top_height_above_depth_desk_m"), size_class=None if o is None else bool(o.get("class_match")),
               block_in_the_wrist_view=((scene.get("wrist") or {}).get("object") or {}).get("visible"))
-    h = ev["object_top_height_m"]; ev["height_is_the_blocks"] = None if h is None else bool(abs(h - 0.04) <= 0.01)       # the class check's own tolerance (a quarter of the size), on the height
+    h = ev["object_top_height_m"]; ev["height_is_the_blocks"] = None if h is None else bool(abs(h - 2 * BLOCK_HALF_M) <= BLOCK_HALF_M / 2)       # the class check's own tolerance (a quarter of the size), on the height
     need = ("jaws_opened", "arm_home_and_released", "place_validly_observed", "place_occupied", "object_seen", "height_is_the_blocks")
     if any(ev[k] is None for k in need):
         ev["verdict"] = "UNKNOWN"

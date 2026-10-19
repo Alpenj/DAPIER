@@ -1,0 +1,13 @@
+{
+ "schema": "sweepick.object.v1",
+ "meaning": "the object the auto teacher looks for and plans around: a cube of size_m, found in the wrist image by its colour. Changing the active object also needs the taught wrist views (refs) re-recorded with that object.",
+ "active": "red_cube_40",
+ "objects": {
+  "red_cube_40": {"size_m": 0.04, "colour": "red", "source": "existing A development block (2026-10-08..19)"},
+  "blue_cube_30": {"size_m": 0.03, "colour": "blue", "source": "2026-10-19 user: 30 mm cube so that any yaw fits the 48 mm gripper (30*(cos+sin) <= 42.4 mm); blue colour rule PROVISIONAL until checked on a wrist image"}
+ },
+ "colour_rules": {
+  "red": {"lab_channel": 1, "op": ">=", "value": 140, "source": "existing wrist_object prior (Lab a >= 140)"},
+  "blue": {"lab_channel": 2, "op": "<=", "value": 110, "source": "PROVISIONAL: OpenCV 8-bit Lab b (128 = neutral, blue < 128); to be checked on the first blue-block wrist image"}
+ }
+}

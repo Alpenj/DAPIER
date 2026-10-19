@@ -787,13 +787,13 @@
    "source_group": "native_revision",
    "source_name": "sweepick_pick01.py",
    "component": "A_CONTROL",
-   "source_sha256": "3c0e1032cb8ee6b8e472536d65b188bc739d18d9f54099c8986dddee1fb5faef",
-   "public_sha256": "3c0e1032cb8ee6b8e472536d65b188bc739d18d9f54099c8986dddee1fb5faef",
-   "bytes": 251049,
+   "source_sha256": "ecaf3684e6194dcdf69657eca43e9ce940e636ce99fdfb4000fe04864c8ad4ee",
+   "public_sha256": "ecaf3684e6194dcdf69657eca43e9ce940e636ce99fdfb4000fe04864c8ad4ee",
+   "bytes": 252219,
    "public_copy_changed": false,
    "source_location": "MOUNTED_FLOOR_CANDIDATE_NOT_ACTIVE",
    "active_original_sha256": "5fe4f24021f91ca6af13aa171d9b8273f8ccb14abda0208955431e848696e143",
-   "revision": "2026-10-19 correctness"
+   "revision": "2026-10-19 object config / IR auto / arm label"
   },
   {
    "file": "native/revision/sweepick_progress.py",
@@ -2707,11 +2707,11 @@
    "source_group": "console_task",
    "source_name": "task_runner.py",
    "component": "CONSOLE_TASK",
-   "source_sha256": "d062e114ddc30910827b4d625403db8cf7c335211a1edc81e517aed32c934c76",
-   "public_sha256": "d062e114ddc30910827b4d625403db8cf7c335211a1edc81e517aed32c934c76",
-   "bytes": 8826,
+   "source_sha256": "6fd18048ec03375b116754668d3347b3a4b68103e109314d51839ca4c719b668",
+   "public_sha256": "6fd18048ec03375b116754668d3347b3a4b68103e109314d51839ca4c719b668",
+   "bytes": 9833,
    "public_copy_changed": false,
-   "revision": "2026-10-18 auto teacher"
+   "revision": "2026-10-19 object config / IR auto / arm label"
   },
   {
    "file": "console_task/sweepick_console_open.sh",
@@ -2899,6 +2899,17 @@
    "bytes": 2430,
    "public_copy_changed": false,
    "revision": "2026-10-19 correctness"
+  },
+  {
+   "file": "native/revision/sweepick_object.json",
+   "source_group": "native",
+   "source_name": "sweepick_object.json",
+   "component": "NATIVE",
+   "source_sha256": "4dfccb8403bc6f6dbfaf7bf244862a61feeec5c59465c054059c85a904917175",
+   "public_sha256": "4dfccb8403bc6f6dbfaf7bf244862a61feeec5c59465c054059c85a904917175",
+   "bytes": 951,
+   "public_copy_changed": false,
+   "revision": "2026-10-19 object config / IR auto / arm label"
   }
  ],
  "console17": {

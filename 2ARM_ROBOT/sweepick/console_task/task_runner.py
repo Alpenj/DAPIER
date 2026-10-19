@@ -20,6 +20,7 @@ REFS = {"right": HOME / "sweepick_261018_right_r0/refs", "left": HOME / "sweepic
 POSES = {"grasp": "H0_grasp", "above": "H2_above_c", "pregrasp": "H6_pregrasp"}
 OPTIONAL_POSES = {"carry": "H9_carry"}                                             # block held, arm folded over the base for the drive (2026-10-18)
 RUNS = HOME / "sweepick_task_runs"
+SET_IR = HOME / "Desktop/sweepick_261018_os30a_depth_probe/set_ir2.sh"           # OS30A IR projector falls back to 0 (off) whenever the camera loses power (2026-10-19 hub move: depth 9.5%)
 LOG_LINES = 60
 
 
@@ -41,18 +42,31 @@ class TaskRunner:
         if self.owner_busy():
             raise TaskError("기존 세션(owner)이 실행 중입니다. 끝난 뒤 다시 누르세요.")
 
+    @staticmethod
+    def _ensure_ir():
+        """Set the OS30A IR projector to 2 before every run (the camera only; the script refuses while a reader holds it)."""
+        try:
+            r = subprocess.run([str(SET_IR)], capture_output=True, text=True, timeout=90)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise TaskError(f"OS30A IR 설정 실패: {type(e).__name__}: {e}")
+        text = (r.stdout or "") + (r.stderr or "")
+        if r.returncode != 0 or '"ir_value":2' not in text.replace(" ", ""):
+            raise TaskError(f"OS30A IR 설정 실패 (exit {r.returncode}): {text.strip()[-300:]}")
+        return text.strip()
+
     def start(self, side, record=True, lift_to="above"):
         if side not in ("left", "right", "auto"):
             raise TaskError("알 수 없는 실행")
         with self.lock:
             self._refuse_if_busy()
+            ir = self._ensure_ir()
             if side == "auto":
                 missing = [f"{s_}:{p}" for s_ in REFS for p in ("H6_pregrasp", "H2_above_c") if not (REFS[s_] / p / f"{s_}_wrist_rgb.jpg").exists()]
                 if missing:
                     raise TaskError(f"영상 정렬 기준 화면이 없습니다: {missing}")
                 out = RUNS / time.strftime("%Y%m%d_%H%M%S_auto")
                 cmd = [str(PYTHON), str(SESSION), "session", str(out), "--execute"] + (["--record"] if record else [])
-                log = open(str(out) + ".log", "w")
+                log = open(str(out) + ".log", "w"); log.write(f"[task_runner] OS30A IR: {ir}\n"); log.flush()
                 proc = subprocess.Popen(cmd, cwd=NATIVE, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
                 self.job = dict(kind="session", side="auto", out=str(out), proc=proc, started=time.time(), record=record, cmd=cmd)
                 return self.status()
@@ -61,7 +75,7 @@ class TaskRunner:
                 raise TaskError(f"{side} 기준 자세가 없습니다: {missing}. 아래 '기준 자세 기록'으로 먼저 기록하세요.")
             out = RUNS / time.strftime(f"%Y%m%d_%H%M%S_{side}")
             cmd = [str(PYTHON), str(REPLAY), str(out), "--refs", str(REFS[side]), "--side", side, "--execute", "--lift-to", lift_to] + (["--record"] if record else [])
-            log = open(str(out) + ".log", "w")
+            log = open(str(out) + ".log", "w"); log.write(f"[task_runner] OS30A IR: {ir}\n"); log.flush()
             proc = subprocess.Popen(cmd, cwd=NATIVE, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             self.job = dict(kind="task", side=side, out=str(out), proc=proc, started=time.time(), record=record, cmd=cmd)
             return self.status()
