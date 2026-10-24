@@ -1,0 +1,4 @@
+images/
+*.pth
+__pycache__/
+.pytest_cache/
