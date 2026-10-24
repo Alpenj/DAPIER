@@ -64,6 +64,8 @@ ACT가 블록 위에서 멈추지 않고 정렬·하강까지 이어 가는지�
 
 ## 실행 안내와 과거 실습
 
+> **`main` 코드의 실물 실행 상태 (2026-09-04 안전 고지 유지):** 이 저장소 `main`의 2ARM_ROBOT 실행기에서 physical motion과 camera streaming은 local safety integration(connected-endpoint identity binding, 독립 device-side watchdog, 카메라 serial/cryptographic binding 확인)이 끝날 때까지 비활성화돼 있다. sweepick 실물 실행은 검토 브랜치의 별도 실행기(단일 owner·정지 조건·현장 승인)로 하며, 그 코드는 아직 `main`에 병합하지 않았다.
+
 현재 코드의 사용법은 해당 하위 모듈 README와 [안전 절차](../docs/HARDWARE_SAFETY_KO.md)를 먼저 확인한다. 개인 보정, 장치 식별자와 원시 영상·데이터는 공개하지 않는다. 문서의 예시 명령은 실물 실행 승인이 아니다.
 
 초기 ROS 2 환경 점검, 합성 토픽 녹화, golden episode 생성과 장치 snapshot 절차는 [갱신 전 README의 고정본](https://github.com/Alpenj/DAPIER/blob/9b1138dbc462d293cbde62961d4d3534a71b2061/2ARM_ROBOT/README.md)에 보존했다. 그 문서의 신발·H201 구성과 실행 제한은 당시 소스의 안내다. 과거 실행 절차를 최신 장비 설정으로 대신하지 않는다.
