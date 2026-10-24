@@ -1,0 +1,41 @@
+[
+  {
+    "name": "baseline_bn_dropout",
+    "use_bn": true,
+    "use_dropout": true,
+    "best_epoch": 30,
+    "best_test_loss": 0.43890228691101074,
+    "best_test_acc": 0.8506,
+    "final_train_acc": 0.80826,
+    "final_test_acc": 0.8506,
+    "overfit_onset_epoch": null,
+    "metrics_csv": "artifacts/metrics/p3_baseline_bn_dropout.csv",
+    "checkpoint": "artifacts/checkpoints/baseline_bn_dropout_best.pt"
+  },
+  {
+    "name": "no_bn",
+    "use_bn": false,
+    "use_dropout": true,
+    "best_epoch": 29,
+    "best_test_loss": 0.5875037099838257,
+    "best_test_acc": 0.7943,
+    "final_train_acc": 0.73482,
+    "final_test_acc": 0.7855,
+    "overfit_onset_epoch": 27,
+    "metrics_csv": "artifacts/metrics/p3_no_bn.csv",
+    "checkpoint": "artifacts/checkpoints/no_bn_best.pt"
+  },
+  {
+    "name": "no_dropout",
+    "use_bn": true,
+    "use_dropout": false,
+    "best_epoch": 25,
+    "best_test_loss": 0.40252298855781554,
+    "best_test_acc": 0.8704,
+    "final_train_acc": 0.9072,
+    "final_test_acc": 0.8679,
+    "overfit_onset_epoch": 16,
+    "metrics_csv": "artifacts/metrics/p3_no_dropout.csv",
+    "checkpoint": "artifacts/checkpoints/no_dropout_best.pt"
+  }
+]
