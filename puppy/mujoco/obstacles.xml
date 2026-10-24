@@ -1,0 +1,11 @@
+<mujoco model="puppy_obstacles">
+  <!-- 교재가 제공한 scene.xml에 들어 있던 장애물이다. 교재 안내대로 초기
+       테스트에서는 빼 두고, 보행을 붙일 때 scene.xml에서 include하면 된다.
+       원본은 로봇 크기(몸통 0.1 m)에 비해 과하게 커서 높이를 줄였다. -->
+  <worldbody>
+    <geom name="bump_1" pos="0.35 0 0.006" type="box" size="0.03 0.30 0.006" rgba="0.6 0.6 0.6 1"/>
+    <geom name="bump_2" pos="0.45 0 0.010" type="box" size="0.03 0.30 0.010" rgba="0.6 0.6 0.6 1"/>
+    <geom name="step_1" pos="0.62 0 0.015" type="box" size="0.06 0.30 0.015" rgba="0.55 0.55 0.6 1"/>
+    <geom name="step_2" pos="0.76 0 0.025" type="box" size="0.06 0.30 0.025" rgba="0.55 0.55 0.6 1"/>
+  </worldbody>
+</mujoco>
