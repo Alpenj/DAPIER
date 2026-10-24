@@ -1,0 +1,4 @@
+build/
+meshes
+.venv/
+MUJOCO_LOG.TXT
