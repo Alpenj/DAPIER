@@ -1,11 +1,12 @@
 # DAPIER architecture
 
 DAPIER의 신규 로봇 코드는 언어가 아니라 실행 책임과 지연 특성에 따라 다음 세
-계층으로 나눈다.
+계층으로 나눈다. 이 3계층은 `main`에 있는 설계 기준이다. 현재 sweepick 실물
+실행이 실제로 거치는 경로는 아래 [sweepick 실물 실행 경로](#sweepick-실물-실행-경로-2026-10-검토-브랜치)에 따로 적었다.
 
 | 계층 | 기준 경로 | 소유 책임 |
 |---|---|---|
-| Python 연구 계층 | [`2ARM_ROBOT/research/`](2ARM_ROBOT/research/README.md) | shoe perception, policy, planning, simulation, dataset, offline evaluation, versioned intent 생성 |
+| Python 연구 계층 | [`2ARM_ROBOT/research/`](2ARM_ROBOT/research/README.md) | object perception, policy, planning, simulation, dataset, offline evaluation, versioned intent 생성 |
 | C++ 인식·지역화 런타임 | [`so101_ros2/dapier_localization_core/`](so101_ros2/dapier_localization_core/README.md) | localization estimate 계약, tracking quality, map/reset generation, 향후 Visual SLAM·TF adapter |
 | C++ 실시간 제어 계층 | [`so101_ros2/dapier_so101_core/`](so101_ros2/dapier_so101_core/) | receiver-local TTL, sequence, interlock, limit, watchdog, safe stop, hardware I/O |
 
@@ -31,9 +32,36 @@ camera intrinsics, 실제 장비에도 존재하는 camera-to-base 보정 transf
 계산한다. simulator truth는 reset, reward, offline label과 test-only 오차 측정에만
 사용한다.
 
-Visual SLAM은 로봇이 지도에서 어디에 있는지 추정한다. RGB-D shoe perception은
-신발이 camera/base/map frame에서 어디에 있는지 추정한다. 두 모듈은 분리하고
-calibrated TF에서 결합한다.
+Visual SLAM은 로봇이 지도에서 어디에 있는지 추정한다. RGB-D object perception은
+집을 물체가 camera/base/map frame에서 어디에 있는지 추정한다. 두 모듈은 분리하고
+calibrated TF에서 결합한다. (초기 과제에서는 이 인식 대상이 신발이었다.)
+
+## sweepick 실물 실행 경로 (2026-10, 검토 브랜치)
+
+sweepick 상체의 실물 실행 소스는 [`pro/sweepick-review-20261015`](https://github.com/Alpenj/DAPIER/tree/pro/sweepick-review-20261015/2ARM_ROBOT/sweepick)
+등 작업 브랜치에서 검수 중이며 아직 `main`에 병합하지 않았다. 실물 실행은 위
+C++ 제어 계층을 거치지 않고, Python 실행기가 SO-101 서보 버스를 직접 소유한다.
+
+```text
+웹 콘솔 (START·승인·실행 기록 검수)
+  -> 세션 (관측 -> 팔 선택 -> pregrasp -> 손목 영상 정렬 -> 하강 -> 집기 -> 들기
+           -> 운반 -> 놓기 -> 복귀)
+       관측: OS30A RGB-D 깊이 + camera->base 변환 -> 물체 윗면 위치
+             손목 RGB -> 정렬 오차(px -> mm)
+       계획: IK·충돌 검사(MuJoCo 모델) -> 관절 구간
+  -> 실행기 (팔당 단일 owner, Goal 쓰기·ACK·readback, 진행 감시, 정지 조건)
+  -> SO-101 서보 (Feetech, 위치 제어)
+기록기: 손목 RGB 2 + OS30A RGB-D + 양팔 측정값·실제 Goal 명령 (학습 데이터 원본)
+```
+
+학습 정책(ACT)을 쓸 때는 정책이 카메라·관절 입력으로 관절 목표 묶음을 내고,
+관절 한계·정지 조건 검사를 거쳐 실행된다. 2026-10-23 수집 경로에서는 ACT가
+접근하다가 정체가 감지되면 교사 실행기가 이어받는다.
+
+- 상체는 이동 베이스를 직접 명령하지 않는다. 필요할 때 정지 요청만 보내고, 임무
+  성공 판정은 상위 임무 관리자가 한다(베이스·SLAM·도킹은 다른 팀 담당).
+- 위 3계층(Python 연구 / C++ 지역화 / C++ 실시간 제어)으로 실물 실행을 옮기는 일은
+  아직 하지 않았다. 이 절은 현재 실행 경로를 설명할 뿐 설계 기준을 바꾸지 않는다.
 
 ## ORB-SLAM3 source basis
 
