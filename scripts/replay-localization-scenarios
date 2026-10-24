@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Write the deterministic DAPIER localization failure matrix."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import sys
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+RESEARCH_SRC = REPO_ROOT / "2ARM_ROBOT" / "research" / "src"
+if str(RESEARCH_SRC) not in sys.path:
+    sys.path.insert(0, str(RESEARCH_SRC))
+
+from dapier_research.localization_replay import save_failure_matrix  # noqa: E402
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("/tmp/dapier-localization-failure-matrix.json"),
+    )
+    args = parser.parse_args()
+    print(save_failure_matrix(args.output))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

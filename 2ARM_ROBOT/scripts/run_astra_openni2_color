@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+bin_dir="${OPENNI2_ROOT:-${HOME}/.local/opt/orbbec-openni2-ros2-v1.0.2}"
+readonly STREAM_CONFIRMATION="VISIBLE_ASTRA_READONLY_STREAM"
+mode="${1:-}"
+
+usage() {
+  echo "usage: $0 check | {poll|viewer} --operator-present --confirm $STREAM_CONFIRMATION" >&2
+}
+if [[ "$mode" == "poll" || "$mode" == "viewer" ]]; then
+  if [[ $# -ne 4 || "$2" != "--operator-present" || "$3" != "--confirm" || "$4" != "$STREAM_CONFIRMATION" ]]; then
+    usage
+    exit 2
+  fi
+  echo "Astra poll/viewer disabled: OpenNI2 cannot bind the approved camera by a cryptographic or serial identity" >&2
+  exit 3
+fi
+
+case "${mode}" in
+  check)
+    [[ $# -eq 1 ]] || { usage; exit 2; }
+    required=(ColorReaderPoll NiViewer libOpenNI2.so OpenNI2/Drivers/liborbbec.so)
+    executables=(ColorReaderPoll NiViewer)
+    ;;
+  *) usage; exit 2 ;;
+esac
+
+for file in "${required[@]}"; do
+  if [[ ! -e "${bin_dir}/${file}" ]]; then
+    echo "missing OpenNI2 runtime file: ${bin_dir}/${file}" >&2
+    exit 1
+  fi
+done
+for executable in "${executables[@]}"; do
+  if [[ ! -x "${bin_dir}/${executable}" ]]; then
+    echo "OpenNI2 runtime file is not executable: ${bin_dir}/${executable}" >&2
+    exit 1
+  fi
+done
+
+printf 'OpenNI2 runtime files present (static-only): %s\n' "${bin_dir}"

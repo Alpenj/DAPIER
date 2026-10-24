@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+profile=${DAPIER_IL_PROFILE:-"$repo_root/2ARM_ROBOT/config/dual_so101_il.local.env"}
+example="$repo_root/2ARM_ROBOT/config/dual_so101_il.example.env"
+venv=${DAPIER_LEROBOT_VENV:-"/home/dapier-jhj/DAPIER/so101_imitation_learning/.venv"}
+export PATH="$venv/bin:$PATH"
+python="$venv/bin/python"
+
+usage() {
+  echo "usage: $0 {setup|identify-leaders|status|calibrate-leaders|calibrate-followers|teleop|record|train}"
+}
+
+load_profile() {
+  [[ -f "$profile" ]] || { echo "missing $profile; run: $0 setup" >&2; exit 2; }
+  # shellcheck disable=SC1090
+  source "$profile"
+}
+
+confirm() {
+  local expected=$1 answer
+  read -r -p "type $expected to continue: " answer
+  [[ "$answer" == "$expected" ]] || { echo "cancelled"; exit 3; }
+}
+
+require_file() {
+  [[ -e "$1" ]] || { echo "missing device: $1" >&2; exit 4; }
+}
+
+require_ports() {
+  local port
+  for port in "$LEFT_FOLLOWER_PORT" "$RIGHT_FOLLOWER_PORT" "$LEFT_LEADER_PORT" "$RIGHT_LEADER_PORT"; do
+    [[ "$port" == /dev/serial/by-id/* || "$port" == /dev/dapier/* ]] || {
+      echo "use stable /dev/serial/by-id or /dev/dapier paths; invalid: $port" >&2; exit 5;
+    }
+    require_file "$port"
+  done
+  [[ $(printf '%s\n' "$LEFT_FOLLOWER_PORT" "$RIGHT_FOLLOWER_PORT" "$LEFT_LEADER_PORT" "$RIGHT_LEADER_PORT" | sort -u | wc -l) -eq 4 ]] || {
+    echo "all four arm ports must be distinct" >&2; exit 6;
+  }
+}
+
+require_h201() {
+  lsusb -d 3438:0173 >/dev/null || { echo "missing HP-ASC-H201 (3438:0173)" >&2; exit 7; }
+}
+
+require_calibrations() {
+  local file missing=0
+  for file in \
+    "$CALIBRATION_DIR/${FOLLOWER_ID}_left.json" \
+    "$CALIBRATION_DIR/${FOLLOWER_ID}_right.json" \
+    "$CALIBRATION_DIR/${LEADER_ID}_left.json" \
+    "$CALIBRATION_DIR/${LEADER_ID}_right.json"; do
+    [[ -f "$file" ]] || { echo "missing calibration: $file" >&2; missing=1; }
+  done
+  [[ $missing -eq 0 ]] || {
+    echo "refusing to auto-calibrate during teleop/record; recover the saved file or run calibration explicitly" >&2
+    exit 9
+  }
+}
+
+camera_args() {
+  LEFT_CAMERA_JSON=$(printf '{"wrist":{"type":"opencv","index_or_path":"%s","width":320,"height":240,"fps":30,"fourcc":"YUYV"}}' "$LEFT_WRIST_CAMERA")
+  RIGHT_CAMERA_JSON=$(printf '{"wrist":{"type":"opencv","index_or_path":"%s","width":320,"height":240,"fps":30,"fourcc":"YUYV"}}' "$RIGHT_WRIST_CAMERA")
+}
+
+base_args() {
+  ROBOT_ARGS=(
+    --robot.type=bi_so_follower
+    "--robot.left_arm_config.port=$LEFT_FOLLOWER_PORT"
+    "--robot.right_arm_config.port=$RIGHT_FOLLOWER_PORT"
+    "--robot.id=$FOLLOWER_ID"
+    "--robot.calibration_dir=$CALIBRATION_DIR"
+    --robot.left_arm_config.max_relative_target=5
+    --robot.right_arm_config.max_relative_target=5
+  )
+  TELEOP_ARGS=(
+    --teleop.type=bi_so_leader
+    "--teleop.left_arm_config.port=$LEFT_LEADER_PORT"
+    "--teleop.right_arm_config.port=$RIGHT_LEADER_PORT"
+    "--teleop.id=$LEADER_ID"
+    "--teleop.calibration_dir=$CALIBRATION_DIR"
+  )
+}
+
+identify_leaders() {
+  local candidates=() path temporary pids=()
+  load_profile
+  for path in "$LEFT_FOLLOWER_PORT" "$RIGHT_FOLLOWER_PORT"; do
+    [[ "$path" == /dev/serial/by-id/* ]] || { echo "assign both follower ports in $profile first" >&2; exit 5; }
+    require_file "$path"
+  done
+  while IFS= read -r path; do
+    [[ "$path" == "$LEFT_FOLLOWER_PORT" || "$path" == "$RIGHT_FOLLOWER_PORT" ]] || candidates+=("$path")
+  done < <(find /dev/serial/by-id -maxdepth 1 -type l -name 'usb-1a86_USB_Single_Serial_*-if00' | sort)
+  [[ ${#candidates[@]} -eq 2 ]] || { echo "expected two unmapped leader controllers, found ${#candidates[@]}" >&2; exit 7; }
+  echo "Move ONLY the physical LEFT leader continuously after confirmation. Followers will not be commanded."
+  confirm VISIBLE_DUAL_SO101_LEADERS_READONLY
+  temporary=$(mktemp -d /tmp/dapier-leader-map.XXXXXX)
+  trap "rm -rf -- '$temporary'" EXIT
+  for path in "${candidates[@]}"; do
+    "$python" "$repo_root/so101/hardware_tools/read_only/read_motor_positions.py" \
+      --role leader --port "$path" --id leader_mapping_probe \
+      --samples 25 --interval 0.2 --output "$temporary/$(basename "$path").jsonl" \
+      >"$temporary/$(basename "$path").log" 2>&1 &
+    pids+=("$!")
+  done
+  for pid in "${pids[@]}"; do wait "$pid"; done
+  "$python" - "$temporary" <<'PY'
+import json, pathlib, sys
+for log in sorted(pathlib.Path(sys.argv[1]).glob("*.jsonl")):
+    rows=[json.loads(line)["raw_ticks"] for line in log.read_text().splitlines()]
+    span=max(max(row[k] for row in rows)-min(row[k] for row in rows) for k in rows[0])
+    print(f"{log.stem}: max_joint_span={span} ticks")
+print("The serial with the clearly larger span is LEFT_LEADER_PORT; the other is RIGHT_LEADER_PORT.")
+PY
+}
+
+case ${1:-} in
+  setup)
+    if [[ -e "$profile" ]]; then echo "kept existing: $profile"; else cp "$example" "$profile"; echo "created: $profile"; fi
+    ;;
+  identify-leaders)
+    identify_leaders
+    ;;
+  status)
+    load_profile
+    echo "profile: $profile"
+    for name in LEFT_FOLLOWER_PORT RIGHT_FOLLOWER_PORT LEFT_LEADER_PORT RIGHT_LEADER_PORT LEFT_WRIST_CAMERA RIGHT_WRIST_CAMERA; do
+      value=${!name}; [[ -e "$value" ]] && state=OK || state=MISSING
+      printf '%-22s %-7s %s\n' "$name" "$state" "$value"
+    done
+    lsusb -d 3438:0173 >/dev/null && state=OK || state=MISSING
+    printf '%-22s %-7s %s\n' H201_DEPTH "$state" '3438:0173 / eYs3D SDK'
+    for file in \
+      "$CALIBRATION_DIR/${FOLLOWER_ID}_left.json" \
+      "$CALIBRATION_DIR/${FOLLOWER_ID}_right.json" \
+      "$CALIBRATION_DIR/${LEADER_ID}_left.json" \
+      "$CALIBRATION_DIR/${LEADER_ID}_right.json"; do
+      [[ -f "$file" ]] && state=OK || state=MISSING
+      printf 'calibration %-7s %s\n' "$state" "$file"
+    done
+    ;;
+  calibrate-leaders)
+    load_profile; require_ports; confirm VISIBLE_CALIBRATE_DUAL_SO101_LEADERS
+    "$venv/bin/lerobot-calibrate" \
+      --teleop.type=bi_so_leader \
+      "--teleop.left_arm_config.port=$LEFT_LEADER_PORT" \
+      "--teleop.right_arm_config.port=$RIGHT_LEADER_PORT" \
+      "--teleop.calibration_dir=$CALIBRATION_DIR" \
+      "--teleop.id=$LEADER_ID"
+    ;;
+  calibrate-followers)
+    load_profile; require_ports; confirm VISIBLE_CALIBRATE_DUAL_SO101_FOLLOWERS
+    "$venv/bin/lerobot-calibrate" \
+      --robot.type=bi_so_follower \
+      "--robot.left_arm_config.port=$LEFT_FOLLOWER_PORT" \
+      "--robot.right_arm_config.port=$RIGHT_FOLLOWER_PORT" \
+      "--robot.calibration_dir=$CALIBRATION_DIR" \
+      "--robot.id=$FOLLOWER_ID"
+    ;;
+  teleop)
+    load_profile; require_ports; require_h201; require_calibrations; camera_args; base_args
+    confirm VISIBLE_DUAL_SO101_LEADER_TELEOP
+    "$python" "$repo_root/2ARM_ROBOT/scripts/lerobot_cv_dashboard.py" teleop "${ROBOT_ARGS[@]}" \
+      "--robot.left_arm_config.cameras=$LEFT_CAMERA_JSON" \
+      "--robot.right_arm_config.cameras=$RIGHT_CAMERA_JSON" \
+      "${TELEOP_ARGS[@]}" --fps="$DATASET_FPS" --display_data=true
+    ;;
+  record)
+    load_profile; require_ports; require_h201; require_calibrations; camera_args; base_args
+    confirm VISIBLE_RECORD_DUAL_SO101_DEMONSTRATIONS
+    record_episodes=${DAPIER_RECORD_EPISODES:-$NUM_EPISODES}
+    record_episode_time_s=${DAPIER_RECORD_EPISODE_TIME_S:-$EPISODE_TIME_S}
+    resume=(); [[ -d "$DATASET_ROOT/meta" ]] && resume=(--resume=true)
+    "$python" "$repo_root/2ARM_ROBOT/scripts/lerobot_cv_dashboard.py" record "${ROBOT_ARGS[@]}" \
+      "--robot.left_arm_config.cameras=$LEFT_CAMERA_JSON" \
+      "--robot.right_arm_config.cameras=$RIGHT_CAMERA_JSON" \
+      "${TELEOP_ARGS[@]}" \
+      "--dataset.repo_id=$DATASET_REPO_ID" "--dataset.root=$DATASET_ROOT" \
+      "--dataset.single_task=$TASK_DESCRIPTION" "--dataset.fps=$DATASET_FPS" \
+      "--dataset.episode_time_s=$record_episode_time_s" "--dataset.reset_time_s=$RESET_TIME_S" \
+      "--dataset.num_episodes=$record_episodes" --dataset.video=false \
+      --dataset.push_to_hub=false --display_data=true "${resume[@]}"
+    ;;
+  train)
+    load_profile
+    [[ -d "$DATASET_ROOT/meta" ]] || { echo "recorded dataset not found: $DATASET_ROOT" >&2; exit 8; }
+    act_inputs='{"observation.state":{"type":"STATE","shape":[12]},"observation.images.left_wrist":{"type":"VISUAL","shape":[3,240,320]},"observation.images.right_wrist":{"type":"VISUAL","shape":[3,240,320]}}'
+    "$venv/bin/lerobot-train" \
+      "--dataset.repo_id=$DATASET_REPO_ID" "--dataset.root=$DATASET_ROOT" \
+      --policy.type=act --policy.device=cuda --policy.push_to_hub=false \
+      "--policy.input_features=$act_inputs" \
+      "--output_dir=$TRAIN_OUTPUT" --job_name=dual_so101_box_shoe_act \
+      "--steps=$TRAIN_STEPS" "--batch_size=$TRAIN_BATCH_SIZE" \
+      --save_checkpoint=true --wandb.enable=false
+    ;;
+  *) usage; exit 1 ;;
+esac

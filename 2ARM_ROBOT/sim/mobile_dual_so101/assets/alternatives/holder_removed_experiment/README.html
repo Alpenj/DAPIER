@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DAPIER holder 제거 대안 실험</title>
+  <style>
+    body { max-width: 860px; margin: 40px auto; padding: 0 24px; font: 16px/1.65 system-ui, sans-serif; color: #18202a; }
+    h1 { color: #9a3412; }
+    .stop { padding: 16px 18px; border: 2px solid #ef4444; border-radius: 12px; background: #fff1f2; }
+    code { background: #eef2f7; padding: 2px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>비활성 대안: upper holder 제거 실험</h1>
+  <p class="stop"><strong>기본 MuJoCo 모델과 제작 기준이 아닙니다.</strong> 비교·회귀 조사용으로만 보존합니다.</p>
+  <p>이 폴더의 STEP/STL은 원본 <code>assem_base.step</code> 상부에서 좌우 holder envelope를
+  BRep boolean으로 제거한 이전 대안입니다. 현재 활성 설계는 원본 upper socket을 유지하고,
+  stock SO-101의 <code>base_so101_v2</code>만 대신합니다. base motor holder, Waveshare
+  mounting plate, base servo와 shoulder 이후 관절 체인은 유지한 채 socket에 끼우는 구조입니다.</p>
+  <ul>
+    <li>활성 upper: <code>../../assem_base_upper.stl</code></li>
+    <li>활성 조립 기준: 프로젝트 <code>README.md</code>와 <code>TOWER_FABRICATION.md</code></li>
+    <li>재생성기: <code>../../../prepare_upper_holder_removed.py</code></li>
+  </ul>
+  <p>이 대안 파일을 slicing하거나 실물 제작에 사용하려면 별도 설계 승인과 체결 검증이 필요합니다.</p>
+</body>
+</html>

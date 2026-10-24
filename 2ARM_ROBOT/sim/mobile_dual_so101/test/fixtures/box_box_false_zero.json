@@ -1,0 +1,323 @@
+{
+  "phase": "FAILURE",
+  "time_s": 0.01,
+  "target_q": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.2028
+  ],
+  "measured_q": [
+    -1.4323371250150344e-07,
+    0.0003706367529868637,
+    0.0003239979480829373,
+    4.7524442399079705e-05,
+    -5.645047230740896e-08,
+    2.202799999627243,
+    -1.432337125015059e-07,
+    0.0003706367529868637,
+    0.0003239979480829373,
+    4.7524442399079705e-05,
+    -5.645047230740899e-08,
+    2.202799999627243
+  ],
+  "qpos": [
+    -1.4323371250150344e-07,
+    0.0003706367529868637,
+    0.0003239979480829373,
+    4.7524442399079705e-05,
+    -5.645047230740896e-08,
+    2.202799999627243,
+    -1.0659123364222697e-06,
+    -1.070723337423577e-06,
+    -1.432337125015059e-07,
+    0.0003706367529868637,
+    0.0003239979480829373,
+    4.7524442399079705e-05,
+    -5.645047230740899e-08,
+    2.202799999627243,
+    -1.0659123364222822e-06,
+    -1.0707233374235802e-06,
+    0.19999999999999857,
+    -3.351850881347936e-19,
+    0.019994712228742342,
+    1.0,
+    -9.646201922768332e-18,
+    3.8718662365625795e-14,
+    1.5025609210059036e-28
+  ],
+  "qvel": [
+    -1.5027374048372071e-05,
+    0.05037499819296552,
+    0.042537237068351136,
+    0.007477056955033383,
+    -8.10092660743524e-06,
+    -4.421850318153535e-08,
+    -8.561340741470176e-05,
+    -8.542537694374906e-05,
+    -1.5027374048372246e-05,
+    0.05037499819296552,
+    0.042537237068351136,
+    0.007477056955033383,
+    -8.100926607435248e-06,
+    -4.4218503181473385e-08,
+    -8.561340741470136e-05,
+    -8.54253769437487e-05,
+    -4.1257653707756634e-13,
+    -1.0144669115813355e-16,
+    0.0024567845989388686,
+    2.4490058168651905e-15,
+    -9.578681640812267e-12,
+    1.5023976082407823e-25
+  ],
+  "minimum_clearance_m": 0.0,
+  "closest_pair": [
+    29,
+    0
+  ],
+  "closest_body_pair": [
+    "left_gripper",
+    "world"
+  ],
+  "arm_floor_clearance_m": 0.0,
+  "support_geom": "table",
+  "block_velocity": [
+    -4.1257653707756634e-13,
+    -1.0144669115813355e-16,
+    0.0024567845989388686,
+    2.4490058168651905e-15,
+    -9.578681640812267e-12,
+    1.5023976082407823e-25
+  ],
+  "finger_force_N": {
+    "jaw_1": 0.0,
+    "jaw_2": 0.0
+  },
+  "contacts": [
+    {
+      "other_geom": 0,
+      "other_geom_name": "table",
+      "other_body": "world",
+      "normal_force_N": 0.045658178645659006,
+      "distance_m": -2.6438856296044644e-06
+    },
+    {
+      "other_geom": 0,
+      "other_geom_name": "table",
+      "other_body": "world",
+      "normal_force_N": 0.0456581786453493,
+      "distance_m": -2.643885628055718e-06
+    },
+    {
+      "other_geom": 0,
+      "other_geom_name": "table",
+      "other_body": "world",
+      "normal_force_N": 0.04565817864565896,
+      "distance_m": -2.6438856296040786e-06
+    },
+    {
+      "other_geom": 0,
+      "other_geom_name": "table",
+      "other_body": "world",
+      "normal_force_N": 0.045658178645349226,
+      "distance_m": -2.643885628055332e-06
+    }
+  ],
+  "protected_contacts": [],
+  "metrics": {
+    "target_object": "block",
+    "block_position_m": [
+      0.19999999999999857,
+      -3.351850881347936e-19,
+      0.019994712228742342
+    ],
+    "block_bottom_height_m": -5.287771259208929e-06,
+    "lifted": false,
+    "left_finger_contacts": [],
+    "grasp_supported": false,
+    "forbidden_block_contact": true,
+    "attachment_active": false,
+    "maximum_block_penetration_m": 2.6438856296044644e-06,
+    "lift_supported": false,
+    "success": false,
+    "success_requires_continuous_hold_s": 3.0,
+    "reward": 0.0,
+    "continuous_hold_s": 0.0
+  },
+  "structural_near_support": [
+    {
+      "side": "left",
+      "pair": [
+        13,
+        0
+      ],
+      "classification": "STRUCTURAL NEAR-SUPPORT",
+      "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+      "safe": true,
+      "clearance_m": 0.01619999860838827,
+      "positive_separation_evidence_m": 0.016199998097549538,
+      "nominal_compiled_clearance_m": 0.016199998097549538,
+      "contacts": [],
+      "penetration": false,
+      "compiled_geometry_verified": true,
+      "nominal_geometry_matches": true,
+      "general_30mm_applies": false,
+      "reason": "approved exact mechanical relationship; positive separation/contact/geometry invariant"
+    },
+    {
+      "side": "right",
+      "pair": [
+        48,
+        0
+      ],
+      "classification": "STRUCTURAL NEAR-SUPPORT",
+      "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+      "safe": true,
+      "clearance_m": 0.016199998443864508,
+      "positive_separation_evidence_m": 0.016199998097549538,
+      "nominal_compiled_clearance_m": 0.016199998097549538,
+      "contacts": [],
+      "penetration": false,
+      "compiled_geometry_verified": true,
+      "nominal_geometry_matches": true,
+      "general_30mm_applies": false,
+      "reason": "approved exact mechanical relationship; positive separation/contact/geometry invariant"
+    }
+  ],
+  "pair": [
+    29,
+    0
+  ],
+  "native_distance_m": 0.0,
+  "expected_lower_bound_m": 0.1958110826349,
+  "scene_id": "integration_desk",
+  "provenance": {
+    "scene_id": "integration_desk",
+    "builder": "integration_scenes.build_scene(desk)",
+    "git_sha": "534c4a6f25ab3eea6dd703526627e89dd9ba66d7",
+    "source_dirty": true,
+    "model_sha256": "ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368",
+    "asset_sha256": {
+      "MOUNTBOTTM2.3mf": "fb1c0a2f75bc17218f586604a5935835425c7c80c35ed2138c4b651d47bcb71a",
+      "cam_mount_top2.3mf": "24d16afdfd5cea6dd1735f3a4f654f4ed9abef37c305444c8a3943ac05727b0d",
+      "NOTICE.md": "60768547046105602c9201b0302ea130ac7a1d9485b309aba0b9271913308003",
+      "provenance.json": "9ce61e8ad515e78e78d4d7b1de865124f0f7934fa5ce377fa20177d8d19db998",
+      "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "CameraMount_square_27mm.stl": "3191faa66b87c20fbdd3596b7691017083a82afd3348761623bab2aaa39e8f32",
+      "Gripper_Base_v1_1.stl": "ff0c113090056f6211368eb0a20138caef245c7e490793821e85c92c53301900",
+      "Gripper_Gear_v1_1.stl": "0c6e45bbd7115b1e6a346af11e5ee331d2eaebb2780b51f8c519893e14bff3a5",
+      "Gripper_Jaw_01_v1_1.stl": "3efe42f96b3cbe4b9c5db59fb3c3f395647b098f1a93de98889672dc07ecaaa1",
+      "Gripper_Jaw_02_v1_1.stl": "d615ada9f3bee9d44b75cefbbbe1fb8d3687664a57871891f1a6047a59df13b7",
+      "ST3215_8_v1_1.stl": "4aebce2fef7b4a946c332c94075e369c3c2667237c0a89c07ff6dddcf5dd3507",
+      "elrobot_follower.urdf": "eb355948d0e02268587491123ba9c4704e70bb1782298d86bcad1280ff86d1cb",
+      "base_motor_holder_so101_v1.stl": "8cd2f241037ea377af1191fffe0dd9d9006beea6dcc48543660ed41647072424",
+      "base_so101_v2.stl": "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d",
+      "motor_holder_so101_base_v1.stl": "31242ae6fb59d8b15c66617b88ad8e9bded62d57c35d11c0c43a70d2f4caa95b",
+      "motor_holder_so101_wrist_v1.stl": "887f92e6013cb64ea3a1ab8675e92da1e0beacfd5e001f972523540545e08011",
+      "moving_jaw_so101_v1.stl": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d",
+      "rotation_pitch_so101_v1.stl": "9be900cc2a2bf718102841ef82ef8d2873842427648092c8ed2ca1e2ef4ffa34",
+      "sts3215_03a_no_horn_v1.stl": "75ef3781b752e4065891aea855e34dc161a38a549549cd0970cedd07eae6f887",
+      "sts3215_03a_v1.stl": "a37c871fb502483ab96c256baf457d36f2e97afc9205313d9c5ab275ef941cd0",
+      "under_arm_so101_v1.stl": "d01d1f2de365651dcad9d6669e94ff87ff7652b5bb2d10752a66a456a86dbc71",
+      "upper_arm_so101_v1.stl": "475056e03a17e71919b82fd88ab9a0b898ab50164f2a7943652a6b2941bb2d4f",
+      "waveshare_mounting_plate_so101_v2.stl": "e197e24005a07d01bbc06a8c42311664eaeda415bf859f68fa247884d0f1a6e9",
+      "wrist_roll_follower_so101_v1.stl": "4b17b410a12d64ec39554abc3e8054d8a97384b2dc4a8d95a5ecb2a93670f5f4",
+      "wrist_roll_pitch_so101_v2.stl": "6c7ec5525b4d8b9e397a30ab4bb0037156a5d5f38a4adf2c7d943d6c56eda5ae",
+      "so101_new_calib.xml": "78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703"
+    },
+    "source_sha256": {
+      "pgripper.py": "3f8b4da8e2f59c0dafce010409b2da8ba9916bc7134a52cce9b8ef7c9e5544b2",
+      "integration_scenes.py": "f5dea8c367c2a66aa5e59f7d1b5d43c3a9c84a000742116e4375fa2cc09e876d",
+      "camera_stand_cad.py": "7cfacf24c1667bc0226e98c28ef00b02d06e6b6665aff9f2d4350c7976dcc757",
+      "tabletop_replay.json": "fc32538d65a0688480b4e6566d8c549911f3f7c12c5a256109b57fa8aea426b5",
+      "replay_recorded_episode.py": "60ad3afa8c5f0b26ed5d7966170247a77f42e19fe7486c72186ccd67c2fa8b2d",
+      "shoe_task.py": "5d08a2a716dad2c7e6e1b9cd3d832a44d7486445fb4381f5736287a12fe2a967",
+      "center_block_teacher.py": "b7a182d18d981ae055bcd11ba5c0cf95b08453dc25591f6ab538557a11deb264",
+      "collision_guard.py": "1489a75874a69d7c3595ad6c54144e73cfae4377a78f3f5d83b8b35b8f21ac4d",
+      "collision_diagnostics.py": "e6d7b56e3447332139126704b230e3dea9ee2ee19a7b9cd3c231a94920f1f720",
+      "integration_desk_near_support.json": "a5f17e30dfdd82c0dce878238247f4aecccc5bc5853dd811661cc2899d5dfc46",
+      "physics_ik.py": "23ba79c921da345483fe524c172b855f089777b6476d1052893c4b556702e6eb"
+    },
+    "mujoco_version": "3.3.7",
+    "gripper_revision": "NORMA PGripper both; pinned CAD + RGB camera stand",
+    "gripper_variant": "both",
+    "wrist_rgb_camera_stand": "NORMA CameraMount_square_27mm STL + RGB optics proxy",
+    "camera_extrinsics_physically_verified": false,
+    "target_body": "red_block",
+    "target_geom": "red_block_geom",
+    "support_geom": "table",
+    "gripper_site": "left_gripperframe",
+    "ik_site": "left_cube_grasp",
+    "observation_source": "SIM truth for offline teacher validation only; not perception/runtime",
+    "actuator_mapping": [
+      {
+        "actuator": "left_shoulder_pan",
+        "joint": "left_shoulder_pan",
+        "qpos_address": 0
+      },
+      {
+        "actuator": "left_shoulder_lift",
+        "joint": "left_shoulder_lift",
+        "qpos_address": 1
+      },
+      {
+        "actuator": "left_elbow_flex",
+        "joint": "left_elbow_flex",
+        "qpos_address": 2
+      },
+      {
+        "actuator": "left_wrist_flex",
+        "joint": "left_wrist_flex",
+        "qpos_address": 3
+      },
+      {
+        "actuator": "left_wrist_roll",
+        "joint": "left_wrist_roll",
+        "qpos_address": 4
+      },
+      {
+        "actuator": "left_gripper",
+        "joint": "left_gripper",
+        "qpos_address": 5
+      },
+      {
+        "actuator": "right_shoulder_pan",
+        "joint": "right_shoulder_pan",
+        "qpos_address": 8
+      },
+      {
+        "actuator": "right_shoulder_lift",
+        "joint": "right_shoulder_lift",
+        "qpos_address": 9
+      },
+      {
+        "actuator": "right_elbow_flex",
+        "joint": "right_elbow_flex",
+        "qpos_address": 10
+      },
+      {
+        "actuator": "right_wrist_flex",
+        "joint": "right_wrist_flex",
+        "qpos_address": 11
+      },
+      {
+        "actuator": "right_wrist_roll",
+        "joint": "right_wrist_roll",
+        "qpos_address": 12
+      },
+      {
+        "actuator": "right_gripper",
+        "joint": "right_gripper",
+        "qpos_address": 13
+      }
+    ]
+  }
+}

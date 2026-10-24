@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly SO_ARM100_REVISION="7629d2ad9853d10fb903093a33ef6114099d97e5"
+readonly SOURCE_PREFIX="src/lerobot/envs/so101_mujoco/assets/"
+readonly SOURCE_BASE_URL="https://raw.githubusercontent.com/TheRobotStudio/SO-ARM100/${SO_ARM100_REVISION}/Simulation/SO101"
+
+fail() {
+  echo "setup-mujoco-sim: $*" >&2
+  exit 1
+}
+
+usage() {
+  echo "Usage: scripts/setup-mujoco-sim [--dest DIRECTORY]" >&2
+}
+
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)" ||
+  fail "cannot resolve script directory"
+repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" ||
+  fail "script is not inside the DAPIER repository"
+manifest="$repo_root/so101/integrations/lerobot_v0_6_so101_mujoco/UPSTREAM_ASSETS.sha256"
+license_file="$repo_root/so101/integrations/lerobot_v0_6_so101_mujoco/LICENSE.apache-2.0.txt"
+[[ -f "$manifest" ]] || fail "asset hash manifest is missing"
+[[ -f "$license_file" ]] || fail "asset license file is missing"
+
+destination=""
+while (($#)); do
+  case "$1" in
+    --dest)
+      (($# >= 2)) || fail "--dest requires a directory"
+      destination="$2"
+      shift 2
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+if [[ -z "$destination" ]]; then
+  cache_base="${XDG_CACHE_HOME:-${TMPDIR:-/tmp}/dapier-cache}"
+  destination="$cache_base/dapier/mujoco/so-arm100-$SO_ARM100_REVISION/Simulation/SO101"
+fi
+destination="$(realpath -m -- "$destination")"
+
+verify_assets() {
+  local root="$1"
+  local expected source_path relative target actual
+  while read -r expected source_path; do
+    [[ -n "$expected" && -n "$source_path" ]] || continue
+    [[ "$source_path" == "$SOURCE_PREFIX"* ]] ||
+      fail "unexpected manifest path: $source_path"
+    relative="${source_path#"$SOURCE_PREFIX"}"
+    target="$root/$relative"
+    [[ -f "$target" ]] || fail "asset is missing: $target"
+    actual="$(sha256sum -- "$target" | awk '{print $1}')"
+    [[ "$actual" == "$expected" ]] ||
+      fail "asset hash mismatch: $relative ($actual)"
+  done <"$manifest"
+}
+
+if [[ -d "$destination" ]]; then
+  verify_assets "$destination"
+  printf '%s\n' "$destination/so101_new_calib.xml"
+  exit 0
+fi
+[[ ! -e "$destination" ]] || fail "destination exists and is not a directory"
+
+destination_parent="$(dirname -- "$destination")"
+mkdir -p -- "$destination_parent"
+staging_dir="$(mktemp -d "$destination_parent/.so101-assets.XXXXXX")"
+cleanup() {
+  if [[ -n "${staging_dir:-}" && -d "$staging_dir" ]]; then
+    rm -rf -- "$staging_dir"
+  fi
+}
+trap cleanup EXIT
+
+while read -r expected source_path; do
+  [[ -n "$expected" && -n "$source_path" ]] || continue
+  [[ "$source_path" == "$SOURCE_PREFIX"* ]] ||
+    fail "unexpected manifest path: $source_path"
+  relative="${source_path#"$SOURCE_PREFIX"}"
+  target="$staging_dir/$relative"
+  mkdir -p -- "$(dirname -- "$target")"
+  echo "Downloading pinned SO-101 asset: $relative" >&2
+  curl --fail --location --retry 3 --silent --show-error \
+    "$SOURCE_BASE_URL/$relative" --output "$target"
+done <"$manifest"
+
+cp -- "$license_file" "$staging_dir/LICENSE.apache-2.0.txt"
+verify_assets "$staging_dir"
+mv -- "$staging_dir" "$destination"
+staging_dir=""
+printf '%s\n' "$destination/so101_new_calib.xml"

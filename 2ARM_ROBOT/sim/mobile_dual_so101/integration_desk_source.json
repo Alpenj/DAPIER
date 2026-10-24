@@ -1,0 +1,27 @@
+{
+  "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+  "profile_id": "integration-desk-existing-local-source-v1",
+  "reason": "Reproduce the existing GRASP_CONFIRM-validated local desk model. Canonical stock has a different shoulder_lift lower limit; no new task limit was selected.",
+  "accepted_source_sha256": {
+    "d75253eb568e8a7214db9c631ab7bed4217f608a26f7276ebe9a7636cac82580": "pinned SO-ARM100 7629d2ad9853d10fb903093a33ef6114099d97e5, stock -100 degree lower limit",
+    "78f7f43fceece8303dc60e58d831d5a6e5114847ad659c6cb5e37bf288db8703": "existing local desk source, -110 degree lower limit; only joint/ctrl lower bounds differ"
+  },
+  "shoulder_lift_joint_range_rad": [
+    -1.9198621771937616,
+    1.7453292519943366
+  ],
+  "shoulder_lift_ctrlrange_rad": [
+    -1.91986,
+    1.74533
+  ],
+  "unchanged_live_compiled_model_sha256": "ed4977e7b9b35f9c0fba6d1f91c56ca75238ec71720cdcaf5367486b77221368",
+  "audited_numeric_equivalence": {
+    "model_sha256": [
+      "b6dafd26e8e6bc34e9e5ecced05e2bb500b36c779a21f2e132efdc32f91811a4",
+      "7bd67b162cc6928afe820db830e108f0c5614bc9be832a0d024858397dab1778"
+    ],
+    "reason": "Identical sources/assets/libmujoco/options; OpenBLAS SkylakeX vs Haswell changes CAD normalization by 1 ULP. Exact Haswell model reproduced locally and in CI; no rounded hashes or third model accepted.",
+    "max_pose_field_difference": 2.220446049250313e-16,
+    "max_derived_inverse_weight_difference": 2.2737367544323206e-13
+  }
+}

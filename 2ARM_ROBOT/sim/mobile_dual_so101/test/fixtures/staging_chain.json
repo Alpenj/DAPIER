@@ -1,0 +1,246 @@
+{
+  "candidate": {
+    "axis": [
+      0.11658069425291079,
+      -0.04828930467042675,
+      -0.9920065951302723
+    ],
+    "best": {
+      "pregrasp": {
+        "q": [
+          0.657357459417949,
+          0.3026934746732691,
+          -0.3758508322566882,
+          1.5024947860405238,
+          -0.9420664151925142,
+          2.2027999952529758,
+          1.0490879384259579e-09,
+          0.000567478777306485,
+          0.00047910179261564527,
+          0.00013322005499829032,
+          -4.0854783511284376e-07,
+          2.2027999952529758
+        ]
+      }
+    }
+  },
+  "settled": {
+    "phase": "SETTLE",
+    "time_s": 0.20000000000000015,
+    "target_q": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.2028,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.2028
+    ],
+    "measured_q": [
+      1.0490879384265303e-09,
+      0.0005674787773064851,
+      0.0004791017926156452,
+      0.00013322005499829032,
+      -4.085478351128436e-07,
+      2.2027999952529758,
+      1.0490879384259579e-09,
+      0.000567478777306485,
+      0.00047910179261564527,
+      0.00013322005499829032,
+      -4.0854783511284376e-07,
+      2.2027999952529758
+    ],
+    "qpos": [
+      1.0490879384265303e-09,
+      0.0005674787773064851,
+      0.0004791017926156452,
+      0.00013322005499829032,
+      -4.085478351128436e-07,
+      2.2027999952529758,
+      -1.3275409916310316e-06,
+      -1.3950141475093207e-06,
+      1.0490879384259579e-09,
+      0.000567478777306485,
+      0.00047910179261564527,
+      0.00013322005499829032,
+      -4.0854783511284376e-07,
+      2.2027999952529758,
+      -1.327540991631033e-06,
+      -1.3950141475093217e-06,
+      0.19999999999999762,
+      3.608554594088977e-18,
+      0.01999797730843671,
+      1.0,
+      2.8709727117660275e-18,
+      -1.2770022893730648e-19,
+      1.6250398211200338e-27
+    ],
+    "qvel": [
+      -2.7878939468021065e-08,
+      -1.6867235253609967e-06,
+      4.64117131737981e-06,
+      2.0071918599553505e-06,
+      4.682459691812123e-10,
+      8.950155235280498e-09,
+      -5.193272442263933e-09,
+      -2.1848756091781614e-09,
+      -2.7878939468046258e-08,
+      -1.686723525358656e-06,
+      4.641171317378136e-06,
+      2.0071918599553505e-06,
+      4.682459691730101e-10,
+      8.9501552353002e-09,
+      -5.193272442133779e-09,
+      -2.184875609257721e-09,
+      1.5181952187569489e-18,
+      2.0844998651807663e-17,
+      -4.745623108621633e-16,
+      -9.504671250161673e-16,
+      -1.1882529431498769e-17,
+      -4.5070046658656685e-30
+    ],
+    "minimum_clearance_m": 0.016199998443864515,
+    "closest_pair": [
+      48,
+      0
+    ],
+    "closest_body_pair": [
+      "right_shoulder",
+      "world"
+    ],
+    "arm_floor_clearance_m": 0.016199998443864515,
+    "support_geom": "table",
+    "block_velocity": [
+      1.5181952187569489e-18,
+      2.0844998651807663e-17,
+      -4.745623108621633e-16,
+      -9.504671250161673e-16,
+      -1.1882529431498769e-17,
+      -4.5070046658656685e-30
+    ],
+    "finger_force_N": {
+      "jaw_1": 0.0,
+      "jaw_2": 0.0
+    },
+    "contacts": [
+      {
+        "other_geom": 0,
+        "other_geom_name": "table",
+        "other_body": "world",
+        "normal_force_N": 0.04904999999999999,
+        "distance_m": -1.011345781645051e-06
+      },
+      {
+        "other_geom": 0,
+        "other_geom_name": "table",
+        "other_body": "world",
+        "normal_force_N": 0.04905000000000005,
+        "distance_m": -1.011345781645046e-06
+      },
+      {
+        "other_geom": 0,
+        "other_geom_name": "table",
+        "other_body": "world",
+        "normal_force_N": 0.049049999999999934,
+        "distance_m": -1.0113457816449363e-06
+      },
+      {
+        "other_geom": 0,
+        "other_geom_name": "table",
+        "other_body": "world",
+        "normal_force_N": 0.049049999999999996,
+        "distance_m": -1.0113457816449312e-06
+      }
+    ],
+    "task_policy": null,
+    "protected_contacts": [],
+    "metrics": {
+      "target_object": "block",
+      "block_position_m": [
+        0.19999999999999762,
+        3.608554594088977e-18,
+        0.01999797730843671
+      ],
+      "block_bottom_height_m": -2.022691563290102e-06,
+      "lifted": false,
+      "left_finger_contacts": [],
+      "grasp_supported": false,
+      "forbidden_block_contact": true,
+      "attachment_active": false,
+      "maximum_block_penetration_m": 1.011345781645051e-06,
+      "lift_supported": false,
+      "success": false,
+      "success_requires_continuous_hold_s": 3.0,
+      "reward": 0.0,
+      "continuous_hold_s": 0.0
+    },
+    "structural_near_support": [
+      {
+        "side": "left",
+        "pair": [
+          13,
+          0
+        ],
+        "classification": "STRUCTURAL NEAR-SUPPORT",
+        "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+        "safe": true,
+        "clearance_m": 0.016199998608388277,
+        "positive_separation_evidence_m": 0.016199998097549545,
+        "nominal_compiled_clearance_m": 0.016199998097549538,
+        "contacts": [],
+        "penetration": false,
+        "compiled_geometry_verified": true,
+        "nominal_geometry_matches": true,
+        "general_30mm_applies": false,
+        "reason": "approved exact mechanical relationship; positive separation/contact/geometry invariant"
+      },
+      {
+        "side": "right",
+        "pair": [
+          48,
+          0
+        ],
+        "classification": "STRUCTURAL NEAR-SUPPORT",
+        "scope": "SIM_ONLY / INTEGRATION_DESK / HARDWARE_UNVERIFIED",
+        "safe": true,
+        "clearance_m": 0.016199998443864515,
+        "positive_separation_evidence_m": 0.016199998097549545,
+        "nominal_compiled_clearance_m": 0.016199998097549538,
+        "contacts": [],
+        "penetration": false,
+        "compiled_geometry_verified": true,
+        "nominal_geometry_matches": true,
+        "general_30mm_applies": false,
+        "reason": "approved exact mechanical relationship; positive separation/contact/geometry invariant"
+      }
+    ]
+  },
+  "teacher_input": {
+    "grasp_xyz": [
+      0.19999999999999762,
+      3.608554594088977e-18,
+      0.01999797730843671
+    ],
+    "pregrasp_xyz": [
+      0.19999999999999762,
+      3.2640378686770537e-18,
+      0.0799979773084367
+    ],
+    "settled_quaternion": [
+      1.0,
+      2.8709727117660275e-18,
+      -1.2770022893730648e-19,
+      1.6250398211200338e-27
+    ],
+    "approach": [
+      0.11658069425291079,
+      -0.04828930467042675,
+      -0.9920065951302723
+    ]
+  }
+}

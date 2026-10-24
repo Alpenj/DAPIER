@@ -1,0 +1,40 @@
+{
+  "record_id": "DAPIER-2026-09-14-jdcobot200-sim2real-review",
+  "upstream_revision": "8b51972f874171c6ef5136b2c008278e88b2e3ce",
+  "upstream_python_files_ast_checked": 112,
+  "upstream_hardware_code_executed": false,
+  "hardware_execution": false,
+  "scope": "SO101 dual-PGripper fixed-scene scripted expert and ACT pipeline smoke, not learned task performance",
+  "versions": {"python": "3.12.3", "mujoco": "3.8.1", "numpy": "2.2.6"},
+  "clocks_hz": {"policy_target": 25, "command": 500, "physics": 1000},
+  "randomization": "initial arm joints +/-0.5 degree only; fixed object and fixture",
+  "physics_evidence_contract": "unassisted: no applied forces or active block attachments",
+  "expert_episodes": [
+    {"seed": 4100, "frames": 2103, "simulation_seconds": 84.108, "full_task_success": true},
+    {"seed": 4101, "frames": 2111, "simulation_seconds": 84.416, "full_task_success": true},
+    {"seed": 4102, "frames": 2105, "simulation_seconds": 84.196, "full_task_success": true},
+    {"seed": 4103, "frames": 2113, "simulation_seconds": 84.514, "full_task_success": true}
+  ],
+  "maximum_substep_pad_force_N": 2.6939999198252442,
+  "maximum_substep_penetration_m": 0.00007326198970221618,
+  "dataset": {
+    "manifest_sha256": "7d3856c903ab2a3eff2c578399bc7385b15be6b468ad856711d132a07df98e14",
+    "train_episodes": [0, 1, 2], "holdout_episodes": [3],
+    "train_frames": 6319, "holdout_frames": 2113,
+    "wrist_images_decoded": 16864,
+    "all_dense_command_alignment_checks_passed": true,
+    "action_source": "requested_target"
+  },
+  "act_smoke": {
+    "optimizer_steps": 1,
+    "checkpoint_sha256": "6cb0b08d0052aa9d760501748a97e82152d7a1521ac3f9e956f1dcee2a5da169",
+    "cpu_checkpoint_reload_and_finite_12d_inference": true,
+    "labels_in_inference_observation": false,
+    "initial_holdout_normalized_l1": 0.9242091762841641,
+    "final_holdout_normalized_l1": 1.0064559896267178,
+    "imitation_loss_improved": false,
+    "learned_task_success": null
+  },
+  "local_tests": {"pgripper": {"passed": 24, "failed": 0}, "evaluator": {"passed": 6, "failed": 0}},
+  "ci": "separate environment; not claimed passing by this evidence"
+}

@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""Hardware-free checks for Python, localization, safety, and real-time boundaries."""
+
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+RESEARCH_SRC = REPO_ROOT / "2ARM_ROBOT" / "research" / "src"
+CPP_LOCALIZATION_ROOT = REPO_ROOT / "so101_ros2" / "dapier_localization_core"
+CPP_SAFETY_ROOT = REPO_ROOT / "so101_ros2" / "dapier_safety_core"
+CPP_REALTIME_ROOT = REPO_ROOT / "so101_ros2" / "dapier_so101_core"
+REMOTE_EXAMPLE = REPO_ROOT / "2ARM_ROBOT" / "config" / "turtlebot3.env.example"
+CONTROL_GENERATOR = REPO_ROOT / "scripts" / "generate-control-contract-header"
+LOCALIZATION_GENERATOR = (
+    REPO_ROOT / "scripts" / "generate-localization-contract-header"
+)
+
+BANNED_RESEARCH_IMPORTS = {
+    "dynamixel_sdk",
+    "feetech",
+    "rclpy",
+    "scservo_sdk",
+    "serial",
+}
+BANNED_RESEARCH_TEXT = {
+    "/dev/serial",
+    "/dev/tty",
+    "eeprom_write",
+    "torque_enable",
+    "write_register",
+}
+BANNED_CPP_TEXT = {
+    "Python.h",
+    "Py_Initialize",
+    "pybind11",
+    "popen(",
+    "std::system(",
+}
+BANNED_LOCALIZATION_CONTROL_TEXT = {
+    "/cmd_vel",
+    "/dev/serial",
+    "/dev/tty",
+    "eeprom_write",
+    "torque_enable",
+    "write_register",
+}
+BANNED_SAFETY_IO_TEXT = {
+    "/dev/",
+    "dynamixel",
+    "rclcpp",
+    "scservo",
+    "serial_port",
+    "sensor_msgs",
+    "std_msgs",
+    "trajectory_msgs",
+    "torque_enable",
+    "write_register",
+}
+FORBIDDEN_REMOTE_KEY = re.compile(
+    r"(?:PASSWORD|PASSWD|SECRET|TOKEN|PRIVATE_KEY)",
+    re.IGNORECASE,
+)
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def imported_roots(tree: ast.AST) -> set[str]:
+    roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            roots.add(node.module.split(".", 1)[0])
+    return roots
+
+
+def verify_python_research_layer() -> None:
+    python_files = sorted(RESEARCH_SRC.rglob("*.py"))
+    if not python_files:
+        fail(f"Python research source is missing under {RESEARCH_SRC}")
+    for path in python_files:
+        text = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError as error:
+            fail(f"cannot parse {path}: {error}")
+        banned_imports = imported_roots(tree) & BANNED_RESEARCH_IMPORTS
+        if banned_imports:
+            fail(f"{path} imports hardware/ROS modules: {sorted(banned_imports)}")
+        lowered = text.lower()
+        for fragment in BANNED_RESEARCH_TEXT:
+            if fragment.lower() in lowered:
+                fail(f"{path} contains prohibited direct hardware fragment: {fragment}")
+    print(f"Python research boundary passed: {len(python_files)} source files")
+
+
+def cpp_source_files(root: Path) -> list[Path]:
+    return sorted(
+        path
+        for suffix in ("*.cpp", "*.hpp", "*.h")
+        for path in root.rglob(suffix)
+    )
+
+
+def verify_cpp_no_python_embedding(root: Path, layer_name: str) -> list[Path]:
+    cpp_files = cpp_source_files(root)
+    if not cpp_files:
+        fail(f"{layer_name} source is missing under {root}")
+    for path in cpp_files:
+        text = path.read_text(encoding="utf-8")
+        for fragment in BANNED_CPP_TEXT:
+            if fragment in text:
+                fail(f"{path} embeds or launches Python: {fragment}")
+    return cpp_files
+
+
+def verify_forbidden_fragments(
+    cpp_files: list[Path],
+    fragments: set[str],
+    layer_name: str,
+) -> None:
+    for path in cpp_files:
+        lowered = path.read_text(encoding="utf-8").lower()
+        for fragment in fragments:
+            if fragment.lower() in lowered:
+                fail(
+                    f"{path} contains prohibited fragment in {layer_name}: "
+                    f"{fragment}"
+                )
+
+
+def verify_cpp_localization_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_LOCALIZATION_ROOT,
+        "C++ localization",
+    )
+    verify_forbidden_fragments(
+        cpp_files,
+        BANNED_LOCALIZATION_CONTROL_TEXT,
+        "C++ localization layer",
+    )
+    print(f"C++ localization boundary passed: {len(cpp_files)} source files")
+
+
+def verify_cpp_safety_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_SAFETY_ROOT,
+        "C++ safety",
+    )
+    verify_forbidden_fragments(
+        cpp_files,
+        BANNED_SAFETY_IO_TEXT,
+        "C++ safety core",
+    )
+    print(f"C++ safety boundary passed: {len(cpp_files)} source files")
+
+
+def verify_cpp_realtime_layer() -> None:
+    cpp_files = verify_cpp_no_python_embedding(
+        CPP_REALTIME_ROOT,
+        "C++ real-time",
+    )
+    print(f"C++ real-time boundary passed: {len(cpp_files)} source files")
+
+
+def parse_env_template(path: Path) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for line_number, raw_line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(),
+        1,
+    ):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            fail(f"{path}:{line_number} is not KEY=VALUE")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in result:
+            fail(f"{path}:{line_number} has an empty or duplicate key")
+        if FORBIDDEN_REMOTE_KEY.search(key):
+            fail(f"{path}:{line_number} contains a secret-bearing key: {key}")
+        result[key] = value.strip()
+    return result
+
+
+def verify_remote_template() -> None:
+    if not REMOTE_EXAMPLE.is_file():
+        fail(f"remote config template is missing: {REMOTE_EXAMPLE}")
+    values = parse_env_template(REMOTE_EXAMPLE)
+    if values.get("TB3_USER") != "user":
+        fail("TB3_USER must match the current TurtleBot3 Raspberry Pi account")
+    if values.get("TB3_AUTH_MODE") != "ssh-key":
+        fail("TB3_AUTH_MODE must remain ssh-key")
+    if not values.get("TB3_HOST"):
+        fail("TB3_HOST must be present in the public template")
+    print("TurtleBot3 remote template passed: secret-free SSH-key configuration")
+
+
+def run_generator_check(generator: Path) -> None:
+    completed = subprocess.run(
+        [sys.executable, str(generator), "--check"],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise SystemExit(completed.returncode)
+
+
+def verify_generated_contracts() -> None:
+    run_generator_check(CONTROL_GENERATOR)
+    run_generator_check(LOCALIZATION_GENERATOR)
+
+
+def main() -> int:
+    verify_python_research_layer()
+    verify_cpp_localization_layer()
+    verify_cpp_safety_layer()
+    verify_cpp_realtime_layer()
+    verify_remote_template()
+    verify_generated_contracts()
+    print("architecture boundary verification passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,50 @@
+name: RoboTwin canonical contract
+
+on:
+  pull_request:
+    paths:
+      - "2ARM_ROBOT/robotwin/**"
+      - "2ARM_ROBOT/src/shoe_sorting_data/**"
+      - ".github/workflows/robotwin-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  robotwin-contract-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Check out review tree without persisted credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up isolated Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - name: Prepare temporary directories
+        run: |
+          work="$RUNNER_TEMP/robotwin-contract"
+          mkdir -p "$work/tmp" "$work/cache"
+          printf 'TMPDIR=%s\nXDG_CACHE_HOME=%s\n' "$work/tmp" "$work/cache" >> "$GITHUB_ENV"
+      - name: Install CPU-only fixture dependencies on hosted runner
+        run: >-
+          python -m pip install --disable-pip-version-check --no-cache-dir
+          --only-binary=:all:
+          numpy==2.3.5 h5py==3.15.1 opencv-python-headless==4.13.0.92
+      - name: Run synthetic contracts and preservation regressions
+        run: |
+          python -B 2ARM_ROBOT/robotwin/test_contract.py
+          python -B 2ARM_ROBOT/robotwin/test_convert_episode.py
+          python -B -m unittest discover -s 2ARM_ROBOT/robotwin -p test_merge_regressions.py -v
+      - name: Check native ACT checkpoint boundary without hardware
+        env:
+          PYTHONPATH: 2ARM_ROBOT/src/shoe_sorting_data
+        run: >-
+          python -B -m unittest discover -s 2ARM_ROBOT/src/shoe_sorting_data/test
+          -p test_dapier_native_act.py -v

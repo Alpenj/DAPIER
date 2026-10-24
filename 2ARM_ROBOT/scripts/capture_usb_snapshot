@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+readonly CONFIRMATION="VISIBLE_USB_SNAPSHOT_READONLY"
+
+usage() {
+  echo "Usage: $0 OUTPUT_DIRECTORY --confirm $CONFIRMATION" >&2
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -ne 3 || "$2" != "--confirm" || "$3" != "$CONFIRMATION" ]]; then
+  usage
+  exit 2
+fi
+[[ -t 0 && -t 1 ]] || {
+  echo "ERROR: read-only USB access requires an interactive TTY" >&2
+  exit 2
+}
+
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -e "$1" || -L "$1" ]]; then
+  echo "ERROR: refusing existing output path or symlink: $1" >&2
+  exit 1
+fi
+raw_output_root="${script_dir}/../output"
+if [[ -L "${raw_output_root}" ]]; then
+  echo "ERROR: repository output root must not be a symlink" >&2
+  exit 1
+fi
+output_root="$(realpath -m -- "${raw_output_root}")"
+snapshot_dir="$(realpath -m -- "$1")"
+case "$snapshot_dir/" in
+  "$output_root/"*) ;;
+  *) echo "ERROR: snapshot must be under $output_root" >&2; exit 1 ;;
+esac
+if [[ -e "$snapshot_dir" || -L "$snapshot_dir" ]]; then
+  echo "ERROR: refusing to overwrite $snapshot_dir" >&2
+  exit 1
+fi
+for command_name in date lsusb v4l2-ctl journalctl awk sed; do
+  command -v "$command_name" >/dev/null || {
+    echo "ERROR: missing command: $command_name" >&2
+    exit 1
+  }
+done
+
+snapshot_parent="$(dirname -- "${snapshot_dir}")"
+mkdir -p -- "${snapshot_parent}"
+snapshot_parent="$(realpath -e -- "${snapshot_parent}")"
+case "${snapshot_parent}/" in
+  "${output_root}/"*) ;;
+  *) echo "ERROR: snapshot parent escaped ${output_root}" >&2; exit 1 ;;
+esac
+private_dir="$(mktemp -d "${snapshot_parent}/.usb-snapshot.XXXXXX")"
+cleanup() {
+  rm -rf -- "${private_dir}"
+}
+trap cleanup EXIT
+
+date --utc --iso-8601=seconds > "$private_dir/captured_at_utc.txt"
+lsusb > "$private_dir/lsusb.txt"
+lsusb -t > "$private_dir/lsusb-tree.txt"
+v4l2-ctl --list-devices > "$private_dir/v4l2-devices.txt" 2>&1 || true
+
+kernel_status="available"
+if ! journalctl -k -b --no-pager 2>"$private_dir/kernel-access.txt" \
+  | awk 'BEGIN {IGNORECASE=1} /usb/ && /reset|disconnect|error|fail|timeout|over-current|stall/' \
+  | sed -E 's/(Serial(Number)?[=:]?[[:space:]]*)[^[:space:]]+/\1REDACTED/g' \
+  > "$private_dir/kernel-usb-events.txt"; then
+  kernel_status="unavailable"
+fi
+
+{
+  printf 'kernel_log=%s\n' "$kernel_status"
+  printf 'motion_commands_sent=false\n'
+  printf 'device_streams_opened=false\n'
+  printf 'hardware_execution=false\n'
+} > "$private_dir/summary.txt"
+
+if [[ -e "$snapshot_dir" || -L "$snapshot_dir" ]]; then
+  echo "ERROR: refusing output path created during capture: $snapshot_dir" >&2
+  exit 1
+fi
+mv -Tn -- "$private_dir" "$snapshot_dir"
+if [[ -e "$private_dir" ]]; then
+  echo "ERROR: atomic no-clobber finalize failed: $snapshot_dir" >&2
+  exit 1
+fi
+trap - EXIT
+
+echo "USB snapshot: $snapshot_dir"

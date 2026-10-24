@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot name="dapier_dual_so101">
+  <!-- Parent-child pairs are already filtered by SAPIEN's URDF loader. -->
+  <disable_collisions link1="dapier_base_link" link2="left_shoulder_link" reason="Default"/>
+  <disable_collisions link1="dapier_base_link" link2="left_upper_arm_link" reason="Default"/>
+  <disable_collisions link1="dapier_base_link" link2="right_shoulder_link" reason="Default"/>
+  <disable_collisions link1="dapier_base_link" link2="right_upper_arm_link" reason="Default"/>
+  <disable_collisions link1="h201_mast_link" link2="h201_link" reason="Default"/>
+  <disable_collisions link1="left_base_link" link2="left_upper_arm_link" reason="Default"/>
+  <disable_collisions link1="left_shoulder_link" link2="left_lower_arm_link" reason="Default"/>
+  <disable_collisions link1="left_upper_arm_link" link2="left_wrist_link" reason="Default"/>
+  <disable_collisions link1="left_lower_arm_link" link2="left_gripper_link" reason="Default"/>
+  <disable_collisions link1="left_wrist_link" link2="left_moving_jaw_so101_v1_link" reason="Default"/>
+  <disable_collisions link1="left_wrist_link" link2="left_camera" reason="Default"/>
+  <disable_collisions link1="left_gripper_link" link2="left_camera" reason="Default"/>
+  <disable_collisions link1="left_moving_jaw_so101_v1_link" link2="left_camera" reason="Default"/>
+  <disable_collisions link1="right_base_link" link2="right_upper_arm_link" reason="Default"/>
+  <disable_collisions link1="right_shoulder_link" link2="right_lower_arm_link" reason="Default"/>
+  <disable_collisions link1="right_upper_arm_link" link2="right_wrist_link" reason="Default"/>
+  <disable_collisions link1="right_lower_arm_link" link2="right_gripper_link" reason="Default"/>
+  <disable_collisions link1="right_wrist_link" link2="right_moving_jaw_so101_v1_link" reason="Default"/>
+  <disable_collisions link1="right_wrist_link" link2="right_camera" reason="Default"/>
+  <disable_collisions link1="right_gripper_link" link2="right_camera" reason="Default"/>
+  <disable_collisions link1="right_moving_jaw_so101_v1_link" link2="right_camera" reason="Default"/>
+</robot>

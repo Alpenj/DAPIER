@@ -1,0 +1,115 @@
+<mujoco model="puppy">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="HighTorqueServo">
+      <geom contype="1" conaffinity="1"/>
+      <joint damping="0.3" frictionloss="0.05" armature="0.02" limited="true"/>
+      <position kp="45.0" kv="1.2" forcerange="-1.5 1.5"/>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="lidar_Link" content_type="model/stl" file="./meshes/lidar_Link.STL"/>
+    <mesh name="base_link" content_type="model/stl" file="./meshes/base_link.STL"/>
+    <mesh name="lb_link1" content_type="model/stl" file="./meshes/lb_link1.STL"/>
+    <mesh name="lb_link2" content_type="model/stl" file="./meshes/lb_link2.STL"/>
+    <mesh name="rb_link1" content_type="model/stl" file="./meshes/rb_link1.STL"/>
+    <mesh name="rb_link2" content_type="model/stl" file="./meshes/rb_link2.STL"/>
+    <mesh name="rf_link1" content_type="model/stl" file="./meshes/rf_link1.STL"/>
+    <mesh name="rf_link2" content_type="model/stl" file="./meshes/rf_link2.STL"/>
+    <mesh name="lf_link1" content_type="model/stl" file="./meshes/lf_link1.STL"/>
+    <mesh name="lf_link2" content_type="model/stl" file="./meshes/lf_link2.STL"/>
+    <mesh name="camera_link" content_type="model/stl" file="./meshes/camera_link.STL"/>
+  </asset>
+
+  <worldbody> 
+    <body name="base_footprint" >
+    <!-- 이것은 로봇이 공중에 고정되어 추가되었음 -->
+     <joint type="free" />
+      <body name="base_link" pos="0 0 0.11" childclass="HighTorqueServo" >
+        <body name="base_dummy" quat="0.707388 0 0 0.706825" childclass="HighTorqueServo">
+          <inertial pos="-0.000281314 -0.00232094 0.0187443" quat="0.487495 0.512122 -0.512201 0.487575" mass="0.0656002" diaginertia="0.000137791 0.000101564 4.70815e-05"/>
+          <geom type="mesh" rgba="0 0 0 1" mesh="base_link"/>
+          <body name="lb_link1" pos="0.0420106 0.0778693 0.015988" quat="0.930141 -0.367203 0 0">
+            <inertial pos="0.0139911 0.0129617 -0.0150641" quat="0.681953 0.285067 -0.259509 0.621555" mass="0.0101535" diaginertia="5.0547e-06 4.74867e-06 7.53492e-07"/>
+            <joint name="lb_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" rgba="0 0 0 1" mesh="lb_link1"/>
+            <body name="lb_link2" pos="0.0120499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="lb_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" rgba="0 0 0 1" mesh="lb_link2"/>
+              <body name="lb_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="rb_link1" pos="-0.0420106 0.0778693 0.015988" quat="0.930141 -0.367203 0 0">
+            <inertial pos="-0.0139912 0.0129616 -0.0150641" quat="0.621547 0.25951 -0.285066 0.681961" mass="0.0101536" diaginertia="5.05471e-06 4.74867e-06 7.53497e-07"/>
+            <joint name="rb_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" rgba="0 0 0 1" mesh="rb_link1"/>
+            <body name="rb_link2" pos="-0.0185499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="rb_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" rgba="0 0 0 1" mesh="rb_link2"/>
+              <body name="rb_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="rf_link1" pos="-0.0420105 -0.0778693 0.0106513" quat="0.930141 -0.367203 0 0">
+            <inertial pos="-0.0139912 0.0129616 -0.0150641" quat="0.621547 0.25951 -0.285066 0.681961" mass="0.0101536" diaginertia="5.05471e-06 4.74867e-06 7.53497e-07"/>
+            <joint name="rf_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" rgba="0 0 0 1" mesh="rf_link1"/>
+            <body name="rf_link2" pos="-0.0185499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="rf_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" rgba="0 0 0 1" mesh="rf_link2"/>
+              <body name="rf_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="lf_link1" pos="0.0420105 -0.0778693 0.0106513" quat="0.930141 -0.367203 0 0">
+            <inertial pos="0.0139911 0.0129616 -0.0150641" quat="0.681953 0.285067 -0.259509 0.621556" mass="0.0101536" diaginertia="5.05473e-06 4.74868e-06 7.53497e-07"/>
+            <joint name="lf_joint1" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+            <geom type="mesh" rgba="0 0 0 1" mesh="lf_link1"/>
+            <body name="lf_link2" pos="0.0120499 0.0525236 -0.0528775">
+              <inertial pos="0.00325 -0.0273004 -0.0228964" quat="0.395706 0.918377 0 0" mass="0.00545593" diaginertia="4.05445e-06 3.95838e-06 2.11118e-07"/>
+              <joint name="lf_joint2" pos="0 0 0" axis="1 0 0" range="-2 2" actuatorfrcrange="-0.5 0.5"/>
+              <geom type="mesh" rgba="0 0 0 1" mesh="lf_link2"/>
+              <body name="lf_link3" pos="0 -0.053 -0.053" quat="0.924909 0.380188 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.0391" diaginertia="5.443e-12 3.7713e-12 3.5422e-12"/>
+                <geom size="0.0095 0.005" pos="0.0032 0 0.001" quat="0.707388 0 0.706825 0" type="cylinder"/>
+              </body>
+            </body>
+          </body>
+          <body name="camera_link" pos="0 -0.100687 0.0171095" quat="0.999853 0.017126 0 0">
+            <inertial pos="7.88163e-12 0.00830783 -1.10275e-09" quat="0.5 0.5 -0.5 0.5" mass="0.0025559" diaginertia="8.93985e-08 8.07505e-08 7.57696e-08"/>
+            <geom type="mesh" rgba="0 0 0 1" mesh="camera_link"/>
+          </body>
+        </body>
+        <body name="lidar_frame" pos="-0.012242 -8.533e-05 0.092501">
+          <inertial pos="8.65086e-05 9.02625e-05 -0.0183546" quat="-0.240675 0.665063 0.24282 0.663931" mass="0.0405423" diaginertia="8.2565e-06 5.16844e-06 4.85549e-06"/>
+          <geom type="mesh" rgba="0 0 0 1" mesh="lidar_Link"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+ <actuator>
+    <position name="act_lb_j1" joint="lb_joint1" class="HighTorqueServo"/>
+    <position name="act_lb_j2" joint="lb_joint2" class="HighTorqueServo"/>
+    
+    <position name="act_rb_j1" joint="rb_joint1" class="HighTorqueServo"/>
+    <position name="act_rb_j2" joint="rb_joint2" class="HighTorqueServo"/>
+    
+    <position name="act_rf_j1" joint="rf_joint1" class="HighTorqueServo"/>
+    <position name="act_rf_j2" joint="rf_joint2" class="HighTorqueServo"/>
+    
+    <position name="act_lf_j1" joint="lf_joint1" class="HighTorqueServo"/>
+    <position name="act_lf_j2" joint="lf_joint2" class="HighTorqueServo"/>
+  </actuator>
+</mujoco>

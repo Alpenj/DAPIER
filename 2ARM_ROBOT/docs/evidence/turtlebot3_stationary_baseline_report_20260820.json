@@ -1,0 +1,25 @@
+{
+  "created_at_utc": "2026-08-20T07:42:11.331997Z",
+  "motion_commands_sent": false,
+  "samples_sha256": "ebfd65966836533f36da3f757b27443651570558bcaa0b059c0a6a0cf31b037f",
+  "schema_version": "dapier.base-stationary-baseline.v0.1",
+  "source_topic": "/odom",
+  "summary": {
+    "angular_z_radps": {
+      "abs_max": 0.000831312191679378,
+      "abs_median": 0.00017642636205959238,
+      "abs_p95": 0.0005204027865166175,
+      "abs_p99": 0.0006673592950041206
+    },
+    "duration_seconds": 30.04031854,
+    "linear_x_mps": {
+      "abs_max": 0.001231529599923639,
+      "abs_median": 0.0,
+      "abs_p95": 0.0005337283966100247,
+      "abs_p99": 0.000656898924711609
+    },
+    "sample_count": 603,
+    "sample_rate_hz": 20.03973423911636
+  },
+  "warmup_seconds": 5.0
+}

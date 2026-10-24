@@ -1,0 +1,92 @@
+{
+  "schema_version": "dapier.dual-so101-sim-real-comparison.v1",
+  "source_hardware_record": "dual_so101_symmetric_smoke_20260903.json",
+  "sequence": "30 linear targets at measured median 51.20 ms: left +3 deg / right -3 deg, then return",
+  "steps_each_way": 30,
+  "control_update_period_s": 0.0512005090713501,
+  "simulated": {
+    "left": {
+      "excursion_degrees": 2.9998975508492873,
+      "residual_degrees": 0.0004840912457670742
+    },
+    "right": {
+      "excursion_degrees": -2.9989306856830393,
+      "residual_degrees": 0.000484099993450021
+    }
+  },
+  "measured": {
+    "left": {
+      "excursion_degrees": 2.5494505494505493,
+      "residual_degrees": 0.2637362637362637
+    },
+    "right": {
+      "excursion_degrees": -2.7252747252747254,
+      "residual_degrees": -0.35164835164835173
+    }
+  },
+  "absolute_error_degrees": {
+    "left": {
+      "excursion_degrees": 0.45044700139873806,
+      "residual_degrees": 0.2632521724904966
+    },
+    "right": {
+      "excursion_degrees": 0.27365596040831397,
+      "residual_degrees": 0.35213245164180174
+    }
+  },
+  "outbound_physics": {
+    "duration_s": 1.4848147630691528,
+    "simulated_steps": 993,
+    "pre_settle_steps": 0,
+    "runtime_qpos_writes": 0,
+    "maximum_tracking_error_rad": 0.0015461174761551635,
+    "final_tracking_error_rad": 0.00010361242155676464,
+    "maximum_actual_velocity_rad_s": 0.21346933429063966,
+    "maximum_actual_acceleration_rad_s2": 53.79044493404879,
+    "maximum_actual_jerk_rad_s3": 27191.29474278559,
+    "maximum_target_velocity_rad_s": 0.034088123021631264,
+    "maximum_target_acceleration_rad_s2": 0.0,
+    "maximum_target_jerk_rad_s3": 0.0,
+    "maximum_actuator_force_ratio": 0.5200664375897851,
+    "torque_saturated": false,
+    "minimum_support_margin_m": 0.03604481055384934,
+    "forbidden_contact_count": 0,
+    "finite_state": true,
+    "dynamics_limits_satisfied": false,
+    "dynamics_limit_violations": [
+      "acceleration",
+      "jerk"
+    ],
+    "simulation_motion_accepted": false,
+    "hardware_execution": false
+  },
+  "inbound_physics": {
+    "duration_s": 1.4848147630691528,
+    "simulated_steps": 993,
+    "pre_settle_steps": 0,
+    "runtime_qpos_writes": 0,
+    "maximum_tracking_error_rad": 0.001537280431447366,
+    "final_tracking_error_rad": 0.00010372947853309888,
+    "maximum_actual_velocity_rad_s": 0.213437310171602,
+    "maximum_actual_acceleration_rad_s2": 53.52470910041059,
+    "maximum_actual_jerk_rad_s3": 27185.713086750824,
+    "maximum_target_velocity_rad_s": 0.034088123021631264,
+    "maximum_target_acceleration_rad_s2": 0.0,
+    "maximum_target_jerk_rad_s3": 0.0,
+    "maximum_actuator_force_ratio": 0.5195336319488744,
+    "torque_saturated": false,
+    "minimum_support_margin_m": 0.03605030104768048,
+    "forbidden_contact_count": 0,
+    "finite_state": true,
+    "dynamics_limits_satisfied": false,
+    "dynamics_limit_violations": [
+      "acceleration",
+      "jerk"
+    ],
+    "simulation_motion_accepted": false,
+    "hardware_execution": false
+  },
+  "strict_dynamics_gate_passed": false,
+  "known_gate_failure": "20 Hz step command and finite-difference actual jerk",
+  "hardware_execution": false
+}
