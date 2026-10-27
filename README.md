@@ -4,7 +4,7 @@ DAPIER에서 배운 내용을 로봇 연동, 시뮬레이션과 데이터 검증
 
 대표 팀 프로젝트 **SWEEPICK**은 청소 경로의 작은 물체를 옮겨 공간을 확보하는 저비용 양팔 모바일 매니퓰레이터다. 물체 이동·청소·저전력 복귀·도킹·충전 흐름은 시뮬레이션에서 구현했고, 실물 기능을 통합하고 있다. 초기 신발 정리 과제는 개발 이력으로 보존한다.
 
-**전형주 주 담당: 모방학습·시뮬레이션·Sim-to-Real·데이터 검증. Visual SLAM도 직접 설계·구현했다.** 프로젝트 전체 실험 결과는 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 공동 자료의 저작 범위는 구분한다.
+**ACT는 팀원과 공동 개발·검증했다. 전형주 주 담당은 모방학습·시뮬레이션·Sim-to-Real·데이터 검증이며, Visual SLAM도 직접 설계·구현했다.** 아래 ACT 수치는 공동 실험 결과다. 개인 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 기여의 출처도 함께 남긴다.
 
 [포트폴리오·이력서](https://julianjeonresume.netlify.app/) · [SWEEPICK 프로젝트](2ARM_ROBOT/README.md) · [CUSTOM ACT V1 실험 기록](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md) · [공개 그림·영상](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [이전 조작 연구](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md)
 
