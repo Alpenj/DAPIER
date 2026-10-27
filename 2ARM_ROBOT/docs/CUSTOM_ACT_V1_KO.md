@@ -2,7 +2,7 @@
 
 SWEEPICK에서 학습 정책을 적용할 때, 낮은 예측 손실만으로는 물체를 끝까지 옮기는지 알 수 없었다. 시연의 외형을 늘리는 단계부터 분할, 모델 학습, 폐루프 실행과 실패 분석까지 같은 기록으로 연결했다.
 
-**전형주 주 담당: 모방학습·시뮬레이션·Sim-to-Real·데이터 검증. Visual SLAM도 직접 설계·구현했다.** 프로젝트 전체 실험 결과는 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 공동 자료의 저작 범위는 구분한다.
+**ACT는 팀원과 공동 개발·검증했다. 전형주 주 담당은 모방학습·시뮬레이션·Sim-to-Real·데이터 검증이며, Visual SLAM도 직접 설계·구현했다.** 아래 ACT 수치는 공동 실험 결과다. 개인 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 기여의 출처도 함께 남긴다.
 
 [프로젝트](../README.md) · [그림·영상으로 보기](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [Notion 연구 노트](https://www.notion.so/4065788b5ed1810aaec9c710b0d9e288)(접근 권한 필요) · [이전 접촉·계획 연구](RESEARCH_SUMMARY_KO.md)
 
