@@ -1,0 +1,72 @@
+{
+  "project": "SWEEPICK custom ACT V1",
+  "source_sha256": "b0d3b524f57b6ae4e2f01c2533bab8c0ca90a532c99112a13bdfdf9092fa599f",
+  "evaluation_report_date": "2026-10-26",
+  "environment": "simulation",
+  "evaluation_checkpoint_epoch": 30,
+  "evaluation_checkpoint_sha256": "032aab674bdbe83a3e75ebf793fc98026ea0c382f994f40ef05f5c4730ab0cf7",
+  "temporal_ensemble": true,
+  "temporal_k": 0.01,
+  "repetitions_per_position": 1,
+  "success_definition": "Lift>=30mm -> measured Stow within0.025rad -> elevated/contact hold2s physics",
+  "randomization_scope": "blockRGB,table/wallUVtextures,lighting;fixedyaw,size,physics,headcalibration",
+  "evaluation": {
+    "all": {
+      "successes": 132,
+      "attempts": 143,
+      "success_rate": 0.9230769230769231
+    },
+    "train": {
+      "successes": 76,
+      "attempts": 80,
+      "success_rate": 0.95
+    },
+    "val": {
+      "successes": 29,
+      "attempts": 32,
+      "success_rate": 0.90625
+    },
+    "test": {
+      "successes": 27,
+      "attempts": 31,
+      "success_rate": 0.8709677419354839
+    },
+    "train_used": {
+      "successes": 59,
+      "attempts": 59,
+      "success_rate": 1.0
+    },
+    "train_not_used": {
+      "successes": 17,
+      "attempts": 21,
+      "success_rate": 0.8095238095238095
+    }
+  },
+  "failure_stages": {
+    "grasp_or_lift": 7,
+    "stow": 4
+  },
+  "collection": {
+    "trajectory_families": 113,
+    "views_per_family": 5,
+    "new_views": 452,
+    "total_views": 565,
+    "train_views": 295,
+    "validation_views": 145,
+    "preserved_test_views": 125
+  },
+  "offline_training": {
+    "completed_epochs": 200,
+    "best_epoch_by_validation_prior_normalized_l1": 103,
+    "best_validation_prior_normalized_l1": 0.015534236763812995,
+    "epoch200_validation_prior_normalized_l1": 0.01951522965469,
+    "closed_loop_evaluated": false
+  },
+  "limits": [
+    "one trial per position;not per-position success probability",
+    "SIM result;not hardware success or safety validation",
+    "epoch30 closed-loop result separate from epoch200 offline training",
+    "temporalOFF is one interrupted latest-first diagnostic;originalACTsequentialOFF notrun",
+    "team artifact does not assign individual authorship"
+  ]
+}
