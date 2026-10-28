@@ -1,0 +1,26 @@
+{
+  "source_as_of": "2026-10-27",
+  "documentation_date": "2026-10-28",
+  "sources": [
+    {
+      "source": "https://julianjeonresume.netlify.app/assets/custom-act-v1/sim-test-mid00_01.mp4",
+      "sha256": "caa1a9c6eadf6f4419398ec0574498e2f7ae6f3905807a194ae4e972078ceec2",
+      "role": "Existing published CUSTOM ACT V1 evaluation media"
+    },
+    {
+      "source": "https://julianjeonresume.netlify.app/assets/custom-act-v1/collection-appearances.png",
+      "sha256": "2f204eec5b9593cfa32c46d34c04864a53f41f6b58c55704de5b2929ea327390",
+      "role": "Existing published CUSTOM ACT V1 evaluation media"
+    },
+    {
+      "source": "https://julianjeonresume.netlify.app/assets/custom-act-v1/training-curves.png",
+      "sha256": "ab86e85ae2f69211c6a9859cd55f6213dffd214fc551f3a0911fcb3af15d5d18",
+      "role": "Existing published CUSTOM ACT V1 evaluation media"
+    }
+  ],
+  "gif": {
+    "file": "custom-act-sim.gif",
+    "sha256": "824bdb4ffb99713a1b03b21a16ed11f0f6e871ece66a47fba8b1ad4001d11e96",
+    "conversion": "ffmpeg: fps=8, scale=640:-1, palettegen max_colors=128, paletteuse bayer; full source duration"
+  }
+}

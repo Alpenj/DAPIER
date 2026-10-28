@@ -1,5 +1,13 @@
 # jdcobot100_sim
 
+실제 장비 연결에 앞서 관절 이름·모델·컨트롤러와 launch 흐름을 확인하는 시뮬레이션 전용 패키지다.
+
+[RViz launch](launch/rviz.launch.py) · [Gazebo launch](launch/gazebo.launch.py) · [컨트롤러 설정](config/gazebo_controllers.yaml)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 이 패키지는 제가 실제 부품을 연결하기 전에 RViz·Gazebo에서 관절 이름,
 launch 순서, controller 연결을 확인하기 위해 사용하는 시뮬레이션 공간입니다.
 여기서 보이는 움직임을 실제 서보가 움직였다고 해석하지 않습니다.

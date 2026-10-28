@@ -1,10 +1,25 @@
-﻿# 프로젝트 문서
+# SWEEPICK 문서 안내
 
-현재 실물 정본은 SO-101 양팔 + TurtleBot3 Waffle Pi + H201 top-view + 전면 Astra S + 좌우
-wrist RGB다. 장치명·역할·stable alias는 [`../config/hardware_roles.json`](../config/hardware_roles.json),
-현재 MuJoCo 실행은 [`../sim/mobile_dual_so101/README.md`](../sim/mobile_dual_so101/README.md)를
-우선한다. 제목에 JDcobot이 있거나 2026-08의 Astra Pro 단일 카메라를 전제로 한 문서는 초기
-연구·회귀 자료이며 현재 실물 명령 근거가 아니다.
+처음 읽는다면 최신 요약에서 시작한 뒤, 확인하려는 코드와 실험의 날짜로 내려간다. 아래 과거 문서는 당시 장비·소스 revision의 기록으로 보존한다.
+
+## 지금 읽을 문서
+
+| 질문 | 문서·근거 |
+|---|---|
+| 어떤 로봇이고 무엇을 담당했는가? | [SWEEPICK 개요·구성·기여](../README.md) |
+| 데이터를 어떻게 나누고 ACT를 평가했는가? | [CUSTOM ACT V1](CUSTOM_ACT_V1_KO.md) |
+| 실제 143개 위치 결과를 볼 수 있는가? | [위치별 CSV](evidence/custom_act_v1_20261027_positions.csv) · [조건·집계 JSON](evidence/custom_act_v1_20261027_summary.json) |
+| 모델·접촉·경로 검증은 어디에 있는가? | [이전 조작 연구와 고정 후보](RESEARCH_SUMMARY_KO.md) |
+| Python 연구와 C++ 실행 경계는 무엇인가? | [연구 계층](../research/README.md) · [제어 계약](../../contracts/README.md) |
+| 교육 코드부터 읽으려면? | [교육·실습 안내](../../docs/LEARNING_GUIDE_KO.md) |
+
+## 장비 구성과 날짜
+
+최근 조작 연구는 **SO-101 양팔·PGripper, 작업공간 OS30A RGB-D와 양손목 RGB**, 이동 베이스 전면 중앙의 **Astra RGB-D**를 구분한다. [프로젝트의 장비 설명](../README.md#장비-역할과-과거-설정)을 먼저 읽는다.
+
+[`hardware_roles.json`](../config/hardware_roles.json)의 `effective_date=2026-09-03`과 H201 top-view는 **당시 구성**이다. 이전 Astra Pro 단일 카메라, JDcobot, 박스·신발 과제 문서도 현재 설정으로 바꿔 읽지 않는다. 문서를 최신화했다고 런타임·보정값이 갱신된 것은 아니다.
+
+## 이전 설계·실습·연구 기록
 
 - [`requirements-ledger.md`](requirements-ledger.md): 현재 확정·미확정 요구사항 원장
 - [`PHASE0_HANDOFF.md`](PHASE0_HANDOFF.md): Ubuntu ROS 2 PC 개발 인수인계
@@ -34,5 +49,5 @@ wrist RGB다. 장치명·역할·stable alias는 [`../config/hardware_roles.json
 - [`2026-09-04-depth-box-pregrasp.md`](2026-09-04-depth-box-pregrasp.md): H201 depth 박스 pose, 앞날개 오른팔 IK·손목 RGB 보정, teleop→ACT episode 검증 기록
 - [`research/MOBILE_DUAL_SO101_EXECUTION_LEDGER_20260902.md`](research/MOBILE_DUAL_SO101_EXECUTION_LEDGER_20260902.md): PR #40을 고정한 뒤 별도 브랜치에서 진행하는 양팔 박스·신발 미션의 단계별 구현·검증·학습 원장
 
-팀의 현재 결정은 `ACT baseline + DYNA-lite + 4주차 이후 보조학습
+아래 문서 작성 당시의 팀 결정은 `ACT baseline + DYNA-lite + 4주차 이후 보조학습
 go/no-go`다. 조사 참고자료의 전체 SLIM/DYNA 구성을 무조건 적용하지 않는다.

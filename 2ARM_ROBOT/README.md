@@ -6,6 +6,33 @@
 
 [포트폴리오·이력서](https://julianjeonresume.netlify.app/) · [CUSTOM ACT V1 상세](docs/CUSTOM_ACT_V1_KO.md) · [그림·영상](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [이전 조작 연구](docs/RESEARCH_SUMMARY_KO.md) · [실물 검토 브랜치](https://github.com/Alpenj/DAPIER/tree/pro/sweepick-review-20261015/2ARM_ROBOT/sweepick)
 
+
+![CUSTOM ACT V1의 대표 SIM 실행과 손목 RGB 관측](../docs/media/custom-act-sim.gif)
+
+<sub>고정 epoch30 · Test mid00_01 · [원본 영상](https://julianjeonresume.netlify.app/assets/custom-act-v1/sim-test-mid00_01.mp4) · [수집 외형](../docs/media/collection-appearances.png) · [학습 곡선](../docs/media/training-curves.png) · [영상·그림 출처](../docs/media/README.md)</sub>
+
+[핵심 결과](#custom-act-v1-데이터에서-실행까지) · [시스템 구성](#시스템-구성) · [실물 연동](#실물-데이터와-실행기-연동) · [코드 위치](#구성과-코드-위치) · [실행 안내](#실행-안내와-과거-실습) · [문서 목록](docs/README.md)
+
+## 시스템 구성
+
+관측과 행동의 단위·순서·시각을 맞추고, 학습된 정책의 출력을 실행 기록과 대조한다. 아래는 연구와 실행의 역할 구분이다. 검토 브랜치의 실물 실행기와 공개 `main`의 연구 코드는 아래 코드 위치에서 따로 연결한다.
+
+```mermaid
+flowchart LR
+  S["RGB-D·손목 RGB·관절 상태"] --> D["수집·시각·단위·분할 검증"]
+  D --> T["ACT 공동 학습"]
+  S --> P["ACT 추론·청크 집계"]
+  T --> P
+  P --> A["관절 명령·정지 조건"]
+  A --> M["SIM 실행"]
+  A --> H["실물 연동·통합 중<br/>별도 실행기"]
+  M --> E["Lift·Stow·Hold 평가"]
+  H --> L["실측·영상·명령 기록"]
+  L --> D
+```
+
+이동 베이스의 전면 Astra RGB-D는 Visual SLAM, 작업공간 OS30A RGB-D와 손목 RGB는 조작 관측에 사용한다. 센서의 역할과 관절·좌표 계약을 구분해 연결한다.
+
 ## CUSTOM ACT V1: 데이터에서 실행까지
 
 학습 손실만으로 로봇의 작업 완료를 판단하기 어려웠다. 시연을 어떤 기준으로 나누었는지, 정책이 어떤 관측을 받는지, 예측한 행동 청크가 실제 명령으로 어떻게 이어지는지를 함께 기록했다.
@@ -14,10 +41,17 @@
 |---|---|---|
 | 데이터 수집 | 원본 113개 궤적의 동작을 유지하며 손목 RGB의 물체색·배경·테이블 텍스처·조명을 5개 외형으로 구성. 관측·상태·명령·시각 정합 확인 | 565개 뷰. 궤적 train/val/test=59/29/25, 뷰=295/145/125. 같은 궤적의 외형은 동일 분할 유지 |
 | 학습 | 양손목 RGB·head PCD·관절 상태를 입력으로 사용하는 ACT 학습 | 200 epoch 완료. best validation은 epoch103, prior normalized L1=0.01553 |
-| 추론 | 별도로 고정한 epoch30 체크포인트, temporal ensemble ON(k=0.01)으로 SIM 폐루프 평가 | 143개 위치 각 1회 중 132회 완료(92.3%). Test 위치는 27/31(87.1%) |
+| 추론 | 별도로 고정한 epoch30 체크포인트, temporal ensemble ON(k=0.01)으로 SIM 폐루프 평가 | 143개 위치 각 1회, 132/143 완료(92.3%). Test 위치는 27/31(87.1%) |
 | 분석 | 예측 청크의 target 시점·가중치·관절 명령·실측값·phase·영상 연결 | 실패 11회 중 grasp/lift 7회, stow 4회. 청크 집계 결과를 저장 CSV에서 재구성해 확인 |
 
 폐루프 완료 기준은 **30 mm 이상 Lift → Stow → 물리 2초 Hold**다. 외형은 랜덤화하고 물체 크기(40 mm)·yaw·물성·카메라 보정은 고정했다. 위 92.3%는 이 SIM 조작 평가의 관측값이다. 200 epoch 최종 모델의 폐루프 결과, 실물 성공률이나 전체 청소 시나리오 성공률과 합산하지 않는다.
+
+
+## 실패를 조사한 방법
+
+학습 손실과 작업 완료를 따로 확인했다. 고정 epoch30 SIM 평가에서 완료하지 못한 11회는 grasp/lift 7회와 stow 4회로 나눴다. 예측값만 보고 원인을 정하지 않고 query·target 시점, 집계 가중치, 실제 전송 명령, 실측 관절과 영상을 같은 시간축에서 읽었다.
+
+기존 first-action-only 실행과 temporal ensemble의 차이도 저장 CSV로 재구성했다. 한 위치의 ON/OFF 비교와 저장 데이터의 정합성 검사는 전체 성능 향상이나 새 실물 성공률로 계산하지 않았다. [청크 집계와 비교 조건](docs/CUSTOM_ACT_V1_KO.md#4-분석--예측-청크가-명령이-되는-과정을-추적했다)에 검사 수치와 한계를 남겼다.
 
 ## 실물 데이터와 실행기 연동
 
@@ -30,7 +64,7 @@
 
 10/08의 첫 무인 왼팔 집기, 10/18~23의 약170회 자동 교사 실행, 10/23의 ACT 접근 뒤 교사 마무리 기록은 위 후속 실험에 이르는 개발 이력이다. 10/26까지의 TJJ 실물 기록에서 ACT 단독 집기 완료는 관찰되지 않았다. 신규 CUSTOM ACT V1 SIM 폐루프 완료와 이 실물 기록을 혼동하지 않는다.
 
-10/27의 새 IR2 정지 shadow는 양팔 각300 prefix를 30초 동안 확인했고 위반0·모터쓰기0이었다. 기록상 full180s=false/all_pass=false이므로 전체 검증 통과로 표시하지 않는다. 최신 후속 노트3개는 [연구 노트 입구](https://www.notion.so/4065788b5ed1810aaec9c710b0d9e288)(접근 권한 필요)에서 연결한다.
+10/27의 새 IR2 정지 shadow는 양팔 각300 prefix를 30초 동안 확인했고 위반0·모터쓰기0이었다. 기록상 full180s=false/all_pass=false이므로 전체 검증 통과로 표시하지 않는다. 공개 가능한 조건과 후속 요약은 [CUSTOM ACT V1 실물 연동 기록](docs/CUSTOM_ACT_V1_KO.md#실물-연동과-후속-기록)에 모았다.
 
 10/16 이후 상체 실행기는 이동 베이스를 직접 움직이지 않고 정지 요청을 전달한다. 모듈을 나눈 실행 구조는 본인의 Visual SLAM 직접 설계·구현 경험을 축소하는 의미가 아니다. 이동·도킹 공동 코드의 출처와 변경 이력도 유지한다.
 
@@ -76,4 +110,4 @@ PR 상태 확인일은 2026-10-08이다. 연구 PR을 닫은 것과 `main`에 �
 
 외부 라이브러리와 자산은 각 폴더의 출처·라이선스를 따른다. Visual SLAM의 직접 설계·구현 경험과 공동 저장소의 외부·팀 기여 이력을 함께 보존한다.
 
-문서 갱신: 2026-10-27. 새 CUSTOM ACT V1의 수집·학습·SIM 평가·분석을 추가하고 기존 실물·코드·후보 PR 기록은 보존했다. 런타임·물리 파라미터·보정값·테스트·의존성은 변경하지 않았다.
+문서 구성 갱신: 2026-10-28. 실험 기록 기준: 2026-10-27. 새 CUSTOM ACT V1의 수집·학습·SIM 평가·분석을 추가하고 기존 실물·코드·후보 PR 기록은 보존했다. 런타임·물리 파라미터·보정값·테스트·의존성은 변경하지 않았다.

@@ -21,6 +21,18 @@ sequence, TTL, limit, interlock과 실행 허가를 다시 검사한다.
 남긴 `source_monotonic_ns`는 trace용이고, C++ 수신기가 자신의 monotonic clock으로
 `ttl_ns`를 시작한다.
 
+## 읽는 순서
+
+| 순서 | 코드 | 확인할 내용 |
+|---|---|---|
+| 1 | [관측 출처](src/dapier_research/observation_contract.py) | 실제 센서 관측과 시뮬레이터 정답을 구분하는 경계 |
+| 2 | [깊이 기반 목표](src/dapier_research/vision_target.py) | 깊이·카메라 내부 파라미터·좌표 변환으로 목표 계산 |
+| 3 | [제어 제안](src/dapier_research/control_intent.py) | 관절 명령의 형태·시간·단위와 실행 권한 구분 |
+| 4 | [지역화 replay](src/dapier_research/localization_replay.py) | 누락·지연·재지역화 때 멈춤과 재계획 판단 |
+| 5 | [테스트](test/) | 장비 없는 입력·실패 조건 검사 |
+
+[SWEEPICK 전체 구성](../README.md) · [CUSTOM ACT V1 결과](../docs/CUSTOM_ACT_V1_KO.md) · [교육·실습 안내](../../docs/LEARNING_GUIDE_KO.md)
+
 ## RGB-D target geometry
 
 [`vision_target.py`](src/dapier_research/vision_target.py)는 detector mask와 aligned

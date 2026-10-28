@@ -1,5 +1,13 @@
 # DAPIER SO-101 ROS 2 Stack
 
+C++ 관절·지역화 계약과 ROS 2 노드를 나눠 읽는 구현 공간이다. 아래 상태표는 이 스택의 범위이며, SWEEPICK의 별도 실물 실행기 상태와 구분한다.
+
+[관절 코어](dapier_so101_core/src/joint_model.cpp) · [관절 테스트](dapier_so101_core/test/test_joint_model.cpp) · [지역화 코어](dapier_localization_core/README.md)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 SO-101의 실행 계층과 TurtleBot3 지역화 경계를 직접 이해하고 구성하기 위한 ROS 2
 Jazzy 프로젝트다. LeRobot의 원클릭 실행 명령을 로봇 런타임으로 사용하지 않고,
 Visual SLAM 지역화, 관절 계약, 안전 제한, 텔레옵, 하드웨어, 데이터 기록의 경계를

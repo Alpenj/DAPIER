@@ -4,7 +4,7 @@ SWEEPICK에서 학습 정책을 적용할 때, 낮은 예측 손실만으로는 
 
 **ACT는 팀원과 공동 개발·검증했다. 전형주 주 담당은 모방학습·시뮬레이션·Sim-to-Real·데이터 검증이며, Visual SLAM도 직접 설계·구현했다.** 아래 ACT 수치는 공동 실험 결과다. 개인 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 기여의 출처도 함께 남긴다.
 
-[프로젝트](../README.md) · [그림·영상으로 보기](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [Notion 연구 노트](https://www.notion.so/4065788b5ed1810aaec9c710b0d9e288)(접근 권한 필요) · [이전 접촉·계획 연구](RESEARCH_SUMMARY_KO.md)
+[프로젝트](../README.md) · [그림·영상으로 보기](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [공개 후속 요약](#실물-연동과-후속-기록)(접근 권한 필요) · [이전 접촉·계획 연구](RESEARCH_SUMMARY_KO.md)
 
 ## 1. 데이터 수집 — 동작을 보존하고 외형을 바꿨다
 
@@ -19,7 +19,7 @@ SWEEPICK에서 학습 정책을 적용할 때, 낮은 예측 손실만으로는 
 
 관절 상태·명령·시각·물체 pose와 head depth/PCD가 같은지 검사했다. 한 궤적의 외형 변형은 같은 분할에 묶어, 같은 동작이 학습과 평가에 나뉘어 들어가지 않게 했다. 정책 입력은 관절q·head PCD·양손목 RGB이며, 정답 행동·phase·물체 정답pose를 추론 입력에서 제외했다.
 
-![동일 궤적의 다섯 외형](https://julianjeonresume.netlify.app/assets/custom-act-v1/collection-appearances.png)
+![동일 궤적의 다섯 외형](../../docs/media/collection-appearances.png)
 
 ## 2. 학습 — 학습 곡선과 작업 완료를 따로 확인했다
 
@@ -32,7 +32,7 @@ shared wrist ResNet18+1×1 projection, hidden256, chunk20, state/action12, KL10,
 
 최저 검증 손실은 epoch103에서 나왔다. 이200 epoch 실행의 최종·best 모델은 원본 묶음에서 폐루프 평가되지 않았다. 다음 절의 작업 완료율은 별도로 고정한 epoch30 체크포인트의 결과다.
 
-![학습·검증 손실과 재개 구간](https://julianjeonresume.netlify.app/assets/custom-act-v1/training-curves.png)
+![학습·검증 손실과 재개 구간](../../docs/media/training-curves.png)
 
 ## 3. 추론 — 고정한 모델로143개 위치를 실행했다
 
@@ -70,9 +70,7 @@ SWEEPICK의 물체 이동·청소·저전력 복귀·도킹·충전 흐름은 �
 
 10/27 후속 노트는 ACT30과 실물 실행기의 관측·12축 절대행동 계약, 앙상블·STOP·feedback·파지 증거 경로를 정리한다. 저장 앙상블 비교와 코드 검사는 새 실물 파지 결과가 아니다. 새IR2는30초 정지 shadow, 양팔 각300 prefix, 위반0·모터쓰기0이며 full180s=false/all_pass=false다. 이전180초 G4 UNKNOWN 기록도 그대로 보존한다.
 
-- [SIM+실물 공동 학습·실행기 정합](https://www.notion.so/4065788b5ed1818f9df0dd925ddecff4)
-- [절대행동·STOP·feedback·파지 증거 경로](https://www.notion.so/4065788b5ed18153ba4cde8a49e0c1f1)
-- [IR2 정지 shadow 읽기 기록](https://www.notion.so/4065788b5ed181329e50ed6501a5942a)
+공개 후속 요약은 위 기록과 [프로젝트의 실물 트랙](../README.md#실물-데이터와-실행기-연동)에서 읽을 수 있다. 비공개 원본 노트의 주소·원시 로그·개인 장치 정보는 공개하지 않는다.
 
 ## 출처와 재검증 범위
 
@@ -87,3 +85,5 @@ SWEEPICK의 물체 이동·청소·저전력 복귀·도킹·충전 흐름은 �
 공개 CSV·JSON은 평가 조건과 결과에 필요한 필드만 골랐다. 원시 데이터·학습 tensor·개인 장치 경로는 포함하지 않는다. 공식 ACT/RoboTwin 등 외부 구현의 출처·라이선스는 기존 코드와 원자료에 따른다. 이 문서는 담당 경험과 프로젝트 실험을 연결한 연구 요약이며 공동 데이터·외부 라이브러리 전체의 단독 저작을 주장하지 않는다.
 
 갱신2026-10-27. 저장 기록을 재계산·대조했으며, 이 문서 작업 중 시뮬레이터나 실물 로봇을 새로 실행하지 않았다.
+
+문서 연결 정리: 2026-10-28. 위 실험 기록의 기준일과 결과는 유지했다.

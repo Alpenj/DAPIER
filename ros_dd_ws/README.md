@@ -1,5 +1,13 @@
 # ros_dd_ws — 패키지 구조 및 가상 물리 환경 (ROS2 Jazzy)
 
+차동구동 로봇의 URDF·물리 장면·TF·SLAM·Nav2를 한 흐름으로 확인한 Jazzy 워크스페이스다. 아래 날짜별 설명과 오류 기록을 보존한다.
+
+[로봇 모델](src/ros_dd_description/) · [시뮬레이션](src/ros_dd_gazebo/) · [내비게이션](src/ros_dd_navigation/)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 `ros_dd_*` 커스텀 차동구동(differential-drive) 로봇 워크스페이스. `turtlebot3_ws`와
 마찬가지로 이 PC는 **ROS2 Jazzy + gz-sim(Harmonic)**만 설치돼 있어, 원본 교재가
 전제하는 Gazebo Classic 파이프라인(`gazebo_ros`, `gzserver`/`gzclient`,

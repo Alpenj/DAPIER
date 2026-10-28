@@ -1,7 +1,15 @@
 # ROS 2 + Arduino 4축 로봇암
 
+ROS 2 JointState의 관절 이름·rad를 Arduino 시리얼 명령과 servo degree로 잇는 4축 교육 프로젝트다. 아래 배선·펌웨어·제어 설명은 이 장비의 학습 기록이다.
+
+[ROS 시리얼 브리지](ros_arm/ros_arm_bridge.py) · [Arduino 코드](arduino/ros_control/ros_control.ino) · [시퀀스 GUI](ros_arm/sequence_gui.py)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 이 폴더는 제가 ROS 2와 서보 제어의 기본 흐름을 익히며 만든 4축 실험
-패키지입니다. 현재 SO-101 카지노 딜러 방향과는 다른 하드웨어이므로,
+패키지입니다. 이후의 SO-101·SWEEPICK과는 다른 하드웨어이므로,
 여기서 확인한 GUI·토픽·시리얼 개념을 그대로 SO-101 실물 결과라고
 간주하지 않습니다.
 
