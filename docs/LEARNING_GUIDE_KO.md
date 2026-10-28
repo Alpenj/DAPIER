@@ -21,7 +21,7 @@
 
 - Arduino Serial/UART 송수신·PWM 제어는 **교육 코드 실습**으로 적었다. SO-101/STS3215 상태 조회는 [저장된 read-only 기록](../2ARM_ROBOT/docs/evidence/dual_arm_read_only_summary_20260820.json)과 함께 확인한다.
 - [C++ 관절 코어](../so101_ros2/dapier_so101_core/src/joint_model.cpp)에서 변환·한계를 다루고, [Python 연구 계층](../2ARM_ROBOT/research/README.md)에서는 관측 출처·데이터·정책 제안을 다룬다. 이 스택의 미구현 하드웨어 드라이버를 실물 완료로 소개하지 않는다.
-- ACT는 팀원과 공동 개발·검증했다. 나는 모방학습·시뮬레이션·Sim-to-Real·데이터 검증을 주로 담당했고, Visual SLAM도 직접 설계·구현했다. [CUSTOM ACT V1](../2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md)에서 학습 조건과 SIM 평가를 읽을 수 있다.
+- ACT는 팀원과 공동 개발·검증했다. 나는 모방학습·시뮬레이션·Sim-to-Real·데이터 검증을 주로 담당했고, Visual SLAM은 협업으로 참여했다. [CUSTOM ACT V1](../2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md)에서 학습 조건과 SIM 평가를 읽을 수 있다.
 - Isaac Sim은 환경·장면·센서 기초를 학습한 범위다. 여기서 근거로 연결하는 MuJoCo·RoboTwin 프로젝트 실행과 구분한다.
 
 ## 다른 실험과 원본 자료
