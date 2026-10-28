@@ -22,5 +22,11 @@
     "file": "custom-act-sim.gif",
     "sha256": "824bdb4ffb99713a1b03b21a16ed11f0f6e871ece66a47fba8b1ad4001d11e96",
     "conversion": "ffmpeg: fps=8, scale=640:-1, palettegen max_colors=128, paletteuse bayer; full source duration"
+  },
+  "system_diagram": {
+    "file": "sweepick-system.png",
+    "sha256": "04fd7c5e8a440a5e9d050907b37a6e1c89c407461fc878e99052e97ccf3ab385",
+    "source": "sweepick-system.mmd",
+    "role": "Explanatory system diagram; not experiment evidence"
   }
 }

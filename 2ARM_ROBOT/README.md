@@ -17,19 +17,9 @@
 
 관측과 행동의 단위·순서·시각을 맞추고, 학습된 정책의 출력을 실행 기록과 대조한다. 아래는 연구와 실행의 역할 구분이다. 검토 브랜치의 실물 실행기와 공개 `main`의 연구 코드는 아래 코드 위치에서 따로 연결한다.
 
-```mermaid
-flowchart LR
-  S["RGB-D·손목 RGB·관절 상태"] --> D["수집·시각·단위·분할 검증"]
-  D --> T["ACT 공동 학습"]
-  S --> P["ACT 추론·청크 집계"]
-  T --> P
-  P --> A["관절 명령·정지 조건"]
-  A --> M["SIM 실행"]
-  A --> H["실물 연동·통합 중<br/>별도 실행기"]
-  M --> E["Lift·Stow·Hold 평가"]
-  H --> L["실측·영상·명령 기록"]
-  L --> D
-```
+![SWEEPICK 관측·학습·명령·SIM 평가와 실물 연동 구성](../docs/media/sweepick-system.png)
+
+[구성도 소스](../docs/media/sweepick-system.mmd)
 
 이동 베이스의 전면 Astra RGB-D는 Visual SLAM, 작업공간 OS30A RGB-D와 손목 RGB는 조작 관측에 사용한다. 센서의 역할과 관절·좌표 계약을 구분해 연결한다.
 

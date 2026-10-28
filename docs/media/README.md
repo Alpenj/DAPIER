@@ -11,3 +11,7 @@
 [원래 연구 페이지](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [원본 MP4](https://julianjeonresume.netlify.app/assets/custom-act-v1/sim-test-mid00_01.mp4) · [평가 조건·기여도](../../2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md)
 
 ACT 공동 실험의 기록이며 단독 저작이나 실물 시연으로 소개하지 않는다. 원본 HTML·체크포인트 식별자는 연구 문서에, 이 미디어의 원본 해시는 [출처 명세](sources.json)에 보존했다.
+
+## 시스템 구성도
+
+[SWEEPICK 구성도](sweepick-system.png)는 프로젝트 README의 관측·학습·실행 구조를 정리한 설명 그림이다. 실험 캡처나 성능 증거를 대신하지 않는다. [Mermaid 원본](sweepick-system.mmd)을 함께 보관한다. GitHub에서 외부 다이어그램 렌더러가 표시 오류를 보여 동일 구조를 PNG로 제공한다.
