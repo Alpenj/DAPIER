@@ -1,5 +1,13 @@
 # SO-101 Imitation Learning — 학습용 포크
 
+PyTorch → Transformer → ACT → SO-101·MuJoCo를 이어 읽는 교육용 코드다. 원본 예제와 개인 재현 기록을 구분하고, ACT 프로젝트의 공동 실험은 SWEEPICK에서 따로 연결한다.
+
+[PyTorch](101_pytorch_basic/) · [ACT 단계별 예제](103_ACT_step_by_step/) · [MuJoCo 기초](105_MUJOCO_basic/)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 PyTorch 기초에서 시퀀스 모델, ACT, SO-101 제어와 MuJoCo 실습으로 이어지는 학습 저장소입니다.
 
 **원본:** [JD-edu/so101_imitation_learning](https://github.com/JD-edu/so101_imitation_learning) · **관리:** [전형주 / Alpenj](https://github.com/Alpenj) · **포트폴리오:** [Physical AI Portfolio](https://julianjeonresume.netlify.app/)

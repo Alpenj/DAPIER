@@ -1,5 +1,13 @@
 # deepThinkCar-mini | 비전·모방학습 주행 실습
 
+영상 수집·라벨·PC 학습·차량 추론의 흐름을 살펴보는 교육 자료다. 아래 원본 기능 설명과 실제로 수행한 개인 실험을 구분한다.
+
+[영상 수집](jd_1_record_lane_video.py) · [학습 데이터](jd_2_get_train_data.py) · [PC 코드](PC_run_code/)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 **카메라 영상 → OpenCV 차선 인식 → 데이터 라벨링 → PC 학습 → 차량 추론**의 연결을 배우는 Raspberry Pi 기반 교육용 저장소입니다.
 
 [전형주 포트폴리오](https://julianjeonresume.netlify.app/) · [개인 학습 아카이브](https://github.com/Alpenj/physical-ai-lab) · [변경 이력](https://github.com/Alpenj/deepThinkCar_mini/commits/main/)

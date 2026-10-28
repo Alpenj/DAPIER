@@ -1,58 +1,62 @@
-# DAPIER | 전형주 · Physical AI와 로봇 소프트웨어
+# DAPIER · Physical AI와 로봇 소프트웨어
 
-DAPIER에서 배운 내용을 로봇 연동, 시뮬레이션과 데이터 검증으로 확인하는 포트폴리오 저장소다. 관측을 학습 데이터로 만들고, 학습 정책의 출력이 실제 로봇 명령으로 이어지는 과정을 중심으로 정리했다.
+동국대학교 DAPIER 1기에서 배운 내용을 로봇 연동·시뮬레이션·학습 데이터 검증으로 확인하며 기록하고 있다. 대표 팀 프로젝트 **SWEEPICK**에서는 청소 경로의 작은 물체를 옮기는 양팔 모바일 매니퓰레이터를 만든다.
 
-대표 팀 프로젝트 **SWEEPICK**은 청소 경로의 작은 물체를 옮겨 공간을 확보하는 저비용 양팔 모바일 매니퓰레이터다. 물체 이동·청소·저전력 복귀·도킹·충전 흐름은 시뮬레이션에서 구현했고, 실물 기능을 통합하고 있다. 초기 신발 정리 과제는 개발 이력으로 보존한다.
+![고정 epoch30 ACT의 Test mid00_01 시뮬레이션 실행. 왼쪽은 로봇 장면, 오른쪽은 손목 카메라 관측](docs/media/custom-act-sim.gif)
 
-**ACT는 팀원과 공동 개발·검증했다. 전형주 주 담당은 모방학습·시뮬레이션·Sim-to-Real·데이터 검증이며, Visual SLAM도 직접 설계·구현했다.** 아래 ACT 수치는 공동 실험 결과다. 개인 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 기여의 출처도 함께 남긴다.
+<sub>CUSTOM ACT V1 대표 SIM 실행 · 고정 epoch30 · temporal ensemble ON · Test mid00_01 한 위치의 기록 · [원본 MP4](https://julianjeonresume.netlify.app/assets/custom-act-v1/sim-test-mid00_01.mp4) · [평가 조건과 143회 결과](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md) · [영상 출처](docs/media/README.md)</sub>
 
-[포트폴리오·이력서](https://julianjeonresume.netlify.app/) · [SWEEPICK 프로젝트](2ARM_ROBOT/README.md) · [CUSTOM ACT V1 실험 기록](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md) · [공개 그림·영상](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [이전 조작 연구](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md)
+**[SWEEPICK 프로젝트](2ARM_ROBOT/README.md)** · **[교육·실습 안내](docs/LEARNING_GUIDE_KO.md)** · **[포트폴리오·이력서](https://julianjeonresume.netlify.app/)**
 
-## CUSTOM ACT V1: 데이터에서 실행까지
+## 무엇을 했는가
 
-학습 손실만으로 로봇의 작업 완료를 판단하기 어려웠다. 시연을 어떤 기준으로 나누었는지, 정책이 어떤 관측을 받는지, 예측한 행동 청크가 실제 명령으로 어떻게 이어지는지를 함께 기록했다.
+ACT는 팀원과 **공동 개발·검증**했다. 나의 주 담당은 **모방학습·시뮬레이션·Sim-to-Real·데이터 검증**이며, **Visual SLAM도 직접 설계·구현**했다. 외부 교육 코드와 라이브러리는 원본 출처 및 변경 이력과 함께 읽는다.
 
-| 단계 | 수행 내용 | 확인한 결과 |
+| 분야 | 사용 기술 | 코드·기록 |
 |---|---|---|
-| 데이터 수집 | 원본 113개 궤적의 동작을 유지하며 손목 RGB의 물체색·배경·테이블 텍스처·조명을 5개 외형으로 구성. 관측·상태·명령·시각 정합 확인 | 565개 뷰. 궤적 train/val/test=59/29/25, 뷰=295/145/125. 같은 궤적의 외형은 동일 분할 유지 |
-| 학습 | 양손목 RGB·head PCD·관절 상태를 입력으로 사용하는 ACT 학습 | 200 epoch 완료. best validation은 epoch103, prior normalized L1=0.01553 |
-| 추론 | 별도로 고정한 epoch30 체크포인트, temporal ensemble ON(k=0.01)으로 SIM 폐루프 평가 | 143개 위치 각 1회 중 132회 완료(92.3%). Test 위치는 27/31(87.1%) |
-| 분석 | 예측 청크의 target 시점·가중치·관절 명령·실측값·phase·영상 연결 | 실패 11회 중 grasp/lift 7회, stow 4회. 청크 집계 결과를 저장 CSV에서 재구성해 확인 |
+| 언어·개발 환경 | Python · C++ · Linux(Ubuntu) · Git | [Python 연구 계층](2ARM_ROBOT/research/README.md) · [C++ 관절 코어](so101_ros2/dapier_so101_core/src/joint_model.cpp) |
+| 로봇·비전 | ROS 2 · TF · URDF/RViz · OpenCV · RGB-D | [ROS 2 스택](so101_ros2/README.md) · [Visual SLAM·이동 모듈](https://github.com/shouttt1320/Dapier_project_visaul_slam) |
+| 학습·시뮬레이션 | PyTorch · LeRobot/ACT · MuJoCo · RoboTwin | [CUSTOM ACT V1](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md) · [교육 코드](so101_imitation_learning/README.md) |
+| 장치 연동·데이터 | SO-101/STS3215 · Serial · 관절 tick↔rad · state/action 검증 | [상태 조회 기록](2ARM_ROBOT/docs/evidence/dual_arm_read_only_summary_20260820.json) · [관측 출처 계약](2ARM_ROBOT/research/OBSERVATION_PROVENANCE.md) |
 
-폐루프 완료 기준은 **30 mm 이상 Lift → Stow → 물리 2초 Hold**다. 외형은 랜덤화하고 물체 크기(40 mm)·yaw·물성·카메라 보정은 고정했다. 위 92.3%는 이 SIM 조작 평가의 관측값이다. 200 epoch 최종 모델의 폐루프 결과, 실물 성공률이나 전체 청소 시나리오 성공률과 합산하지 않는다.
+## 핵심 결과
 
-## 실물 기록과 후속 연동
+| 확인한 내용 | 결과와 조건 | 근거 |
+|---|---|---|
+| 데이터 구성 | 원본 113궤적 × 외형 5종 = 565뷰. 같은 궤적의 외형은 같은 train/val/test 분할에 유지 | [데이터·분할](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md#1-데이터-수집--동작을-보존하고-외형을-바꿨다) |
+| ACT 학습 | 200 epoch 완료. best validation은 epoch103, prior normalized L1 0.01553 | [학습 조건·곡선](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md#2-학습--학습-곡선과-작업-완료를-따로-확인했다) |
+| 고정 모델 SIM 평가 | 별도로 고정한 epoch30으로 143개 위치 각 1회 중 **132/143, 92.3%** 완료. Test 위치 **27/31, 87.1%** | [위치별 CSV](2ARM_ROBOT/docs/evidence/custom_act_v1_20261027_positions.csv) · [조건·집계 JSON](2ARM_ROBOT/docs/evidence/custom_act_v1_20261027_summary.json) |
+| 실패 분석 | 완료하지 못한 11회는 grasp/lift 7회, stow 4회. 예측 청크·관절 명령·실측값·영상을 대조 | [추론 실행 분석](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md#4-분석--예측-청크가-명령이-되는-과정을-추적했다) |
+| 실물 연동 | Native 교사 120/198회, 실물 데이터 ACT TJJ v2 관절 예측오차 3.30°, DAgger 교정 시연 16개를 별도 기록. 10/27에는 모터 명령 없는 정지 shadow 확인 | [실물 트랙과 후속 연동](2ARM_ROBOT/README.md#실물-데이터와-실행기-연동) |
 
-기존 실물 트랙은 신규 SIM 평가와 별도로 유지한다. 2026-10-18~26 Native 교사 콘솔은 집기·이동·놓기·복귀 120/198회를 성공으로 판정했다. 실물 데이터 기반 ACT TJJ v2는 학습46/검증7 run의 관절 예측오차 3.30°(epoch690)를 기록했고, 정책 정체 후 교사 인계로 교정 시연16개를 확보했다. 예측오차는 작업 완료율과 다른 지표다.
+SIM 완료 기준은 **30 mm 이상 Lift → Stow → 물리 2초 Hold**다. 외형은 랜덤화하고 물체 크기 40 mm·yaw·물성·카메라 보정은 고정했다. 위 평가 모델은 200 epoch 최종 모델과 구분한다. 물체 이동·청소·저전력 복귀·도킹·충전 전체 흐름은 시뮬레이션에서 구현했고, 현재 실물 기능을 통합하고 있다.
 
-10/27 후속 연구는 ACT30과 실물 실행기의 관측·12축 절대행동 계약, 앙상블·STOP·feedback·파지 증거의 연결을 확인하는 단계다. 새 30초 정지 shadow는 모터 명령 없이 읽기 경로를 확인한 기록이며, 전체 180초 검증과 새 실물 파지 완료를 뜻하지 않는다. [최신 연구 노트](https://www.notion.so/4065788b5ed1810aaec9c710b0d9e288)(접근 권한 필요)에 조건과 후속 기록을 연결했다.
+## 프로젝트와 교육 코드를 찾는 순서
 
-## 코드와 연구 이력
-
-| 확인할 내용 | 코드와 문서 |
+| 보고 싶은 내용 | 시작점 |
 |---|---|
-| 수집·학습·추론·분석의 조건과 근거 | [CUSTOM ACT V1](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md) |
-| 실물 실행기·콘솔·저장 기록 검수 | [sweepick 검토 브랜치](https://github.com/Alpenj/DAPIER/tree/pro/sweepick-review-20261015/2ARM_ROBOT/sweepick) |
-| 양팔 모델·접촉·경로 검사 | [MuJoCo 모델](2ARM_ROBOT/sim/mobile_dual_so101/README.md) · [이전 연구](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md) |
-| Visual SLAM·Nav2·도킹 모듈 | [이동 모듈 협업 저장소](https://github.com/shouttt1320/Dapier_project_visaul_slam) |
+| 로봇 구성, 구현 범위, 실행기와 연구 결과 | [SWEEPICK](2ARM_ROBOT/README.md) |
+| 수집 → 학습 → 추론 → 분석의 조건과 근거 | [CUSTOM ACT V1 연구 기록](2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md) |
+| RGB-D·관절 데이터 계약, 정책 제안과 C++ 실행 경계 | [Python 연구 계층](2ARM_ROBOT/research/README.md) · [제어 계약](contracts/README.md) |
+| 강의에서 배운 기술과 프로젝트 적용의 연결 | [DAPIER 교육·실습 안내](docs/LEARNING_GUIDE_KO.md) |
+| 예전 장비·실험·실패·후보 브랜치 | [프로젝트 문서 목록](2ARM_ROBOT/docs/README.md) · [이전 조작 연구](2ARM_ROBOT/docs/RESEARCH_SUMMARY_KO.md) |
 
-상체 실행기는 10/16부터 이동 베이스를 직접 구동하지 않고 정지 요청과 조작 결과를 전달하는 역할로 나눴다. 이 실행 구조와 본인의 Visual SLAM 설계·구현 경험은 별개다. 공동 저장소와 교육 예제·외부 라이브러리의 기여 이력은 보존한다.
+## 장비 없이 먼저 확인하기
 
-연구 실행기와 후속 결과가 모두 공개 `main`에 병합된 것은 아니다. 검토 브랜치 및 고정 후보의 결과는 해당 revision에서 읽는다. 이번 갱신은 문서와 공개 요약 근거를 정리한 것으로, 런타임·보정값·장치 설정을 변경하지 않았다.
+Python 3.12 환경에서 저장소 루트의 연구 계층 테스트를 실행할 수 있다. 관측 출처, 명령 형태·TTL, 지역화 상태와 깊이 기반 좌표 변환을 확인하며 장치를 열지 않는다.
 
-## 교육·실습 코드
+```bash
+git clone https://github.com/Alpenj/DAPIER.git
+cd DAPIER
+python3 -m unittest discover -s 2ARM_ROBOT/research/test -v
+```
 
-| 폴더 | 내용 |
-|---|---|
-| [so101](so101/README.md) · [so101_ros2](so101_ros2/README.md) | SO-101 실습, LeRobot 연동, ROS 2 제어 |
-| [so101_imitation_learning](so101_imitation_learning/) | PyTorch·모방학습 교육 코드 |
-| [deepThinkCar_mini](deepThinkCar_mini/) | 자율주행 자동차 실습 |
-| [turtlebot3_ws](turtlebot3_ws/README.md) · [ros_dd_ws](ros_dd_ws/README.md) | 이동로봇 시뮬레이션, SLAM·내비게이션 학습 |
-| [jdcobot100_sim](jdcobot100_sim/README.md) · [ros_arm](ros_arm/README.md) | 로봇암 시뮬레이션과 Arduino 제어 |
-| [dapier_sim_first](dapier_sim_first/README.md) · [casino_dealer](casino_dealer/README.md) | 한 팔 조작과 카드 딜러 실험 |
+2026-10-28에 기존 소스 그대로 Windows·Python 3.12에서 33개 테스트를 확인했다. ROS 2·MuJoCo 실행은 [연구 계층](2ARM_ROBOT/research/README.md)과 각 모듈의 환경 안내를 따른다. 실물 보정·제어는 [하드웨어 안전 절차](docs/HARDWARE_SAFETY_KO.md)를 먼저 확인한다.
 
-실행 환경은 각 폴더의 README를 확인한다. 오래된 실습의 장비 구성·파라미터는 해당 날짜의 조건이며, 현재 장비에 그대로 적용하지 않는다. 실물 접근·제어는 [하드웨어 안전 절차](docs/HARDWARE_SAFETY_KO.md)를 따른다.
+## 기록을 읽을 때
 
-외부 코드·자산의 출처와 라이선스는 해당 폴더에 보존했다. 별도 학습 포크를 이 저장소로 옮긴 내역은 [통합 기록](docs/FORK_MIGRATION_20260907_KO.md)에서 확인할 수 있다.
+- **SIM / MOCK / HW**를 구분한다. 테스트 통과, 예측오차와 실제 작업 완료는 서로 다른 결과다.
+- 공개 `main`과 고정 후보·검토 브랜치의 구현 범위가 다르다. 결과에 연결한 revision과 실행 조건을 함께 확인한다.
+- 교육 예제·외부 코드·자산의 출처는 각 폴더에 보존한다. 이전 학습 포크를 옮긴 내역은 [통합 기록](docs/FORK_MIGRATION_20260907_KO.md)에 있다.
 
-문서 갱신: 2026-10-27. 지정된 CUSTOM ACT V1 내장 보고서·CSV·학습 로그와 기존 Notion·실물 기록을 대조했다.
+DAPIER 교육: **2026.07.06–11.04 · 수강 중 · 총 편성 656시간**. 문서 정리 기준일: 2026-10-28.

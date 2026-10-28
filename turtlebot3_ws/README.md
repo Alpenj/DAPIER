@@ -1,5 +1,13 @@
 # turtlebot3_ws — SLAM·Nav2 (ROS2 Jazzy)
 
+교재의 Humble·Gazebo Classic 예제를 Jazzy·Gazebo Harmonic에 맞추며 SLAM·Nav2·메시지 형식 차이를 기록한 워크스페이스다. 아래 설치·실행은 시뮬레이션 환경을 먼저 확인한다.
+
+[목표 전송 패키지](src/nav2_goals_py/) · [실행 보조 스크립트](scripts/README.md)
+
+[교육 전체 안내](../docs/LEARNING_GUIDE_KO.md) · [최신 SWEEPICK](../2ARM_ROBOT/README.md) · [저장소 첫 화면](../README.md)
+
+## 기록의 범위와 기존 실행 안내
+
 wikidocs의 TurtleBot3 SLAM·Nav2 실습 교재를 이 워크스페이스에 맞게 이식했다.
 교재는 **ROS2 Humble + Gazebo Classic** 기준이라 여러 군데를 이번 환경
 (**ROS2 Jazzy + gz-sim/Harmonic**)에 맞게 바꿔야 했고, 그 과정에서 겪은 버그와
