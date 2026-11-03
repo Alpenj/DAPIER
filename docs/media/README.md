@@ -7,6 +7,8 @@
 | [custom-act-sim.gif](custom-act-sim.gif) | 고정 epoch30·temporal ensemble ON, Test mid00_01 한 위치의 기존 SIM 영상. 장면과 손목 RGB를 함께 표시한다. 원본 MP4 전체 7.2초를 너비640·8fps GIF로 변환했다. |
 | [collection-appearances.png](collection-appearances.png) | 같은 궤적에 적용한 외형 구성. 신규 물리 동작이나 독립 궤적 수로 세지 않는다. |
 | [training-curves.png](training-curves.png) | 200epoch 학습 곡선. 고정epoch30 폐루프 평가와 구분한다. |
+| [sweepick-real-run-4x.gif](sweepick-real-run-4x.gif) | SWEEPICK 최종 발표 시연 영상(62초, 앞부분 편집·일부 2배속)을 4배속·320px·8fps GIF로 변환. 실물 로봇이 바닥의 휴지를 집어 ArUco 마커 상자까지 옮겨 놓는다. [원본 MP4](https://julianjeonresume.netlify.app/assets/video/sweepick-real-full-run.mp4) |
+| [sweepick-real-act-cams.gif](sweepick-real-act-cams.gif) | 최종 발표 자료의 실물 ACT 실행 영상(6초). 헤드 깊이·왼손목 RGB·오른손목 RGB를 나란히 표시한다. 730px·8fps GIF. |
 
 [원래 연구 페이지](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [원본 MP4](https://julianjeonresume.netlify.app/assets/custom-act-v1/sim-test-mid00_01.mp4) · [평가 조건·기여도](../../2ARM_ROBOT/docs/CUSTOM_ACT_V1_KO.md)
 
