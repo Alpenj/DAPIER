@@ -28,6 +28,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install NumPy for the sim-first evaluator tests
+        run: python3 -m pip install --disable-pip-version-check --only-binary=:all: numpy==2.3.5
+
       - name: SO-101 sim-first unit tests
         working-directory: mini-projects
         env:
