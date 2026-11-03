@@ -1,0 +1,47 @@
+name: Hardware-free tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hardware-free-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hardware-free-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install NumPy for the sim-first evaluator tests
+        run: "python3 -m pip install --disable-pip-version-check --only-binary=:all: numpy==2.3.5"
+
+      - name: SO-101 sim-first unit tests
+        working-directory: mini-projects
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s dapier_sim_first/test -v
+
+      - name: CardBench unit tests
+        working-directory: mini-projects/casino_dealer
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s test -v
+
+      - name: Markdown links
+        run: python3 .github/scripts/check_markdown_links.py
