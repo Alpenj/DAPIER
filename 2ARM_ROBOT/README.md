@@ -1,11 +1,14 @@
 # SWEEPICK | 이동형 양팔 청소 로봇의 조작·학습·Sim-to-Real
 
-청소 경로의 작은 물체를 인식해 옮기고, 확보된 공간을 청소하는 저비용 모바일 매니퓰레이터다. DAPIER 팀 프로젝트에서 SO-101 양팔·카메라·이동 베이스와 학습 기반 제어를 연결했다. 물체 이동·청소·저전력 복귀·도킹·충전은 시뮬레이션 구현을 완료했고, 실물 기능을 통합하고 있다.
+청소 경로의 작은 물체를 인식해 옮기고, 확보된 공간을 청소하는 저비용 모바일 매니퓰레이터다. DAPIER 4인 팀 프로젝트에서 SO-101 양팔·카메라·이동 베이스와 학습 기반 제어를 연결했다. 물체 이동·청소·저전력 복귀·도킹·충전은 시뮬레이션 구현을 완료했다. 실물에서는 **2026-11-01에 이동 → 양팔 ACT 집기 → B 지점 놓기 → HOME 전체 과정을 사람 개입 없이 처음 성공**했고, 최종 발표 기준 작업공간 안 물체별 10회 집기는 3cm 큐브 7회, 휴지 8회, 원형 고무 7회였다(물체별 추가 파인튜닝 없음). 청소·충전의 실물 연결과 연속 성공률 측정은 남아 있다.
 
-**ACT는 팀원과 공동 개발·검증했다. 전형주 주 담당은 모방학습·시뮬레이션·Sim-to-Real·데이터 검증이며, Visual SLAM은 협업으로 참여했다.** 아래 ACT 수치는 공동 실험 결과다. 개인 담당 경험과 연결해 설명하되, 외부 ACT·RoboTwin 구현과 팀 기여의 출처도 함께 남긴다.
+**전형주는 SIM 데이터·도메인 랜덤화, 실물 Sim-to-Real 통합, 베이스↔로봇팔 ROS 2 연동을 주도했다. ACT는 팀원과 공동 개발·검증했고, Visual SLAM은 협업으로 참여했다.** 영역별 참여도는 [저장소 첫 화면의 역할 표](../README.md#내-역할과-참여도)에 있다. 아래 ACT 수치는 공동 실험 결과다. 외부 ACT·RoboTwin 구현과 팀 기여의 출처도 함께 남긴다.
 
-[포트폴리오·이력서](https://julianjeonresume.netlify.app/) · [CUSTOM ACT V1 상세](docs/CUSTOM_ACT_V1_KO.md) · [그림·영상](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [이전 조작 연구](docs/RESEARCH_SUMMARY_KO.md) · [실물 검토 브랜치](https://github.com/Alpenj/DAPIER/tree/pro/sweepick-review-20261015/2ARM_ROBOT/sweepick)
+[포트폴리오·실물 영상](https://julianjeonresume.netlify.app/) · [CUSTOM ACT V1 상세](docs/CUSTOM_ACT_V1_KO.md) · [그림·영상](https://julianjeonresume.netlify.app/research/custom-act-v1/) · [이전 조작 연구](docs/RESEARCH_SUMMARY_KO.md) · [실물 검토 브랜치](https://github.com/Alpenj/DAPIER/tree/pro/sweepick-review-20261015/2ARM_ROBOT/sweepick) · [이동 베이스(팀원 저장소)](https://github.com/shouttt1320/Dapier_project_visaul_slam)
 
+![SWEEPICK 실물 시연. 로봇 시점의 헤드 깊이와 양손목 RGB로 본 ACT 집기](../docs/media/sweepick-real-act-cams.gif)
+
+<sub>실물 ACT 실행 · 왼쪽부터 헤드 깊이, 왼손목 RGB, 오른손목 RGB · [실물 전체 과정 영상](https://julianjeonresume.netlify.app/assets/video/sweepick-real-full-run.mp4)</sub>
 
 ![CUSTOM ACT V1의 대표 SIM 실행과 손목 RGB 관측](../docs/media/custom-act-sim.gif)
 
@@ -100,4 +103,4 @@ PR 상태 확인일은 2026-10-08이다. 연구 PR을 닫은 것과 `main`에 �
 
 외부 라이브러리와 자산은 각 폴더의 출처·라이선스를 따른다. Visual SLAM 협업 참여 범위와 공동 저장소의 외부·팀 기여 이력을 함께 보존한다.
 
-문서 구성 갱신: 2026-10-28. 실험 기록 기준: 2026-10-27. 새 CUSTOM ACT V1의 수집·학습·SIM 평가·분석을 추가하고 기존 실물·코드·후보 PR 기록은 보존했다. 런타임·물리 파라미터·보정값·테스트·의존성은 변경하지 않았다.
+문서 구성 갱신: 2026-11-03(11/01 실물 첫 전체 성공, 최종 발표 물체별 결과, 역할 표 반영). 그 전 갱신: 2026-10-28. 실험 기록 기준: 2026-10-27. 새 CUSTOM ACT V1의 수집·학습·SIM 평가·분석을 추가하고 기존 실물·코드·후보 PR 기록은 보존했다. 런타임·물리 파라미터·보정값·테스트·의존성은 변경하지 않았다.
