@@ -1,9 +1,0 @@
-build/
-install/
-log/
-/output/
-/config/99-dapier-hardware.rules
-.venv/
-**/__pycache__/
-**/.pytest_cache/
-**/.ruff_cache/

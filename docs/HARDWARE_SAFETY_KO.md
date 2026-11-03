@@ -7,7 +7,7 @@
 ## 보정과 수동 작업
 
 SO-101 새 작업과 재개 작업에서는 로컬
-`2ARM_ROBOT/recording/config/CALIBRATION_CURRENT.md`를 먼저 확인한다.
+sweepick checkout의 `recording/config/CALIBRATION_CURRENT.md`를 먼저 확인한다.
 공통 보정 파일은 `~/.config/dapier/lerobot-calibration`에 보관하며,
 2026-09-15에 네 장치의 값과 readback을 확인했다. 개인 보정 원본은 공개하지 않는다.
 
